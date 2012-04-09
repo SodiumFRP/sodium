@@ -69,10 +69,27 @@ static void test_filter_e() {
     assert(res->x == 3);
     assert(res->y == 5);
 }
+
+static void test_not_e() {
+    printf("%s\n", __FUNCTION__);
+    auto r = li::receiver_e<bool>();
+    auto m = li::not_e(r);
+    std::shared_ptr<bool> res;
+    auto io = li::map_io<bool>([&](std::shared_ptr<bool> p) {
+        res = p;
+    }, m);
+    li::send_event(std::shared_ptr <bool> (new bool(true)), r);
+    assert(!*res);
+    li::send_event(std::shared_ptr <bool> (new bool(false)), r);
+    assert(*res);
+}
+
 int main(int argc, char *argv[]) {
     test_map_e();
     test_merge_e();
     test_filter_e();
+    test_not_e();
+
     printf("tests passed\n");
 }
 

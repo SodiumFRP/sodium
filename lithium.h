@@ -72,10 +72,13 @@ auto merge_e(event<T> source0, event<T> source1) -> event<T> {
 template<class T>
 auto filter_e(event<T> source,
         std::function<auto(std::shared_ptr<T>) -> bool> f) -> event<T> {
-    return event<T>(impl::filter_e(source.impl, [=](std::shared_ptr<void> value)->bool {
-        return f(*reinterpret_cast<std::shared_ptr<T>*>(&value));
-    }));
+    return event<T>(
+            impl::filter_e(source.impl, [=](std::shared_ptr<void> value)->bool {
+                return f(*reinterpret_cast<std::shared_ptr<T>*>(&value));
+            }));
 }
+
+auto not_e(event<bool> source) -> event<bool>;
 
 template<class A>
 auto map_io(std::function<auto(std::shared_ptr<A>) -> void> f,

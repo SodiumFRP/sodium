@@ -128,5 +128,13 @@ auto map_io(std::function<auto(data) -> void> f, base_ptr source)->base_ptr {
     return self;
 }
 
+} // end namespace
+
+auto not_e(event<bool> source) -> event<bool> {
+    return map_e<bool, bool>(
+            [=](std::shared_ptr<bool> b)->std::shared_ptr<bool> {
+                return std::shared_ptr<bool>(new bool(!*b));
+            }, source);
 }
+
 }
