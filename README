@@ -1,0 +1,6 @@
+Lithium - Reactive Programming in C++
+
+This is a C++ based Functional Reactive Programming engine written in C++. It
+is based on Flapjax and has an intentionally similar API.
+
+It is still very much a work in progress.
