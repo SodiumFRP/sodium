@@ -22,26 +22,28 @@ static auto transpose(std::shared_ptr<point> p) -> std::shared_ptr<point> {
     return std::shared_ptr < point > (new point(p->y, p->x));
 }
 
-static void test_map() {
+static void test_map_e() {
     printf("%s\n", __FUNCTION__);
     auto r = li::receiver_e<point>();
     auto m = li::map_e<point, point>(transpose, r);
     std::shared_ptr<point> res;
     auto io = li::map_io<point>([&](std::shared_ptr<point> p) {
-        res = p;}, m);
+        res = p;
+    }, m);
     li::send_event(std::shared_ptr < point > (new point(3, 5)), r);
     assert(res->x == 5);
     assert(res->y == 3);
 }
 
-static void test_merge() {
+static void test_merge_e() {
     printf("%s\n", __FUNCTION__);
     auto r0 = li::receiver_e<point>();
     auto r1 = li::receiver_e<point>();
     auto m = li::merge_e<point>(r0, r1);
     std::shared_ptr<point> res;
     auto io = li::map_io<point>([&](std::shared_ptr<point> p) {
-        res = p;}, m);
+        res = p;
+    }, m);
     li::send_event(std::shared_ptr < point > (new point(3, 5)), r0);
     assert(res->x == 3);
     assert(res->y == 5);
@@ -50,9 +52,27 @@ static void test_merge() {
     assert(res->y == 1);
 }
 
+static void test_filter_e() {
+    printf("%s\n", __FUNCTION__);
+    auto r = li::receiver_e<point>();
+    auto m = li::filter_e<point>(r, [=](std::shared_ptr<point> p)->bool {
+        return p->x < p->y;
+    });
+    std::shared_ptr<point> res;
+    auto io = li::map_io<point>([&](std::shared_ptr<point> p) {
+        res = p;
+    }, m);
+    li::send_event(std::shared_ptr < point > (new point(3, 5)), r);
+    assert(res->x == 3);
+    assert(res->y == 5);
+    li::send_event(std::shared_ptr < point > (new point(9, 1)), r);
+    assert(res->x == 3);
+    assert(res->y == 5);
+}
 int main(int argc, char *argv[]) {
-    test_map();
-    test_merge();
+    test_map_e();
+    test_merge_e();
+    test_filter_e();
     printf("tests passed\n");
 }
 
