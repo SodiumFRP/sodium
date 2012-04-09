@@ -67,10 +67,12 @@ auto propagate_pulse(base_ptr self, data v) -> void {
     }
 }
 
+static auto identity(data value)->data {
+    return value;
+}
+
 auto receiver_e()->base_ptr {
-    return std::shared_ptr < base > (new base([=](data value)->data {
-        return value;
-    }));
+    return std::shared_ptr < base > (new base(identity));
 }
 
 auto map_e(std::function<auto(data) -> data> f, base_ptr source)->base_ptr {
@@ -78,6 +80,14 @@ auto map_e(std::function<auto(data) -> data> f, base_ptr source)->base_ptr {
         return f(value);
     }));
     listen_to(self, source);
+    return self;
+}
+
+auto merge_e(std::list<base_ptr> sources)->base_ptr {
+    base_ptr self = std::shared_ptr < base > (new base(identity));
+    for (auto itr = sources.begin(); itr != sources.end(); itr++) {
+        listen_to(self, *itr);
+    }
     return self;
 }
 
