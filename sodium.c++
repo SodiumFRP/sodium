@@ -23,9 +23,7 @@ auto generic_event::propagate_pulse(generic_pulse pulse) -> void {
 }
 
 auto not_e(event<bool> source) -> event<bool> {
-	return map_e<bool, bool>([=](bool b)->bool {
-		return !b;
-	}, source);
+	return map_e<bool, bool>([=](bool b) -> bool {return !b;}, source);
 }
 
 }

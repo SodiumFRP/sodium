@@ -95,7 +95,7 @@ public:
 	auto notify_all(T value, pulse_queue& queue) -> void {
 		for (auto itr = sends_to.begin(); itr != sends_to.end(); itr++) {
 			listener<T> lst = *itr;
-			queue->push(generic_pulse(lst.get_rank(), [=,&queue](pulse_queue&)->void {
+			queue->push(generic_pulse(lst.get_rank(), [=,&queue](pulse_queue&) {
 				lst.notify(value, queue);
 			}));
 		}
@@ -139,17 +139,16 @@ auto receiver_e() -> event<T> {
 
 template<typename T>
 auto send_event(T value, event<T> source) -> void {
-	auto pulse = generic_pulse(source->get_rank(),
-			[=](pulse_queue& queue)->void {
-				source->notify_all(value, queue);
-			});
+	auto pulse = generic_pulse(source->get_rank(), [=](pulse_queue& queue) {
+		source->notify_all(value, queue);
+	});
 	generic_event::propagate_pulse(pulse);
 }
 
 template<typename S, typename R>
 auto map_e(std::function<auto(S) -> R> function, event<S> source) -> event<R> {
 	auto map = event<R>();
-	auto get_rank = [=]()->rank_t {return map->get_rank();};
+	auto get_rank = [=] {return map->get_rank();};
 	auto f = [=](S value, pulse_queue& queue)->void {
 		map->notify_all(function(value), queue);
 	};
@@ -160,40 +159,46 @@ auto map_e(std::function<auto(S) -> R> function, event<S> source) -> event<R> {
 template<typename T>
 auto map_io(std::function<auto(T) ->void> function, event<T> source) -> io {
 	auto result = io();
-	auto f = [=](T value, pulse_queue queue)->void {
+	auto f = [=](T value, pulse_queue queue) {
 		function(value);
 	};
-	source->listen_to(
-			listener<T>([=]()->rank_t {return result->get_rank();}, f));
+	source->listen_to(listener<T>([=] {return result->get_rank();}, f));
 	return result;
 }
-//
-//template<class T>
-//auto merge_e(event<T> source0, event<T> source1) -> event<T> {
-//	std::list<impl::base_ptr> sources;
-//	sources.push_back(source0.impl);
-//	sources.push_back(source1.impl);
-//	return event<T>(impl::merge_e(sources));
-//}
-//
-//template<class T>
-//auto filter_e(event<T> source,
-//		std::function<auto(std::shared_ptr<T>) -> bool> f) -> event<T> {
-//	return event<T>(
-//			impl::filter_e(source.impl, [=](std::shared_ptr<void> value)->bool {
-//				return f(*reinterpret_cast<std::shared_ptr<T>*>(&value));
-//			}));
-//}
-//
-//auto not_e(event<bool> source) -> event<bool>;
-//
-//template<class A>
-//auto map_io(std::function<auto(std::shared_ptr<A>) -> void> f,
-//		event<A> source) -> event<unit> {
-//	return event<unit>(impl::map_io([=](impl::data value)->void {
-//		f(*reinterpret_cast<std::shared_ptr<A>*>(&value));
-//	}, source.impl));
-//}
+
+template<typename T>
+auto merge_e(event<T> source0, event<T> source1) -> event<T> {
+	auto merge = event<T>();
+	auto get_rank = [=] {return merge->get_rank();};
+	auto f = [=](T value, pulse_queue& queue)->void {
+		merge->notify_all(value, queue);
+	};
+	source0->listen_to(listener<T>(get_rank, f));
+	source1->listen_to(listener<T>(get_rank, f));
+	return merge;
+}
+
+template<typename T>
+auto filter_e(std::function<auto(T) -> bool> function,
+		event<T> source) -> event<T> {
+	auto filter = event<T>();
+	auto get_rank = [=] {return filter->get_rank();};
+	auto f = [=](T value, pulse_queue& queue) {
+		if (function(value)) {
+			filter->notify_all(value, queue);
+		}
+	};
+	source->listen_to(listener<T>(get_rank, f));
+	return filter;
+}
+
+template<typename S, typename R>
+auto constant_e(R value, event<S> source) -> event<S> {
+	return map_e([=](S source) {return value;}, source);
+}
+
+// Non-template methods
+auto not_e(event<bool> source) -> event<bool>;
 
 }
 
