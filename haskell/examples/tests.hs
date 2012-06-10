@@ -59,15 +59,15 @@ merge1 = TestCase $ do
     unlisten
     assertEqual "merge1" ["hello","world","people","everywhere"] =<< readIORef outRef
 
-justE1 = TestCase $ do
+filterJust1 = TestCase $ do
     (ema :: Event M (Maybe String), push) <- newEvent
     outRef <- newIORef []
     synchronously $ do
-        listenIO (justE ema) $ \a -> modifyIORef outRef (++ [a])
+        listenIO (filterJust ema) $ \a -> modifyIORef outRef (++ [a])
         push (Just "yes")
         push Nothing
         push (Just "no")
-    assertEqual "justE1" ["yes", "no"] =<< readIORef outRef
+    assertEqual "filterJust1" ["yes", "no"] =<< readIORef outRef
 
 filterE1 = TestCase $ do
     (ec, push) <- newEvent
@@ -456,7 +456,7 @@ calm1 = TestCase $ do
     unlisten
     assertEqual "calm1" [2, 11] =<< readIORef outRef
 
-tests = test [ event1, fmap1, merge1, justE1, filterE1, beh1, beh2, beh3, beh4, beh5, beh6,
+tests = test [ event1, fmap1, merge1, filterJust1, filterE1, beh1, beh2, beh3, beh4, beh5, beh6,
     appl1, appl2, snapshot1, count1, collect1, collect2, collectE1, collectE2, switchE1,
     switch1, once1, once2, crossE1, cross1, cross2, cycle1, mergeWith1, mergeWith2, mergeWith3,
     calm1 ]

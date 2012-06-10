@@ -75,8 +75,8 @@ data Partition p = Partition {
     }
 
 -- | Queue the specified atomic to run at the end of the priority 1 queue
-schedulePriority1 :: Reactive p () -> Reactive p ()
-schedulePriority1 task = Reactive $ modify $ \as -> as { asQueue1 = asQueue1 as |> task }
+schedulePrioritized :: Reactive p () -> Reactive p ()
+schedulePrioritized task = Reactive $ modify $ \as -> as { asQueue1 = asQueue1 as |> task }
 
 onFinal :: IO () -> Reactive p ()
 onFinal task = Reactive $ modify $ \as -> as { asFinal = asFinal as >> task }
@@ -369,15 +369,15 @@ calm combine e = Event gl cacheRef
             ioReactive $ modifyIORef outRef $ \ma -> Just $ case ma of
                 Just a0 -> a0 `combine` a
                 Nothing -> a
-            when first $ schedulePriority2 (Just mvNode) $ do
+            when first $ scheduleLast (Just mvNode) $ do
                 Just out <- ioReactive $ readIORef outRef
                 ioReactive $ writeIORef outRef Nothing
                 push out
         addCleanup unlistener l
 
 -- | Unwrap Just values, and discard event occurrences with Nothing values.
-justE :: Typeable p => Event p (Maybe a) -> Event p a
-justE ema = Event gl cacheRef
+filterJust :: Typeable p => Event p (Maybe a) -> Event p a
+filterJust ema = Event gl cacheRef
   where
     cacheRef = unsafePerformIO $ newIORef Nothing
     gl = do
@@ -390,7 +390,7 @@ justE ema = Event gl cacheRef
 
 -- | Only keep event occurrences for which the predicate is true.
 filterE :: Typeable p => (a -> Bool) -> Event p a -> Event p a
-filterE pred = justE . ((\a -> if pred a then Just a else Nothing) <$>)
+filterE pred = filterJust . ((\a -> if pred a then Just a else Nothing) <$>)
 
 -- | A time-varying value, American spelling.
 type Behavior p a = Behaviour p a
@@ -441,7 +441,7 @@ newtype Unlistener = Unlistener (MVar (Maybe (IO ())))
 unlistenize :: Reactive p (IO ()) -> Reactive p Unlistener
 unlistenize doListen = do
     unlistener@(Unlistener ref) <- newUnlistener
-    schedulePriority1 $ do
+    schedulePrioritized $ do
         mOldUnlisten <- ioReactive $ takeMVar ref
         case mOldUnlisten of
             Just _ -> do
@@ -501,7 +501,7 @@ snapshotWith f ea bb = Event gl cacheRef
             push (f a b)
         addCleanup unlistener l
 
--- | Variant of attachWith that throws away the event's value and captures the behaviour's.
+-- | Variant of snapshotWith that throws away the event's value and captures the behaviour's.
 snapshot :: Typeable p => Event p a -> Behaviour p b -> Event p b
 snapshot = snapshotWith (flip const)
 
@@ -516,10 +516,10 @@ listenValueRaw ba mMvNode handle = do
     linkedListen (underlyingEvent ba) mMvNode handle
 
 -- | Queue the specified atomic to run at the end of the priority 2 queue
-schedulePriority2 :: Maybe (MVar (Node p))
+scheduleLast :: Maybe (MVar (Node p))
                   -> Reactive p ()
                   -> Reactive p ()
-schedulePriority2 mMvNode task = do
+scheduleLast mMvNode task = do
     mNode <- case mMvNode of
         Just mvNode -> Just <$> ioReactive (readMVar mvNode)
         Nothing -> pure Nothing
@@ -539,7 +539,7 @@ tidy listen mMvNode handle = do
     listen mMvNode $ \a -> do
         ma <- ioReactive $ readIORef aRef
         ioReactive $ writeIORef aRef (Just a)
-        when (isNothing ma) $ schedulePriority2 mMvNode $ do
+        when (isNothing ma) $ scheduleLast mMvNode $ do
             Just a <- ioReactive $ readIORef aRef
             ioReactive $ writeIORef aRef Nothing
             handle a
@@ -600,7 +600,7 @@ instance Typeable p => Applicative (Behaviour p) where
 -- Note that the behaviour's value is as it was at the start of the transaction,
 -- that is, no state changes from the current transaction are taken into account.
 gate :: Typeable p => Event p a -> Behaviour p Bool -> Event p a
-gate ea = justE . snapshotWith (\a b -> if b then Just a else Nothing) ea
+gate ea = filterJust . snapshotWith (\a b -> if b then Just a else Nothing) ea
 
 -- | Transform an event with a generalized state loop (a mealy machine). The function
 -- is passed the input and the old state and returns the new state and output value.
@@ -676,7 +676,7 @@ switchE bea = Event gl cacheRef
         beaId <- collect (\ea nxtID -> ((ea, nxtID), succ nxtID)) (0 :: ID) bea
         (l, push, mvNode) <- ioReactive newEventImpl
         unlistener1 <- unlistenize $ linkedListenValue beaId (Just mvNode) $ \(ea, iD) -> do
-            let filtered = justE $ snapshotWith (\a activeID ->
+            let filtered = filterJust $ snapshotWith (\a activeID ->
                         if activeID == iD
                             then Just a
                             else Nothing
@@ -709,7 +709,7 @@ switch bba = do
 
 -- | Throw away all event occurrences except for the first one.
 once :: Typeable p => Event p a -> Reactive p (Event p a)
-once ea = justE <$> collectE (\a active -> (if active then Just a else Nothing, False)) True ea
+once ea = filterJust <$> collectE (\a active -> (if active then Just a else Nothing, False)) True ea
 
 -- | Execute the specified 'Reactive' action inside an event.
 execute :: Typeable p => Event p (Reactive p a) -> Event p a

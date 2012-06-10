@@ -62,7 +62,7 @@ module FRP.Sodium (
         never,
         merge,
         mergeWith,
-        justE,
+        filterJust,
         hold,
         valueEvent,
         snapshotWith,
