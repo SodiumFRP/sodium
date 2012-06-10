@@ -1,6 +1,6 @@
-Lithium - Reactive Programming in C++
+Sodium - Reactive Programming in Java, Haskell and C++
 
-This is a C++ based Functional Reactive Programming engine written in C++. It
-is based on Flapjax and has an intentionally similar API.
+This is based on Flapjax, Yampa, scala.React and a number of other Reactive
+programming efforts. Enjoy.
 
 It is still very much a work in progress.
