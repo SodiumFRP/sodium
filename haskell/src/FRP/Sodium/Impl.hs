@@ -339,7 +339,7 @@ merge ea eb = Event gl cacheRef
         (l, push, mvNode) <- ioReactive newEventImpl
         unlistener1 <- unlistenize $ runListen l1 (Just mvNode) push
         unlistener2 <- unlistenize $ runListen l2 (Just mvNode) push
-        (finalerize unlistener1 <=< finalerize unlistener2) l
+        (addCleanup unlistener1 <=< addCleanup unlistener2) l
 
 -- | Merge two streams of events of the same type, combining simultaneous
 -- event occurrences.
@@ -352,26 +352,28 @@ merge ea eb = Event gl cacheRef
 -- The combine function should be commutative, because simultaneous events
 -- should be considered to be order-agnostic.
 mergeWith :: Typeable p => (a -> a -> a) -> Event p a -> Event p a -> Event p a
-mergeWith f ea eb = Event gl cacheRef
+mergeWith f ea eb = calm f $ merge ea eb
+
+-- | If there's more than one firing in a single transaction, combine them into
+-- one using the specified function.
+calm :: Typeable p => (a -> a -> a) -> Event p a -> Event p a
+calm combine e = Event gl cacheRef
   where
     cacheRef = unsafePerformIO $ newIORef Nothing
     gl = do
-        l1 <- getListen ea
-        l2 <- getListen eb
+        l1 <- getListen e
         (l, push, mvNode) <- ioReactive newEventImpl
-        outRef <- ioReactive $ newIORef Nothing
-        let process a = do
-                mOut <- ioReactive $ readIORef outRef
-                ioReactive $ modifyIORef outRef $ \mOut -> Just $ case mOut of
-                    Just out -> f out a
-                    Nothing  -> a
-                when (isNothing mOut) $ schedulePriority2 (Just mvNode) $ do
-                    Just out <- ioReactive $ readIORef outRef
-                    ioReactive $ writeIORef outRef Nothing
-                    push out
-        unlistener1 <- unlistenize $ runListen l1 (Just mvNode) process
-        unlistener2 <- unlistenize $ runListen l2 (Just mvNode) process
-        (finalerize unlistener1 <=< finalerize unlistener2) l
+        outRef <- ioReactive $ newIORef Nothing  
+        unlistener <- unlistenize $ runListen l1 (Just mvNode) $ \a -> do
+            first <- isNothing <$> ioReactive (readIORef outRef)
+            ioReactive $ modifyIORef outRef $ \ma -> Just $ case ma of
+                Just a0 -> a0 `combine` a
+                Nothing -> a
+            when first $ schedulePriority2 (Just mvNode) $ do
+                Just out <- ioReactive $ readIORef outRef
+                ioReactive $ writeIORef outRef Nothing
+                push out
+        addCleanup unlistener l
 
 -- | Unwrap Just values, and discard event occurrences with Nothing values.
 justE :: Typeable p => Event p (Maybe a) -> Event p a
@@ -384,7 +386,7 @@ justE ema = Event gl cacheRef
         unlistener <- unlistenize $ runListen l (Just mvNode) $ \ma -> case ma of
             Just a -> push a
             Nothing -> return ()
-        finalerize unlistener l'
+        addCleanup unlistener l'
 
 -- | Only keep event occurrences for which the predicate is true.
 filterE :: Typeable p => (a -> Bool) -> Event p a -> Event p a
@@ -435,7 +437,7 @@ finalizeListen l unlisten = do
 newtype Unlistener = Unlistener (MVar (Maybe (IO ())))
 
 -- | Listen to an input event/behaviour and return an 'Unlistener' that can be
--- attached to an output event using 'finalerize'.
+-- attached to an output event using 'addCleanup'.
 unlistenize :: Reactive p (IO ()) -> Reactive p Unlistener
 unlistenize doListen = do
     unlistener@(Unlistener ref) <- newUnlistener
@@ -453,8 +455,8 @@ unlistenize doListen = do
 
 -- | Cause the things listened to with unlistenize to be unlistened when the
 -- specified listener is not referenced any more.
-finalerize :: Unlistener -> Listen p a -> Reactive p (Listen p a)
-finalerize (Unlistener ref) l = ioReactive $ finalizeListen l $ do
+addCleanup :: Unlistener -> Listen p a -> Reactive p (Listen p a)
+addCleanup (Unlistener ref) l = ioReactive $ finalizeListen l $ do
     mUnlisten <- takeMVar ref
     fromMaybe (return ()) mUnlisten
     putMVar ref Nothing
@@ -478,7 +480,7 @@ hold initA ea = do
             writeIORef bsRef bs'
     let gl = do
             l <- getListen ea
-            finalerize unlistener l
+            addCleanup unlistener l
         beh = Behaviour {
                 underlyingEvent = Event gl (evCacheRef ea),
                 sample = ioReactive $ bsCurrent <$> readIORef bsRef
@@ -488,8 +490,8 @@ hold initA ea = do
 -- | Sample the behaviour at the time of the event firing. Note that the 'current value'
 -- of the behaviour that's sampled is the value as at the start of the transaction
 -- before any state changes of the current transaction are applied through 'hold's.
-attachWith :: Typeable p => (a -> b -> c) -> Event p a -> Behaviour p b -> Event p c
-attachWith f ea bb = Event gl cacheRef
+snapshotWith :: Typeable p => (a -> b -> c) -> Event p a -> Behaviour p b -> Event p c
+snapshotWith f ea bb = Event gl cacheRef
   where
     cacheRef = unsafePerformIO $ newIORef Nothing
     gl = do
@@ -497,15 +499,11 @@ attachWith f ea bb = Event gl cacheRef
         unlistener <- unlistenize $ linkedListen ea (Just mvNode) $ \a -> do
             b <- sample bb
             push (f a b)
-        finalerize unlistener l
-
--- | Variant of attachWith defined as /attachWith (,)/ 
-attach :: Typeable p => Event p a -> Behaviour p b -> Event p (a,b)
-attach = attachWith (,)
+        addCleanup unlistener l
 
 -- | Variant of attachWith that throws away the event's value and captures the behaviour's.
-tag :: Typeable p => Event p a -> Behaviour p b -> Event p b
-tag = attachWith (flip const)
+snapshot :: Typeable p => Event p a -> Behaviour p b -> Event p b
+snapshot = snapshotWith (flip const)
 
 -- | Listen to the value of this behaviour with an initial callback giving
 -- the current value. Can get multiple values per transaction, the last of
@@ -535,7 +533,7 @@ schedulePriority2 mMvNode task = do
 -- Clean up the listener so it gives only one value per transaction, specifically
 -- the last one.                
 tidy :: (Maybe (MVar (Node p)) -> (a -> Reactive p ()) -> Reactive p (IO ()))
-      -> Maybe (MVar (Node p)) -> (a -> Reactive p ()) -> Reactive p (IO ())
+     -> Maybe (MVar (Node p)) -> (a -> Reactive p ()) -> Reactive p (IO ())
 tidy listen mMvNode handle = do
     aRef <- ioReactive $ newIORef Nothing
     listen mMvNode $ \a -> do
@@ -568,7 +566,7 @@ eventify listen = Event gl cacheRef
     gl = do
         (l, push, mvNode) <- ioReactive newEventImpl
         unlistener <- unlistenize $ listen (Just mvNode) push
-        finalerize unlistener l
+        addCleanup unlistener l
 
 -- | An event that fires once for the current value of the behaviour, and then
 -- for all changes that occur after that.
@@ -595,14 +593,14 @@ instance Typeable p => Applicative (Behaviour p) where
                 f <- ioReactive $ readIORef fRef
                 ioReactive $ writeIORef aRef a
                 push (f a)
-            (finalerize unlistener1 <=< finalerize unlistener2) l
+            (addCleanup unlistener1 <=< addCleanup unlistener2) l
         s = ($) <$> s1 <*> s2
 
 -- | Let event occurrences through only when the behaviour's value is True.
 -- Note that the behaviour's value is as it was at the start of the transaction,
 -- that is, no state changes from the current transaction are taken into account.
 gate :: Typeable p => Event p a -> Behaviour p Bool -> Event p a
-gate ea = justE . attachWith (\a b -> if b then Just a else Nothing) ea
+gate ea = justE . snapshotWith (\a b -> if b then Just a else Nothing) ea
 
 -- | Transform an event with a generalized state loop (a mealy machine). The function
 -- is passed the input and the old state and returns the new state and output value.
@@ -610,7 +608,7 @@ collectE :: Typeable p => (a -> s -> (b, s)) -> s -> Event p a -> Reactive p (Ev
 collectE f z ea = do
     rec
         s <- hold z es
-        let ebs = attachWith f ea s
+        let ebs = snapshotWith f ea s
             eb = fst <$> ebs
             es = snd <$> ebs
     return eb
@@ -624,14 +622,14 @@ collect f zs bea = do
     let (zb, zs') = f za zs
     rec
         bs <- hold (zb, zs') ebs
-        let ebs = attachWith f ea (snd <$> bs)
+        let ebs = snapshotWith f ea (snd <$> bs)
     return (fst <$> bs)
 
 -- | Accumulate on input event, outputting the new state each time.
 accumE :: Typeable p => (a -> s -> s) -> s -> Event p a -> Reactive p (Event p s) 
 accumE f z ea = do
     rec
-        let es = attachWith f ea s
+        let es = snapshotWith f ea s
         s <- hold z es
     return es
 
@@ -639,7 +637,7 @@ accumE f z ea = do
 accum :: Typeable p => (a -> s -> s) -> s -> Event p a -> Reactive p (Behaviour p s)
 accum f z ea = do
     rec
-        s <- hold z (attachWith f ea s)
+        s <- hold z (snapshotWith f ea s)
     return s
 
 -- | Count event occurrences, starting with 1 for the first occurrence.
@@ -678,7 +676,7 @@ switchE bea = Event gl cacheRef
         beaId <- collect (\ea nxtID -> ((ea, nxtID), succ nxtID)) (0 :: ID) bea
         (l, push, mvNode) <- ioReactive newEventImpl
         unlistener1 <- unlistenize $ linkedListenValue beaId (Just mvNode) $ \(ea, iD) -> do
-            let filtered = justE $ attachWith (\a activeID ->
+            let filtered = justE $ snapshotWith (\a activeID ->
                         if activeID == iD
                             then Just a
                             else Nothing
@@ -687,7 +685,7 @@ switchE bea = Event gl cacheRef
                 push a
                 ioReactive $ unlistenLessThan unlistensRef iD
             ioReactive $ modifyIORef unlistensRef (M.insert iD unlisten2)
-        finalerize unlistener1 l
+        addCleanup unlistener1 l
 
 -- | Unwrap a behaviour inside another behaviour to give a time-varying behaviour implementation.
 switch :: Typeable p => Behaviour p (Behaviour p a) -> Reactive p (Behaviour p a)
@@ -723,7 +721,7 @@ execute ev = Event gl cacheRef
         unlistener <- unlistenize $ do
             l <- getListen ev
             runListen l (Just mvNode) $ \action -> action >>= push
-        finalerize unlistener l'
+        addCleanup unlistener l'
 
 -- | Cross the specified event over to a different partition.
 crossE :: (Typeable p, Typeable q) => Event p a -> Reactive p (Event q a)

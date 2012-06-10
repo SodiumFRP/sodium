@@ -187,11 +187,11 @@ appl2 = TestCase $ do  -- variant that uses listenIO (valueEvent esum) instead o
     unlisten
     assertEqual "appl2" [0, 5, 105, 210] =<< readIORef outRef
     
-attach1 = TestCase $ do
+snapshot1 = TestCase $ do
     (ea :: Event M Char, pusha) <- newEvent
     (eb :: Event M Int, pushb) <- newEvent
     bb <- synchronously $ hold 0 eb
-    let ec = attach ea bb
+    let ec = snapshotWith (,) ea bb
     outRef <- newIORef []
     unlisten <- synchronously $ listenIO ec $ \c -> modifyIORef outRef (++ [c])
     synchronously $ pusha 'A'
@@ -200,7 +200,7 @@ attach1 = TestCase $ do
     synchronously $ pusha 'C' >> pushb 60
     synchronously $ pusha 'D'
     unlisten
-    assertEqual "attach1" [('A',0),('B',50),('C',50),('D',60)] =<< readIORef outRef
+    assertEqual "snapshot1" [('A',0),('B',50),('C',50),('D',60)] =<< readIORef outRef
 
 count1 = TestCase $ do
     (ea :: Event M (), push) <- newEvent
@@ -445,9 +445,21 @@ mergeWith3 = TestCase $ do
     unlisten
     assertEqual "mergeWith3" [2,14,32,55] =<< readIORef outRef
 
+calm1 = TestCase $ do
+    outRef <- newIORef []
+    (ea :: Event M Int, pushA) <- newEvent
+    (eb :: Event M Int, pushB) <- newEvent
+    unlisten <- synchronously $ do
+        listenIO (calm (+) (merge ea eb)) $ \o -> modifyIORef outRef (++ [o])
+    synchronously $ pushA 2
+    synchronously $ pushA 5 >> pushB 6
+    unlisten
+    assertEqual "calm1" [2, 11] =<< readIORef outRef
+
 tests = test [ event1, fmap1, merge1, justE1, filterE1, beh1, beh2, beh3, beh4, beh5, beh6,
-    appl1, appl2, attach1, count1, collect1, collect2, collectE1, collectE2, switchE1,
-    switch1, once1, once2, crossE1, cross1, cross2, cycle1, mergeWith1, mergeWith2, mergeWith3 ]
+    appl1, appl2, snapshot1, count1, collect1, collect2, collectE1, collectE2, switchE1,
+    switch1, once1, once2, crossE1, cross1, cross2, cycle1, mergeWith1, mergeWith2, mergeWith3,
+    calm1 ]
 
 main = {-forever $-} runTestTT tests
 
