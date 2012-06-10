@@ -1,0 +1,40 @@
+<project default="jar">
+
+	<target name="clean">
+		<delete dir="build" />
+	</target>
+
+	<target name="compile">
+		<mkdir dir="build/classes" />
+		<javac debug="true" srcdir="src" destdir="build/classes" />
+	</target>
+
+	<target name="jar" depends="compile">
+		<mkdir dir="build/jar" />
+		<jar destfile="build/jar/Sodium.jar" basedir="build/classes">
+			<manifest>
+				<attribute name="Main-Class" value="oata.HelloWorld" />
+			</manifest>
+		</jar>
+	</target>
+
+	<target name="run">
+		<java jar="build/jar/Sodium.jar" fork="true" />
+	</target>
+
+	<target name="tests" depends="jar">
+		<junit printsummary="yes" showoutput="yes">
+			<formatter type="plain" />
+			<classpath>
+				<pathelement location="build/classes" />
+			</classpath>
+
+			<batchtest>
+				<fileset dir="build/classes">
+					<include name="*Tester.class" />
+				</fileset>
+			</batchtest>
+		</junit>
+	</target>
+
+</project>
