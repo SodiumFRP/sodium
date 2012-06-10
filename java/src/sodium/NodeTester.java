@@ -1,3 +1,5 @@
+package sodium;
+
 import junit.framework.TestCase;
 
 public class NodeTester extends TestCase {

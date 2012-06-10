@@ -1,3 +1,4 @@
+package sodium;
 
 public class BehaviorSink<A> extends Behavior<A> {
     public BehaviorSink(A initValue) {

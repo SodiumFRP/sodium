@@ -31,7 +31,7 @@
 
 			<batchtest>
 				<fileset dir="build/classes">
-					<include name="*Tester.class" />
+					<include name="sodium/*Tester.class" />
 				</fileset>
 			</batchtest>
 		</junit>

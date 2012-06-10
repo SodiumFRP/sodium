@@ -1,3 +1,4 @@
+package sodium;
 
 public class Behavior<A> {
 	protected Event<A> event;
