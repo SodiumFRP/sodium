@@ -19,7 +19,7 @@ event1 = TestCase $ do
         push '?'
     unlisten <- synchronously $ do
         push 'h'
-        unlisten <- listenIO ev $ \letter -> modifyIORef outRef (++ [letter]) 
+        unlisten <- listen ev $ \letter -> modifyIORef outRef (++ [letter]) 
         push 'e'
         return unlisten
     synchronously $ do
@@ -36,7 +36,7 @@ fmap1 = TestCase $ do
     (ev :: Event M Char, push) <- newEvent
     outRef <- newIORef ""
     synchronously $ do
-        listenIO (toUpper `fmap` ev) $ \letter -> modifyIORef outRef (++ [letter])
+        listen (toUpper `fmap` ev) $ \letter -> modifyIORef outRef (++ [letter])
         push 'h'
         push 'e'
         push 'l'
@@ -50,7 +50,7 @@ merge1 = TestCase $ do
     (ev2, push2) <- newEvent
     let ev = merge ev1 ev2
     outRef <- newIORef []
-    unlisten <- synchronously $ listenIO ev $ \a -> modifyIORef outRef (++ [a])
+    unlisten <- synchronously $ listen ev $ \a -> modifyIORef outRef (++ [a])
     synchronously $ do
         push1 "hello"
         push2 "world"
@@ -63,7 +63,7 @@ filterJust1 = TestCase $ do
     (ema :: Event M (Maybe String), push) <- newEvent
     outRef <- newIORef []
     synchronously $ do
-        listenIO (filterJust ema) $ \a -> modifyIORef outRef (++ [a])
+        listen (filterJust ema) $ \a -> modifyIORef outRef (++ [a])
         push (Just "yes")
         push Nothing
         push (Just "no")
@@ -74,7 +74,7 @@ filterE1 = TestCase $ do
     outRef <- newIORef ""
     synchronously $ do
         let ed = filterE isDigit (ec :: Event M Char)
-        listenIO ed $ \a -> modifyIORef outRef (++ [a])
+        listen ed $ \a -> modifyIORef outRef (++ [a])
         push 'a'
         push '2'
         push 'X'
@@ -86,7 +86,7 @@ beh1 = TestCase $ do
     outRef <- newIORef []
     unlisten <- synchronously $ do
         beh <- hold "init" ea
-        listenValueIO beh $ \a -> modifyIORef outRef (++ [a])
+        listenValue beh $ \a -> modifyIORef outRef (++ [a])
     synchronously $ do
         push "next"
     unlisten
@@ -97,7 +97,7 @@ beh2 = TestCase $ do
     outRef <- newIORef []
     unlisten <- synchronously $ do
         beh <- hold "init" ea
-        listenValueIO beh $ \a -> modifyIORef outRef (++ [a])
+        listenValue beh $ \a -> modifyIORef outRef (++ [a])
     unlisten
     synchronously $ do
         push "next"
@@ -108,7 +108,7 @@ beh3 = TestCase $ do
     outRef <- newIORef []
     unlisten <- synchronously $ do
         beh <- hold "init" ea
-        listenValueIO beh $ \a -> modifyIORef outRef (++ [a])
+        listenValue beh $ \a -> modifyIORef outRef (++ [a])
     synchronously $ do
         push "first"
         push "second"
@@ -122,7 +122,7 @@ beh4 = TestCase $ do
     outRef <- newIORef []
     unlisten <- synchronously $ do
         beh <- hold "init" ea
-        unlisten <- listenValueIO beh $ \a -> modifyIORef outRef (++ [a])
+        unlisten <- listenValue beh $ \a -> modifyIORef outRef (++ [a])
         push "other"
         return unlisten
     synchronously $ do
@@ -136,7 +136,7 @@ beh5 = TestCase $ do
     outRef <- newIORef []
     unlisten <- synchronously $ do
         beh <- hold "init" ea
-        unlisten <- listenIO (valueEvent beh) $ \a -> modifyIORef outRef (++ [a])
+        unlisten <- listen (values beh) $ \a -> modifyIORef outRef (++ [a])
         push "other"
         return unlisten
     synchronously $ do
@@ -150,7 +150,7 @@ beh6 = TestCase $ do
     outRef <- newIORef []
     unlisten <- synchronously $ do
         beh <- hold "init" ea
-        unlisten <- listenIO (map toUpper <$> valueEvent beh) $ \a -> modifyIORef outRef (++ [a])
+        unlisten <- listen (map toUpper <$> values beh) $ \a -> modifyIORef outRef (++ [a])
         push "other"
         return unlisten
     synchronously $ do
@@ -166,21 +166,21 @@ appl1 = TestCase $ do
     bb <- synchronously $ hold 0 eb
     let esum = (+) <$> ba <*> bb
     outRef <- newIORef []
-    unlisten <- synchronously $ listenValueIO esum $ \sum -> modifyIORef outRef (++ [sum])
+    unlisten <- synchronously $ listenValue esum $ \sum -> modifyIORef outRef (++ [sum])
     synchronously $ pusha 5
     synchronously $ pushb 100
     synchronously $ pusha 10 >> pushb 200
     unlisten
     assertEqual "appl1" [0, 5, 105, 210] =<< readIORef outRef
 
-appl2 = TestCase $ do  -- variant that uses listenIO (valueEvent esum) instead of listenValueIO
+appl2 = TestCase $ do  -- variant that uses listen (valueEvent esum) instead of listenValue
     (ea :: Event M Int, pusha) <- newEvent
     ba <- synchronously $ hold 0 ea
     (eb, pushb) <- newEvent
     bb <- synchronously $ hold 0 eb
     let esum = (+) <$> ba <*> bb
     outRef <- newIORef []
-    unlisten <- synchronously $ listenIO (valueEvent esum) $ \sum -> modifyIORef outRef (++ [sum])
+    unlisten <- synchronously $ listen (values esum) $ \sum -> modifyIORef outRef (++ [sum])
     synchronously $ pusha 5
     synchronously $ pushb 100
     synchronously $ pusha 10 >> pushb 200
@@ -193,7 +193,7 @@ snapshot1 = TestCase $ do
     bb <- synchronously $ hold 0 eb
     let ec = snapshotWith (,) ea bb
     outRef <- newIORef []
-    unlisten <- synchronously $ listenIO ec $ \c -> modifyIORef outRef (++ [c])
+    unlisten <- synchronously $ listen ec $ \c -> modifyIORef outRef (++ [c])
     synchronously $ pusha 'A'
     synchronously $ pushb 50
     synchronously $ pusha 'B'
@@ -207,7 +207,7 @@ count1 = TestCase $ do
     outRef <- newIORef []
     unlisten <- synchronously $ do
         eCount <- countE ea
-        listenIO eCount $ \c -> modifyIORef outRef (++ [c])
+        listen eCount $ \c -> modifyIORef outRef (++ [c])
     synchronously $ push ()
     synchronously $ push ()
     synchronously $ push ()
@@ -220,7 +220,7 @@ collect1 = TestCase $ do
     unlisten <- synchronously $ do
         ba <- hold 100 ea
         sum <- collect (\a s -> (a+s, a+s)) 0 ba
-        listenValueIO sum $ \sum -> modifyIORef outRef (++ [sum])
+        listenValue sum $ \sum -> modifyIORef outRef (++ [sum])
     synchronously $ push 5
     synchronously $ push 7
     synchronously $ push 1
@@ -239,7 +239,7 @@ collect2 = TestCase $ do
         ba <- hold 100 ea
         sum <- collect (\a s -> (a + s, a + s)) 0 ba
         push 5
-        listenValueIO sum $ \sum -> modifyIORef outRef (++ [sum])
+        listenValue sum $ \sum -> modifyIORef outRef (++ [sum])
     synchronously $ push 7
     synchronously $ push 1
     unlisten
@@ -250,7 +250,7 @@ collectE1 = TestCase $ do
     outRef <- newIORef []
     unlisten <- synchronously $ do
         sum <- collectE (\a s -> (a+s, a+s)) 100 ea
-        listenIO sum $ \sum -> modifyIORef outRef (++ [sum])
+        listen sum $ \sum -> modifyIORef outRef (++ [sum])
     synchronously $ push 5
     synchronously $ push 7
     synchronously $ push 1
@@ -268,7 +268,7 @@ collectE2 = TestCase $ do
     unlisten <- synchronously $ do
         sum <- collectE (\a s -> (a + s, a + s)) 100 ea
         push 5
-        listenIO sum $ \sum -> modifyIORef outRef (++ [sum])
+        listen sum $ \sum -> modifyIORef outRef (++ [sum])
     synchronously $ push 7
     synchronously $ push 1
     unlisten
@@ -282,7 +282,7 @@ switchE1 = TestCase $ do
     unlisten <- synchronously $ do
         sw <- hold ea esw
         let eo = switchE sw
-        unlisten <- listenIO eo $ \o -> modifyIORef outRef (++ [o])
+        unlisten <- listen eo $ \o -> modifyIORef outRef (++ [o])
         pusha 'A'
         pushb 'a'
         return unlisten
@@ -307,7 +307,7 @@ switch1 = TestCase $ do
         bb <- hold 'a' eb
         bsw <- hold ba esw
         bo <- switch bsw
-        unlisten <- listenValueIO bo $ \o -> modifyIORef outRef (++ [o])
+        unlisten <- listenValue bo $ \o -> modifyIORef outRef (++ [o])
         return (ba, bb, unlisten)
     synchronously $ pusha 'B' >> pushb 'b'
     synchronously $ pushsw bb >> pusha 'C' >> pushb 'c'
@@ -327,7 +327,7 @@ once1 = TestCase $ do
     outRef <- newIORef []
     unlisten <- synchronously $ do
         oea <- once ea
-        listenIO oea $ \a -> modifyIORef outRef (++ [a])
+        listen oea $ \a -> modifyIORef outRef (++ [a])
     synchronously $ pusha 'A'
     synchronously $ pusha 'B'
     synchronously $ pusha 'C'
@@ -340,7 +340,7 @@ once2 = TestCase $ do
     unlisten <- synchronously $ do
         oea <- once ea
         pusha 'A'
-        listenIO oea $ \a -> modifyIORef outRef (++ [a])
+        listen oea $ \a -> modifyIORef outRef (++ [a])
     synchronously $ pusha 'B'
     synchronously $ pusha 'C'
     unlisten
@@ -350,7 +350,7 @@ crossE1 = TestCase $ do
     outRef <- newIORef []
     (ema :: Event M Char, push) <- newEvent
     (ena :: Event N Char) <- synchronously $ crossE ema
-    unlisten <- synchronously $ listenIO ena $ \a -> modifyIORef outRef (++ [a])
+    unlisten <- synchronously $ listen ena $ \a -> modifyIORef outRef (++ [a])
     synchronously $ push 'A'
     synchronously $ push 'M'
     synchronously $ push 'T'
@@ -365,7 +365,7 @@ cross1 = TestCase $ do
     bma <- synchronously $ hold 'A' ema
     synchronously $ push 'B'
     (bna :: Behaviour N Char) <- synchronously $ cross bma
-    unlisten <- synchronously $ listenValueIO bna $ \a -> modifyIORef outRef (++ [a])
+    unlisten <- synchronously $ listenValue bna $ \a -> modifyIORef outRef (++ [a])
     synchronously $ push 'C'
     synchronously $ push 'D'
     synchronously $ push 'E'
@@ -379,7 +379,7 @@ cross2 = TestCase $ do
     (ema :: Event M Char, push) <- newEvent
     bma <- synchronously $ hold 'A' ema
     (bna :: Behaviour N Char) <- synchronously $ cross bma
-    unlisten <- synchronously $ listenValueIO bna $ \a -> modifyIORef outRef (++ [a])
+    unlisten <- synchronously $ listenValue bna $ \a -> modifyIORef outRef (++ [a])
     synchronously $ push 'B'
     synchronously $ push 'C'
     synchronously $ push 'D'
@@ -400,7 +400,7 @@ cycle1 = TestCase $ do
             bPair <- hold initPair ePage
             let ePage = execute $ unPage <$> switchE (snd <$> bPair)
         return (fst <$> bPair)
-    unlisten <- synchronously $ listenValueIO bo $ \o -> modifyIORef outRef (++ [o])
+    unlisten <- synchronously $ listenValue bo $ \o -> modifyIORef outRef (++ [o])
     synchronously $ push (Page $ return ('b', ep))
     synchronously $ push (Page $ return ('c', ep))
     unlisten
@@ -412,7 +412,7 @@ mergeWith1 = TestCase $ do
     (eb :: Event M Int, pushB) <- newEvent
     unlisten <- synchronously $ do
         pushA 5
-        listenIO (mergeWith (+) ea eb) $ \o -> modifyIORef outRef (++ [o])
+        listen (mergeWith (+) ea eb) $ \o -> modifyIORef outRef (++ [o])
     synchronously $ pushA 2
     synchronously $ pushB 3
     synchronously $ pushA 10 >> pushB 4
@@ -426,7 +426,7 @@ mergeWith2 = TestCase $ do
     (eb :: Event M Int, pushB) <- newEvent
     unlisten <- synchronously $ do
         pushA 5
-        unlisten <- listenIO (mergeWith (+) ea eb) $ \o -> modifyIORef outRef (++ [o])
+        unlisten <- listen (mergeWith (+) ea eb) $ \o -> modifyIORef outRef (++ [o])
         pushB 99
         return unlisten
     unlisten
@@ -437,7 +437,7 @@ mergeWith3 = TestCase $ do
     (ea :: Event M Int, pushA) <- newEvent
     (eb :: Event M Int, pushB) <- newEvent
     unlisten <- synchronously $ do
-        listenIO (mergeWith (+) ea eb) $ \o -> modifyIORef outRef (++ [o])
+        listen (mergeWith (+) ea eb) $ \o -> modifyIORef outRef (++ [o])
     synchronously $ pushA 2
     synchronously $ pushB 3 >> pushB 1 >> pushA 10
     synchronously $ pushB 9 >> pushB 11 >> pushB 12
@@ -445,21 +445,21 @@ mergeWith3 = TestCase $ do
     unlisten
     assertEqual "mergeWith3" [2,14,32,55] =<< readIORef outRef
 
-calm1 = TestCase $ do
+coalesce1 = TestCase $ do
     outRef <- newIORef []
     (ea :: Event M Int, pushA) <- newEvent
     (eb :: Event M Int, pushB) <- newEvent
     unlisten <- synchronously $ do
-        listenIO (calm (+) (merge ea eb)) $ \o -> modifyIORef outRef (++ [o])
+        listen (coalesce (+) (merge ea eb)) $ \o -> modifyIORef outRef (++ [o])
     synchronously $ pushA 2
     synchronously $ pushA 5 >> pushB 6
     unlisten
-    assertEqual "calm1" [2, 11] =<< readIORef outRef
+    assertEqual "coalesce1" [2, 11] =<< readIORef outRef
 
 tests = test [ event1, fmap1, merge1, filterJust1, filterE1, beh1, beh2, beh3, beh4, beh5, beh6,
     appl1, appl2, snapshot1, count1, collect1, collect2, collectE1, collectE2, switchE1,
     switch1, once1, once2, crossE1, cross1, cross2, cycle1, mergeWith1, mergeWith2, mergeWith3,
-    calm1 ]
+    coalesce1 ]
 
 main = {-forever $-} runTestTT tests
 

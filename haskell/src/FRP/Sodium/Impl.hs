@@ -197,15 +197,15 @@ linkedListen ev mMvTarget handle = do
     l <- getListen ev
     runListen l mMvTarget handle
 
--- | Variant of 'listenIO' that allows you to initiate more activity in the current
+-- | Variant of 'listen' that allows you to initiate more activity in the current
 -- transaction. Useful for implementing new primitives.
-listen :: Event p a -> (a -> Reactive p ()) -> Reactive p (IO ())
-listen ev handle = linkedListen ev Nothing handle
+listenTrans :: Event p a -> (a -> Reactive p ()) -> Reactive p (IO ())
+listenTrans ev handle = linkedListen ev Nothing handle
 
 -- | Listen for firings of this event. The returned @IO ()@ is an IO action
 -- that unregisters the listener. This is the observer pattern.
-listenIO :: Event p a -> (a -> IO ()) -> Reactive p (IO ())
-listenIO ev handle = listen ev (ioReactive . handle)
+listen :: Event p a -> (a -> IO ()) -> Reactive p (IO ())
+listen ev handle = listenTrans ev (ioReactive . handle)
 
 data Observer p a = Observer {
         obNextID    :: ID,
@@ -352,12 +352,12 @@ merge ea eb = Event gl cacheRef
 -- The combine function should be commutative, because simultaneous events
 -- should be considered to be order-agnostic.
 mergeWith :: Typeable p => (a -> a -> a) -> Event p a -> Event p a -> Event p a
-mergeWith f ea eb = calm f $ merge ea eb
+mergeWith f ea eb = coalesce f $ merge ea eb
 
 -- | If there's more than one firing in a single transaction, combine them into
--- one using the specified function.
-calm :: Typeable p => (a -> a -> a) -> Event p a -> Event p a
-calm combine e = Event gl cacheRef
+-- one using the specified combining function.
+coalesce :: Typeable p => (a -> a -> a) -> Event p a -> Event p a
+coalesce combine e = Event gl cacheRef
   where
     cacheRef = unsafePerformIO $ newIORef Nothing
     gl = do
@@ -469,7 +469,7 @@ addCleanup (Unlistener ref) l = ioReactive $ finalizeListen l $ do
 hold :: a -> Event p a -> Reactive p (Behaviour p a)
 hold initA ea = do
     bsRef <- ioReactive $ newIORef (BehaviourState initA Nothing)
-    unlistener <- unlistenize $ listen ea $ \a -> do
+    unlistener <- unlistenize $ listenTrans ea $ \a -> do
         bs <- ioReactive $ readIORef bsRef
         ioReactive $ writeIORef bsRef $ bs { bsUpdate = Just a }
         when (isNothing (bsUpdate bs)) $ onFinal $ do
@@ -549,15 +549,15 @@ tidy listen mMvNode handle = do
 linkedListenValue :: Behaviour p a -> Maybe (MVar (Node p)) -> (a -> Reactive p ()) -> Reactive p (IO ())
 linkedListenValue ba = tidy (listenValueRaw ba)
 
--- | Variant of 'listenValueIO' that allows you to initiate more activity in the current
+-- | Variant of 'listenValue' that allows you to initiate more activity in the current
 -- transaction. Useful for implementing new primitives.
-listenValue :: Behaviour p a -> (a -> Reactive p ()) -> Reactive p (IO ())
-listenValue ba = linkedListenValue ba Nothing
+listenValueTrans :: Behaviour p a -> (a -> Reactive p ()) -> Reactive p (IO ())
+listenValueTrans ba = linkedListenValue ba Nothing
 
 -- | Listen to the value of this behaviour with a guaranteed initial callback
 -- giving the current value, followed by callbacks for any updates. 
-listenValueIO :: Behaviour p a -> (a -> IO ()) -> Reactive p (IO ())
-listenValueIO ba handle = listenValue ba (ioReactive . handle)
+listenValue :: Behaviour p a -> (a -> IO ()) -> Reactive p (IO ())
+listenValue ba handle = listenValueTrans ba (ioReactive . handle)
 
 eventify :: Typeable p => (Maybe (MVar (Node p)) -> (a -> Reactive p ()) -> Reactive p (IO ())) -> Event p a
 eventify listen = Event gl cacheRef
@@ -568,10 +568,16 @@ eventify listen = Event gl cacheRef
         unlistener <- unlistenize $ listen (Just mvNode) push
         addCleanup unlistener l
 
--- | An event that fires once for the current value of the behaviour, and then
--- for all changes that occur after that.
-valueEvent :: Typeable p => Behaviour p a -> Event p a
-valueEvent ba = eventify (linkedListenValue ba)
+-- | An event that is guaranteed to fires once when you listen to it, giving
+-- the current value of the behaviour, and thereafter behaves like 'changes',
+-- firing for each update to the behaviour's value.
+values :: Typeable p => Behaviour p a -> Event p a
+values ba = eventify (linkedListenValue ba)
+
+-- | An event that gives the updates for the behaviour. It doesn't do any equality
+-- comparison as the name might imply.
+changes :: Behaviour p a -> Event p a
+changes = underlyingEvent
 
 instance Typeable p => Applicative (Behaviour p) where
     pure = constant
@@ -681,7 +687,7 @@ switchE bea = Event gl cacheRef
                             then Just a
                             else Nothing
                     ) ea (snd <$> beaId)
-            unlisten2 <- listen filtered $ \a -> do
+            unlisten2 <- listenTrans filtered $ \a -> do
                 push a
                 ioReactive $ unlistenLessThan unlistensRef iD
             ioReactive $ modifyIORef unlistensRef (M.insert iD unlisten2)
@@ -727,7 +733,7 @@ execute ev = Event gl cacheRef
 crossE :: (Typeable p, Typeable q) => Event p a -> Reactive p (Event q a)
 crossE epa = do
     (ev, push) <- ioReactive newEvent
-    unlisten <- listenIO epa $ asynchronously . push
+    unlisten <- listen epa $ asynchronously . push
     return $ finalizeEvent ev unlisten
 
 -- | Cross the specified behaviour over to a different partition.

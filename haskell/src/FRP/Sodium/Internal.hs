@@ -1,10 +1,10 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, DoRec #-}
 {-# OPTIONS_GHC -fno-cse -fno-full-laziness #-}
 module FRP.Sodium.Internal (
-        listen,
-        listenValue,
-        Event(..),
-        Behaviour(..),
+        listenTrans,
+        listenValueTrans,
+        Event,
+        Behaviour,
         schedulePrioritized,
         scheduleLast,
         Listen(..),
