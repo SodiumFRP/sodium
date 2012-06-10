@@ -1,0 +1,51 @@
+name:                sodium
+version:             0.3.0.1
+synopsis:            Sodium Reactive Programming (FRP) System
+description:         
+  A general purpose Reactive Programming (FRP) system.
+  .
+   * Goals include simplicity and completeness, but it is currently not built for speed.
+  .
+   * Applicative style: Event implements Functor and Behaviour implements Applicative.
+  .
+   * FRP logic is tied to partitions, within which consistency is guaranteed.
+     This concept allows you to selectively relax consistency guarantees to
+     facilitate parallelism.
+  .
+   * Instead of the common approach where inputs are fed into the front of a monolithic
+     \'reactimate\', Sodium allows you to push inputs in from scattered places in IO.
+  .
+   * Integration with IO: Extensible to provide lots of scope for lifting IO into FRP
+     logic.
+  .
+   * Push-based imperative implementation.
+  .
+  See the /examples/ directory for test cases and examples.
+  .
+  Changes: 0.2.0.0 fix some value recursion deadlocks and improve docs;
+           0.3.0.0 add mergeWith, make cross asynchronous
+license:             BSD3
+license-file:        LICENSE
+author:              Stephen Blackheath
+maintainer:          http://blacksapphire.com/antispam/
+copyright:           (c) Stephen Blackheath 2012
+category:            FRP
+build-type:          Simple
+cabal-version:       >=1.8
+extra-source-files:  examples/tests.hs
+                     examples/poodle/poodle.hs
+                     examples/poodle/Engine.hs
+                     examples/poodle/Image.hs
+                     examples/poodle/poodle.png
+
+source-repository head
+  type:     git
+  location: https://github.com/the-real-blackh/sodium
+
+library
+  hs-source-dirs:      src
+  exposed-modules:     FRP.Sodium, FRP.Sodium.Internal
+  other-modules:       FRP.Sodium.Impl       
+  build-depends:       base >= 4.3.0.0 && < 4.6.0.0,
+                       containers >= 0.4.0.0 && < 0.5.0.0,
+                       mtl >= 2.0.0.0 && < 2.2.0.0
