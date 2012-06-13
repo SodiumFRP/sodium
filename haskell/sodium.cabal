@@ -45,8 +45,8 @@ source-repository head
 
 library
   hs-source-dirs:      src
-  exposed-modules:     FRP.Sodium, FRP.Sodium.Internal
-  other-modules:       FRP.Sodium.Impl       
+  exposed-modules:     FRP.Sodium, FRP.Sodium.Internal, FRP.Sodium.Context
+  other-modules:       FRP.Sodium.Plain
   build-depends:       base >= 4.3.0.0 && < 4.6.0.0,
                        containers >= 0.4.0.0 && < 0.5.0.0,
                        mtl >= 2.0.0.0 && < 2.2.0.0

@@ -3,8 +3,6 @@
 module FRP.Sodium.Internal (
         listenTrans,
         listenValueTrans,
-        Event,
-        Behaviour,
         schedulePrioritized,
         scheduleLast,
         Listen(..),
@@ -22,5 +20,5 @@ module FRP.Sodium.Internal (
         unlistenize
     ) where
 
-import FRP.Sodium.Impl
+import FRP.Sodium.Plain
 
