@@ -8,7 +8,6 @@ import FRP.Sodium
 import Control.Applicative
 import Control.Monad.Trans
 import Data.Maybe
-import Data.Typeable
 import Engine
 import System.Random
 
@@ -16,12 +15,11 @@ poodleSprite :: Point -> Sprite
 poodleSprite pt = ((pt,(120,120)), "poodle.png")
 
 -- | Active poodle logic (which could be made much more interesting).
-poodle :: Typeable p =>
-          PoodleID
+poodle :: PoodleID
        -> Point
-       -> Event p MouseEvent
-       -> Behaviour p Double
-       -> Reactive p (Behaviour p (PoodleID, Sprite))
+       -> Event MouseEvent
+       -> Behaviour Double
+       -> Reactive (Behaviour (PoodleID, Sprite))
 poodle iD pos@(x0,y0) eMouse time = do
     t0 <- sample time
     let dt = subtract t0 <$> time
@@ -32,29 +30,29 @@ poodle iD pos@(x0,y0) eMouse time = do
     return sprite
 
 -- | Peel a new item off the list each time the event fires.
-peelList :: Typeable p => Event p x -> [a] -> Reactive p (Behaviour p a)
+peelList :: Event x -> [a] -> Reactive (Behaviour a)
 peelList ev xs0 =
     hold (head xs0)
             =<< collectE (\_ (x:xs) -> (x, xs)) (tail xs0) ev
 
 -- | Generate events at random intervals.
-randomTimes :: Typeable p => StdGen -> Behaviour p Double -> Reactive p (Event p Double)
+randomTimes :: StdGen -> Behaviour Double -> Reactive (Event Double)
 randomTimes rng time = do
     -- Infinite list of random intervals from 0.25 to 1.2 seconds.
     let intervals = randomRs (0.25, 1.2) rng
     rec
         tLast <- hold 0 eAppear
         interval <- peelList eAppear intervals
-        let eTime = valueEvent time
-            eAppear = justE $ attachWith (\t (tLast, interval) ->
+        let eTime = values time
+            eAppear = filterJust $ snapshotWith (\t (tLast, interval) ->
                     if t >= tLast + interval then Just t else Nothing
                 ) eTime ((,) <$> tLast <*> interval)
     return eAppear
 
 newtype PoodleID = PoodleID Int deriving (Eq, Enum, Show)
-data Action p = Create PoodleID (Behaviour p (PoodleID, Sprite)) | Destroy PoodleID
+data Action = Create PoodleID (Behaviour (PoodleID, Sprite)) | Destroy PoodleID
 
-poodleGame :: forall p . Typeable p => StdGen -> Game p
+poodleGame :: StdGen -> Game
 poodleGame rng eMouse time = do
 
     -- Random times for appearance of new poodles
@@ -80,7 +78,7 @@ poodleGame rng eMouse time = do
 
     rec
         -- Destroy poodles that are clicked on
-        let eDestructions = justE $ attachWith (\mev poodles ->
+        let eDestructions = filterJust $ snapshotWith (\mev poodles ->
                     case mev of
                         MouseDown clickPos -> listToMaybe
                             [ Destroy iD | (iD, (rect, _)) <- poodles,

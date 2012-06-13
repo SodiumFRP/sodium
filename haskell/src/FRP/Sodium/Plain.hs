@@ -161,9 +161,9 @@ merge ea eb = Event gl cacheRef
     gl = do
         l1 <- getListen ea
         l2 <- getListen eb                                
-        (l, push, mvNode) <- ioReactive newEventImpl
-        unlistener1 <- unlistenize $ runListen l1 (Just mvNode) push
-        unlistener2 <- unlistenize $ runListen l2 (Just mvNode) push
+        (l, push, nodeRef) <- ioReactive newEventImpl
+        unlistener1 <- unlistenize $ runListen l1 (Just nodeRef) push
+        unlistener2 <- unlistenize $ runListen l2 (Just nodeRef) push
         (addCleanup unlistener1 <=< addCleanup unlistener2) l
 
 -- | Unwrap Just values, and discard event occurrences with Nothing values.
@@ -172,9 +172,9 @@ filterJust ema = Event gl cacheRef
   where
     cacheRef = unsafePerformIO $ newIORef Nothing
     gl = do
-        (l', push, mvNode) <- ioReactive newEventImpl
+        (l', push, nodeRef) <- ioReactive newEventImpl
         l <- getListen ema
-        unlistener <- unlistenize $ runListen l (Just mvNode) $ \ma -> case ma of
+        unlistener <- unlistenize $ runListen l (Just nodeRef) $ \ma -> case ma of
             Just a -> push a
             Nothing -> return ()
         addCleanup unlistener l'
@@ -224,8 +224,8 @@ snapshotWith f ea bb = Event gl cacheRef
   where
     cacheRef = unsafePerformIO $ newIORef Nothing
     gl = do
-        (l, push, mvNode) <- ioReactive newEventImpl
-        unlistener <- unlistenize $ linkedListen ea (Just mvNode) $ \a -> do
+        (l, push, nodeRef) <- ioReactive newEventImpl
+        unlistener <- unlistenize $ linkedListen ea (Just nodeRef) $ \a -> do
             b <- sample bb
             push (f a b)
         addCleanup unlistener l
@@ -239,8 +239,8 @@ switchE bea = Event gl cacheRef
     gl = do
         -- assign ID numbers to the incoming events
         beaId <- R.collect (\ea nxtID -> ((ea, nxtID), succ nxtID)) (0 :: ID) bea
-        (l, push, mvNode) <- ioReactive newEventImpl
-        unlistener1 <- unlistenize $ linkedListenValue beaId (Just mvNode) $ \(ea, iD) -> do
+        (l, push, nodeRef) <- ioReactive newEventImpl
+        unlistener1 <- unlistenize $ linkedListenValue beaId (Just nodeRef) $ \(ea, iD) -> do
             let filtered = filterJust $ snapshotWith (\a activeID ->
                         if activeID == iD
                             then Just a
@@ -257,14 +257,14 @@ switch        :: Behavior (Behavior a) -> Reactive (Behavior a)
 switch bba = do
     ba <- sample bba
     za <- sample ba
-    (ev, push, mvNode) <- ioReactive newEventLinked
+    (ev, push, nodeRef) <- ioReactive newEventLinked
     activeIDRef <- ioReactive $ newIORef (0 :: ID)
     unlistensRef <- ioReactive $ newIORef M.empty
-    unlisten1 <- listenValueRaw bba (Just mvNode) $ \ba -> do
+    unlisten1 <- listenValueRaw bba (Just nodeRef) $ \ba -> do
         iD <- ioReactive $ do
             modifyIORef activeIDRef succ
             readIORef activeIDRef
-        unlisten2 <- listenValueRaw ba (Just mvNode) $ \a -> do
+        unlisten2 <- listenValueRaw ba (Just nodeRef) $ \a -> do
             activeID <- ioReactive $ readIORef activeIDRef
             when (activeID == iD) $ do
                 push a
@@ -278,10 +278,10 @@ execute ev = Event gl cacheRef
   where
     cacheRef = unsafePerformIO $ newIORef Nothing
     gl = do
-        (l', push, mvNode) <- ioReactive newEventImpl
+        (l', push, nodeRef) <- ioReactive newEventImpl
         unlistener <- unlistenize $ do
             l <- getListen ev
-            runListen l (Just mvNode) $ \action -> action >>= push
+            runListen l (Just nodeRef) $ \action -> action >>= push
         addCleanup unlistener l'
 
 -- | Obtain the current value of a behaviour.
@@ -296,14 +296,14 @@ coalesce combine e = Event gl cacheRef
     cacheRef = unsafePerformIO $ newIORef Nothing
     gl = do
         l1 <- getListen e
-        (l, push, mvNode) <- ioReactive newEventImpl
+        (l, push, nodeRef) <- ioReactive newEventImpl
         outRef <- ioReactive $ newIORef Nothing  
-        unlistener <- unlistenize $ runListen l1 (Just mvNode) $ \a -> do
+        unlistener <- unlistenize $ runListen l1 (Just nodeRef) $ \a -> do
             first <- isNothing <$> ioReactive (readIORef outRef)
             ioReactive $ modifyIORef outRef $ \ma -> Just $ case ma of
                 Just a0 -> a0 `combine` a
                 Nothing -> a
-            when first $ scheduleLast (Just mvNode) $ do
+            when first $ scheduleLast (Just nodeRef) $ do
                 Just out <- ioReactive $ readIORef outRef
                 ioReactive $ writeIORef outRef Nothing
                 push out
@@ -417,9 +417,9 @@ schedulePrioritized task = Reactive $ modify $ \as -> as { asQueue1 = asQueue1 a
 onFinal :: IO () -> Reactive ()
 onFinal task = Reactive $ modify $ \as -> as { asFinal = asFinal as >> task }
 
-data Listen a = Listen { runListen_ :: Maybe (MVar (Node)) -> (a -> Reactive ()) -> Reactive (IO ()) }
+data Listen a = Listen { runListen_ :: Maybe (IORef Node) -> (a -> Reactive ()) -> Reactive (IO ()) }
 
-runListen :: Listen a -> Maybe (MVar (Node)) -> (a -> Reactive ()) -> Reactive (IO ())
+runListen :: Listen a -> Maybe (IORef Node) -> (a -> Reactive ()) -> Reactive (IO ())
 {-# NOINLINE runListen #-}
 runListen l mv handle = do
     o <- runListen_ l mv handle
@@ -439,7 +439,7 @@ getListen (Event getLRaw cacheRef) = do
 
 -- | Listen for firings of this event. The returned @IO ()@ is an IO action
 -- that unregisters the listener. This is the observer pattern.
-linkedListen :: Event a -> Maybe (MVar (Node)) -> (a -> Reactive ()) -> Reactive (IO ())
+linkedListen :: Event a -> Maybe (IORef Node) -> (a -> Reactive ()) -> Reactive (IO ())
 linkedListen ev mMvTarget handle = do
     l <- getListen ev
     runListen l mMvTarget handle
@@ -458,16 +458,16 @@ data Observer p a = Observer {
 data Node = Node {
         noID        :: NodeID,
         noRank      :: Int64,
-        noListeners :: Map ID (MVar (Node))
+        noListeners :: Map ID (IORef Node)
     }
 
-newNode :: IO (MVar (Node))
+newNode :: IO (IORef Node)
 newNode = do
     nodeID <- readIORef (paNextNodeID partition)
     modifyIORef (paNextNodeID partition) succ
-    newMVar (Node nodeID 0 M.empty)
+    newIORef (Node nodeID 0 M.empty)
 
-wrap :: (Maybe (MVar (Node)) -> (a -> Reactive ()) -> Reactive (IO ())) -> IO (Listen a)
+wrap :: (Maybe (IORef Node) -> (a -> Reactive ()) -> Reactive (IO ())) -> IO (Listen a)
 {-# NOINLINE wrap #-}
 wrap l = return (Listen l)
 
@@ -475,35 +475,35 @@ touch :: Listen a -> IO ()
 {-# NOINLINE touch #-}
 touch l = evaluate l >> return ()
 
-linkNode :: MVar (Node) -> ID -> MVar (Node) -> IO ()
-linkNode mvNode iD mvTarget = do
-    no <- readMVar mvNode
+linkNode :: IORef Node -> ID -> IORef Node -> IO ()
+linkNode nodeRef iD mvTarget = do
+    no <- readIORef nodeRef
     ensureBiggerThan S.empty mvTarget (noRank no)
-    modifyMVar_ mvNode $ \no -> return $
+    modifyIORef nodeRef $ \no ->
         no { noListeners = M.insert iD mvTarget (noListeners no) }
 
-ensureBiggerThan :: Set NodeID -> MVar (Node) -> Int64 -> IO ()
-ensureBiggerThan visited mvNode limit = do
-    no <- readMVar mvNode
+ensureBiggerThan :: Set NodeID -> IORef Node -> Int64 -> IO ()
+ensureBiggerThan visited nodeRef limit = do
+    no <- readIORef nodeRef
     if noRank no > limit || noID no `S.member` visited then
             return ()
         else do
             let newSerial = succ limit
             --putStrLn $ show (noRank no) ++ " -> " ++ show newSerial
-            modifyMVar_ mvNode $ \no -> return $ no { noRank = newSerial }
+            modifyIORef nodeRef $ \no -> no { noRank = newSerial }
             forM_ (M.elems . noListeners $ no) $ \mvTarget -> do
                 ensureBiggerThan (S.insert (noID no) visited) mvTarget newSerial
 
-unlinkNode :: MVar (Node) -> ID -> IO ()
-unlinkNode mvNode iD = do
-    modifyMVar_ mvNode $ \no -> return $
+unlinkNode :: IORef Node -> ID -> IO ()
+unlinkNode nodeRef iD = do
+    modifyIORef nodeRef $ \no ->
         no { noListeners = M.delete iD (noListeners no) }
 
 -- | Returns a 'Listen' for registering listeners, and a push action for pushing
 -- a value into the event.
-newEventImpl :: forall p a . IO (Listen a, a -> Reactive (), MVar (Node))
+newEventImpl :: forall p a . IO (Listen a, a -> Reactive (), IORef Node)
 newEventImpl = do
-    mvNode <- newNode
+    nodeRef <- newNode
     mvObs <- newMVar (Observer 0 M.empty [])
     cacheRef <- newIORef Nothing
     rec
@@ -517,11 +517,11 @@ newEventImpl = do
                             modifyMVar_ mvObs $ \ob -> return $ ob {
                                     obListeners = M.delete iD (obListeners ob)
                                 }
-                            unlinkNode mvNode iD
+                            unlinkNode nodeRef iD
                             return ()
                     in (ob', (reverse . obFirings $ ob, unlisten, iD))
                 case mMvTarget of
-                    Just mvTarget -> ioReactive $ linkNode mvNode iD mvTarget
+                    Just mvTarget -> ioReactive $ linkNode nodeRef iD mvTarget
                     Nothing       -> return ()
                 mapM_ handle firings
                 return unlisten
@@ -534,27 +534,27 @@ newEventImpl = do
                 modifyMVar_ mvObs $ \ob -> return $ ob { obFirings = [] }
             let seqa = seq a a
             mapM_ ($ seqa) (M.elems . obListeners $ ob)
-    return (listen, push, mvNode)
+    return (listen, push, nodeRef)
 
 -- | Returns an event, and a push action for pushing a value into the event.
-newEventLinked :: IO (Event a, a -> Reactive (), MVar (Node))
+newEventLinked :: IO (Event a, a -> Reactive (), IORef Node)
 newEventLinked = do
-    (listen, push, mvNode) <- newEventImpl
+    (listen, push, nodeRef) <- newEventImpl
     cacheRef <- newIORef Nothing
     let ev = Event {
                 getListenRaw = return listen,
                 evCacheRef = cacheRef
             }
-    return (ev, push, mvNode)
+    return (ev, push, nodeRef)
 
 instance Functor (R.Event Plain) where
     f `fmap` Event getListen cacheRef = Event getListen' cacheRef
       where
         cacheRef = unsafePerformIO $ newIORef Nothing
         getListen' = do
-            return $ Listen $ \mMvNode handle -> do
+            return $ Listen $ \mNodeRef handle -> do
                 l <- getListen
-                runListen l mMvNode (handle . f)
+                runListen l mNodeRef (handle . f)
 
 instance Functor (R.Behavior Plain) where
     f `fmap` Behavior underlyingEvent sample =
@@ -618,19 +618,19 @@ addCleanup (Unlistener ref) l = ioReactive $ finalizeListen l $ do
 -- the current value. Can get multiple values per transaction, the last of
 -- which is considered valid. You would normally want to use 'listenValue',
 -- which removes the extra unwanted values.
-listenValueRaw :: Behavior a -> Maybe (MVar (Node)) -> (a -> Reactive ()) -> Reactive (IO ())
-listenValueRaw ba mMvNode handle = do
+listenValueRaw :: Behavior a -> Maybe (IORef Node) -> (a -> Reactive ()) -> Reactive (IO ())
+listenValueRaw ba mNodeRef handle = do
     a <- sample ba
     handle a
-    linkedListen (underlyingEvent ba) mMvNode handle
+    linkedListen (underlyingEvent ba) mNodeRef handle
 
 -- | Queue the specified atomic to run at the end of the priority 2 queue
-scheduleLast :: Maybe (MVar (Node))
+scheduleLast :: Maybe (IORef Node)
                   -> Reactive ()
                   -> Reactive ()
-scheduleLast mMvNode task = do
-    mNode <- case mMvNode of
-        Just mvNode -> Just <$> ioReactive (readMVar mvNode)
+scheduleLast mNodeRef task = do
+    mNode <- case mNodeRef of
+        Just nodeRef -> Just <$> ioReactive (readIORef nodeRef)
         Nothing -> pure Nothing
     let priority = maybe maxBound noRank mNode
     Reactive $ modify $ \as -> as {
@@ -641,21 +641,21 @@ scheduleLast mMvNode task = do
 
 -- Clean up the listener so it gives only one value per transaction, specifically
 -- the last one.                
-tidy :: (Maybe (MVar (Node)) -> (a -> Reactive ()) -> Reactive (IO ()))
-     -> Maybe (MVar (Node)) -> (a -> Reactive ()) -> Reactive (IO ())
-tidy listen mMvNode handle = do
+tidy :: (Maybe (IORef Node) -> (a -> Reactive ()) -> Reactive (IO ()))
+     -> Maybe (IORef Node) -> (a -> Reactive ()) -> Reactive (IO ())
+tidy listen mNodeRef handle = do
     aRef <- ioReactive $ newIORef Nothing
-    listen mMvNode $ \a -> do
+    listen mNodeRef $ \a -> do
         ma <- ioReactive $ readIORef aRef
         ioReactive $ writeIORef aRef (Just a)
-        when (isNothing ma) $ scheduleLast mMvNode $ do
+        when (isNothing ma) $ scheduleLast mNodeRef $ do
             Just a <- ioReactive $ readIORef aRef
             ioReactive $ writeIORef aRef Nothing
             handle a
 
 -- | Listen to the value of this behaviour with a guaranteed initial callback
 -- giving the current value, followed by callbacks for any updates. 
-linkedListenValue :: Behavior a -> Maybe (MVar (Node)) -> (a -> Reactive ()) -> Reactive (IO ())
+linkedListenValue :: Behavior a -> Maybe (IORef Node) -> (a -> Reactive ()) -> Reactive (IO ())
 linkedListenValue ba = tidy (listenValueRaw ba)
 
 -- | Variant of 'listenValue' that allows you to initiate more activity in the current
@@ -663,13 +663,13 @@ linkedListenValue ba = tidy (listenValueRaw ba)
 listenValueTrans :: Behavior a -> (a -> Reactive ()) -> Reactive (IO ())
 listenValueTrans ba = linkedListenValue ba Nothing
 
-eventify :: (Maybe (MVar (Node)) -> (a -> Reactive ()) -> Reactive (IO ())) -> Event a
+eventify :: (Maybe (IORef Node) -> (a -> Reactive ()) -> Reactive (IO ())) -> Event a
 eventify listen = Event gl cacheRef
   where
     cacheRef = unsafePerformIO $ newIORef Nothing
     gl = do
-        (l, push, mvNode) <- ioReactive newEventImpl
-        unlistener <- unlistenize $ listen (Just mvNode) push
+        (l, push, nodeRef) <- ioReactive newEventImpl
+        unlistener <- unlistenize $ listen (Just nodeRef) push
         addCleanup unlistener l
 
 instance Applicative (R.Behavior Plain) where
@@ -683,12 +683,12 @@ instance Applicative (R.Behavior Plain) where
             aRef <- ioReactive . newIORef =<< s2
             l1 <- getListen u1
             l2 <- getListen u2
-            (l, push, mvNode) <- ioReactive newEventImpl
-            unlistener1 <- unlistenize $ runListen l1 (Just mvNode) $ \f -> do
+            (l, push, nodeRef) <- ioReactive newEventImpl
+            unlistener1 <- unlistenize $ runListen l1 (Just nodeRef) $ \f -> do
                 ioReactive $ writeIORef fRef f
                 a <- ioReactive $ readIORef aRef
                 push (f a)
-            unlistener2 <- unlistenize $ runListen l2 (Just mvNode) $ \a -> do
+            unlistener2 <- unlistenize $ runListen l2 (Just nodeRef) $ \a -> do
                 f <- ioReactive $ readIORef fRef
                 ioReactive $ writeIORef aRef a
                 push (f a)

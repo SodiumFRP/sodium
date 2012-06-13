@@ -2,15 +2,13 @@ name:                sodium
 version:             0.4.0.0
 synopsis:            Sodium Reactive Programming (FRP) System
 description:         
-  A general purpose Reactive Programming (FRP) system.
+  A general purpose Reactive Programming (FRP) system. This is part of a project to
+  implement reactive libraries with similar interfaces across a range of programming
+  languages.
   .
-   * Goals include simplicity and completeness, but it is currently not built for speed.
+   * Goals include simplicity and completeness.
   .
    * Applicative style: Event implements Functor and Behaviour implements Applicative.
-  .
-   * FRP logic is tied to partitions, within which consistency is guaranteed.
-     This concept allows you to selectively relax consistency guarantees to
-     facilitate parallelism.
   .
    * Instead of the common approach where inputs are fed into the front of a monolithic
      \'reactimate\', Sodium allows you to push inputs in from scattered places in IO.
@@ -24,7 +22,7 @@ description:
   .
   Changes: 0.2.0.0 fix some value recursion deadlocks and improve docs;
            0.3.0.0 add mergeWith, make cross asynchronous;
-           0.4.0.0 API revamp to get into sync with Java version
+           0.4.0.0 API revamp to remove an excess type variable. Parallelism stuff to be rethought.
 license:             BSD3
 license-file:        LICENSE
 author:              Stephen Blackheath
@@ -41,7 +39,7 @@ extra-source-files:  examples/tests.hs
 
 source-repository head
   type:     git
-  location: https://github.com/the-real-blackh/sodium
+  location: https://github.com/kentuckyfriedtakahe/sodium
 
 library
   hs-source-dirs:      src
