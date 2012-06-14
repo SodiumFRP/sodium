@@ -44,7 +44,8 @@ public class Behavior<A> {
     			action.run(trans, value);  // Start with the initial value.
     		    return changes().listen(target, trans, action);
     		}
-    	}.coalesce((A first, A second) -> second);
+    	}.lastFiringOnly();  // Needed in case of an initial value and an update
+    	                     // in the same transaction.
     }
 
 	public final <B> Behavior<B> map(Lambda1<A,B> f)
@@ -106,6 +107,12 @@ public class Behavior<A> {
                     private Listener currentListener;
                     @Override
                     public void run(Transaction trans2, Behavior<A> ba) {
+                        // Note: If any switch takes place during a transaction, then the
+                        // values().listen will always cause a sample to be fetched from the
+                        // one we just switched to. The caller will be fetching our output
+                        // using values().listen, and values() throws away all firings except
+                        // for the last one. Therefore, anything from the old input behaviour
+                        // that might have happened during this transaction will be suppressed.
                         if (currentListener != null)
                             currentListener.unlisten();
                         currentListener = ba.values().listen(out.node, trans2, (Transaction trans3, A a) -> {
@@ -123,7 +130,7 @@ public class Behavior<A> {
                 return super.listen(target, trans1, action).addCleanup(l1);
             }
         };
-        return out0.hold(za);
+        return out0.lastFiringOnly().hold(za);
 	}
 
 	@Override

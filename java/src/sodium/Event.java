@@ -29,7 +29,7 @@ public class Event<A> {
 		}
 	}
 
-	protected final List<TransactionHandler<A>> listeners = new ArrayList<TransactionHandler<A>>();
+	protected final ArrayList<TransactionHandler<A>> listeners = new ArrayList<TransactionHandler<A>>();
 	protected final List<Listener> finalizers = new ArrayList<Listener>();
 	Node node = new Node(0L);
 	protected final List<A> firings = new ArrayList<A>();
@@ -68,7 +68,7 @@ public class Event<A> {
 	}
 
 	public final Behavior<A> hold(A initValue) {
-		return new Behavior<A>(this, initValue);
+		return new Behavior<A>(lastFiringOnly(), initValue);
 	}
 
 	public final <B> Event<B> snapshot(Behavior<B> beh)
@@ -134,6 +134,14 @@ public class Event<A> {
                 return super.listen(target, trans, action).addCleanup(l);
             }
         };
+    }
+
+    /**
+     * Clean up the output by discarding any firing other than the last one. 
+     */
+    Event<A> lastFiringOnly()
+    {
+        return coalesce((A first, A second) -> second);
     }
 
     public static <A> Event<A> mergeWith(Lambda2<A,A,A> f, Event<A> ea, Event<A> eb)

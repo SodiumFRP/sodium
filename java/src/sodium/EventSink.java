@@ -1,5 +1,7 @@
 package sodium;
 
+import java.util.List;
+
 public class EventSink<A> extends Event<A> {
     public EventSink() {}
 	public void send(A a) {
@@ -10,6 +12,7 @@ public class EventSink<A> extends Event<A> {
             trans.last(() -> { firings.clear(); });
         firings.add(a);
         
+        List<TransactionHandler<A>> listeners = (List<TransactionHandler<A>>)this.listeners.clone();
     	for (TransactionHandler<A> action : listeners) {
     		try {
                 action.run(trans, a);
