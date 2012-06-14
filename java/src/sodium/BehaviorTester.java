@@ -131,7 +131,7 @@ public class BehaviorTester extends TestCase {
 		l.unlisten();
 		assertEquals(Arrays.asList("3 5", "6 10"), out);
 	}
-	
+
 	public void testHoldIsDelayed() {
 	    EventSink<Integer> e = new EventSink<Integer>();
 	    Behavior<Integer> h = e.hold(0);
@@ -143,4 +143,43 @@ public class BehaviorTester extends TestCase {
 		l.unlisten();
 		assertEquals(Arrays.asList("2 0", "3 2"), out);
 	}
+
+	static class SB
+	{
+	    SB(Character a, Character b, Behavior<Character> sw)
+	    {
+	        this.a = a;
+	        this.b = b;
+	        this.sw = sw;
+	    }
+	    Character a;
+	    Character b;
+	    Behavior<Character> sw;
+	}
+
+	public void testSwitchB()
+	{
+	    EventSink<SB> esb = new EventSink();
+	    // Split each field out of SB so we can update multiple behaviours in a
+	    // single transaction.
+	    Behavior<Character> ba = esb.map((SB s) -> s.a).filterNotNull().hold('A');
+	    Behavior<Character> bb = esb.map((SB s) -> s.b).filterNotNull().hold('a');
+	    Behavior<Behavior<Character>> bsw = esb.map((SB s) -> s.sw).filterNotNull().hold(ba);
+	    Behavior<Character> bo = Behavior.switchB(bsw);
+		List<Character> out = new ArrayList<Character>();
+	    Listener l = bo.values().listen((Character c) -> { out.add(c); });
+	    esb.send(new SB('B','b',null));
+	    esb.send(new SB('C','c',bb));
+	    esb.send(new SB('D','d',null));
+	    esb.send(new SB('E','e',ba));
+	    esb.send(new SB('F','f',null));
+	    esb.send(new SB(null,null,bb));
+	    esb.send(new SB(null,null,ba));
+	    esb.send(new SB('G','g',bb));
+	    esb.send(new SB('H','h',ba));
+	    esb.send(new SB('I','i',ba));
+	    l.unlisten();
+	    assertEquals(Arrays.asList('A','B','c','d','E','F','f','F','g','H','I'), out);
+	}
 }
+

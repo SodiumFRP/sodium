@@ -75,5 +75,29 @@ public class EventTester extends TestCase {
         l.unlisten();
         assertEquals(Arrays.asList(202, 808, 40), out);
     }
+    
+    public void testFilter()
+    {
+        EventSink<Character> e = new EventSink();
+        List<Character> out = new ArrayList();
+        Listener l = e.filter((Character c) -> Character.isUpperCase(c)).listen((Character c) -> { out.add(c); });
+        e.send('H');
+        e.send('o');
+        e.send('I');
+        l.unlisten();
+        assertEquals(Arrays.asList('H','I'), out);
+    }
+
+    public void testFilterNotNull()
+    {
+        EventSink<String> e = new EventSink();
+        List<String> out = new ArrayList();
+        Listener l = e.filterNotNull().listen((String s) -> { out.add(s); });
+        e.send("tomato");
+        e.send(null);
+        e.send("peach");
+        l.unlisten();
+        assertEquals(Arrays.asList("tomato","peach"), out);
+    }
 }
 

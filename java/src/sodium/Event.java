@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Event<A> {
-	private static final class ListenerImplementation<A> implements Listener {
+	private static final class ListenerImplementation<A> extends Listener {
 		/**
 		 * It's essential that we keep the listener alive while the caller holds
 		 * the Listener, so that the finalizer doesn't get triggered.
@@ -32,36 +32,39 @@ public class Event<A> {
 	protected final List<TransactionHandler<A>> listeners = new ArrayList<TransactionHandler<A>>();
 	protected final List<Listener> finalizers = new ArrayList<Listener>();
 	Node node = new Node(0L);
+	protected final List<A> firings = new ArrayList<A>();
 
 	public Event() {
 	}
 
 	public final Listener listen(final Handler<A> action) {
-		return listen(Node.NULL, (Transaction trans, A a) -> { action.run(a); });
-	}
-
-	final Listener listen(Node target, TransactionHandler<A> action) {
-		return Transaction.evaluate((Transaction trans) -> listen(target, trans, action));
+		return Transaction.evaluate((Transaction trans1) ->
+		    listen(Node.NULL, trans1, (Transaction trans2, A a) -> { action.run(a); }));
 	}
 
 	Listener listen(Node target, Transaction trans, TransactionHandler<A> action) {
-		node.linkTo(target);
+		if (node.linkTo(target))
+		    trans.toRegen = true;
 		listeners.add(action);
+		// Anything sent already in this transaction must be sent now so that
+		// there's no order dependency between send and listen.
+		for (A a : firings)
+		    action.run(trans, a);
 		return new ListenerImplementation<A>(this, action, target);
 	}
 
-	public final <B> Event<B> map(Lambda1<A,B> f)
+	public final <B> Event<B> map(final Lambda1<A,B> f)
 	{
-		EventSink<B> out = new EventSink();
-		Listener l = listen(out.node, (Transaction trans, A a) -> {
-			out.send(trans, f.evaluate(a));
-		});
-		return out.addCleanup(l);
-	}
-
-	protected final Event<A> addCleanup(Listener l) {
-		finalizers.add(l);
-		return this;
+	    final Event<A> ev = this;
+		return new EventSink<B>() {
+            Listener listen(Node target, Transaction trans1, TransactionHandler<B> action) {
+                final EventSink<B> out = this;
+                Listener l = ev.listen(out.node, trans1, (Transaction trans2, A a) -> {
+                    out.send(trans2, f.evaluate(a));
+                });
+                return super.listen(target, trans1, action).addCleanup(l);
+            }
+        };
 	}
 
 	public final Behavior<A> hold(A initValue) {
@@ -73,52 +76,64 @@ public class Event<A> {
 	    return snapshot(beh, (A a, B b) -> b);
 	}
 
-	public final <B,C> Event<C> snapshot(Behavior<B> b, Lambda2<A,B,C> f)
+	public final <B,C> Event<C> snapshot(final Behavior<B> b, final Lambda2<A,B,C> f)
 	{
-		EventSink<C> out = new EventSink();
-		Listener l = listen(out.node, (Transaction trans, A a) -> {
-			out.send(trans, f.evaluate(a, b.value));
-		});
-	    return out.addCleanup(l);
+	    final Event<A> ev = this;
+		return new EventSink<C>() {
+		    Listener listen(Node target, Transaction trans1, TransactionHandler<C> action) {
+		        final EventSink<C> out = this;
+                Listener l = ev.listen(out.node, trans1, (Transaction trans2, A a) -> {
+                    out.send(trans2, f.evaluate(a, b.value));
+                });
+                return super.listen(target, trans1, action).addCleanup(l);
+            }
+        };
 	}
 
-	public static <A> Event<A> merge(Event<A> ea, Event<A> bb)
+	public static <A> Event<A> merge(final Event<A> ea, final Event<A> bb)
 	{
-	    EventSink<A> out = new EventSink<A>();
-	    TransactionHandler<A> h = (Transaction trans, A a) -> {
-            out.send(trans, a);
-	    };
-	    Listener l1 = ea.listen(out.node, h);
-	    Listener l2 = bb.listen(out.node, h);
-	    return out.addCleanup(l1).addCleanup(l2);
+	    return new EventSink<A>() {
+	        Listener listen(Node target, Transaction trans1, TransactionHandler<A> action) {
+		        final EventSink<A> out = this;
+                TransactionHandler<A> h = (Transaction trans, A a) -> {
+                    out.send(trans, a);
+                };
+                Listener l1 = ea.listen(out.node, trans1, h);
+                Listener l2 = bb.listen(out.node, trans1, h);
+                return super.listen(target, trans1, action).addCleanup(l1).addCleanup(l2);
+            }
+        };
 	}
 
 	public final Event<A> coalesce(final Lambda2<A,A,A> f)
 	{
-	    final EventSink<A> out = new EventSink<A>();
+	    final Event<A> ev = this;
+	    return new EventSink<A>() {
+            Listener listen(Node target, Transaction trans, TransactionHandler<A> action) {
+                final EventSink<A> out = this;
+                TransactionHandler<A> h = new TransactionHandler<A>() {
+                    private boolean accumValid = false;
+                    private A accum;
+                    @Override
+                    public void run(Transaction trans1, A a) {
+                        if (accumValid)
+                            accum = f.evaluate(accum, a);
+                        else {
+                            trans1.prioritized(out.node, (Transaction trans2) -> {
+                                out.send(trans2, this.accum);
+                                this.accumValid = false;
+                                this.accum = null;
+                            });
+                            accum = a;
+                            accumValid = true;
+                        }
+                    }
+                };
 
-		TransactionHandler<A> h = new TransactionHandler<A>() {
-		    boolean accumValid;
-			A accum;
-			@Override
-			public void run(Transaction trans1, A a) {
-			    boolean first = !accumValid;
-			    if (accumValid)
-			        accum = f.evaluate(accum, a);
-			    else {
-                    trans1.prioritized(out.node, (Transaction trans2) -> {
-                       out.send(trans2, this.accum);
-                       this.accumValid = false;
-                       this.accum = null;
-                    });
-			        accum = a;
-			        accumValid = true;
-			    }
-			}
-		};
-
-		Listener l = listen(out.node, h);
-		return out.addCleanup(l);
+                Listener l = ev.listen(out.node, trans, h);
+                return super.listen(target, trans, action).addCleanup(l);
+            }
+        };
     }
 
     public static <A> Event<A> mergeWith(Lambda2<A,A,A> f, Event<A> ea, Event<A> eb)
@@ -126,9 +141,32 @@ public class Event<A> {
         return merge(ea, eb).coalesce(f);
     }
 
-	@Override
-	protected void finalize() throws Throwable {
-		for (Listener l : finalizers)
-			l.unlisten();
-	}
+    public Event<A> filter(final Lambda1<A,Boolean> f)
+    {
+        final Event<A> ev = this;
+        return new EventSink<A>() {
+            Listener listen(Node target, Transaction trans1, TransactionHandler<A> action) {
+                final EventSink<A> out = this;
+                Listener l = ev.listen(out.node, trans1, (Transaction trans2, A a) -> {
+                    if (f.evaluate(a)) out.send(trans2, a);
+                });
+                return super.listen(target, trans1, action).addCleanup(l);
+            }
+        };
+    }
+
+    public Event<A> filterNotNull()
+    {
+        final Event<A> ev = this;
+        return new EventSink<A>() {
+            Listener listen(Node target, Transaction trans1, TransactionHandler<A> action) {
+                final EventSink<A> out = this;
+                Listener l = ev.listen(out.node, trans1, (Transaction trans2, A a) -> {
+                    if (a != null) out.send(trans2, a);
+                });
+                return super.listen(target, trans1, action).addCleanup(l);
+            }
+        };
+    }
 }
+

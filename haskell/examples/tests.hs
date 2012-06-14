@@ -276,17 +276,14 @@ switchE1 = TestCase $ do
     assertEqual "switchE1" "ABCdeFGhI" =<< readIORef outRef
 
 switch1 = TestCase $ do
-    (ea, pusha) <- sync newEvent
-    (eb, pushb) <- sync newEvent
-    (esw, pushsw) <- sync newEvent
     outRef <- newIORef []
-    (ba, bb, unlisten) <- sync $ do
-        ba <- hold 'A' ea
-        bb <- hold 'a' eb
-        bsw <- hold ba esw
+    (ba, bb, pusha, pushb, pushsw, unlisten) <- sync $ do
+        (ba, pusha) <- newBehavior 'A'
+        (bb, pushb) <- newBehavior 'a'
+        (bsw, pushsw) <- newBehavior ba
         bo <- switch bsw
         unlisten <- listenValue bo $ \o -> modifyIORef outRef (++ [o])
-        return (ba, bb, unlisten)
+        return (ba, bb, pusha, pushb, pushsw, unlisten)
     sync $ pusha 'B' >> pushb 'b'
     sync $ pushsw bb >> pusha 'C' >> pushb 'c'
     sync $ pusha 'D' >> pushb 'd'
