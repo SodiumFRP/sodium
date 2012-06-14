@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Event<A> {
-	private static final class ListenerImplementation<A> extends Listener {
+	private static final class ListenerImplementation<A> implements Listener {
 		/**
 		 * It's essential that we keep the listener alive while the caller holds
 		 * the Listener, so that the finalizer doesn't get triggered.
@@ -38,8 +38,12 @@ public class Event<A> {
 	}
 
 	public final Listener listen(final Handler<A> action) {
+		return listen_(Node.NULL, (Transaction trans2, A a) -> { action.run(a); });
+	}
+
+	Listener listen_(Node target, TransactionHandler<A> action) {
 		return Transaction.evaluate((Transaction trans1) ->
-		    listen(Node.NULL, trans1, (Transaction trans2, A a) -> { action.run(a); }));
+		    listen(Node.NULL, trans1, action));
 	}
 
 	Listener listen(Node target, Transaction trans, TransactionHandler<A> action) {
@@ -55,20 +59,15 @@ public class Event<A> {
 
 	public final <B> Event<B> map(final Lambda1<A,B> f)
 	{
-	    final Event<A> ev = this;
-		return new EventSink<B>() {
-            Listener listen(Node target, Transaction trans1, TransactionHandler<B> action) {
-                final EventSink<B> out = this;
-                Listener l = ev.listen(out.node, trans1, (Transaction trans2, A a) -> {
-                    out.send(trans2, f.evaluate(a));
-                });
-                return super.listen(target, trans1, action).addCleanup(l);
-            }
-        };
+		EventSink<B> out = new EventSink<B>();
+        Listener l = listen_(out.node, (Transaction trans2, A a) -> {
+            out.send(trans2, f.evaluate(a));
+        });
+        return out.addCleanup(l);
 	}
 
 	public final Behavior<A> hold(A initValue) {
-		return new Behavior<A>(lastFiringOnly(), initValue);
+		return new Behavior<A>(this /*lastFiringOnly()*/, initValue);
 	}
 
 	public final <B> Event<B> snapshot(Behavior<B> beh)
@@ -78,62 +77,48 @@ public class Event<A> {
 
 	public final <B,C> Event<C> snapshot(final Behavior<B> b, final Lambda2<A,B,C> f)
 	{
-	    final Event<A> ev = this;
-		return new EventSink<C>() {
-		    Listener listen(Node target, Transaction trans1, TransactionHandler<C> action) {
-		        final EventSink<C> out = this;
-                Listener l = ev.listen(out.node, trans1, (Transaction trans2, A a) -> {
-                    out.send(trans2, f.evaluate(a, b.value));
-                });
-                return super.listen(target, trans1, action).addCleanup(l);
-            }
-        };
+		EventSink<C> out = new EventSink<C>();
+        Listener l = listen_(out.node, (Transaction trans2, A a) -> {
+            out.send(trans2, f.evaluate(a, b.value));
+        });
+        return out.addCleanup(l);
 	}
 
 	public static <A> Event<A> merge(final Event<A> ea, final Event<A> bb)
 	{
-	    return new EventSink<A>() {
-	        Listener listen(Node target, Transaction trans1, TransactionHandler<A> action) {
-		        final EventSink<A> out = this;
-                TransactionHandler<A> h = (Transaction trans, A a) -> {
-                    out.send(trans, a);
-                };
-                Listener l1 = ea.listen(out.node, trans1, h);
-                Listener l2 = bb.listen(out.node, trans1, h);
-                return super.listen(target, trans1, action).addCleanup(l1).addCleanup(l2);
-            }
+	    EventSink<A> out = new EventSink<A>();
+        TransactionHandler<A> h = (Transaction trans, A a) -> {
+            out.send(trans, a);
         };
+        Listener l1 = ea.listen_(out.node, h);
+        Listener l2 = bb.listen_(out.node, h);
+        return out.addCleanup(l1).addCleanup(l2);
 	}
 
 	public final Event<A> coalesce(final Lambda2<A,A,A> f)
 	{
-	    final Event<A> ev = this;
-	    return new EventSink<A>() {
-            Listener listen(Node target, Transaction trans, TransactionHandler<A> action) {
-                final EventSink<A> out = this;
-                TransactionHandler<A> h = new TransactionHandler<A>() {
-                    private boolean accumValid = false;
-                    private A accum;
-                    @Override
-                    public void run(Transaction trans1, A a) {
-                        if (accumValid)
-                            accum = f.evaluate(accum, a);
-                        else {
-                            trans1.prioritized(out.node, (Transaction trans2) -> {
-                                out.send(trans2, this.accum);
-                                this.accumValid = false;
-                                this.accum = null;
-                            });
-                            accum = a;
-                            accumValid = true;
-                        }
-                    }
-                };
-
-                Listener l = ev.listen(out.node, trans, h);
-                return super.listen(target, trans, action).addCleanup(l);
+	    final EventSink<A> out = new EventSink<A>();
+        TransactionHandler<A> h = new TransactionHandler<A>() {
+            private boolean accumValid = false;
+            private A accum;
+            @Override
+            public void run(Transaction trans1, A a) {
+                if (accumValid)
+                    accum = f.evaluate(accum, a);
+                else {
+                    trans1.prioritized(out.node, (Transaction trans2) -> {
+                        out.send(trans2, this.accum);
+                        this.accumValid = false;
+                        this.accum = null;
+                    });
+                    accum = a;
+                    accumValid = true;
+                }
             }
         };
+
+        Listener l = listen_(out.node, h);
+        return out.addCleanup(l);
     }
 
     /**
@@ -151,30 +136,32 @@ public class Event<A> {
 
     public Event<A> filter(final Lambda1<A,Boolean> f)
     {
-        final Event<A> ev = this;
-        return new EventSink<A>() {
-            Listener listen(Node target, Transaction trans1, TransactionHandler<A> action) {
-                final EventSink<A> out = this;
-                Listener l = ev.listen(out.node, trans1, (Transaction trans2, A a) -> {
-                    if (f.evaluate(a)) out.send(trans2, a);
-                });
-                return super.listen(target, trans1, action).addCleanup(l);
-            }
-        };
+        EventSink<A> out = new EventSink<A>();
+        Listener l = listen_(out.node, (Transaction trans2, A a) -> {
+            if (f.evaluate(a)) out.send(trans2, a);
+        });
+        return out.addCleanup(l);
     }
 
     public Event<A> filterNotNull()
     {
-        final Event<A> ev = this;
-        return new EventSink<A>() {
-            Listener listen(Node target, Transaction trans1, TransactionHandler<A> action) {
-                final EventSink<A> out = this;
-                Listener l = ev.listen(out.node, trans1, (Transaction trans2, A a) -> {
-                    if (a != null) out.send(trans2, a);
-                });
-                return super.listen(target, trans1, action).addCleanup(l);
-            }
-        };
+        EventSink<A> out = new EventSink<A>();
+        Listener l = listen_(out.node, (Transaction trans2, A a) -> {
+            if (a != null) out.send(trans2, a);
+        });
+        return out.addCleanup(l);
     }
+
+    Event<A> addCleanup(Listener cleanup)
+    {
+        finalizers.add(cleanup);
+        return this;
+    }
+
+	@Override
+	protected void finalize() throws Throwable {
+		for (Listener l : finalizers)
+			l.unlisten();
+	}
 }
 

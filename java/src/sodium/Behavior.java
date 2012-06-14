@@ -44,7 +44,7 @@ public class Behavior<A> {
     			action.run(trans, value);  // Start with the initial value.
     		    return changes().listen(target, trans, action);
     		}
-    	}.lastFiringOnly();  // Needed in case of an initial value and an update
+    	}/*.lastFiringOnly()*/;  // Needed in case of an initial value and an update
     	                     // in the same transaction.
     }
 
@@ -67,70 +67,61 @@ public class Behavior<A> {
 
 	public static <A,B> Behavior<B> apply(final Behavior<Lambda1<A,B>> bf, final Behavior<A> ba)
 	{
-		final EventSink<B> out0 = new EventSink<B>() {
-		    Listener listen(Node target, Transaction trans1, TransactionHandler<B> action) {
-		        final EventSink<B> out = this;
-                Handler<Transaction> h = new Handler<Transaction>() {
-                    boolean fired = false;			
-                    @Override
-                    public void run(Transaction trans2) {
-                        if (fired) 
-                            return;
-                        
-                        fired = true;
-                        trans2.prioritized(out.node, (Transaction trans3) -> {
-                           out.send(trans3, bf.newValue().evaluate(ba.newValue()));
-                           fired = false;
-                        });
-                    }
-                };
-            
-                Listener l1 = bf.changes().listen(out.node, trans1, (Transaction trans2, Lambda1<A,B> f) -> {
-                    h.run(trans2);
+		final EventSink<B> out = new EventSink();
+
+        Handler<Transaction> h = new Handler<Transaction>() {
+            boolean fired = false;			
+            @Override
+            public void run(Transaction trans1) {
+                if (fired) 
+                    return;
+                
+                fired = true;
+                trans1.prioritized(out.node, (Transaction trans2) -> {
+                   out.send(trans2, bf.newValue().evaluate(ba.newValue()));
+                   fired = false;
                 });
-                Listener l2 = ba.changes().listen(out.node, trans1, (Transaction trans2, A a) -> {
-                    h.run(trans2);
-                });
-                return super.listen(target, trans1, action).addCleanup(l1).addCleanup(l2);
             }
         };
-        return out0.hold(bf.value.evaluate(ba.value));
+    
+        Listener l1 = bf.changes().listen_(out.node, (Transaction trans1, Lambda1<A,B> f) -> {
+            h.run(trans1);
+        });
+        Listener l2 = ba.changes().listen_(out.node, (Transaction trans1, A a) -> {
+            h.run(trans1);
+        });
+        return out.addCleanup(l1).addCleanup(l2).hold(bf.value.evaluate(ba.value));
 	}
 
 	public static <A> Behavior<A> switchB(final Behavior<Behavior<A>> bba)
 	{
 	    A za = bba.value.value;
-	    final EventSink<A> out0 = new EventSink<A>() {
-	        Listener listen(Node target, Transaction trans1, TransactionHandler<A> action) {
-		        final EventSink<A> out = this;
-                TransactionHandler<Behavior<A>> h = new TransactionHandler<Behavior<A>>() {
-                    private Listener currentListener;
-                    @Override
-                    public void run(Transaction trans2, Behavior<A> ba) {
-                        // Note: If any switch takes place during a transaction, then the
-                        // values().listen will always cause a sample to be fetched from the
-                        // one we just switched to. The caller will be fetching our output
-                        // using values().listen, and values() throws away all firings except
-                        // for the last one. Therefore, anything from the old input behaviour
-                        // that might have happened during this transaction will be suppressed.
-                        if (currentListener != null)
-                            currentListener.unlisten();
-                        currentListener = ba.values().listen(out.node, trans2, (Transaction trans3, A a) -> {
-                            out.send(trans3, a);
-                        });
-                    }
-        
-                    @Override
-                    protected void finalize() throws Throwable {
-                        if (currentListener != null)
-                            currentListener.unlisten();
-                    }
-                };
-                Listener l1 = bba.values().listen(out.node, trans1, h);
-                return super.listen(target, trans1, action).addCleanup(l1);
+	    final EventSink<A> out = new EventSink<A>();
+        TransactionHandler<Behavior<A>> h = new TransactionHandler<Behavior<A>>() {
+            private Listener currentListener;
+            @Override
+            public void run(Transaction trans2, Behavior<A> ba) {
+                // Note: If any switch takes place during a transaction, then the
+                // values().listen will always cause a sample to be fetched from the
+                // one we just switched to. The caller will be fetching our output
+                // using values().listen, and values() throws away all firings except
+                // for the last one. Therefore, anything from the old input behaviour
+                // that might have happened during this transaction will be suppressed.
+                if (currentListener != null)
+                    currentListener.unlisten();
+                currentListener = ba.values().listen(out.node, trans2, (Transaction trans3, A a) -> {
+                    out.send(trans3, a);
+                });
+            }
+
+            @Override
+            protected void finalize() throws Throwable {
+                if (currentListener != null)
+                    currentListener.unlisten();
             }
         };
-        return out0.lastFiringOnly().hold(za);
+        Listener l1 = bba.values().listen_(out.node, h);
+        return out.addCleanup(l1).hold(za);
 	}
 
 	@Override
