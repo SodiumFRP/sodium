@@ -52,7 +52,7 @@ public class Event<A> {
 
 	public final <B> Event<B> map(Lambda1<A,B> f)
 	{
-		EventSink<B> out = new EventSink<B>();
+		EventSink<B> out = new EventSink();
 		Listener l = listen(out.node, (Transaction trans, A a) -> {
 			out.send(trans, f.evaluate(a));
 		});
@@ -75,12 +75,56 @@ public class Event<A> {
 
 	public final <B,C> Event<C> snapshot(Behavior<B> b, Lambda2<A,B,C> f)
 	{
-		EventSink<C> out = new EventSink<C>();
+		EventSink<C> out = new EventSink();
 		Listener l = listen(out.node, (Transaction trans, A a) -> {
 			out.send(trans, f.evaluate(a, b.value));
 		});
 	    return out.addCleanup(l);
 	}
+
+	public static <A> Event<A> merge(Event<A> ea, Event<A> bb)
+	{
+	    EventSink<A> out = new EventSink<A>();
+	    TransactionHandler<A> h = (Transaction trans, A a) -> {
+            out.send(trans, a);
+	    };
+	    Listener l1 = ea.listen(out.node, h);
+	    Listener l2 = bb.listen(out.node, h);
+	    return out.addCleanup(l1).addCleanup(l2);
+	}
+
+	public final Event<A> coalesce(final Lambda2<A,A,A> f)
+	{
+	    final EventSink<A> out = new EventSink<A>();
+
+		TransactionHandler<A> h = new TransactionHandler<A>() {
+		    boolean accumValid;
+			A accum;
+			@Override
+			public void run(Transaction trans1, A a) {
+			    boolean first = !accumValid;
+			    if (accumValid)
+			        accum = f.evaluate(accum, a);
+			    else {
+                    trans1.prioritized(out.node, (Transaction trans2) -> {
+                       out.send(trans2, this.accum);
+                       this.accumValid = false;
+                       this.accum = null;
+                    });
+			        accum = a;
+			        accumValid = true;
+			    }
+			}
+		};
+
+		Listener l = listen(out.node, h);
+		return out.addCleanup(l);
+    }
+
+    public static <A> Event<A> mergeWith(Lambda2<A,A,A> f, Event<A> ea, Event<A> eb)
+    {
+        return merge(ea, eb).coalesce(f);
+    }
 
 	@Override
 	protected void finalize() throws Throwable {

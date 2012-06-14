@@ -66,7 +66,7 @@ public class Behavior<A> {
 
 	public static <A,B> Behavior<B> apply(final Behavior<Lambda1<A,B>> bf, final Behavior<A> ba)
 	{
-		final EventSink<B> out = new EventSink<B>();
+		final EventSink<B> out = new EventSink();
 
 		Handler<Transaction> h = new Handler<Transaction>() {
 			boolean fired = false;			
