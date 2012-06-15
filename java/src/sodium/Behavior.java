@@ -38,14 +38,17 @@ public class Behavior<A> {
 
     public Event<A> values()
     {
-    	return new Event<A>() {
+    	EventSink<A> out = new EventSink<A>() {
     		@Override
-    		public Listener listen(Node target, Transaction trans, TransactionHandler<A> action) {
-    			action.run(trans, value);  // Start with the initial value.
-    		    return changes().listen(target, trans, action);
-    		}
-    	}/*.lastFiringOnly()*/;  // Needed in case of an initial value and an update
-    	                     // in the same transaction.
+            protected Object[] sampleNow()
+            {
+                return new Object[] { value };
+            }
+    	};
+        Listener l = event.listen_(out.node, (Transaction trans, A a) -> { out.send(trans, a); });
+        return out.addCleanup(l)
+            .lastFiringOnly();    // Needed in case of an initial value and an update
+    	                          // in the same transaction.
     }
 
 	public final <B> Behavior<B> map(Lambda1<A,B> f)

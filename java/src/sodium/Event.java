@@ -3,7 +3,7 @@ package sodium;
 import java.util.ArrayList;
 import java.util.List;
 
-public class Event<A> {
+public abstract class Event<A> {
 	private static final class ListenerImplementation<A> implements Listener {
 		/**
 		 * It's essential that we keep the listener alive while the caller holds
@@ -37,18 +37,25 @@ public class Event<A> {
 	public Event() {
 	}
 
+	protected abstract Object[] sampleNow();
+
 	public final Listener listen(final Handler<A> action) {
 		return listen_(Node.NULL, (Transaction trans2, A a) -> { action.run(a); });
 	}
 
-	Listener listen_(Node target, TransactionHandler<A> action) {
+	final Listener listen_(Node target, TransactionHandler<A> action) {
 		return Transaction.evaluate((Transaction trans1) ->
 		    listen(Node.NULL, trans1, action));
 	}
 
-	Listener listen(Node target, Transaction trans, TransactionHandler<A> action) {
+	final Listener listen(Node target, Transaction trans, TransactionHandler<A> action) {
 		if (node.linkTo(target))
 		    trans.toRegen = true;
+		Object[] aNow = sampleNow();
+		if (aNow != null) {    // In cases like values(), we start with an initial value.
+		    for (int i = 0; i < aNow.length; i++)
+                action.run(trans, (A)aNow[i]);
+        }
 		listeners.add(action);
 		// Anything sent already in this transaction must be sent now so that
 		// there's no order dependency between send and listen.
@@ -59,7 +66,22 @@ public class Event<A> {
 
 	public final <B> Event<B> map(final Lambda1<A,B> f)
 	{
-		EventSink<B> out = new EventSink<B>();
+	    final Event<A> ev = this;
+	    final EventSink<B> out = new EventSink<B>() {
+    		@Override
+            protected Object[] sampleNow()
+            {
+                Object[] oi = ev.sampleNow();
+                if (oi != null) {
+                    Object[] oo = new Object[oi.length];
+                    for (int i = 0; i < oo.length; i++)
+                        oo[i] = f.evaluate((A)oi[i]);
+                    return oo;
+                }
+                else
+                    return null;
+            }
+	    };
         Listener l = listen_(out.node, (Transaction trans2, A a) -> {
             out.send(trans2, f.evaluate(a));
         });
@@ -77,27 +99,76 @@ public class Event<A> {
 
 	public final <B,C> Event<C> snapshot(final Behavior<B> b, final Lambda2<A,B,C> f)
 	{
-		EventSink<C> out = new EventSink<C>();
+	    final Event<A> ev = this;
+		EventSink<C> out = new EventSink<C>() {
+    		@Override
+            protected Object[] sampleNow()
+            {
+                Object[] oi = ev.sampleNow();
+                if (oi != null) {
+                    Object[] oo = new Object[oi.length];
+                    for (int i = 0; i < oo.length; i++)
+                        oo[i] = f.evaluate((A)oi[i], b.value);
+                    return oo;
+                }
+                else
+                    return null;
+            }
+		};
         Listener l = listen_(out.node, (Transaction trans2, A a) -> {
             out.send(trans2, f.evaluate(a, b.value));
         });
         return out.addCleanup(l);
 	}
 
-	public static <A> Event<A> merge(final Event<A> ea, final Event<A> bb)
+	public static <A> Event<A> merge(final Event<A> ea, final Event<A> eb)
 	{
-	    EventSink<A> out = new EventSink<A>();
+	    EventSink<A> out = new EventSink<A>() {
+    		@Override
+            protected Object[] sampleNow()
+            {
+                Object[] oa = ea.sampleNow();
+                Object[] ob = eb.sampleNow();
+                if (oa != null && ob != null) {
+                    Object[] oo = new Object[oa.length + ob.length];
+                    int j = 0;
+                    for (int i = 0; i < oa.length; i++) oo[j++] = oa[i];
+                    for (int i = 0; i < ob.length; i++) oo[j++] = ob[i];
+                    return oo;
+                }
+                else
+                if (oa != null)
+                    return oa;
+                else
+                    return ob;
+            }
+	    };
         TransactionHandler<A> h = (Transaction trans, A a) -> {
             out.send(trans, a);
         };
         Listener l1 = ea.listen_(out.node, h);
-        Listener l2 = bb.listen_(out.node, h);
+        Listener l2 = eb.listen_(out.node, h);
         return out.addCleanup(l1).addCleanup(l2);
 	}
 
 	public final Event<A> coalesce(final Lambda2<A,A,A> f)
 	{
-	    final EventSink<A> out = new EventSink<A>();
+	    final Event<A> ev = this;
+	    final EventSink<A> out = new EventSink<A>() {
+    		@Override
+            protected Object[] sampleNow()
+            {
+                Object[] oi = ev.sampleNow();
+                if (oi != null) {
+                    A o = (A)oi[0];
+                    for (int i = 1; i < oi.length; i++)
+                        o = f.evaluate(o, (A)oi[i]);
+                    return new Object[] { o };
+                }
+                else
+                    return null;
+            }
+	    };
         TransactionHandler<A> h = new TransactionHandler<A>() {
             private boolean accumValid = false;
             private A accum;
@@ -136,7 +207,30 @@ public class Event<A> {
 
     public Event<A> filter(final Lambda1<A,Boolean> f)
     {
-        EventSink<A> out = new EventSink<A>();
+        final Event<A> ev = this;
+        EventSink<A> out = new EventSink<A>() {
+    		@Override
+            protected Object[] sampleNow()
+            {
+                Object[] oi = ev.sampleNow();
+                if (oi != null) {
+                    Object[] oo = new Object[oi.length];
+                    int j = 0;
+                    for (int i = 0; i < oi.length; i++)
+                        if (f.evaluate((A)oi[i]))
+                            oo[j++] = oi[i];
+                    if (j < oo.length) {
+                        Object[] oo2 = new Object[j];
+                        for (int i = 0; i < j; i++)
+                            oo2[i] = oo[i];
+                        oo = oo2;
+                    }
+                    return oo;
+                }
+                else
+                    return null;
+            }
+        };
         Listener l = listen_(out.node, (Transaction trans2, A a) -> {
             if (f.evaluate(a)) out.send(trans2, a);
         });
@@ -145,11 +239,7 @@ public class Event<A> {
 
     public Event<A> filterNotNull()
     {
-        EventSink<A> out = new EventSink<A>();
-        Listener l = listen_(out.node, (Transaction trans2, A a) -> {
-            if (a != null) out.send(trans2, a);
-        });
-        return out.addCleanup(l);
+        return filter((A a) -> a != null);
     }
 
     Event<A> addCleanup(Listener cleanup)

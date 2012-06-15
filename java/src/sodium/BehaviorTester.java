@@ -53,6 +53,115 @@ public class BehaviorTester extends TestCase {
 		assertEquals(Arrays.asList(9,2,7), out);
 	}
 
+	public void testValuesThenMap() {
+		BehaviorSink<Integer> b = new BehaviorSink<Integer>(9);
+		List<Integer> out = new ArrayList<Integer>();
+		Listener l = b.values().map((Integer x) -> x+100).listen((Integer x) -> { out.add(x); });
+		b.send(2);
+		b.send(7);
+		l.unlisten();
+		assertEquals(Arrays.asList(109,102,107), out);
+	}
+
+	/**
+	 * This is used for tests where values() produces a single initial value on listen,
+	 * and then we double that up by causing that single initial event to be repeated.
+	 * This needs testing separately, because the code must be done carefully to achieve
+	 * this.
+	 */
+	private static Event<Integer> doubleUp(Event<Integer> ev)
+	{
+	    return Event.merge(ev, ev);
+	}
+
+	public void testValuesTwiceThenMap() {
+		BehaviorSink<Integer> b = new BehaviorSink<Integer>(9);
+		List<Integer> out = new ArrayList<Integer>();
+		Listener l = doubleUp(b.values()).map((Integer x) -> x+100).listen((Integer x) -> { out.add(x); });
+		b.send(2);
+		b.send(7);
+		l.unlisten();
+		assertEquals(Arrays.asList(109,109,102,102,107,107), out);
+	}
+
+	public void testValuesThenCoalesce() {
+		BehaviorSink<Integer> b = new BehaviorSink<Integer>(9);
+		List<Integer> out = new ArrayList<Integer>();
+		Listener l = b.values().coalesce((Integer fst, Integer snd) -> snd).listen((Integer x) -> { out.add(x); });
+		b.send(2);
+		b.send(7);
+		l.unlisten();
+		assertEquals(Arrays.asList(9,2,7), out);
+	}
+
+	public void testValuesTwiceThenCoalesce() {
+		BehaviorSink<Integer> b = new BehaviorSink<Integer>(9);
+		List<Integer> out = new ArrayList<Integer>();
+		Listener l = doubleUp(b.values()).coalesce((Integer fst, Integer snd) -> fst+snd).listen((Integer x) -> { out.add(x); });
+		b.send(2);
+		b.send(7);
+		l.unlisten();
+		assertEquals(Arrays.asList(18,4,14), out);
+	}
+
+	public void testValuesThenSnapshot() {
+		BehaviorSink<Integer> bi = new BehaviorSink<Integer>(9);
+		BehaviorSink<Character> bc = new BehaviorSink<Character>('a');
+		List<Character> out = new ArrayList<Character>();
+		Listener l = bi.values().snapshot(bc).listen((Character x) -> { out.add(x); });
+		bc.send('b');
+		bi.send(2);
+		bc.send('c');
+		bi.send(7);
+		l.unlisten();
+		assertEquals(Arrays.asList('a','b','c'), out);
+	}
+
+	public void testValuesTwiceThenSnapshot() {
+		BehaviorSink<Integer> bi = new BehaviorSink<Integer>(9);
+		BehaviorSink<Character> bc = new BehaviorSink<Character>('a');
+		List<Character> out = new ArrayList<Character>();
+		Listener l = doubleUp(bi.values()).snapshot(bc).listen((Character x) -> { out.add(x); });
+		bc.send('b');
+		bi.send(2);
+		bc.send('c');
+		bi.send(7);
+		l.unlisten();
+		assertEquals(Arrays.asList('a','a','b','b','c','c'), out);
+	}
+
+	public void testValuesThenMerge() {
+		BehaviorSink<Integer> bi = new BehaviorSink<Integer>(9);
+		BehaviorSink<Integer> bj = new BehaviorSink<Integer>(2);
+		List<Integer> out = new ArrayList<Integer>();
+		Listener l = Event.mergeWith((Integer x, Integer y) -> x+y, bi.values(),bj.values())
+		    .listen((Integer x) -> { out.add(x); });
+		bi.send(1);
+		bj.send(4);
+		l.unlisten();
+		assertEquals(Arrays.asList(11,1,4), out);
+	}
+
+	public void testValuesThenFilter() {
+		BehaviorSink<Integer> b = new BehaviorSink<Integer>(9);
+		List<Integer> out = new ArrayList<Integer>();
+		Listener l = b.values().filter((Integer a) -> true).listen((Integer x) -> { out.add(x); });
+		b.send(2);
+		b.send(7);
+		l.unlisten();
+		assertEquals(Arrays.asList(9,2,7), out);
+	}
+
+	public void testValuesTwiceThenFilter() {
+		BehaviorSink<Integer> b = new BehaviorSink<Integer>(9);
+		List<Integer> out = new ArrayList<Integer>();
+		Listener l = doubleUp(b.values()).filter((Integer a) -> true).listen((Integer x) -> { out.add(x); });
+		b.send(2);
+		b.send(7);
+		l.unlisten();
+		assertEquals(Arrays.asList(9,9,2,2,7,7), out);
+	}
+
 	public void testValuesLateListen() {
 		BehaviorSink<Integer> b = new BehaviorSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
