@@ -165,6 +165,19 @@ public class Behavior<A> {
         return out.addCleanup(l1);
 	}
 
+    public static <A,B> B loop(final Lambda1<Behavior<A>,Tuple2<B,Behavior<A>>> f)
+    {
+        return Event.loop(
+            // Lambda syntax doesn't work here - compiler bug?
+            new Lambda1<Event<A>,Tuple2<B,Event<A>>>() {
+                public Tuple2<B,Event<A>> evaluate(Event<A> ea) {
+                    Tuple2<B,Behavior<A>> b_ba = f.evaluate(ea.hold(null));
+                    return new Tuple2(b_ba.a, b_ba.b.values());
+                }
+            }
+        );
+    }
+
 	@Override
 	protected void finalize() throws Throwable {
 		cleanup.unlisten();

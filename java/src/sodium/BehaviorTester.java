@@ -325,5 +325,26 @@ public class BehaviorTester extends TestCase {
 	    l.unlisten();
 	    assertEquals(Arrays.asList('A','B','C','d','e','F','G','h','I'), out);
     }
+
+    public void testLoopBehavior()
+    {
+        final EventSink<Integer> ea = new EventSink();
+        Behavior<Integer> sum = Behavior.loop(
+            // Lambda syntax doesn't seem to work here - compiler bug?
+            new Lambda1<Behavior<Integer>,Tuple2<Behavior<Integer>,Behavior<Integer>>>() {
+                public Tuple2<Behavior<Integer>,Behavior<Integer>> evaluate(Behavior<Integer> sum_last) {
+                    Behavior<Integer> sum = ea.snapshot(sum_last, (x, y) -> x+y).hold(0);
+                    return new Tuple2(sum, sum);
+                }
+            }
+        );
+        List<Integer> out = new ArrayList();
+        Listener l = sum.values().listen(x -> { out.add(x); });
+        ea.send(2);
+        ea.send(3);
+        ea.send(1);
+        l.unlisten();
+        assertEquals(Arrays.asList(0,2,5,6), out);
+    }
 }
 
