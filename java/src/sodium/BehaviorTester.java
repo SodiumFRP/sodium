@@ -162,6 +162,26 @@ public class BehaviorTester extends TestCase {
 		assertEquals(Arrays.asList(9,9,2,2,7,7), out);
 	}
 
+	public void testValuesThenOnce() {
+		BehaviorSink<Integer> b = new BehaviorSink<Integer>(9);
+		List<Integer> out = new ArrayList<Integer>();
+		Listener l = b.values().once().listen(x -> { out.add(x); });
+		b.send(2);
+		b.send(7);
+		l.unlisten();
+		assertEquals(Arrays.asList(9), out);
+	}
+
+	public void testValuesTwiceThenOnce() {
+		BehaviorSink<Integer> b = new BehaviorSink<Integer>(9);
+		List<Integer> out = new ArrayList<Integer>();
+		Listener l = doubleUp(b.values()).once().listen(x -> { out.add(x); });
+		b.send(2);
+		b.send(7);
+		l.unlisten();
+		assertEquals(Arrays.asList(9), out);
+	}
+
 	public void testValuesLateListen() {
 		BehaviorSink<Integer> b = new BehaviorSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();

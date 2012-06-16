@@ -31,11 +31,20 @@ public class Behavior<A> {
     	return valueUpdate == null ? value :  valueUpdate;
     }
 
+    /**
+     * An event that gives the updates for the behavior. It doesn't do any equality
+     * comparison as the name might imply.
+     */
     public final Event<A> changes()
     {
     	return event;
     }
 
+    /**
+     * An event that is guaranteed to fire once when you listen to it, giving
+     * the current value of the behavior, and thereafter behaves like 'changes',
+     * firing for each update to the behavior's value.
+     */
     public final Event<A> values()
     {
         return Transaction.evaluate((Transaction trans) -> values(trans));
@@ -56,11 +65,17 @@ public class Behavior<A> {
     	                              // in the same transaction.
     }
 
+    /**
+     * Transform the behavior's value according to the supplied function.
+     */
 	public final <B> Behavior<B> map(Lambda1<A,B> f)
 	{
 		return changes().map(f).hold(f.evaluate(value));
 	}
-	
+
+	/**
+	 * Lift a binary function into behaviors.
+	 */
 	public final <B,C> Behavior<C> lift(Lambda2<A,B,C> f, Behavior<B> b)
 	{
 		Lambda1<A, Lambda1<B,C>> ffa = (A aa) -> (B bb) -> f.evaluate(aa,bb);
@@ -68,11 +83,18 @@ public class Behavior<A> {
 		return apply(bf, b);
 	}
 
+	/**
+	 * Lift a binary function into behaviors.
+	 */
 	public static final <A,B,C> Behavior<C> lift(Lambda2<A,B,C> f, Behavior<A> a, Behavior<B> b)
 	{
 		return a.lift(f, b);
 	}
 
+	/**
+	 * Apply a value inside a behavior to a function inside a behavior. This is the
+	 * primitive for all function lifting.
+	 */
 	public static <A,B> Behavior<B> apply(final Behavior<Lambda1<A,B>> bf, final Behavior<A> ba)
 	{
 		final EventSink<B> out = new EventSink();
@@ -101,6 +123,9 @@ public class Behavior<A> {
         return out.addCleanup(l1).addCleanup(l2).hold(bf.value.evaluate(ba.value));
 	}
 
+	/**
+	 * Unwrap a behavior inside another behavior to give a time-varying behavior implementation.
+	 */
 	public static <A> Behavior<A> switchB(final Behavior<Behavior<A>> bba)
 	{
 	    A za = bba.value.value;
@@ -132,6 +157,9 @@ public class Behavior<A> {
         return out.addCleanup(l1).hold(za);
 	}
 	
+	/**
+	 * Unwrap an event inside a behavior to give a time-varying event implementation.
+	 */
 	public static <A> Event<A> switchE(final Behavior<Event<A>> bea)
 	{
         return Transaction.evaluate((final Transaction trans) -> switchE(trans, bea));
@@ -165,6 +193,10 @@ public class Behavior<A> {
         return out.addCleanup(l1);
 	}
 
+	/**
+	 * Loop a behavior round so it can effectively be forward referenced.
+	 * This adds a cycle to your graph of relationships between events and behaviors.
+	 */
     public static <A,B> B loop(final Lambda1<Behavior<A>,Tuple2<B,Behavior<A>>> f)
     {
         return Event.loop(
@@ -178,6 +210,10 @@ public class Behavior<A> {
         );
     }
 
+    /**
+     * Transform a behavior with a generalized state loop (a mealy machine). The function
+     * is passed the input and the old state and returns the new state and output value.
+     */
     public final <B,S> Behavior<B> collect(final S initState, final Lambda2<A, S, Tuple2<B, S>> f)
     {
         final Event<A> ea = changes().coalesce((A fst, A snd) -> snd);
@@ -195,6 +231,9 @@ public class Behavior<A> {
         );
     }
 
+    /**
+     * Accumulate on input event, holding state.
+     */
     public final <S> Behavior<S> accum(final S initState, final Lambda2<A, S, S> f)
     {
         final Event<A> ea = changes().coalesce((A fst, A snd) -> snd);

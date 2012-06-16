@@ -70,9 +70,9 @@ instance R.Context Plain where
         }
 
     data Behavior Plain a = Behavior {
-            -- | Internal: Extract the underlyingEvent event for this behaviour.
+            -- | Internal: Extract the underlyingEvent event for this behavior.
             underlyingEvent :: Event a,
-            -- | Obtain the current value of a behaviour.
+            -- | Obtain the current value of a behavior.
             behSample       :: Reactive a
         }
     sync = sync
@@ -150,10 +150,9 @@ never = Event {
 --
 -- In the case where two event occurrences are simultaneous (i.e. both
 -- within the same transaction), both will be delivered in the same
--- transaction.
---
--- The order is not defined, because simultaneous events should be considered
--- to be order-agnostic.
+-- transaction. If the event firings are ordered for some reason, then
+-- their ordering is retained. In many common cases the ordering will
+-- be undefined.
 merge         :: Event a -> Event a -> Event a
 merge ea eb = Event gl cacheRef
   where
@@ -179,8 +178,8 @@ filterJust ema = Event gl cacheRef
             Nothing -> return ()
         addCleanup unlistener l'
 
--- | Create a behaviour with the specified initial value, that gets updated
--- by the values coming through the event. The \'current value\' of the behaviour
+-- | Create a behavior with the specified initial value, that gets updated
+-- by the values coming through the event. The \'current value\' of the behavior
 -- is notionally the value as it was 'at the start of the transaction'.
 -- That is, state updates caused by event firings get processed at the end of
 -- the transaction.
@@ -205,19 +204,19 @@ hold initA ea = do
             }
     return beh
 
--- | An event that gives the updates for the behaviour. It doesn't do any equality
+-- | An event that gives the updates for the behavior. It doesn't do any equality
 -- comparison as the name might imply.
 changes       :: Behavior a -> Event a
 changes = underlyingEvent
 
 -- | An event that is guaranteed to fires once when you listen to it, giving
--- the current value of the behaviour, and thereafter behaves like 'changes',
--- firing for each update to the behaviour's value.
+-- the current value of the behavior, and thereafter behaves like 'changes',
+-- firing for each update to the behavior's value.
 values        :: Behavior a -> Event a
 values = eventify . linkedListenValue
 
--- | Sample the behaviour at the time of the event firing. Note that the 'current value'
--- of the behaviour that's sampled is the value as at the start of the transaction
+-- | Sample the behavior at the time of the event firing. Note that the 'current value'
+-- of the behavior that's sampled is the value as at the start of the transaction
 -- before any state changes of the current transaction are applied through 'hold's.
 snapshotWith  :: (a -> b -> c) -> Event a -> Behavior b -> Event c
 snapshotWith f ea bb = Event gl cacheRef
@@ -230,7 +229,7 @@ snapshotWith f ea bb = Event gl cacheRef
             push (f a b)
         addCleanup unlistener l
 
--- | Unwrap an event inside a behaviour to give a time-varying event implementation.
+-- | Unwrap an event inside a behavior to give a time-varying event implementation.
 switchE       :: Behavior (Event a) -> Event a
 switchE bea = Event gl cacheRef
   where
@@ -252,7 +251,7 @@ switchE bea = Event gl cacheRef
             ioReactive $ modifyIORef unlistensRef (M.insert iD unlisten2)
         addCleanup unlistener1 l
 
--- | Unwrap a behaviour inside another behaviour to give a time-varying behaviour implementation.
+-- | Unwrap a behavior inside another behavior to give a time-varying behavior implementation.
 switch        :: Behavior (Behavior a) -> Reactive (Behavior a)
 switch bba = do
     ba <- sample bba
@@ -284,12 +283,17 @@ execute ev = Event gl cacheRef
             runListen l (Just nodeRef) $ \action -> action >>= push
         addCleanup unlistener l'
 
--- | Obtain the current value of a behaviour.
+-- | Obtain the current value of a behavior.
 sample        :: Behavior a -> Reactive a
 sample = behSample
 
 -- | If there's more than one firing in a single transaction, combine them into
 -- one using the specified combining function.
+--
+-- If the event firings are ordered, then the first will appear at the left
+-- input of the combining function. In most common cases it's best not to
+-- make any assumptions about the ordering, and the combining function would
+-- ideally be commutative.
 coalesce      :: (a -> a -> a) -> Event a -> Event a
 coalesce combine e = Event gl cacheRef
   where
@@ -309,7 +313,7 @@ coalesce combine e = Event gl cacheRef
                 push out
         addCleanup unlistener l
 
-newBehavior :: a  -- ^ Initial behaviour value
+newBehavior :: a  -- ^ Initial behavior value
             -> Reactive (Behavior a, a -> Reactive ())
 newBehavior = R.newBehavior
 
@@ -333,12 +337,12 @@ mergeWith = R.mergeWith
 filterE :: (a -> Bool) -> Event a -> Event a
 filterE = R.filterE
 
--- | Variant of 'snapshotWith' that throws away the event's value and captures the behaviour's.
+-- | Variant of 'snapshotWith' that throws away the event's value and captures the behavior's.
 snapshot :: Event a -> Behavior b -> Event b
 snapshot = R.snapshot
 
--- | Let event occurrences through only when the behaviour's value is True.
--- Note that the behaviour's value is as it was at the start of the transaction,
+-- | Let event occurrences through only when the behavior's value is True.
+-- Note that the behavior's value is as it was at the start of the transaction,
 -- that is, no state changes from the current transaction are taken into account.
 gate :: Event a -> Behavior Bool -> Event a
 gate = R.gate
@@ -348,7 +352,7 @@ gate = R.gate
 collectE :: (a -> s -> (b, s)) -> s -> Event a -> Reactive (Event b)
 collectE = R.collectE
 
--- | Transform a behaviour with a generalized state loop (a mealy machine). The function
+-- | Transform a behavior with a generalized state loop (a mealy machine). The function
 -- is passed the input and the old state and returns the new state and output value.
 collect :: (a -> s -> (b, s)) -> s -> Behavior a -> Reactive (Behavior b)
 collect = R.collect
@@ -365,7 +369,7 @@ accum = R.accum
 countE :: Event a -> Reactive (Event Int)
 countE = R.countE
 
--- | Count event occurrences, giving a behaviour that starts with 0 before the first occurrence.
+-- | Count event occurrences, giving a behavior that starts with 0 before the first occurrence.
 count :: Event a -> Reactive (Behavior Int)
 count = R.count
 
@@ -589,7 +593,7 @@ finalizeListen l unlisten = do
 
 newtype Unlistener = Unlistener (MVar (Maybe (IO ())))
 
--- | Listen to an input event/behaviour and return an 'Unlistener' that can be
+-- | Listen to an input event/behavior and return an 'Unlistener' that can be
 -- attached to an output event using 'addCleanup'.
 unlistenize :: Reactive (IO ()) -> Reactive Unlistener
 unlistenize doListen = do
@@ -614,7 +618,7 @@ addCleanup (Unlistener ref) l = ioReactive $ finalizeListen l $ do
     fromMaybe (return ()) mUnlisten
     putMVar ref Nothing
 
--- | Listen to the value of this behaviour with an initial callback giving
+-- | Listen to the value of this behavior with an initial callback giving
 -- the current value. Can get multiple values per transaction, the last of
 -- which is considered valid. You would normally want to use 'listenValue',
 -- which removes the extra unwanted values.
@@ -653,7 +657,7 @@ tidy listen mNodeRef handle = do
             ioReactive $ writeIORef aRef Nothing
             handle a
 
--- | Listen to the value of this behaviour with a guaranteed initial callback
+-- | Listen to the value of this behavior with a guaranteed initial callback
 -- giving the current value, followed by callbacks for any updates. 
 linkedListenValue :: Behavior a -> Maybe (IORef Node) -> (a -> Reactive ()) -> Reactive (IO ())
 linkedListenValue ba = tidy (listenValueRaw ba)
@@ -720,7 +724,7 @@ crossE epa = do
     unlisten <- listen epa $ async . push
     return $ finalizeEvent ev unlisten
 
--- | Cross the specified behaviour over to a different partition.
+-- | Cross the specified behavior over to a different partition.
 cross :: (Typeable p, Typeable q) => Behavior a -> Reactive (Behavior q a)
 cross bpa = do
     a <- sample bpa

@@ -39,6 +39,10 @@ public abstract class Event<A> {
 
 	protected abstract Object[] sampleNow();
 
+	/**
+	 * Listen for firings of this event. The returned Listener has an unlisten()
+	 * method to cause the listener to be removed. This is the observer pattern.
+     */
 	public final Listener listen(final Handler<A> action) {
 		return listen_(Node.NULL, (Transaction trans2, A a) -> { action.run(a); });
 	}
@@ -66,6 +70,9 @@ public abstract class Event<A> {
 		return new ListenerImplementation<A>(this, action, target);
 	}
 
+    /**
+     * Transform the event's value according to the supplied function.
+     */
 	public final <B> Event<B> map(final Lambda1<A,B> f)
 	{
 	    final Event<A> ev = this;
@@ -90,16 +97,31 @@ public abstract class Event<A> {
         return out.addCleanup(l);
 	}
 
+	/**
+	 * Create a behavior with the specified initial value, that gets updated
+     * by the values coming through the event. The 'current value' of the behavior
+     * is notionally the value as it was 'at the start of the transaction'.
+     * That is, state updates caused by event firings get processed at the end of
+     * the transaction.
+     */
 	public final Behavior<A> hold(A initValue) {
 		return Transaction.evaluate((Transaction trans) ->
 		    new Behavior<A>(lastFiringOnly(trans), initValue));
 	}
 
+	/**
+	 * Variant of snapshot that throws away the event's value and captures the behavior's.
+	 */
 	public final <B> Event<B> snapshot(Behavior<B> beh)
 	{
 	    return snapshot(beh, (A a, B b) -> b);
 	}
 
+	/**
+	 * Sample the behavior at the time of the event firing. Note that the 'current value'
+     * of the behavior that's sampled is the value as at the start of the transaction
+     * before any state changes of the current transaction are applied through 'hold's.
+     */
 	public final <B,C> Event<C> snapshot(final Behavior<B> b, final Lambda2<A,B,C> f)
 	{
 	    final Event<A> ev = this;
@@ -124,6 +146,15 @@ public abstract class Event<A> {
         return out.addCleanup(l);
 	}
 
+    /**
+     * Merge two streams of events of the same type.
+     *
+     * In the case where two event occurrences are simultaneous (i.e. both
+     * within the same transaction), both will be delivered in the same
+     * transaction. If the event firings are ordered for some reason, then
+     * their ordering is retained. In many common cases the ordering will
+     * be undefined.
+     */
 	public static <A> Event<A> merge(final Event<A> ea, final Event<A> eb)
 	{
 	    EventSink<A> out = new EventSink<A>() {
@@ -154,6 +185,15 @@ public abstract class Event<A> {
         return out.addCleanup(l1).addCleanup(l2);
 	}
 
+    /**
+     * If there's more than one firing in a single transaction, combine them into
+     * one using the specified combining function.
+     *
+     * If the event firings are ordered, then the first will appear at the left
+     * input of the combining function. In most common cases it's best not to
+     * make any assumptions about the ordering, and the combining function would
+     * ideally be commutative.
+     */
 	public final Event<A> coalesce(final Lambda2<A,A,A> f)
 	{
 	    return Transaction.evaluate((Transaction trans) -> coalesce(trans, f));
@@ -208,11 +248,22 @@ public abstract class Event<A> {
         return coalesce(trans, (A first, A second) -> second);
     }
 
+    /**
+     * Merge two streams of events of the same type, combining simultaneous
+     * event occurrences.
+     *
+     * In the case where multiple event occurrences are simultaneous (i.e. all
+     * within the same transaction), they are combined using the same logic as
+     * 'coalesce'.
+     */
     public static <A> Event<A> mergeWith(Lambda2<A,A,A> f, Event<A> ea, Event<A> eb)
     {
         return merge(ea, eb).coalesce(f);
     }
 
+    /**
+     * Only keep event occurrences for which the predicate returns true.
+     */
     public final Event<A> filter(final Lambda1<A,Boolean> f)
     {
         final Event<A> ev = this;
@@ -245,11 +296,18 @@ public abstract class Event<A> {
         return out.addCleanup(l);
     }
 
+    /**
+     * Filter out any event occurrences whose value is a Java null pointer.
+     */
     public final Event<A> filterNotNull()
     {
         return filter((A a) -> a != null);
     }
 
+	/**
+	 * Loop an event round so it can effectively be forward referenced.
+	 * This adds a cycle to your graph of relationships between events and behaviors.
+	 */
     public static <A,B> B loop(Lambda1<Event<A>,Tuple2<B,Event<A>>> f)
     {
         EventSink<A> ea_in = new EventSink();
@@ -263,11 +321,20 @@ public abstract class Event<A> {
         return b;
     }
 
+    /**
+     * Let event occurrences through only when the behavior's value is True.
+     * Note that the behavior's value is as it was at the start of the transaction,
+     * that is, no state changes from the current transaction are taken into account.
+     */
     public final Event<A> gate(Behavior<Boolean> bPred)
     {
         return snapshot(bPred, (A a, Boolean pred) -> pred ? a : null).filterNotNull();
     }
 
+    /**
+     * Transform an event with a generalized state loop (a mealy machine). The function
+     * is passed the input and the old state and returns the new state and output value.
+     */
     public final <B,S> Event<B> collect(final S initState, final Lambda2<A, S, Tuple2<B, S>> f)
     {
         final Event<A> ea = this;
@@ -284,6 +351,9 @@ public abstract class Event<A> {
         );
     }
 
+    /**
+     * Accumulate on input event, outputting the new state each time.
+     */
     public final <S> Event<S> accum(final S initState, final Lambda2<A, S, S> f)
     {
         final Event<A> ea = this;
@@ -298,25 +368,56 @@ public abstract class Event<A> {
         );
     }
 
+    /**
+     * Count event occurrences, starting with 1 for the first occurrence.
+     */
     public final Event<Integer> countE()
     {
         return map((A a) -> 1).accum(0, (a,b)->a+b);
     }
-    
+
+    /**
+     * Count event occurrences, giving a behavior that starts with 0 before the first occurrence.
+     */
     public final Behavior<Integer> count()
     {
         return countE().hold(0);
     }
 
+    /**
+     * Throw away all event occurrences except for the first one.
+     */
     public final Event<A> once()
     {
-        return collect(new Boolean(true),
-            new Lambda2<A, Boolean, Tuple2<A, Boolean>>() {
-                public Tuple2<A, Boolean> evaluate(A a, Boolean active) {
-                    return new Tuple2(active ? a : null, new Boolean(false));
+        // This is a bit long-winded but it's efficient because it deregisters
+        // the listener.
+        final Event<A> ev = this;
+        final Listener[] la = new Listener[1];
+        EventSink<A> out = new EventSink<A>() {
+            @Override
+            protected Object[] sampleNow()
+            {
+                Object[] oi = ev.sampleNow();
+                Object[] oo = oi;
+                if (oo != null) {
+                    if (oo.length > 1)
+                        oo = new Object[] { oi[0] };
+                    if (la[0] != null) {
+                        la[0].unlisten();
+                        la[0] = null;
+                    }
                 }
+                return oo;
             }
-        ).filterNotNull();
+        };
+        la[0] = ev.listen_(out.node, (Transaction trans, A a) -> {
+            out.send(trans, a);
+            if (la[0] != null) {
+                la[0].unlisten();
+                la[0] = null;
+            }
+        });
+        return out.addCleanup(la[0]);
     }
 
     Event<A> addCleanup(Listener cleanup)
