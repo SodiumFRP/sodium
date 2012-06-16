@@ -45,10 +45,10 @@ public abstract class Event<A> {
 
 	final Listener listen_(Node target, TransactionHandler<A> action) {
 		return Transaction.evaluate((Transaction trans1) ->
-		    listen(target, trans1, action));
+		    listen(target, trans1, action, false));
 	}
 
-	final Listener listen(Node target, Transaction trans, TransactionHandler<A> action) {
+	final Listener listen(Node target, Transaction trans, TransactionHandler<A> action, boolean suppressEarlierFirings) {
 		if (node.linkTo(target))
 		    trans.toRegen = true;
 		Object[] aNow = sampleNow();
@@ -57,10 +57,12 @@ public abstract class Event<A> {
                 action.run(trans, (A)aNow[i]);
         }
 		listeners.add(action);
-		// Anything sent already in this transaction must be sent now so that
-		// there's no order dependency between send and listen.
-		for (A a : firings)
-		    action.run(trans, a);
+		if (!suppressEarlierFirings) {
+            // Anything sent already in this transaction must be sent now so that
+            // there's no order dependency between send and listen.
+            for (A a : firings)
+                action.run(trans, a);
+        }
 		return new ListenerImplementation<A>(this, action, target);
 	}
 
@@ -194,7 +196,7 @@ public abstract class Event<A> {
             }
         };
 
-        Listener l = listen(out.node, trans1, h);
+        Listener l = listen(out.node, trans1, h, false);
         return out.addCleanup(l);
     }
 

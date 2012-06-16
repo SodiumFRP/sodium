@@ -290,5 +290,40 @@ public class BehaviorTester extends TestCase {
 	    l.unlisten();
 	    assertEquals(Arrays.asList('A','B','c','d','E','F','f','F','g','H','I'), out);
 	}
+
+	static class SE
+	{
+	    SE(Character a, Character b, Event<Character> sw)
+	    {
+	        this.a = a;
+	        this.b = b;
+	        this.sw = sw;
+	    }
+	    Character a;
+	    Character b;
+	    Event<Character> sw;
+	}
+
+    public void testSwitchE()
+    {
+        EventSink<SE> ese = new EventSink();
+        Event<Character> ea = ese.map((SE s) -> s.a).filterNotNull();
+        Event<Character> eb = ese.map((SE s) -> s.b).filterNotNull();
+        Behavior<Event<Character>> bsw = ese.map((SE s) -> s.sw).filterNotNull().hold(ea);
+        List<Character> out = new ArrayList();
+        Event<Character> eo = Behavior.switchE(bsw);
+	    Listener l = eo.listen((Character c) -> { out.add(c); });
+	    ese.send(new SE('A','a',null));
+	    ese.send(new SE('B','b',null));
+	    ese.send(new SE('C','c',eb));
+	    ese.send(new SE('D','d',null));
+	    ese.send(new SE('E','e',ea));
+	    ese.send(new SE('F','f',null));
+	    ese.send(new SE('G','g',eb));
+	    ese.send(new SE('H','h',ea));
+	    ese.send(new SE('I','i',ea));
+	    l.unlisten();
+	    assertEquals(Arrays.asList('A','B','C','d','e','F','G','h','I'), out);
+    }
 }
 

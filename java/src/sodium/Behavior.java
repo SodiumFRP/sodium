@@ -19,7 +19,7 @@ public class Behavior<A> {
 	    			});
 	    		}
 	    		this.valueUpdate = a;
-	    	});
+	    	}, false);
     	});
     }
 
@@ -50,7 +50,7 @@ public class Behavior<A> {
                 return new Object[] { value };
             }
     	};
-        Listener l = event.listen(out.node, trans1, (Transaction trans2, A a) -> { out.send(trans2, a); });
+        Listener l = event.listen(out.node, trans1, (Transaction trans2, A a) -> { out.send(trans2, a); }, false);
         return out.addCleanup(l)
             .lastFiringOnly(trans1);  // Needed in case of an initial value and an update
     	                              // in the same transaction.
@@ -119,7 +119,7 @@ public class Behavior<A> {
                     currentListener.unlisten();
                 currentListener = ba.values(trans2).listen(out.node, trans2, (Transaction trans3, A a) -> {
                     out.send(trans3, a);
-                });
+                }, false);
             }
 
             @Override
@@ -130,6 +130,39 @@ public class Behavior<A> {
         };
         Listener l1 = bba.values().listen_(out.node, h);
         return out.addCleanup(l1).hold(za);
+	}
+	
+	public static <A> Event<A> switchE(final Behavior<Event<A>> bea)
+	{
+        return Transaction.evaluate((final Transaction trans) -> switchE(trans, bea));
+    }
+
+	private static <A> Event<A> switchE(final Transaction trans1, final Behavior<Event<A>> bea)
+	{
+        final EventSink<A> out = new EventSink<A>();
+        final TransactionHandler<A> h2 = (Transaction trans2, A a) -> {
+            out.send(trans2, a);
+        };
+        TransactionHandler<Event<A>> h1 = new TransactionHandler<Event<A>>() {
+            private Listener currentListener = bea.value.listen(out.node, trans1, h2, false);
+
+            @Override
+            public void run(Transaction trans2, Event<A> ea) {
+                trans2.last(() -> {
+                    if (currentListener != null)
+                        currentListener.unlisten();
+                    currentListener = ea.listen(out.node, trans2, h2, true);
+                });
+            }
+
+            @Override
+            protected void finalize() throws Throwable {
+                if (currentListener != null)
+                    currentListener.unlisten();
+            }
+        };
+        Listener l1 = bea.changes().listen(out.node, trans1, h1, false);
+        return out.addCleanup(l1);
 	}
 
 	@Override
