@@ -125,5 +125,42 @@ public class EventTester extends TestCase {
         l.unlisten();
         assertEquals(Arrays.asList(2,7), out);
     }
+
+    public void testGate()
+    {
+        EventSink<Character> ec = new EventSink();
+        BehaviorSink<Boolean> epred = new BehaviorSink(true);
+        List<Character> out = new ArrayList();
+        Listener l = ec.gate(epred).listen(x -> { out.add(x); });
+        ec.send('H');
+        epred.send(false);
+        ec.send('O');
+        epred.send(true);
+        ec.send('I');
+        l.unlisten();
+        assertEquals(Arrays.asList('H','I'), out);
+    }
+
+    public void testCollectEvent()
+    {
+        EventSink<Integer> ea = new EventSink();
+        List<Integer> out = new ArrayList();
+        Event<Integer> sum = ea.collect(100,
+            //(a,s) -> new Tuple2(a+s, a+s)
+            new Lambda2<Integer, Integer, Tuple2<Integer,Integer>>() {
+                public Tuple2<Integer,Integer> evaluate(Integer a, Integer s) {
+                    return new Tuple2<Integer,Integer>(a+s, a+s);
+                }
+            }
+        );
+        Listener l = sum.listen((x) -> { out.add(x); });
+        ea.send(5);
+        ea.send(7);
+        ea.send(1);
+        ea.send(2);
+        ea.send(3);
+        l.unlisten();
+        assertEquals(Arrays.asList(105,112,113,115,118), out);
+    }
 }
 

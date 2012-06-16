@@ -213,7 +213,7 @@ public abstract class Event<A> {
         return merge(ea, eb).coalesce(f);
     }
 
-    public Event<A> filter(final Lambda1<A,Boolean> f)
+    public final Event<A> filter(final Lambda1<A,Boolean> f)
     {
         final Event<A> ev = this;
         EventSink<A> out = new EventSink<A>() {
@@ -245,15 +245,9 @@ public abstract class Event<A> {
         return out.addCleanup(l);
     }
 
-    public Event<A> filterNotNull()
+    public final Event<A> filterNotNull()
     {
         return filter((A a) -> a != null);
-    }
-
-    Event<A> addCleanup(Listener cleanup)
-    {
-        finalizers.add(cleanup);
-        return this;
     }
 
     public static <A,B> B loop(Lambda1<Event<A>,Tuple2<B,Event<A>>> f)
@@ -267,6 +261,33 @@ public abstract class Event<A> {
         });
         ea_in.addCleanup(l);
         return b;
+    }
+
+    public final Event<A> gate(Behavior<Boolean> bPred)
+    {
+        return snapshot(bPred, (A a, Boolean pred) -> pred ? a : null).filterNotNull();
+    }
+
+    public final <B,S> Event<B> collect(final S initState, final Lambda2<A, S, Tuple2<B, S>> f)
+    {
+        final Event<A> ea = this;
+        return Event.loop(
+            new Lambda1<Event<S>, Tuple2<Event<B>,Event<S>>>() {
+                public Tuple2<Event<B>,Event<S>> evaluate(Event<S> es) {
+                    Behavior<S> s = es.hold(initState);
+                    Event<Tuple2<B,S>> ebs = ea.snapshot(s, f);
+                    Event<B> eb = ebs.map(bs -> bs.a);
+                    Event<S> es_out = ebs.map(bs -> bs.b);
+                    return new Tuple2<Event<B>,Event<S>>(eb, es_out);
+                }
+            }
+        );
+    }
+
+    Event<A> addCleanup(Listener cleanup)
+    {
+        finalizers.add(cleanup);
+        return this;
     }
 
 	@Override
