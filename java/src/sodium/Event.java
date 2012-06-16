@@ -89,7 +89,8 @@ public abstract class Event<A> {
 	}
 
 	public final Behavior<A> hold(A initValue) {
-		return new Behavior<A>(this /*lastFiringOnly()*/, initValue);
+		return Transaction.evaluate((Transaction trans) ->
+		    new Behavior<A>(lastFiringOnly(trans), initValue));
 	}
 
 	public final <B> Event<B> snapshot(Behavior<B> beh)
@@ -153,6 +154,11 @@ public abstract class Event<A> {
 
 	public final Event<A> coalesce(final Lambda2<A,A,A> f)
 	{
+	    return Transaction.evaluate((Transaction trans) -> coalesce(trans, f));
+	}
+
+	final Event<A> coalesce(Transaction trans1, final Lambda2<A,A,A> f)
+	{
 	    final Event<A> ev = this;
 	    final EventSink<A> out = new EventSink<A>() {
     		@Override
@@ -188,16 +194,16 @@ public abstract class Event<A> {
             }
         };
 
-        Listener l = listen_(out.node, h);
+        Listener l = listen(out.node, trans1, h);
         return out.addCleanup(l);
     }
 
     /**
      * Clean up the output by discarding any firing other than the last one. 
      */
-    Event<A> lastFiringOnly()
+    final Event<A> lastFiringOnly(Transaction trans)
     {
-        return coalesce((A first, A second) -> second);
+        return coalesce(trans, (A first, A second) -> second);
     }
 
     public static <A> Event<A> mergeWith(Lambda2<A,A,A> f, Event<A> ea, Event<A> eb)

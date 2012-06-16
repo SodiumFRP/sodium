@@ -26,17 +26,22 @@ public class Behavior<A> {
     /**
      * @return The value including any updates that have happened in this transaction.
      */
-    A newValue()
+    final A newValue()
     {
     	return valueUpdate == null ? value :  valueUpdate;
     }
 
-    public Event<A> changes()
+    public final Event<A> changes()
     {
     	return event;
     }
 
-    public Event<A> values()
+    public final Event<A> values()
+    {
+        return Transaction.evaluate((Transaction trans) -> values(trans));
+    }
+
+    final Event<A> values(Transaction trans1)
     {
     	EventSink<A> out = new EventSink<A>() {
     		@Override
@@ -45,10 +50,10 @@ public class Behavior<A> {
                 return new Object[] { value };
             }
     	};
-        Listener l = event.listen_(out.node, (Transaction trans, A a) -> { out.send(trans, a); });
+        Listener l = event.listen(out.node, trans1, (Transaction trans2, A a) -> { out.send(trans2, a); });
         return out.addCleanup(l)
-            .lastFiringOnly();    // Needed in case of an initial value and an update
-    	                          // in the same transaction.
+            .lastFiringOnly(trans1);  // Needed in case of an initial value and an update
+    	                              // in the same transaction.
     }
 
 	public final <B> Behavior<B> map(Lambda1<A,B> f)
@@ -112,7 +117,7 @@ public class Behavior<A> {
                 // that might have happened during this transaction will be suppressed.
                 if (currentListener != null)
                     currentListener.unlisten();
-                currentListener = ba.values().listen(out.node, trans2, (Transaction trans3, A a) -> {
+                currentListener = ba.values(trans2).listen(out.node, trans2, (Transaction trans3, A a) -> {
                     out.send(trans3, a);
                 });
             }

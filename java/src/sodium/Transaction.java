@@ -13,15 +13,21 @@ public class Transaction {
 	private static class Entry implements Comparable<Entry> {
 		private Node rank;
 		private Handler<Transaction> action;
+		private static long nextSeq;
+		private long seq;
 
 		public Entry(Node rank, Handler<Transaction> action) {
 			this.rank = rank;
 			this.action = action;
+			this.seq = nextSeq++;
 		}
 
 		@Override
 		public int compareTo(Entry o) {
-			return rank.compareTo(o.rank);
+			int answer = rank.compareTo(o.rank);
+			if (answer == 0)  // Same rank: preserve chronological sequence.
+			    answer = Long.compare(seq, o.seq);
+			return answer;
 		}
 
 	}
