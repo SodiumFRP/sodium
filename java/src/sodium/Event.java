@@ -256,6 +256,19 @@ public abstract class Event<A> {
         return this;
     }
 
+    public static <A,B> B loop(Lambda1<Event<A>,Tuple2<B,Event<A>>> f)
+    {
+        EventSink<A> ea_in = new EventSink();
+        Tuple2<B,Event<A>> b_ea = f.evaluate(ea_in);
+        B b = b_ea.a;
+        Event<A> ea_out = b_ea.b;
+        Listener l = ea_out.listen_(ea_in.node, (Transaction trans, A a) -> {
+            ea_in.send(trans, a);
+        });
+        ea_in.addCleanup(l);
+        return b;
+    }
+
 	@Override
 	protected void finalize() throws Throwable {
 		for (Listener l : finalizers)

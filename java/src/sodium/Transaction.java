@@ -6,7 +6,7 @@ import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.HashSet;
 
-public class Transaction {
+public final class Transaction {
     // True if we need to re-generate the priority queue.
     boolean toRegen = false;
 

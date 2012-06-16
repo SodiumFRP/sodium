@@ -19,7 +19,7 @@ public class BehaviorTester extends TestCase {
         EventSink<Integer> e = new EventSink<Integer>();
         Behavior<Integer> b = e.hold(0);
         List<Integer> out = new ArrayList<Integer>();
-        Listener l = b.changes().listen((Integer x) -> { out.add(x); });
+        Listener l = b.changes().listen(x -> { out.add(x); });
         e.send(2);
         e.send(9);
         l.unlisten();
@@ -31,8 +31,8 @@ public class BehaviorTester extends TestCase {
         BehaviorSink<Integer> b = new BehaviorSink<Integer>(0);
         EventSink<Long> trigger = new EventSink<Long>();
         List<String> out = new ArrayList<String>();
-        Listener l = trigger.snapshot(b, (Long x, Integer y) -> x + " " + y)
-            .listen((String x) -> { out.add(x); });
+        Listener l = trigger.snapshot(b, (x, y) -> x + " " + y)
+            .listen(x -> { out.add(x); });
         trigger.send(100L);
         b.send(2);
         trigger.send(200L);
@@ -46,7 +46,7 @@ public class BehaviorTester extends TestCase {
 	public void testValues() {
 		BehaviorSink<Integer> b = new BehaviorSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
-		Listener l = b.values().listen((Integer x) -> { out.add(x); });
+		Listener l = b.values().listen(x -> { out.add(x); });
 		b.send(2);
 		b.send(7);
 		l.unlisten();
@@ -56,7 +56,7 @@ public class BehaviorTester extends TestCase {
 	public void testValuesThenMap() {
 		BehaviorSink<Integer> b = new BehaviorSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
-		Listener l = b.values().map((Integer x) -> x+100).listen((Integer x) -> { out.add(x); });
+		Listener l = b.values().map(x -> x+100).listen(x -> { out.add(x); });
 		b.send(2);
 		b.send(7);
 		l.unlisten();
@@ -77,7 +77,7 @@ public class BehaviorTester extends TestCase {
 	public void testValuesTwiceThenMap() {
 		BehaviorSink<Integer> b = new BehaviorSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
-		Listener l = doubleUp(b.values()).map((Integer x) -> x+100).listen((Integer x) -> { out.add(x); });
+		Listener l = doubleUp(b.values()).map(x -> x+100).listen(x -> { out.add(x); });
 		b.send(2);
 		b.send(7);
 		l.unlisten();
@@ -87,7 +87,7 @@ public class BehaviorTester extends TestCase {
 	public void testValuesThenCoalesce() {
 		BehaviorSink<Integer> b = new BehaviorSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
-		Listener l = b.values().coalesce((Integer fst, Integer snd) -> snd).listen((Integer x) -> { out.add(x); });
+		Listener l = b.values().coalesce((fst, snd) -> snd).listen(x -> { out.add(x); });
 		b.send(2);
 		b.send(7);
 		l.unlisten();
@@ -97,7 +97,7 @@ public class BehaviorTester extends TestCase {
 	public void testValuesTwiceThenCoalesce() {
 		BehaviorSink<Integer> b = new BehaviorSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
-		Listener l = doubleUp(b.values()).coalesce((Integer fst, Integer snd) -> fst+snd).listen((Integer x) -> { out.add(x); });
+		Listener l = doubleUp(b.values()).coalesce((fst, snd) -> fst+snd).listen(x -> { out.add(x); });
 		b.send(2);
 		b.send(7);
 		l.unlisten();
@@ -108,7 +108,7 @@ public class BehaviorTester extends TestCase {
 		BehaviorSink<Integer> bi = new BehaviorSink<Integer>(9);
 		BehaviorSink<Character> bc = new BehaviorSink<Character>('a');
 		List<Character> out = new ArrayList<Character>();
-		Listener l = bi.values().snapshot(bc).listen((Character x) -> { out.add(x); });
+		Listener l = bi.values().snapshot(bc).listen(x -> { out.add(x); });
 		bc.send('b');
 		bi.send(2);
 		bc.send('c');
@@ -121,7 +121,7 @@ public class BehaviorTester extends TestCase {
 		BehaviorSink<Integer> bi = new BehaviorSink<Integer>(9);
 		BehaviorSink<Character> bc = new BehaviorSink<Character>('a');
 		List<Character> out = new ArrayList<Character>();
-		Listener l = doubleUp(bi.values()).snapshot(bc).listen((Character x) -> { out.add(x); });
+		Listener l = doubleUp(bi.values()).snapshot(bc).listen(x -> { out.add(x); });
 		bc.send('b');
 		bi.send(2);
 		bc.send('c');
@@ -134,8 +134,8 @@ public class BehaviorTester extends TestCase {
 		BehaviorSink<Integer> bi = new BehaviorSink<Integer>(9);
 		BehaviorSink<Integer> bj = new BehaviorSink<Integer>(2);
 		List<Integer> out = new ArrayList<Integer>();
-		Listener l = Event.mergeWith((Integer x, Integer y) -> x+y, bi.values(),bj.values())
-		    .listen((Integer x) -> { out.add(x); });
+		Listener l = Event.mergeWith((x, y) -> x+y, bi.values(),bj.values())
+		    .listen(x -> { out.add(x); });
 		bi.send(1);
 		bj.send(4);
 		l.unlisten();
@@ -145,7 +145,7 @@ public class BehaviorTester extends TestCase {
 	public void testValuesThenFilter() {
 		BehaviorSink<Integer> b = new BehaviorSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
-		Listener l = b.values().filter((Integer a) -> true).listen((Integer x) -> { out.add(x); });
+		Listener l = b.values().filter(a -> true).listen(x -> { out.add(x); });
 		b.send(2);
 		b.send(7);
 		l.unlisten();
@@ -155,7 +155,7 @@ public class BehaviorTester extends TestCase {
 	public void testValuesTwiceThenFilter() {
 		BehaviorSink<Integer> b = new BehaviorSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
-		Listener l = doubleUp(b.values()).filter((Integer a) -> true).listen((Integer x) -> { out.add(x); });
+		Listener l = doubleUp(b.values()).filter(a -> true).listen(x -> { out.add(x); });
 		b.send(2);
 		b.send(7);
 		l.unlisten();
@@ -167,7 +167,7 @@ public class BehaviorTester extends TestCase {
 		List<Integer> out = new ArrayList<Integer>();
 		Event<Integer> values = b.values();
 		b.send(8);
-		Listener l = values.listen((Integer x) -> { out.add(x); });
+		Listener l = values.listen(x -> { out.add(x); });
 		b.send(2);
 		l.unlisten();
 		assertEquals(Arrays.asList(8,2), out);
@@ -176,8 +176,8 @@ public class BehaviorTester extends TestCase {
 	public void testMapB() {
 		BehaviorSink<Integer> b = new BehaviorSink<Integer>(6);
 		List<String> out = new ArrayList<String>();
-		Listener l = b.map((Integer x) -> x.toString())
-				.values().listen((String x) -> { out.add(x); });
+		Listener l = b.map(x -> x.toString())
+				.values().listen(x -> { out.add(x); });
 		b.send(8);
 		l.unlisten();
 		assertEquals(Arrays.asList("6", "8"), out);
@@ -186,9 +186,9 @@ public class BehaviorTester extends TestCase {
 	public void testMapBLateListen() {
 		BehaviorSink<Integer> b = new BehaviorSink<Integer>(6);
 		List<String> out = new ArrayList<String>();
-		Behavior<String> bm = b.map((Integer x) -> x.toString());
+		Behavior<String> bm = b.map(x -> x.toString());
 		b.send(2);
-		Listener l = bm.values().listen((String x) -> { out.add(x); });
+		Listener l = bm.values().listen(x -> { out.add(x); });
 		b.send(8);
 		l.unlisten();
 		assertEquals(Arrays.asList("2", "8"), out);
@@ -197,7 +197,7 @@ public class BehaviorTester extends TestCase {
 	public void testTransaction() {
 		final boolean[] calledBack = new boolean[1];
 	    Transaction.run((Transaction trans) -> {
-	    	trans.prioritized(Node.NULL, (Transaction trans2) -> { calledBack[0] = true; });
+	    	trans.prioritized(Node.NULL, trans2 -> { calledBack[0] = true; });
 	    });
 	    assertEquals(true, calledBack[0]);
 	}
@@ -207,7 +207,7 @@ public class BehaviorTester extends TestCase {
 				(Long b) -> "1 "+b);
 		BehaviorSink<Long> ba = new BehaviorSink<Long>(5L);
 		List<String> out = new ArrayList<String>();
-		Listener l = Behavior.apply(bf,ba).values().listen((String x) -> { out.add(x); });
+		Listener l = Behavior.apply(bf,ba).values().listen(x -> { out.add(x); });
 		bf.send((Long b) -> "12 "+b);
 		ba.send(6L);
         l.unlisten();
@@ -219,7 +219,7 @@ public class BehaviorTester extends TestCase {
 		BehaviorSink<Long> b = new BehaviorSink<Long>(5L);
 		List<String> out = new ArrayList<String>();
 		Listener l = Behavior.lift(
-			(Integer x, Long y) -> x + " " + y,
+			(x, y) -> x + " " + y,
 			a,
 			b
 		).values().listen((String x) -> { out.add(x); });
@@ -233,7 +233,7 @@ public class BehaviorTester extends TestCase {
 		BehaviorSink<Integer> a = new BehaviorSink<Integer>(1);
 		Behavior<Integer> a3 = a.map((Integer x) -> x * 3);
 		Behavior<Integer> a5 = a.map((Integer x) -> x * 5);
-		Behavior<String> b = Behavior.lift((Integer x, Integer y) -> x + " " + y, a3, a5);
+		Behavior<String> b = Behavior.lift((x, y) -> x + " " + y, a3, a5);
 		List<String> out = new ArrayList<String>();
 		Listener l = b.values().listen((String x) -> { out.add(x); });
 		a.send(2);
@@ -244,7 +244,7 @@ public class BehaviorTester extends TestCase {
 	public void testHoldIsDelayed() {
 	    EventSink<Integer> e = new EventSink<Integer>();
 	    Behavior<Integer> h = e.hold(0);
-	    Event<String> pair = e.snapshot(h, (Integer a, Integer b) -> a + " " + b);
+	    Event<String> pair = e.snapshot(h, (a, b) -> a + " " + b);
 		List<String> out = new ArrayList<String>();
 		Listener l = pair.listen((String x) -> { out.add(x); });
 		e.send(2);
@@ -271,12 +271,12 @@ public class BehaviorTester extends TestCase {
 	    EventSink<SB> esb = new EventSink();
 	    // Split each field out of SB so we can update multiple behaviours in a
 	    // single transaction.
-	    Behavior<Character> ba = esb.map((SB s) -> s.a).filterNotNull().hold('A');
-	    Behavior<Character> bb = esb.map((SB s) -> s.b).filterNotNull().hold('a');
-	    Behavior<Behavior<Character>> bsw = esb.map((SB s) -> s.sw).filterNotNull().hold(ba);
+	    Behavior<Character> ba = esb.map(s -> s.a).filterNotNull().hold('A');
+	    Behavior<Character> bb = esb.map(s -> s.b).filterNotNull().hold('a');
+	    Behavior<Behavior<Character>> bsw = esb.map(s -> s.sw).filterNotNull().hold(ba);
 	    Behavior<Character> bo = Behavior.switchB(bsw);
 		List<Character> out = new ArrayList<Character>();
-	    Listener l = bo.values().listen((Character c) -> { out.add(c); });
+	    Listener l = bo.values().listen(c -> { out.add(c); });
 	    esb.send(new SB('B','b',null));
 	    esb.send(new SB('C','c',bb));
 	    esb.send(new SB('D','d',null));
@@ -307,12 +307,12 @@ public class BehaviorTester extends TestCase {
     public void testSwitchE()
     {
         EventSink<SE> ese = new EventSink();
-        Event<Character> ea = ese.map((SE s) -> s.a).filterNotNull();
-        Event<Character> eb = ese.map((SE s) -> s.b).filterNotNull();
-        Behavior<Event<Character>> bsw = ese.map((SE s) -> s.sw).filterNotNull().hold(ea);
+        Event<Character> ea = ese.map(s -> s.a).filterNotNull();
+        Event<Character> eb = ese.map(s -> s.b).filterNotNull();
+        Behavior<Event<Character>> bsw = ese.map(s -> s.sw).filterNotNull().hold(ea);
         List<Character> out = new ArrayList();
         Event<Character> eo = Behavior.switchE(bsw);
-	    Listener l = eo.listen((Character c) -> { out.add(c); });
+	    Listener l = eo.listen(c -> { out.add(c); });
 	    ese.send(new SE('A','a',null));
 	    ese.send(new SE('B','b',null));
 	    ese.send(new SE('C','c',eb));

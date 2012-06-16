@@ -1,6 +1,6 @@
 package sodium;
 
-public class BehaviorSink<A> extends Behavior<A> {
+public final class BehaviorSink<A> extends Behavior<A> {
     public BehaviorSink(A initValue) {
     	super(new EventSink<A>(), initValue);
     }
