@@ -45,7 +45,7 @@ public abstract class Event<A> {
 
 	final Listener listen_(Node target, TransactionHandler<A> action) {
 		return Transaction.evaluate((Transaction trans1) ->
-		    listen(Node.NULL, trans1, action));
+		    listen(target, trans1, action));
 	}
 
 	final Listener listen(Node target, Transaction trans, TransactionHandler<A> action) {
