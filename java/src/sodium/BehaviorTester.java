@@ -346,5 +346,27 @@ public class BehaviorTester extends TestCase {
         l.unlisten();
         assertEquals(Arrays.asList(0,2,5,6), out);
     }
+
+    public void testCollect()
+    {
+        EventSink<Integer> ea = new EventSink();
+        List<Integer> out = new ArrayList();
+        Behavior<Integer> sum = ea.hold(100).collect(0,
+            //(a,s) -> new Tuple2(a+s, a+s)
+            new Lambda2<Integer, Integer, Tuple2<Integer,Integer>>() {
+                public Tuple2<Integer,Integer> evaluate(Integer a, Integer s) {
+                    return new Tuple2<Integer,Integer>(a+s, a+s);
+                }
+            }
+        );
+        Listener l = sum.values().listen((x) -> { out.add(x); });
+        ea.send(5);
+        ea.send(7);
+        ea.send(1);
+        ea.send(2);
+        ea.send(3);
+        l.unlisten();
+        assertEquals(Arrays.asList(100,105,112,113,115,118), out);
+    }
 }
 

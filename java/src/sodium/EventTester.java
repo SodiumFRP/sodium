@@ -141,7 +141,7 @@ public class EventTester extends TestCase {
         assertEquals(Arrays.asList('H','I'), out);
     }
 
-    public void testCollectEvent()
+    public void testCollect()
     {
         EventSink<Integer> ea = new EventSink();
         List<Integer> out = new ArrayList();
