@@ -52,6 +52,14 @@ public class BehaviorTester extends TestCase {
 		l.unlisten();
 		assertEquals(Arrays.asList(9,2,7), out);
 	}
+	
+	public void testConstantBehavior() {
+	    Behavior<Integer> b = new Behavior<Integer>(12);
+	    List<Integer> out = new ArrayList();
+	    Listener l = b.values().listen(x -> { out.add(x); });
+	    l.unlisten();
+	    assertEquals(Arrays.asList(12), out);
+	}
 
 	public void testValuesThenMap() {
 		BehaviorSink<Integer> b = new BehaviorSink<Integer>(9);

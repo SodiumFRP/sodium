@@ -3,7 +3,7 @@ package sodium;
 import java.util.ArrayList;
 import java.util.List;
 
-public abstract class Event<A> {
+public class Event<A> {
 	private static final class ListenerImplementation<A> implements Listener {
 		/**
 		 * It's essential that we keep the listener alive while the caller holds
@@ -34,10 +34,13 @@ public abstract class Event<A> {
 	Node node = new Node(0L);
 	protected final List<A> firings = new ArrayList<A>();
 
+	/**
+	 * An event that never fires.
+	 */
 	public Event() {
 	}
 
-	protected abstract Object[] sampleNow();
+	protected Object[] sampleNow() { return null; }
 
 	/**
 	 * Listen for firings of this event. The returned Listener has an unlisten()

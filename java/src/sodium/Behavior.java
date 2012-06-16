@@ -6,6 +6,15 @@ public class Behavior<A> {
 	A valueUpdate;
 	private Listener cleanup;
 
+	/**
+	 * A behavior with a constant value.
+	 */
+    public Behavior(A value)
+    {
+    	this.event = new Event<A>();
+    	this.value = value;
+    }
+
     Behavior(Event<A> event, A initValue)
     {
     	this.event = event;
@@ -252,6 +261,7 @@ public class Behavior<A> {
 
 	@Override
 	protected void finalize() throws Throwable {
-		cleanup.unlisten();
+	    if (cleanup != null)
+            cleanup.unlisten();
 	}
 }
