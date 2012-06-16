@@ -284,6 +284,41 @@ public abstract class Event<A> {
         );
     }
 
+    public final <S> Event<S> accum(final S initState, final Lambda2<A, S, S> f)
+    {
+        final Event<A> ea = this;
+        return Event.loop(
+            new Lambda1<Event<S>, Tuple2<Event<S>,Event<S>>>() {
+                public Tuple2<Event<S>,Event<S>> evaluate(Event<S> es) {
+                    Behavior<S> s = es.hold(initState);
+                    Event<S> es_out = ea.snapshot(s, f);
+                    return new Tuple2<Event<S>,Event<S>>(es_out, es_out);
+                }
+            }
+        );
+    }
+
+    public final Event<Integer> countE()
+    {
+        return map((A a) -> 1).accum(0, (a,b)->a+b);
+    }
+    
+    public final Behavior<Integer> count()
+    {
+        return countE().hold(0);
+    }
+
+    public final Event<A> once()
+    {
+        return collect(new Boolean(true),
+            new Lambda2<A, Boolean, Tuple2<A, Boolean>>() {
+                public Tuple2<A, Boolean> evaluate(A a, Boolean active) {
+                    return new Tuple2(active ? a : null, new Boolean(false));
+                }
+            }
+        ).filterNotNull();
+    }
+
     Event<A> addCleanup(Listener cleanup)
     {
         finalizers.add(cleanup);

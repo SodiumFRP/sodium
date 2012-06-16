@@ -368,5 +368,20 @@ public class BehaviorTester extends TestCase {
         l.unlisten();
         assertEquals(Arrays.asList(100,105,112,113,115,118), out);
     }
+
+    public void testAccum()
+    {
+        EventSink<Integer> ea = new EventSink();
+        List<Integer> out = new ArrayList();
+        Behavior<Integer> sum = ea.hold(100).accum(0, (a,s)->a+s);
+        Listener l = sum.values().listen((x) -> { out.add(x); });
+        ea.send(5);
+        ea.send(7);
+        ea.send(1);
+        ea.send(2);
+        ea.send(3);
+        l.unlisten();
+        assertEquals(Arrays.asList(100,105,112,113,115,118), out);
+    }
 }
 

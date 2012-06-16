@@ -195,6 +195,22 @@ public class Behavior<A> {
         );
     }
 
+    public final <S> Behavior<S> accum(final S initState, final Lambda2<A, S, S> f)
+    {
+        final Event<A> ea = changes().coalesce((A fst, A snd) -> snd);
+        final A za = value;
+        final S zs = f.evaluate(za, initState);
+        return Event.loop(
+            new Lambda1<Event<S>, Tuple2<Behavior<S>,Event<S>>>() {
+                public Tuple2<Behavior<S>,Event<S>> evaluate(Event<S> es) {
+                    Behavior<S> bs = es.hold(zs);
+                    Event<S> es_out = ea.snapshot(bs, f);
+                    return new Tuple2<Behavior<S>,Event<S>>(bs, es_out);
+                }
+            }
+        );
+    }
+
 	@Override
 	protected void finalize() throws Throwable {
 		cleanup.unlisten();

@@ -162,5 +162,56 @@ public class EventTester extends TestCase {
         l.unlisten();
         assertEquals(Arrays.asList(105,112,113,115,118), out);
     }
+
+    public void testAccum()
+    {
+        EventSink<Integer> ea = new EventSink();
+        List<Integer> out = new ArrayList();
+        Event<Integer> sum = ea.accum(100, (a,s)->a+s);
+        Listener l = sum.listen((x) -> { out.add(x); });
+        ea.send(5);
+        ea.send(7);
+        ea.send(1);
+        ea.send(2);
+        ea.send(3);
+        l.unlisten();
+        assertEquals(Arrays.asList(105,112,113,115,118), out);
+    }
+
+    public void testCountE()
+    {
+        EventSink<Unit> e = new EventSink();
+        List<Integer> out = new ArrayList();
+        Listener l = e.countE().listen((x) -> { out.add(x); });
+        e.send(Unit.unit);
+        e.send(Unit.unit);
+        e.send(Unit.unit);
+        l.unlisten();
+        assertEquals(Arrays.asList(1,2,3), out);
+    }
+
+    public void testCount()
+    {
+        EventSink<Unit> e = new EventSink();
+        List<Integer> out = new ArrayList();
+        Listener l = e.count().values().listen((x) -> { out.add(x); });
+        e.send(Unit.unit);
+        e.send(Unit.unit);
+        e.send(Unit.unit);
+        l.unlisten();
+        assertEquals(Arrays.asList(0,1,2,3), out);
+    }
+
+    public void testOnce()
+    {
+        EventSink<Character> e = new EventSink();
+        List<Character> out = new ArrayList();
+        Listener l = e.once().listen((x) -> { out.add(x); });
+        e.send('A');
+        e.send('B');
+        e.send('C');
+        l.unlisten();
+        assertEquals(Arrays.asList('A'), out);
+    }
 }
 
