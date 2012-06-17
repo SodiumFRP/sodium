@@ -76,7 +76,7 @@ cardSpacing = (2000-cardWidth) / fromIntegral (noOfStacks-1)
     (cardWidth, _) = cardSize
 
 cardSpacingNarrow :: Double
-cardSpacingNarrow = cardSpacing * 0.95
+cardSpacingNarrow = cardSpacing * 0.9
 
 topRow :: Double
 topRow = 1000 - 50 - cardHeight
@@ -107,6 +107,8 @@ draw pt (Card v s) = ((pt, cardSize), "cards" ++ [pathSeparator] ++ suitName s +
 emptySpace :: Point -> Sprite
 emptySpace pt = ((pt, cardSize), "cards" ++ [pathSeparator] ++ "empty-space.png") 
 
+-- | The vertical stacks of cards, where cards can only be added if they're
+-- descending numbers and alternating red-black.
 stack :: Event MouseEvent -> [Card] -> Location -> Behavior Int -> Event [Card]
       -> Reactive (Behavior [Sprite], Behavior Destination, Event Bunch)
 stack eMouse initCards loc@(Stack ix) freeSpaces eDrop = do
@@ -149,6 +151,7 @@ stack eMouse initCards loc@(Stack ix) freeSpaces eDrop = do
             ) <$> cards <*> freeSpaces
     return (sprites, dest, eDrag)
 
+-- | The "free cells" where cards can be temporarily put.
 cell :: Event MouseEvent -> Location -> Event [Card]
      -> Reactive (Behavior [Sprite], Behavior Destination, Event Bunch, Behavior Int)
 cell eMouse loc@(Cell ix) eDrop = do
@@ -174,6 +177,7 @@ cell eMouse loc@(Cell ix) eDrop = do
         emptySpaces = (\c -> if isNothing c then 1 else 0) <$> mCard
     return (sprites, dest, eDrag, emptySpaces)
 
+-- | The place where the cards end up at the top right, aces first.
 grave :: Event MouseEvent -> Event [Card]
       -> Reactive (Behavior [Sprite], Behavior Destination, Event Bunch)
 grave eMouse eDrop = do
@@ -230,6 +234,7 @@ grave eMouse eDrop = do
         doit (x:xs) ix = if x then Just ix
                               else doit xs (ix+1)
 
+-- | Draw the cards while they're being dragged.
 dragger :: Event MouseEvent -> Event Bunch -> Reactive (Behavior [Sprite], Event (Point, Bunch))
 dragger eMouse eStartDrag = do
     dragPos <- hold (0,0) $ flip fmap eMouse $ \mev ->
@@ -239,23 +244,29 @@ dragger eMouse eStartDrag = do
             MouseDown pt -> pt
     rec
         dragging <- hold Nothing $ (const Nothing <$> eDrop) `merge` (Just <$> eStartDrag)
-        let plot pt (Just bunch) =
-                let cpos = cardPos pt bunch
-                    positions = iterate (\(x, y) -> (x, y-overlapY)) cpos
-                in  zipWith draw positions (buCards bunch) 
-            plot _ Nothing = []
-            eDrop = filterJust $ snapshotWith (\mev mDragging ->
+        let eDrop = filterJust $ snapshotWith (\mev mDragging ->
                     case (mev, mDragging) of
+                        -- If the mouse is released, and we are dragging...
                         (MouseUp pt, Just dragging) -> Just (cardPos pt dragging, dragging)
                         _                           -> Nothing
                 ) eMouse dragging
-    return (plot <$> dragPos <*> dragging, eDrop)
+    let sprites = drawDraggedCards <$> dragPos <*> dragging
+          where
+            drawDraggedCards pt (Just bunch) =
+                let cpos = cardPos pt bunch
+                    positions = iterate (\(x, y) -> (x, y-overlapY)) cpos
+                in  zipWith draw positions (buCards bunch) 
+            drawDraggedCards _ Nothing = []
+    return (sprites, eDrop)
   where
     cardPos pt bunch = (pt `minus` buInitMousePos bunch) `plus` buInitOrig bunch
 
+-- | Determine where dropped cards are routed to.
 dropper :: Event (Point, Bunch) -> Behavior [Destination] -> Event (Location, [Card])
 dropper eDrop dests =
     snapshotWith (\(pt, bunch) dests ->
+                -- If none of the destinations will accept the dropped cards, then send them
+                -- back where they originated from.
                 let findDest [] = (buOrigin bunch, buCards bunch)
                     findDest (dest:rem) =
                         if pt `inside` deDropZone dest && deMayDrop dest (buCards bunch)
