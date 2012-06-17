@@ -7,15 +7,12 @@
 import FRP.Sodium
 import Control.Applicative
 import Control.Monad
-import Control.Monad.Trans
 import Data.Traversable (sequenceA)
 import Data.List
 import Data.Maybe
-import Debug.Trace
 import Engine
 import System.Random
 import System.FilePath
-import Data.Array (Array)
 import Data.Array.IArray as A
 import Data.Array.ST
 
