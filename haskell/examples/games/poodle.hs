@@ -1,4 +1,4 @@
-{-# LANGUAGE DoRec, GeneralizedNewtypeDeriving, ScopedTypeVariables #-}
+{-# LANGUAGE DoRec, GeneralizedNewtypeDeriving #-}
 -- Package dependencies:
 --     random
 --     stb-image
