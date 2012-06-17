@@ -36,11 +36,55 @@ instance Bounded Card where
     minBound = Card minBound minBound
     maxBound = Card maxBound maxBound 
 
+noOfStacks :: Int
+noOfStacks = 8
+
+noOfCells :: Int
+noOfCells = 4
+
 cardSize :: Vector
 cardSize = (100,150)
 
-isRed :: Card -> Bool
-isRed (Card _ suit) = suit == Hearts || suit == Diamonds
+overlapY :: Double
+overlapY = 90
+
+data Location = Stack Int | Cell Int | Grave deriving (Eq, Show)
+
+data Bunch = Bunch {
+        buInitOrig     :: Point,
+        buInitMousePos :: Point,
+        buCards        :: [Card],
+        buOrigin       :: Location
+    }
+    deriving Show
+
+data Destination = Destination {
+        deLocation :: Location,
+        deDropZone :: Rect,
+        deMayDrop  :: [Card] -> Bool
+    }
+
+validSequence :: [Card] -> Bool
+validSequence xs = and $ zipWith follows xs (drop 1 xs)
+
+follows :: Card -> Card -> Bool
+follows one@(Card v1 _) two@(Card v2 _) = isRed one /= isRed two && (v1 /= Ace && pred v1 == v2)
+  where
+    isRed :: Card -> Bool
+    isRed (Card _ suit) = suit == Hearts || suit == Diamonds
+
+cardSpacing :: Double
+cardSpacing = (2000-cardWidth) / fromIntegral (noOfStacks-1)
+  where
+    (cardWidth, _) = cardSize
+
+cardSpacingNarrow :: Double
+cardSpacingNarrow = cardSpacing * 0.95
+
+topRow :: Double
+topRow = 1000 - 50 - cardHeight
+  where
+    (cardWidth, cardHeight) = cardSize
 
 draw :: Point -> Card -> Sprite
 draw pt (Card v s) = ((pt, cardSize), "cards" ++ [pathSeparator] ++ suitName s ++ valueName v ++ ".png")
@@ -65,45 +109,6 @@ draw pt (Card v s) = ((pt, cardSize), "cards" ++ [pathSeparator] ++ suitName s +
 
 emptySpace :: Point -> Sprite
 emptySpace pt = ((pt, cardSize), "cards" ++ [pathSeparator] ++ "empty-space.png") 
-
-data Location = Stack Int | Cell Int | Grave deriving (Eq, Show)
-
-data Bunch = Bunch {
-        buInitOrig     :: Point,
-        buInitMousePos :: Point,
-        buCards        :: [Card],
-        buOrigin       :: Location
-    }
-    deriving Show
-
-data Destination = Destination {
-        deLocation :: Location,
-        deDropZone :: Rect,
-        deMayDrop  :: [Card] -> Bool
-    }
-
-noOfStacks :: Int
-noOfStacks = 8
-
-noOfCells :: Int
-noOfCells = 4
-
-overlapY :: Double
-overlapY = 90
-
-validSequence :: [Card] -> Bool
-validSequence xs = and $ zipWith follows xs (drop 1 xs)
-
-follows :: Card -> Card -> Bool
-follows one@(Card v1 _) two@(Card v2 _) = isRed one /= isRed two && (v1 /= Ace && pred v1 == v2)
-
-cardSpacing :: Double
-cardSpacing = (2000-cardWidth) / fromIntegral (noOfStacks-1)
-  where
-    (cardWidth, _) = cardSize
-
-cardSpacingNarrow :: Double
-cardSpacingNarrow = cardSpacing * 0.95
 
 stack :: Event MouseEvent -> [Card] -> Location -> Behavior Int -> Event [Card]
       -> Reactive (Behavior [Sprite], Behavior Destination, Event Bunch)
@@ -146,11 +151,6 @@ stack eMouse initCards loc@(Stack ix) freeSpaces eDrop = do
                 }
             ) <$> cards <*> freeSpaces
     return (sprites, dest, eDrag)
-
-topRow :: Double
-topRow = 1000 - 50 - cardHeight
-  where
-    (cardWidth, cardHeight) = cardSize
 
 cell :: Event MouseEvent -> Location -> Event [Card]
      -> Reactive (Behavior [Sprite], Behavior Destination, Event Bunch, Behavior Int)
