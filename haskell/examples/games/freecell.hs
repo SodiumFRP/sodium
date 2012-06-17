@@ -85,16 +85,6 @@ data Destination = Destination {
 noOfStacks :: Int
 noOfStacks = 8
 
-toStacks :: Int -> [Card] -> [[Card]]
-toStacks noOfStacks cards = foldl (\stacks layer ->
-        zipWith (++) (map (:[]) layer ++ repeat []) stacks
-    ) (replicate noOfStacks []) (layerize cards)
-  where
-    layerize :: [Card] -> [[Card]]
-    layerize cards = case splitAt noOfStacks cards of
-        ([], _) -> []
-        (layer, rem) -> layer : layerize rem
-
 noOfCells :: Int
 noOfCells = 4
 
@@ -113,7 +103,7 @@ cardSpacing = (2000-cardWidth) / fromIntegral (noOfStacks-1)
     (cardWidth, _) = cardSize
 
 cardSpacingNarrow :: Double
-cardSpacingNarrow = cardSpacing * 0.9
+cardSpacingNarrow = cardSpacing * 0.95
 
 stack :: Event MouseEvent -> [Card] -> Location -> Behavior Int -> Event [Card]
       -> Reactive (Behavior [Sprite], Behavior Destination, Event Bunch)
@@ -319,6 +309,16 @@ shuffle rng cards =
                     writeArray ary ix2 one
             return ary
     in  (A.elems ary, rng')
+
+toStacks :: Int -> [Card] -> [[Card]]
+toStacks noOfStacks cards = foldl (\stacks layer ->
+        zipWith (++) (map (:[]) layer ++ repeat []) stacks
+    ) (replicate noOfStacks []) (layerize cards)
+  where
+    layerize :: [Card] -> [[Card]]
+    layerize cards = case splitAt noOfStacks cards of
+        ([], _) -> []
+        (layer, rem) -> layer : layerize rem
 
 main = do
     rng <- newStdGen
