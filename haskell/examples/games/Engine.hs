@@ -30,6 +30,12 @@ type Sprite = (Rect, String)
 data MouseEvent = MouseDown Point | MouseMove Point | MouseUp Point
     deriving Show
 
+plus :: Point -> Vector -> Point
+plus (x0, y0) (x1, y1) = (x0 + x1, y0 + y1)
+
+minus :: Point -> Point -> Vector
+minus (x0, y0) (x1, y1) = (x0 - x1, y0 - y1)
+
 -- | True if the point is inside the rectangle
 inside :: Point -> Rect -> Bool
 inside (x, y) ((ox, oy), (wx, wy)) =
