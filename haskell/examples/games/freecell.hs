@@ -297,6 +297,9 @@ freecell stackCards eMouse time = do
         (ceSprites, ceDests, ceDrags, ceEmptySpaces) <- unzip4 <$> forM (zip ceLocs ceDrops) (\(loc, drop) ->
             cell eMouse loc drop)
         (grSprites, grDest, grDrag) <- grave eMouse (head grDrops)
+        -- The total number of empty spaces available in cells - 0 to 4. We need to
+        -- know this when we drop a stack of cards, because (the rules of the game say)
+        -- this is equivalent to temporarily putting all but one of them in cells.
         let emptySpaces = foldr1 (\x y -> (+) <$> x <*> y) ceEmptySpaces
         (drSprites, eDrop) <- dragger eMouse (foldr1 merge (stDrags ++ ceDrags ++ [grDrag]))
     return $ concat <$> sequenceA (stSprites ++ ceSprites ++ [grSprites] ++ [drSprites])
