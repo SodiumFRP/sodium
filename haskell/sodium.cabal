@@ -1,5 +1,5 @@
 name:                sodium
-version:             0.4.0.1
+version:             0.5.0.0
 synopsis:            Sodium Reactive Programming (FRP) System
 description:         
   A general purpose Reactive Programming (FRP) system. This is part of a project to
@@ -23,7 +23,7 @@ description:
   Changes: 0.2.0.0 fix some value recursion deadlocks and improve docs;
            0.3.0.0 add mergeWith, make cross asynchronous;
            0.4.0.0 API revamp to remove an excess type variable. Parallelism stuff to be rethought;
-           0.4.0.1 Improved tests cases + add Freecell example.
+           0.5.0.0 Improved tests cases + add Freecell example, API tweaks.
 license:             BSD3
 license-file:        LICENSE
 author:              Stephen Blackheath

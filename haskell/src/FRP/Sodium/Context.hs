@@ -32,6 +32,8 @@ class (
     newEvent      :: Reactive r (Event r a, a -> Reactive r ())
     -- | Listen for firings of this event. The returned @IO ()@ is an IO action
     -- that unregisters the listener. This is the observer pattern.
+    --
+    -- To listen to a 'Behavior' use @listen (values b) handler@
     listen        :: Event r a -> (a -> IO ()) -> Reactive r (IO ())
     -- | An event that never fires.
     never         :: Event r a
@@ -78,6 +80,8 @@ class (
     -- make any assumptions about the ordering, and the combining function would
     -- ideally be commutative.
     coalesce      :: (a -> a -> a) -> Event r a -> Event r a
+    -- | Throw away all event occurrences except for the first one.
+    once          :: Context r => Event r a -> Event r a
 
 newBehavior :: forall r a . Context r =>
                a  -- ^ Initial behavior value
@@ -86,9 +90,6 @@ newBehavior initA = do
     (ev, push) <- newEvent
     beh <- hold initA ev
     return (beh, push)
-
-listenValue   :: Context r => Behavior r a -> (a -> IO ()) -> Reactive r (IO ())
-listenValue b handler = listen (values b) handler
 
 -- | Merge two streams of events of the same type, combining simultaneous
 -- event occurrences.
@@ -158,8 +159,4 @@ countE = accumE (+) 0 . (const 1 <$>)
 -- | Count event occurrences, giving a behavior that starts with 0 before the first occurrence.
 count :: Context r => Event r a -> Reactive r (Behavior r Int)
 count = hold 0 <=< countE
-
--- | Throw away all event occurrences except for the first one.
-once :: Context r => Event r a -> Reactive r (Event r a)
-once ea = filterJust <$> collectE (\a active -> (if active then Just a else Nothing, False)) True ea
 

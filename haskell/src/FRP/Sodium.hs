@@ -38,7 +38,6 @@ module FRP.Sodium (
         newEvent,
         newBehavior,
         listen,
-        listenValue,
         -- * FRP core language
         Event,
         Behavior,
@@ -66,7 +65,7 @@ module FRP.Sodium (
         accum,
         countE,
         count,
-        once,
+        once
     ) where
 
 import FRP.Sodium.Plain

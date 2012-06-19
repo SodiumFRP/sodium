@@ -91,6 +91,7 @@ instance R.Context Plain where
     execute = execute
     sample = sample
     coalesce = coalesce
+    once = once
 
 -- | Execute the specified 'Reactive' within a new transaction, blocking the caller
 -- until all resulting processing is complete and all callbacks have been called.
@@ -136,6 +137,8 @@ newEvent = do
 
 -- | Listen for firings of this event. The returned @IO ()@ is an IO action
 -- that unregisters the listener. This is the observer pattern.
+--
+-- To listen to a 'Behavior' use @listen (values b) handler@
 listen        :: Event a -> (a -> IO ()) -> Reactive (IO ())
 listen ev handle = listenTrans ev (ioReactive . handle)
 
@@ -189,7 +192,7 @@ hold initA ea = do
     unlistener <- unlistenize $ listenTrans ea $ \a -> do
         bs <- ioReactive $ readIORef bsRef
         ioReactive $ writeIORef bsRef $ bs { bsUpdate = Just a }
-        when (isNothing (bsUpdate bs)) $ onFinal $ do
+        when (isNothing (bsUpdate bs)) $ scheduleLast $ do
             bs <- readIORef bsRef
             let newCurrent = fromJust (bsUpdate bs)
                 bs' = newCurrent `seq` BehaviorState newCurrent Nothing
@@ -307,18 +310,35 @@ coalesce combine e = Event gl cacheRef
             ioReactive $ modifyIORef outRef $ \ma -> Just $ case ma of
                 Just a0 -> a0 `combine` a
                 Nothing -> a
-            when first $ scheduleLast (Just nodeRef) $ do
+            when first $ schedulePrioritized (Just nodeRef) $ do
                 Just out <- ioReactive $ readIORef outRef
                 ioReactive $ writeIORef outRef Nothing
                 push out
         addCleanup unlistener l
 
+-- | Throw away all event occurrences except for the first one.
+once :: Event a -> Event a
+once e = Event gl cacheRef
+  where
+    cacheRef = unsafePerformIO $ newIORef Nothing
+    gl = do
+        l1 <- getListen e
+        (l, push, nodeRef) <- ioReactive newEventImpl
+        aliveRef <- ioReactive $ newIORef True
+        unlistener <- unlistenize $ do
+            rec
+                unlisten <- runListen l1 (Just nodeRef) $ \a -> do
+                    alive <- ioReactive $ readIORef aliveRef
+                    when alive $ do
+                        ioReactive $ writeIORef aliveRef False
+                        scheduleLast unlisten
+                        push a
+            return unlisten
+        addCleanup unlistener l
+
 newBehavior :: a  -- ^ Initial behavior value
             -> Reactive (Behavior a, a -> Reactive ())
 newBehavior = R.newBehavior
-
-listenValue   :: Behavior a -> (a -> IO ()) -> Reactive (IO ())
-listenValue = R.listenValue
 
 -- | Merge two streams of events of the same type, combining simultaneous
 -- event occurrences.
@@ -373,10 +393,6 @@ countE = R.countE
 count :: Event a -> Reactive (Behavior Int)
 count = R.count
 
--- | Throw away all event occurrences except for the first one.
-once :: Event a -> Reactive (Event a)
-once = R.once
-
 type ID = Int64
 
 data ReactiveState = ReactiveState {
@@ -415,11 +431,11 @@ data Partition = Partition {
     }
 
 -- | Queue the specified atomic to run at the end of the priority 1 queue
-schedulePrioritized :: Reactive () -> Reactive ()
-schedulePrioritized task = Reactive $ modify $ \as -> as { asQueue1 = asQueue1 as |> task }
+scheduleEarly :: Reactive () -> Reactive ()
+scheduleEarly task = Reactive $ modify $ \as -> as { asQueue1 = asQueue1 as |> task }
 
-onFinal :: IO () -> Reactive ()
-onFinal task = Reactive $ modify $ \as -> as { asFinal = asFinal as >> task }
+scheduleLast :: IO () -> Reactive ()
+scheduleLast task = Reactive $ modify $ \as -> as { asFinal = asFinal as >> task }
 
 data Listen a = Listen { runListen_ :: Maybe (IORef Node) -> (a -> Reactive ()) -> Reactive (IO ()) }
 
@@ -534,7 +550,7 @@ newEventImpl = do
             ob <- ioReactive $ modifyMVar mvObs $ \ob -> return $
                 (ob { obFirings = a : obFirings ob }, ob)
             -- If this is the first firing...
-            when (null (obFirings ob)) $ onFinal $ do
+            when (null (obFirings ob)) $ scheduleLast $ do
                 modifyMVar_ mvObs $ \ob -> return $ ob { obFirings = [] }
             let seqa = seq a a
             mapM_ ($ seqa) (M.elems . obListeners $ ob)
@@ -598,7 +614,7 @@ newtype Unlistener = Unlistener (MVar (Maybe (IO ())))
 unlistenize :: Reactive (IO ()) -> Reactive Unlistener
 unlistenize doListen = do
     unlistener@(Unlistener ref) <- newUnlistener
-    schedulePrioritized $ do
+    scheduleEarly $ do
         mOldUnlisten <- ioReactive $ takeMVar ref
         case mOldUnlisten of
             Just _ -> do
@@ -629,10 +645,10 @@ listenValueRaw ba mNodeRef handle = do
     linkedListen (underlyingEvent ba) mNodeRef handle
 
 -- | Queue the specified atomic to run at the end of the priority 2 queue
-scheduleLast :: Maybe (IORef Node)
+schedulePrioritized :: Maybe (IORef Node)
                   -> Reactive ()
                   -> Reactive ()
-scheduleLast mNodeRef task = do
+schedulePrioritized mNodeRef task = do
     mNode <- case mNodeRef of
         Just nodeRef -> Just <$> ioReactive (readIORef nodeRef)
         Nothing -> pure Nothing
@@ -652,7 +668,7 @@ tidy listen mNodeRef handle = do
     listen mNodeRef $ \a -> do
         ma <- ioReactive $ readIORef aRef
         ioReactive $ writeIORef aRef (Just a)
-        when (isNothing ma) $ scheduleLast mNodeRef $ do
+        when (isNothing ma) $ schedulePrioritized mNodeRef $ do
             Just a <- ioReactive $ readIORef aRef
             ioReactive $ writeIORef aRef Nothing
             handle a
@@ -729,6 +745,6 @@ cross :: (Typeable p, Typeable q) => Behavior a -> Reactive (Behavior q a)
 cross bpa = do
     a <- sample bpa
     ea <- crossE (underlyingEvent bpa)
-    ioReactive $ sync $ hold a ea
+    ioReactive $ sync $ 3 a ea
 -}
 

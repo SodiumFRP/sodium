@@ -8,7 +8,7 @@ import qualified Data.ByteString.Unsafe as B
 import Graphics.Rendering.OpenGL as GL hiding (RGB, RGBA)
 import qualified Graphics.Rendering.OpenGL as GL
 import Codec.Image.STB
-import Data.Bitmap.IO
+import Data.Bitmap
 import Data.Char
 import Control.Exception
 import Control.Monad
