@@ -190,7 +190,7 @@ filterJust ema = Event gl cacheRef
 hold          :: a -> Event a -> Reactive (Behavior a)
 hold initA ea = do
     bsRef <- ioReactive $ newIORef (BehaviorState initA Nothing)
-    unlistener <- unlistenize $ lastFiringOnly (linkedListen ea) Nothing False $ \a -> do
+    unlistener <- unlistenize $ {-lastFiringOnly-} (linkedListen ea) Nothing False $ \a -> do
         bs <- ioReactive $ readIORef bsRef
         ioReactive $ writeIORef bsRef $ bs { bsUpdate = Just a }
         when (isNothing (bsUpdate bs)) $ scheduleLast $ ioReactive $ do
@@ -242,13 +242,17 @@ switchE bea = Event gl cacheRef
     gl = do
         -- assign ID numbers to the incoming events
         (l, push, nodeRef) <- ioReactive newEventImpl
+        unlisten2Ref <- ioReactive $ newIORef Nothing
+        let doUnlisten2 = do
+                mUnlisten2 <- readIORef unlisten2Ref
+                fromMaybe (return ()) mUnlisten2
         unlistener1 <- unlistenize $ do
             initEa <- sample bea
-            unlisten2Ref <- (ioReactive . newIORef) =<< linkedListen initEa (Just nodeRef) False push
-            listenValueRaw bea (Just nodeRef) False $ \ea -> scheduleLast $ do
-                unlisten2 <- ioReactive $ readIORef unlisten2Ref
-                ioReactive unlisten2
-                (ioReactive . writeIORef unlisten2Ref) =<< linkedListen ea (Just nodeRef) True push
+            (ioReactive . writeIORef unlisten2Ref) =<< (Just <$> linkedListen initEa (Just nodeRef) False push)
+            unlisten1 <- listenValueRaw bea (Just nodeRef) False $ \ea -> scheduleLast $ do
+                ioReactive doUnlisten2
+                (ioReactive . writeIORef unlisten2Ref) =<< (Just <$> linkedListen ea (Just nodeRef) True push)
+            return $ unlisten1 >> doUnlisten2
         addCleanup unlistener1 l
 
 -- | Unwrap a behavior inside another behavior to give a time-varying behavior implementation.
@@ -258,13 +262,13 @@ switch bba = do
     za <- sample ba
     (ev, push, nodeRef) <- ioReactive newEventLinked
     unlisten2Ref <- ioReactive $ newIORef Nothing
+    let doUnlisten2 = do
+            mUnlisten2 <- readIORef unlisten2Ref
+            fromMaybe (return ()) mUnlisten2
     unlisten1 <- listenValueRaw bba (Just nodeRef) False $ \ba -> do
-        mUnlisten2 <- ioReactive $ readIORef unlisten2Ref
-        case mUnlisten2 of
-            Just unlisten2 -> ioReactive unlisten2
-            Nothing        -> return ()
+        ioReactive doUnlisten2
         (ioReactive . writeIORef unlisten2Ref . Just) =<< listenValueRaw ba (Just nodeRef) False push
-    hold za (finalizeEvent ev unlisten1)
+    hold za (finalizeEvent ev (unlisten1 >> doUnlisten2))
 
 -- | Execute the specified 'Reactive' action inside an event.
 execute       :: Event (Reactive a) -> Event a
