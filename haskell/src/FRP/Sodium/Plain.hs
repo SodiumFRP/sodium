@@ -115,9 +115,14 @@ sync task = do
                         task
                         loop
                     Nothing -> do
-                        Reactive final <- gets asFinal
-                        final
-                        return ()
+                        final <- gets asFinal
+                        if not $ Seq.null final then do
+                            let Reactive task = Seq.index final 0
+                            modify $ \as -> as { asFinal = Seq.drop 1 final }
+                            task
+                            loop
+                          else
+                            return ()
     outVar <- newIORef undefined
     let lock = paLock partition
     putMVar lock ()
@@ -125,7 +130,7 @@ sync task = do
     evalStateT loop $ ReactiveState {
             asQueue1 = Seq.singleton (task >>= ioReactive . writeIORef outVar),
             asQueue2 = q,
-            asFinal = return ()
+            asFinal = Seq.empty
         }
     takeMVar lock
     readIORef outVar
@@ -238,9 +243,7 @@ switchE       :: Behavior (Event a) -> Event a
 switchE bea = Event gl cacheRef
   where
     cacheRef = unsafePerformIO $ newIORef Nothing
-    unlistensRef = unsafePerformIO $ newIORef M.empty
     gl = do
-        -- assign ID numbers to the incoming events
         (l, push, nodeRef) <- ioReactive newEventImpl
         unlisten2Ref <- ioReactive $ newIORef Nothing
         let doUnlisten2 = do
@@ -249,7 +252,7 @@ switchE bea = Event gl cacheRef
         unlistener1 <- unlistenize $ do
             initEa <- sample bea
             (ioReactive . writeIORef unlisten2Ref) =<< (Just <$> linkedListen initEa (Just nodeRef) False push)
-            unlisten1 <- listenValueRaw bea (Just nodeRef) False $ \ea -> scheduleLast $ do
+            unlisten1 <- linkedListen (changes bea) (Just nodeRef) False $ \ea -> scheduleLast $ do
                 ioReactive doUnlisten2
                 (ioReactive . writeIORef unlisten2Ref) =<< (Just <$> linkedListen ea (Just nodeRef) True push)
             return $ unlisten1 >> doUnlisten2
@@ -448,7 +451,7 @@ instance PriorityQueueable (Maybe (IORef Node)) where
 data ReactiveState = ReactiveState {
         asQueue1     :: Seq (Reactive ()),
         asQueue2     :: PriorityQueue (Maybe (IORef Node)) (Reactive ()),
-        asFinal      :: Reactive ()
+        asFinal      :: Seq (Reactive ())
     }
 
 instance Functor (R.Reactive Plain) where
@@ -485,7 +488,7 @@ scheduleEarly :: Reactive () -> Reactive ()
 scheduleEarly task = Reactive $ modify $ \as -> as { asQueue1 = asQueue1 as |> task }
 
 scheduleLast :: Reactive () -> Reactive ()
-scheduleLast task = Reactive $ modify $ \as -> as { asFinal = asFinal as >> task }
+scheduleLast task = Reactive $ modify $ \as -> as { asFinal = asFinal as |> task }
 
 data Listen a = Listen { runListen_ :: Maybe (IORef Node) -> Bool -> (a -> Reactive ()) -> Reactive (IO ()) }
 
@@ -607,8 +610,8 @@ newEventImpl = do
             -- If this is the first firing...
             when (null (obFirings ob)) $ scheduleLast $ ioReactive $ do
                 modifyMVar_ mvObs $ \ob -> return $ ob { obFirings = [] }
-            let seqa = seq a a
-            mapM_ ($ seqa) (M.elems . obListeners $ ob)
+            ioReactive $ evaluate a
+            mapM_ ($ a) (M.elems . obListeners $ ob)
     return (listen, push, nodeRef)
 
 -- | Returns an event, and a push action for pushing a value into the event.
