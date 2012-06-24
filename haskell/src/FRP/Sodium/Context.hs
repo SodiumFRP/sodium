@@ -83,6 +83,11 @@ class (
     -- | Throw away all event occurrences except for the first one.
     once          :: Context r => Event r a -> Event r a
 
+-- | A time-varying value, British spelling.
+type Behaviour r a = Behavior r a
+
+-- | Create a new 'Behavior' along with an action to push changes into it.
+-- American spelling.
 newBehavior :: forall r a . Context r =>
                a  -- ^ Initial behavior value
             -> Reactive r (Behavior r a, a -> Reactive r ())
@@ -90,6 +95,13 @@ newBehavior initA = do
     (ev, push) <- newEvent
     beh <- hold initA ev
     return (beh, push)
+
+-- | Create a new 'Behavior' along with an action to push changes into it.
+-- British spelling.
+newBehaviour :: forall r a . Context r =>
+               a  -- ^ Initial behavior value
+            -> Reactive r (Behavior r a, a -> Reactive r ())
+newBehaviour = newBehavior
 
 -- | Merge two streams of events of the same type, combining simultaneous
 -- event occurrences.

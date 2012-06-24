@@ -37,6 +37,7 @@ module FRP.Sodium (
         sync,
         newEvent,
         newBehavior,
+        newBehaviour,
         listen,
         -- * FRP core language
         Event,

@@ -335,9 +335,17 @@ once e = Event gl cacheRef
             return unlisten
         addCleanup unlistener l
 
+-- | Create a new 'Behavior' along with an action to push changes into it.
+-- American spelling.
 newBehavior :: a  -- ^ Initial behavior value
             -> Reactive (Behavior a, a -> Reactive ())
 newBehavior = R.newBehavior
+
+-- | Create a new 'Behavior' along with an action to push changes into it.
+-- British spelling.
+newBehaviour :: a  -- ^ Initial behavior value
+            -> Reactive (Behavior a, a -> Reactive ())
+newBehaviour = R.newBehaviour
 
 -- | Merge two streams of events of the same type, combining simultaneous
 -- event occurrences.
