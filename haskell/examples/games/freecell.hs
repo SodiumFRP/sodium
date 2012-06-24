@@ -1,4 +1,9 @@
 {-# LANGUAGE DoRec #-}
+-- | A minimal implementation of Freecell, a soltaire card game, to demonstrate
+-- the Sodium reactive programming system.
+--
+-- BE WARNED! This game can be addictive.
+--
 -- Package dependencies:
 --     random
 --     stb-image
@@ -43,7 +48,7 @@ cardSize :: Vector
 cardSize = (100,150)
 
 overlapY :: Double
-overlapY = 90
+overlapY = 70
 
 data Location = Stack Int | Cell Int | Grave deriving (Eq, Show)
 
