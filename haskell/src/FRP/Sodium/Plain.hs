@@ -194,20 +194,18 @@ filterJust ema = Event gl cacheRef
 -- the transaction.
 hold          :: a -> Event a -> Reactive (Behavior a)
 hold initA ea = do
-    bsRef <- ioReactive $ newIORef (BehaviorState initA Nothing)
-    unlistener <- unlistenize $ {-lastFiringOnly-} (linkedListen ea) Nothing False $ \a -> do
+    bsRef <- ioReactive $ newIORef $ initA `seq` BehaviorState initA Nothing
+    unlistener <- unlistenize $ linkedListen ea Nothing False $ \a -> do
         bs <- ioReactive $ readIORef bsRef
-        ioReactive $ writeIORef bsRef $ bs { bsUpdate = Just a }
+        ioReactive $ writeIORef bsRef $ a `seq` bs { bsUpdate = Just a }
         when (isNothing (bsUpdate bs)) $ scheduleLast $ ioReactive $ do
             bs <- readIORef bsRef
             let newCurrent = fromJust (bsUpdate bs)
-                bs' = newCurrent `seq` BehaviorState newCurrent Nothing
-            evaluate bs'
-            writeIORef bsRef bs'
+            writeIORef bsRef $ newCurrent `seq` BehaviorState newCurrent Nothing
     let gl = do
             l <- getListen ea
             addCleanup unlistener l
-        beh = Behavior {
+        beh = unlistener `seq` ea `seq` Behavior {
                 underlyingEvent = Event gl (evCacheRef ea),
                 behSample = ioReactive $ bsCurrent <$> readIORef bsRef
             }
@@ -504,6 +502,7 @@ runListen :: Listen a -> Maybe (IORef Node) -> Bool -> (a -> Reactive ()) -> Rea
 {-# NOINLINE runListen #-}
 runListen l mv suppressEarlierFirings handle = do
     o <- runListen_ l mv suppressEarlierFirings handle
+    -- ensure l doesn't get cleaned up while runListen_ is running
     _ <- ioReactive $ evaluate l
     return o
 
@@ -561,7 +560,8 @@ linkNode nodeRef iD mvTarget = do
     no <- readIORef nodeRef
     modified <- ensureBiggerThan S.empty mvTarget (noRank no)
     modifyIORef nodeRef $ \no ->
-        no { noListeners = M.insert iD mvTarget (noListeners no) }
+        let listeners'  = M.insert iD mvTarget (noListeners no)
+        in  listeners' `seq` no { noListeners = listeners' }
     return modified
 
 ensureBiggerThan :: Set NodeID -> IORef Node -> Int64 -> IO Bool
@@ -572,7 +572,7 @@ ensureBiggerThan visited nodeRef limit = do
         else do
             let newSerial = succ limit
             --putStrLn $ show (noRank no) ++ " -> " ++ show newSerial
-            modifyIORef nodeRef $ \no -> no { noRank = newSerial }
+            modifyIORef nodeRef $ \no -> newSerial `seq` no { noRank = newSerial }
             forM_ (M.elems . noListeners $ no) $ \mvTarget -> do
                 ensureBiggerThan (S.insert (noID no) visited) mvTarget newSerial
             return True
@@ -580,7 +580,8 @@ ensureBiggerThan visited nodeRef limit = do
 unlinkNode :: IORef Node -> ID -> IO ()
 unlinkNode nodeRef iD = do
     modifyIORef nodeRef $ \no ->
-        no { noListeners = M.delete iD (noListeners no) }
+        let listeners' = M.delete iD (noListeners no)
+        in  listeners' `seq` no { noListeners = listeners' }
 
 -- | Returns a 'Listen' for registering listeners, and a push action for pushing
 -- a value into the event.
@@ -591,18 +592,21 @@ newEventImpl = do
     cacheRef <- newIORef Nothing
     rec
         let l mMvTarget suppressEarlierFirings handle = do
-                (firings, unlisten, iD) <- ioReactive $ modifyMVar mvObs $ \ob -> return $
+                (firings, unlisten, iD) <- ioReactive $ modifyMVar mvObs $ \ob -> do
                     let iD = obNextID ob
                         handle' a = handle a >> ioReactive (touch listen)
-                        ob' = ob { obNextID    = succ iD,
-                                   obListeners = M.insert iD handle' (obListeners ob) }
+                        nextID' = succ iD
+                        listeners' = M.insert iD handle' (obListeners ob)
+                        ob' = nextID' `seq` listeners' `seq` 
+                              ob { obNextID    = nextID',
+                                   obListeners = listeners' }
                         unlisten = do
-                            modifyMVar_ mvObs $ \ob -> return $ ob {
-                                    obListeners = M.delete iD (obListeners ob)
-                                }
+                            modifyMVar_ mvObs $ \ob -> do
+                                let listeners' = M.delete iD (obListeners ob)
+                                return $ listeners' `seq` ob { obListeners = listeners' }
                             unlinkNode nodeRef iD
                             return ()
-                    in (ob', (reverse . obFirings $ ob, unlisten, iD))
+                    return (ob', (reverse . obFirings $ ob, unlisten, iD))
                 modified <- case mMvTarget of
                     Just mvTarget -> ioReactive $ linkNode nodeRef iD mvTarget
                     Nothing       -> return False
@@ -613,12 +617,12 @@ newEventImpl = do
                 return unlisten
         listen <- wrap l  -- defeat optimizer on ghc-7.0.4
     let push a = do
+            ioReactive $ evaluate a
             ob <- ioReactive $ modifyMVar mvObs $ \ob -> return $
                 (ob { obFirings = a : obFirings ob }, ob)
             -- If this is the first firing...
             when (null (obFirings ob)) $ scheduleLast $ ioReactive $ do
                 modifyMVar_ mvObs $ \ob -> return $ ob { obFirings = [] }
-            ioReactive $ evaluate a
             mapM_ ($ a) (M.elems . obListeners $ ob)
     return (listen, push, nodeRef)
 
@@ -680,6 +684,8 @@ newtype Unlistener = Unlistener (MVar (Maybe (IO ())))
 unlistenize :: Reactive (IO ()) -> Reactive Unlistener
 unlistenize doListen = do
     unlistener@(Unlistener ref) <- newUnlistener
+    -- We schedule the actual listen rather than doing it now, so event values get
+    -- evaluated lazily. Otherwise we get deadlocks when events are used in value loops.
     scheduleEarly $ do
         mOldUnlisten <- ioReactive $ takeMVar ref
         case mOldUnlisten of
