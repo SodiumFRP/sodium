@@ -202,12 +202,10 @@ hold initA ea = do
             bs <- readIORef bsRef
             let newCurrent = fromJust (bsUpdate bs)
             writeIORef bsRef $ newCurrent `seq` BehaviorState newCurrent Nothing
-    let gl = do
-            l <- getListen ea
-            addCleanup unlistener l
-        beh = unlistener `seq` ea `seq` Behavior {
-                underlyingEvent = Event gl (evCacheRef ea),
-                behSample = ioReactive $ bsCurrent <$> readIORef bsRef
+    sample <- ioReactive $ addCleanup_Reactive unlistener (ioReactive $ bsCurrent <$> readIORef bsRef)
+    let beh = sample `seq` Behavior {
+                underlyingEvent = ea,
+                behSample = sample
             }
     return beh
 
@@ -638,12 +636,12 @@ newEventLinked = do
     return (ev, push, nodeRef)
 
 instance Functor (R.Event Plain) where
-    f `fmap` Event getListen cacheRef = Event getListen' cacheRef
+    f `fmap` e = Event getListen' cacheRef
       where
         cacheRef = unsafePerformIO $ newIORef Nothing
         getListen' = do
             return $ Listen $ \mNodeRef suppressEarlierFirings handle -> do
-                l <- getListen
+                l <- getListen e
                 runListen l mNodeRef suppressEarlierFirings (handle . f)
 
 instance Functor (R.Behavior Plain) where
@@ -677,6 +675,13 @@ finalizeListen l unlisten = do
     addFinalizer l unlisten
     return l
 
+-- | Add a finalizer to a Reactive.
+finalizeReactive :: Reactive a -> IO () -> IO (Reactive a)
+{-# NOINLINE finalizeReactive #-}
+finalizeReactive l unlisten = do
+    addFinalizer l unlisten
+    return l
+
 newtype Unlistener = Unlistener (MVar (Maybe (IO ())))
 
 -- | Listen to an input event/behavior and return an 'Unlistener' that can be
@@ -702,6 +707,12 @@ unlistenize doListen = do
 -- specified listener is not referenced any more.
 addCleanup :: Unlistener -> Listen a -> Reactive (Listen a)
 addCleanup (Unlistener ref) l = ioReactive $ finalizeListen l $ do
+    mUnlisten <- takeMVar ref
+    fromMaybe (return ()) mUnlisten
+    putMVar ref Nothing
+
+addCleanup_Reactive :: Unlistener -> Reactive a -> IO (Reactive a)
+addCleanup_Reactive (Unlistener ref) r = finalizeReactive r $ do
     mUnlisten <- takeMVar ref
     fromMaybe (return ()) mUnlisten
     putMVar ref Nothing
