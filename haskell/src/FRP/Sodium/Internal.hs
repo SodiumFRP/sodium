@@ -17,7 +17,10 @@ module FRP.Sodium.Internal (
         finalizeListen,
         ioReactive,
         Unlistener,
-        addCleanup,
+        addCleanup_Listen,
+        Sample(..),
+        unSample,
+        addCleanup_Sample,
         unlistenize
     ) where
 
