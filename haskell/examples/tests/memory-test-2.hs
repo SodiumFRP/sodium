@@ -31,4 +31,5 @@ main = do
     kill <- sync $ listen (values out) $ \x ->
         if verbose then print x else (evaluate x >> return ())
     mapM_ (sync . pushT) [0..]
+    kill
 

@@ -16,4 +16,5 @@ main = do
         if verbose then print (x :: Int) else (evaluate x >> return ())
     forM_ [0..] $ \i -> do
         sync $ pushC ()
+    kill
 
