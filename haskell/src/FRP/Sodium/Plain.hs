@@ -179,9 +179,11 @@ merge ea eb = Event gl cacheRef
         l1 <- getListen ea
         l2 <- getListen eb                                
         (l, push, nodeRef) <- ioReactive newEventImpl
-        unlistener1 <- unlistenize $ runListen l1 (Just nodeRef) False push
-        unlistener2 <- unlistenize $ runListen l2 (Just nodeRef) False push
-        (addCleanup_Listen unlistener1 <=< addCleanup_Listen unlistener2) l
+        unlistener <- unlistenize $ do
+            u1 <- runListen l1 (Just nodeRef) False push
+            u2 <- runListen l2 (Just nodeRef) False push
+            return (u1 >> u2)
+        addCleanup_Listen unlistener l
 
 -- | Unwrap Just values, and discard event occurrences with Nothing values.
 filterJust    :: Event (Maybe a) -> Event a
