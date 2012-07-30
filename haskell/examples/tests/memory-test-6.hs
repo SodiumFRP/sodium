@@ -5,7 +5,7 @@ import Control.Applicative
 import Control.Exception
 import Control.Monad
 
-verbose = True
+verbose = False
 
 flam :: Event () -> Reactive (Behavior Bool)
 flam e = do

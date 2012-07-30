@@ -76,15 +76,15 @@ type Behavior a = R.Behavior Plain a
 type Behaviour a = R.Behavior Plain a
 
 -- Must be data not newtype, because we need to attach finalizers to it
-data Sample a = Sample { unSample_ :: Reactive a }
+data Sample a = Sample { unSample_ :: IO (IO a) }
 
-unSample :: Sample a -> Reactive a
+unSample :: Sample a -> IO a
 {-# NOINLINE unSample #-}
 unSample sample = do
-    value <- unSample_ sample
-    ioReactive $ evaluate sample  -- Ensure 'sample' stays alive while it's
-                                  -- being used.
-    return value
+    sample' <- unSample_ sample
+    touch sample  -- Ensure 'sample' stays alive while it's
+                  -- being used.
+    sample'
 
 instance R.Context Plain where
 
@@ -232,7 +232,7 @@ hold initA ea = do
             bs <- readIORef bsRef
             let newCurrent = fromJust (bsUpdate bs)
             writeIORef bsRef $ newCurrent `seq` BehaviorState newCurrent Nothing
-    sample <- ioReactive $ addCleanup_Sample unlistener (Sample $ ioReactive $ bsCurrent <$> readIORef bsRef)
+    sample <- ioReactive $ addCleanup_Sample unlistener (Sample $ return $ bsCurrent <$> readIORef bsRef)
     let beh = sample `seq` Behavior {
                 underlyingEvent = ea,
                 behSample = sample
@@ -259,12 +259,13 @@ snapshotWith f ea bb = Event gl cacheRef
     cacheRef = unsafePerformIO $ newIORef Nothing
     gl = do
         (l, push, nodeRef) <- ioReactive newEventImpl
+        sample' <- ioReactive $ unSample_ $ behSample $ bb
+        _ <- ioReactive $ touch sample'
         unlistener <- unlistenize $ do
-            let sample' = sample bb
-            _ <- ioReactive $ evaluate sample'
             unlisten <- linkedListen ea (Just nodeRef) False $ \a -> do
-                b <- sample'
+                b <- ioReactive $ sample'
                 push (f a b)
+                return ()
             return (unlisten >> touch bb)
         addCleanup_Listen unlistener l
 
@@ -316,7 +317,7 @@ execute ev = Event gl cacheRef
 
 -- | Obtain the current value of a behavior.
 sample        :: Behavior a -> Reactive a
-sample = unSample . behSample
+sample b = ioReactive . unSample . behSample $ b
 
 -- | If there's more than one firing in a single transaction, combine them into
 -- one using the specified combining function.
@@ -681,12 +682,12 @@ instance Functor (R.Event Plain) where
 instance Functor (R.Behavior Plain) where
     f `fmap` Behavior underlyingEvent sample =
         sample' `seq` Behavior (f `fmap` underlyingEvent) sample'
-        where sample' = Sample $ f `fmap` unSample sample
+        where sample' = Sample $ return $ f `fmap` unSample sample
 
 constant :: a -> Behavior a
 constant a = Behavior {
         underlyingEvent = never,
-        behSample = Sample $ return a
+        behSample = Sample $ return $ return a
     }
 
 data BehaviorState a = BehaviorState {
@@ -810,8 +811,8 @@ instance Applicative (R.Behavior Plain) where
         cacheRef = unsafePerformIO $ newIORef Nothing
         u = Event gl cacheRef
         gl = do
-            fRef <- ioReactive . newIORef =<< unSample s1
-            aRef <- ioReactive . newIORef =<< unSample s2
+            fRef <- ioReactive $ newIORef =<< unSample s1
+            aRef <- ioReactive $ newIORef =<< unSample s2
             l1 <- getListen u1
             l2 <- getListen u2
             (l, push, nodeRef) <- ioReactive newEventImpl
@@ -826,7 +827,7 @@ instance Applicative (R.Behavior Plain) where
                     push (f a)
                 return (un1 >> un2)
             addCleanup_Listen unlistener l
-        s = Sample $ ($) <$> unSample s1 <*> unSample s2
+        s = Sample $ return $ ($) <$> unSample s1 <*> unSample s2
 
 {-
 -- | Cross the specified event over to a different partition.

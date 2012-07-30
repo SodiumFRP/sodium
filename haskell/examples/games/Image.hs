@@ -67,9 +67,9 @@ unsafeTextureToBS :: TextureImage_ (Ptr Word8) -> IO TextureImage
 unsafeTextureToBS (TextureImage iWidth iHeight pWidth pHeight fmt buf) = do
     let bpp = bytesPerPixel fmt
         sz = bpp * iWidth * iHeight
-    bytes <- peekArray sz buf
+    bytes <- B.create sz $ \str -> B.memcpy str buf (fromIntegral sz)
     free buf
-    return $ TextureImage iWidth iHeight pWidth pHeight fmt (B.pack bytes)
+    return $ TextureImage iWidth iHeight pWidth pHeight fmt bytes
 
 bytesPerPixel :: Format -> Int
 bytesPerPixel RGB = 3
