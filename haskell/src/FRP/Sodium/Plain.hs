@@ -244,7 +244,7 @@ hold initA ea = do
 changes       :: Behavior a -> Event a
 changes = underlyingEvent
 
--- | An event that is guaranteed to fires once when you listen to it, giving
+-- | An event that is guaranteed to fire once when you listen to it, giving
 -- the current value of the behavior, and thereafter behaves like 'changes',
 -- firing for each update to the behavior's value.
 values        :: Behavior a -> Event a
