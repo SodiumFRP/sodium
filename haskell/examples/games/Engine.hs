@@ -77,7 +77,7 @@ runGame title game = do
     (eMouse, pushMouse) <- sync newEvent
     (eTime, pushTime) <- sync newEvent
     spritesRef <- newIORef []
-    _ <- sync $ do
+    unlisten <- sync $ do
         time <- hold 0 eTime
         sprites <- game eMouse time
         listen (values sprites) (writeIORef spritesRef)
@@ -113,6 +113,7 @@ runGame title game = do
         )
     GLUT.addTimerCallback (1000 `div` frameRate) $ repaint
     GLUT.mainLoop
+    unlisten
   where
     toScreen :: GLint -> GLint -> IO (Coord, Coord)
     toScreen x y = do

@@ -13,6 +13,7 @@ module FRP.Sodium.Internal (
         Node,
         newEventLinked,
         newEvent,
+        newEventImpl,
         finalizeEvent,
         finalizeListen,
         ioReactive,

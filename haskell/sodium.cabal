@@ -118,6 +118,6 @@ library
   hs-source-dirs:      src
   exposed-modules:     FRP.Sodium, FRP.Sodium.Internal, FRP.Sodium.Context
   other-modules:       FRP.Sodium.Plain
-  build-depends:       base >= 4.3.0.0 && < 4.6.0.0,
-                       containers >= 0.4.0.0 && < 0.5.0.0,
+  build-depends:       base >= 4.3.0.0 && < 4.7.0.0,
+                       containers >= 0.4.0.0 && < 0.6.0.0,
                        mtl >= 2.0.0.0 && < 2.2.0.0

@@ -17,7 +17,7 @@
 --
 --   * Applicative 'pure' is used to give a constant 'Behavior'.
 --
---   * Recursive do (via DoRec) to make state loops with the @rec@ keyword.
+--   * Recursive do (using the DoRec language extension) to make state loops with the @rec@ keyword.
 --
 -- Here's an example of recursive do to write state-keeping loops. Note that
 -- all 'hold's are delayed, so 'attachWith' will capture the /old/ value of the state /s/.
