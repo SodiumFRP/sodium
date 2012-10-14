@@ -1,4 +1,4 @@
-{-# LANGUAGE ScopedTypeVariables, DeriveDataTypeable, EmptyDataDecls #-}
+{-# LANGUAGE ScopedTypeVariables, EmptyDataDecls #-}
 module Engine where
 
 import FRP.Sodium
@@ -6,7 +6,6 @@ import FRP.Sodium
 import Control.Applicative
 import Control.Monad
 import Data.List
-import Data.Typeable
 import Graphics.Rendering.OpenGL as GL hiding (Triangle, Rect, translate)
 import qualified Graphics.Rendering.OpenGL as GL
 import qualified Graphics.UI.GLUT as GLUT hiding (Rect, translate)
@@ -30,6 +29,12 @@ type Sprite = (Rect, String)
 
 data MouseEvent = MouseDown Point | MouseMove Point | MouseUp Point
     deriving Show
+
+plus :: Point -> Vector -> Point
+plus (x0, y0) (x1, y1) = (x0 + x1, y0 + y1)
+
+minus :: Point -> Point -> Vector
+minus (x0, y0) (x1, y1) = (x0 - x1, y0 - y1)
 
 -- | True if the point is inside the rectangle
 inside :: Point -> Rect -> Bool
@@ -62,22 +67,20 @@ getTime = do
         (fromIntegral sec) +
         (fromIntegral pico) / 1000000000000
 
-data M deriving Typeable
-
 -- | Game, which takes mouse event and time as input, and a list of sprites to draw
 -- as output. Time is updated once per animation frame.
-type Game p = Event p MouseEvent -> Behaviour p Double -> Reactive p (Behaviour p [Sprite])
+type Game = Event MouseEvent -> Behaviour Double -> Reactive (Behaviour [Sprite])
 
-runGame :: String -> Game M -> IO ()
+runGame :: String -> Game -> IO ()
 runGame title game = do
 
-    (eMouse, pushMouse) <- newEvent
-    (eTime, pushTime) <- newEvent
+    (eMouse, pushMouse) <- sync newEvent
+    (eTime, pushTime) <- sync newEvent
     spritesRef <- newIORef []
-    _ <- synchronously $ do
+    unlisten <- sync $ do
         time <- hold 0 eTime
         sprites <- game eMouse time
-        listenValueIO sprites (writeIORef spritesRef)
+        listen (values sprites) (writeIORef spritesRef)
 
     _ <- GLUT.getArgsAndInitialize
     GLUT.initialDisplayMode $= [GLUT.DoubleBuffered]
@@ -97,19 +100,20 @@ runGame title game = do
     GLUT.displayCallback $= display texturesRef t0 pushTime spritesRef
     let motion (GLUT.Position x y) = do
             pt <- toScreen x y
-            synchronously $ pushMouse (MouseMove pt)
+            sync $ pushMouse (MouseMove pt)
     GLUT.motionCallback $= Just motion
     GLUT.passiveMotionCallback $= Just motion
     GLUT.keyboardMouseCallback $= Just (\key keyState mods pos -> do
             case (key, keyState, pos) of
                 (GLUT.MouseButton GLUT.LeftButton, GLUT.Down, GLUT.Position x y) ->
-                    synchronously . pushMouse . MouseDown =<< toScreen x y
+                    sync . pushMouse . MouseDown =<< toScreen x y
                 (GLUT.MouseButton GLUT.LeftButton, GLUT.Up,   GLUT.Position x y) ->
-                    synchronously . pushMouse . MouseUp   =<< toScreen x y
+                    sync . pushMouse . MouseUp   =<< toScreen x y
                 _ -> return ()
         )
     GLUT.addTimerCallback (1000 `div` frameRate) $ repaint
     GLUT.mainLoop
+    unlisten
   where
     toScreen :: GLint -> GLint -> IO (Coord, Coord)
     toScreen x y = do
@@ -128,13 +132,13 @@ runGame title game = do
 
     display :: IORef (Map String (TextureImage, TextureObject))
             -> Double
-            -> (Double -> Reactive M ())
+            -> (Double -> Reactive ())
             -> IORef [Sprite]
             -> IO ()
     display texturesRef t0 pushTime spritesRef = do
 
         t <- subtract t0 <$> getTime
-        synchronously $ pushTime t
+        sync $ pushTime t
 
         sprites <- readIORef spritesRef
 

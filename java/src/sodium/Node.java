@@ -13,12 +13,16 @@ public class Node implements Comparable<Node> {
 	private long rank;
 	private Set<Node> listeners = new HashSet<Node>();
 
-	void linkTo(Node target) {
+	/**
+	 * @return true if any changes were made. 
+	 */
+	boolean linkTo(Node target) {
 		if (target == NULL)
-			return;
+			return false;
 
-		target.ensureBiggerThan(rank, new HashSet<Node>());
+		boolean changed = target.ensureBiggerThan(rank, new HashSet<Node>());
 		listeners.add(target);
+		return changed;
 	}
 
 	void unlinkTo(Node target) {
@@ -28,14 +32,15 @@ public class Node implements Comparable<Node> {
 		listeners.remove(target);
 	}
 
-	private void ensureBiggerThan(long limit, Set<Node> visited) {
+	private boolean ensureBiggerThan(long limit, Set<Node> visited) {
 		if (rank > limit || visited.contains(this))
-			return;
+			return false;
 
 		visited.add(this);
 		rank = limit + 1;
 		for (Node l : listeners)
 			l.ensureBiggerThan(rank, visited);
+		return true;
 	}
 
 	@Override

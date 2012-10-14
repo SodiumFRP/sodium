@@ -1,10 +1,9 @@
 {-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, DoRec #-}
 {-# OPTIONS_GHC -fno-cse -fno-full-laziness #-}
 module FRP.Sodium.Internal (
+        C.Event(..),
         listenTrans,
         listenValueTrans,
-        Event,
-        Behaviour,
         schedulePrioritized,
         scheduleLast,
         Listen(..),
@@ -14,13 +13,18 @@ module FRP.Sodium.Internal (
         Node,
         newEventLinked,
         newEvent,
+        newEventImpl,
         finalizeEvent,
         finalizeListen,
         ioReactive,
         Unlistener,
-        addCleanup,
+        addCleanup_Listen,
+        Sample(..),
+        unSample,
+        addCleanup_Sample,
         unlistenize
     ) where
 
-import FRP.Sodium.Impl
+import qualified FRP.Sodium.Context as C
+import FRP.Sodium.Plain
 
