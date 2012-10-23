@@ -9,6 +9,9 @@ import Data.ByteString (ByteString)
 import Data.Int
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IM
+import Data.List
+import Data.Map (Map)
+import qualified Data.Map as M
 import Data.Maybe
 import Data.Word
 import Language.C
@@ -18,7 +21,7 @@ import Language.C.Parser
 
 data Value = Value {
         vaDecls :: [CDecl],
-        vaStats :: [CStat],
+        vaStmts :: [CStat],
         vaExpr  :: CExpr
     }
 
@@ -30,9 +33,18 @@ class RType a where
 konstant :: forall a . (RNum a, Integral a) => a -> R a
 konstant i = r $ Value {
         vaDecls = [],
-        vaStats = [],
+        vaStmts = [],
         vaExpr  = castedNumeric (ctype (undefined :: R a)) i
     }
+
+variable :: Ident -> Value
+variable ident = Value [] [] (CVar ident undefNode)
+
+formatValue :: Ident -> Value -> [CBlockItem]
+formatValue var va =
+    map CBlockDecl (vaDecls va) ++
+    map CBlockStmt (vaStmts va) ++
+    map CBlockStmt [CExpr (Just $ CAssign CAssignOp (CVar var undefNode) (vaExpr va) undefNode) undefNode]
 
 class RType (R a) => RNum a where
     data R a :: *
@@ -40,7 +52,7 @@ class RType (R a) => RNum a where
     plus :: R a -> R a -> R a
     ra `plus` rb = r $ Value {
             vaDecls = vaDecls a ++ vaDecls b,
-            vaStats = vaStats a ++ vaStats b,
+            vaStmts = vaStmts a ++ vaStmts b,
             vaExpr  = CBinary CAddOp (vaExpr a) (vaExpr b) undefNode
         }
       where a = unr ra
@@ -120,9 +132,14 @@ data Behavior a = Behavior Int
 data Event a = Event Int
 
 data EventImpl where
-    To :: Int -> EventImpl
-    MapE :: (Value -> Value) -> Int -> EventImpl
-    Code :: String -> CStat -> EventImpl
+    To :: CTypeSpec -> Int -> EventImpl
+    MapE :: CTypeSpec -> (Value -> Value) -> Int -> EventImpl
+    Code :: CTypeSpec -> String -> CStat -> EventImpl
+    
+typeOf :: EventImpl -> CTypeSpec
+typeOf (To t _) = t
+typeOf (MapE t _ _) = t
+typeOf (Code t _ _) = t
 
 data ReactiveState = ReactiveState {
         rsInputType :: CTypeSpec,
@@ -136,7 +153,7 @@ newReactiveState :: CTypeSpec -> ReactiveState
 newReactiveState typ = ReactiveState {
         rsInputType = typ,
         rsInputs    = [],
-        rsNextIdent = "a",
+        rsNextIdent = "__a",
         rsNextEvent = 2,
         rsEvents    = IM.empty
     }
@@ -147,28 +164,75 @@ toC rs = [
                 CTypeSpec (CVoidType undefNode)
             ]
             (
-                CDeclr (Just $ Ident "banana" 0 undefNode) [
+                CDeclr (Just $ Ident "react" 0 undefNode) [
                         CFunDeclr (Right ([
-                            CDecl [
-                                CTypeSpec $ rsInputType rs
-                            ] [(Just (
-                                CDeclr (Just $ Ident "apple" 0 undefNode) [] Nothing [] undefNode
-                            ), Nothing, Nothing)] undefNode
+                            mkVarDecl (rsInputType rs) (transferVarOf . rsInputType $ rs)
                         ], False)) [] undefNode
                     ] Nothing [] undefNode
             )
             []
             (
-                CCompound [] stmts undefNode
---                    CBlockStmt (CBreak undefNode)
+                CCompound [] (transferDecls ++ stmts) undefNode
             )
             undefNode
     ]
   where
+    implsType :: [EventImpl] -> CTypeSpec
+    implsType = fromMaybe (CVoidType undefNode) .
+                fmap typeOf .
+                listToMaybe
+    inputTypeOf :: Int -> CTypeSpec
+    inputTypeOf ix = implsType $ fromMaybe [] $ ix `IM.lookup` rsEvents rs
+    transferVars :: Map String (CTypeSpec, Ident)
+    transferVars = fst $ foldl' (\(m, nextIdent) evImpls ->
+            let ty = implsType evImpls
+                tyName = show ty
+            in  case tyName `M.lookup` m of
+                    Just _ -> (m, nextIdent)
+                    Nothing ->
+                        let ident = nextIdent
+                        in  (M.insert tyName (ty, Ident ident 0 undefNode) m, succIdent nextIdent)
+        ) (M.empty, rsNextIdent rs) (IM.elems (rsEvents rs)) 
+    transferVarOf :: CTypeSpec -> Ident
+    transferVarOf ty = snd $ fromMaybe (error $ "non-existent transfer variable type "++show ty) $
+        show ty `M.lookup` transferVars
+    mkVarDecl :: CTypeSpec -> Ident -> CDecl
+    mkVarDecl ty ident = 
+        let tyDecl = CTypeSpec ty
+            declr = CDeclr (Just ident) [] Nothing [] undefNode
+        in  CDecl [tyDecl] [(Just declr, Nothing, Nothing)] undefNode
+    transferDecls :: [CBlockItem]
+    transferDecls = map (\(ty, ident) ->  CBlockDecl $ mkVarDecl ty ident)
+        (M.elems . M.delete (show (rsInputType rs)) $ transferVars) 
+    mkLabel ix = Ident ("l"++show ix) 0 undefNode
     stmts = flip concatMap (IM.toList (rsEvents rs)) $ \(ix, impls) ->
-        flip concatMap impls $ \impl ->
-            case impl of
-                _ -> []
+        let stmts = 
+                flip concatMap impls $ \impl ->
+                    case impl of
+                        To ty to -> [CGoto (mkLabel to) undefNode]
+                        MapE ty f to ->
+                            let ivar = transferVarOf ty
+                                ovar = transferVarOf (inputTypeOf to)
+                            in
+                                [CCompound []
+                                    (formatValue ovar (f (variable ivar)))
+                                    undefNode,
+                                    CGoto (mkLabel to) undefNode
+                                ]
+                        Code ty var stmt -> [
+                            let ivar = transferVarOf ty
+                            in  CCompound [] [
+                                    CBlockDecl (
+                                        let declr = CDeclr (Just (Ident var 0 undefNode)) [] Nothing [] undefNode
+                                            ass = CInitExpr (CVar ivar undefNode) undefNode 
+                                        in  CDecl [CTypeSpec ty] [(Just declr, Just ass, Nothing)] undefNode 
+                                    ),
+                                    CBlockStmt (fmap (const undefNode) stmt)
+                                ] undefNode
+                            ]
+        in  case stmts of
+                [] -> []
+                (st:sts) -> CBlockStmt (CLabel (mkLabel ix) st [] undefNode) : map CBlockStmt sts
 
 newtype Reactive a = Reactive { unReactive :: State ReactiveState a }
     deriving (Functor, Applicative, Monad)
@@ -178,10 +242,11 @@ connect i impl = Reactive $ modify $ \rs -> rs {
         rsEvents = IM.alter (Just . (impl:) . fromMaybe []) i (rsEvents rs)
     }
 
-incIdent :: String -> String
-incIdent = reverse . ii . reverse
+succIdent :: String -> String
+succIdent = reverse . ii . reverse
   where
     ii [] = ['a']
+    ii underscores@('_':_) = underscores
     ii ('z':xs) = 'a' : ii xs
     ii (x:xs)   = succ x : xs
 
@@ -194,20 +259,22 @@ allocEvent = Reactive $ do
     modify $ \rs -> rs { rsNextEvent = rsNextEvent rs + 1 }
     return e
 
-merge :: RType a => Event a -> Event a -> Reactive (Event a)
+merge :: forall a . RType a => Event a -> Event a -> Reactive (Event a)
 merge (Event ea) (Event eb) = do
     ec <- allocEvent
-    connect ea (To ec)
-    connect eb (To ec)
+    let ty = ctype (undefined :: a)
+    connect ea (To ty ec)
+    connect eb (To ty ec)
     return $ Event ec
 
 mapE :: forall a b . (RType a, RType b) => (a -> b) -> Event a -> Reactive (Event b)
 mapE f (Event ea) = do
     eb <- allocEvent
-    connect ea (MapE (\v -> unr (f (r v))) eb)
+    let ty = ctype (undefined :: a)
+    connect ea (MapE ty (\v -> unr (f (r v))) eb)
     return $ Event eb
 
-listen :: Event a
+listen :: forall a . RType a => Event a
        -> String     -- ^ Variable identifier
        -> ByteString -- ^ Statement or statement block to handle it
        -> Reactive ()
@@ -215,7 +282,8 @@ listen (Event ea) ident statement = do
     case execParser statementP statement (position 0 "blah" 1 1) [Ident "hello" 0 undefNode] (map Name [0..]) of
         Left err -> fail $ "parse failed in listen: " ++ show err
         Right (stmt, _) -> do
-            connect ea (Code ident stmt)
+            let ty = ctype (undefined :: a)
+            connect ea (Code ty ident stmt)
 
 react :: forall a . RType a => (Event a -> Reactive ()) -> ReactiveState
 react r = execState (unReactive (r (Event 1))) (newReactiveState (ctype (undefined :: a)))
