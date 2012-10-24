@@ -158,24 +158,8 @@ newReactiveState typ = ReactiveState {
         rsEvents    = IM.empty
     }
 
-toC :: ReactiveState -> [CExternalDeclaration NodeInfo]
-toC rs = [
-        CFDefExt $ CFunDef [
-                CTypeSpec (CVoidType undefNode)
-            ]
-            (
-                CDeclr (Just $ Ident "react" 0 undefNode) [
-                        CFunDeclr (Right ([
-                            mkVarDecl (rsInputType rs) (transferVarOf . rsInputType $ rs)
-                        ], False)) [] undefNode
-                    ] Nothing [] undefNode
-            )
-            []
-            (
-                CCompound [] (transferDecls ++ stmts) undefNode
-            )
-            undefNode
-    ]
+toC :: ReactiveState -> [CExtDecl]
+toC rs = funcs
   where
     implsType :: [EventImpl] -> CTypeSpec
     implsType = fromMaybe (CVoidType undefNode) .
@@ -183,56 +167,55 @@ toC rs = [
                 listToMaybe
     inputTypeOf :: Int -> CTypeSpec
     inputTypeOf ix = implsType $ fromMaybe [] $ ix `IM.lookup` rsEvents rs
-    transferVars :: Map String (CTypeSpec, Ident)
-    transferVars = fst $ foldl' (\(m, nextIdent) evImpls ->
-            let ty = implsType evImpls
-                tyName = show ty
-            in  case tyName `M.lookup` m of
-                    Just _ -> (m, nextIdent)
-                    Nothing ->
-                        let ident = nextIdent
-                        in  (M.insert tyName (ty, Ident ident 0 undefNode) m, succIdent nextIdent)
-        ) (M.empty, rsNextIdent rs) (IM.elems (rsEvents rs)) 
-    transferVarOf :: CTypeSpec -> Ident
-    transferVarOf ty = snd $ fromMaybe (error $ "non-existent transfer variable type "++show ty) $
-        show ty `M.lookup` transferVars
     mkVarDecl :: CTypeSpec -> Ident -> CDecl
     mkVarDecl ty ident = 
         let tyDecl = CTypeSpec ty
             declr = CDeclr (Just ident) [] Nothing [] undefNode
         in  CDecl [tyDecl] [(Just declr, Nothing, Nothing)] undefNode
-    transferDecls :: [CBlockItem]
-    transferDecls = map (\(ty, ident) ->  CBlockDecl $ mkVarDecl ty ident)
-        (M.elems . M.delete (show (rsInputType rs)) $ transferVars) 
-    mkLabel ix = Ident ("l"++show ix) 0 undefNode
-    stmts = flip concatMap (IM.toList (rsEvents rs)) $ \(ix, impls) ->
-        let stmts = 
-                flip concatMap impls $ \impl ->
+    mkLabel ix = Ident ("react"++show ix) 0 undefNode
+    
+    allocIdent :: State String Ident
+    allocIdent = do
+        ident <- get
+        modify succIdent
+        return $ Ident ident 0 undefNode
+
+    funcs :: [CExtDecl]
+    funcs = flip evalState (rsNextIdent rs) $ do
+        forM (IM.toList (rsEvents rs)) $ \(ix, impls) -> do
+            ivar <- allocIdent
+            let ovar = Ident "out" 0 undefNode
+            let itype = implsType impls
+                stmts = flip concatMap impls $ \impl ->
                     case impl of
-                        To ty to -> [CGoto (mkLabel to) undefNode]
+                        To ty to -> [CBlockStmt $ CGoto (mkLabel to) undefNode]
                         MapE ty f to ->
-                            let ivar = transferVarOf ty
-                                ovar = transferVarOf (inputTypeOf to)
-                            in
-                                [CCompound []
-                                    (formatValue ovar (f (variable ivar)))
-                                    undefNode,
-                                    CGoto (mkLabel to) undefNode
-                                ]
+                            (formatValue ovar (f (variable ivar)))
+                            -- CBlockStmt $ CGoto (mkLabel to) undefNode
                         Code ty var stmt -> [
-                            let ivar = transferVarOf ty
-                            in  CCompound [] [
-                                    CBlockDecl (
-                                        let declr = CDeclr (Just (Ident var 0 undefNode)) [] Nothing [] undefNode
-                                            ass = CInitExpr (CVar ivar undefNode) undefNode 
-                                        in  CDecl [CTypeSpec ty] [(Just declr, Just ass, Nothing)] undefNode 
-                                    ),
-                                    CBlockStmt (fmap (const undefNode) stmt)
-                                ] undefNode
+                                CBlockDecl (
+                                    let declr = CDeclr (Just (Ident var 0 undefNode)) [] Nothing [] undefNode
+                                        ass = CInitExpr (CVar ivar undefNode) undefNode 
+                                    in  CDecl [CTypeSpec ty] [(Just declr, Just ass, Nothing)] undefNode 
+                                ),
+                                CBlockStmt (fmap (const undefNode) stmt)
                             ]
-        in  case stmts of
-                [] -> []
-                (st:sts) -> CBlockStmt (CLabel (mkLabel ix) st [] undefNode) : map CBlockStmt sts
+            return $
+                CFDefExt $ CFunDef [
+                        CTypeSpec (CVoidType undefNode)
+                    ]
+                    (
+                        CDeclr (Just $ mkLabel ix) [
+                                CFunDeclr (Right ([
+                                    mkVarDecl itype ivar
+                                ], False)) [] undefNode
+                            ] Nothing [] undefNode
+                    )
+                    []
+                    (
+                        CCompound [] (stmts) undefNode
+                    )
+                    undefNode
 
 newtype Reactive a = Reactive { unReactive :: State ReactiveState a }
     deriving (Functor, Applicative, Monad)
