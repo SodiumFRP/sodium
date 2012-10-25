@@ -11,6 +11,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
+import java.awt.event.WindowEvent;
+import java.awt.event.WindowAdapter;
 import javax.swing.*;
 
 class Date implements Comparable<Date> {
@@ -120,8 +122,9 @@ class Button extends JButton
 
     private Listener l;
 
-    protected void finalize() throws Throwable {
+    public void removeNotify() {
         l.unlisten();
+        super.removeNotify();
     }
 }
 
@@ -168,8 +171,9 @@ class DateField extends Container
 
     private Listener l;
 
-    protected void finalize() throws Throwable {
+    public void removeNotify() {
         l.unlisten();
+        super.removeNotify();
     }
 
     public Behavior<Date> date;
@@ -222,7 +226,13 @@ public class FlightBooking extends JFrame
     public static void main(String[] args)
     {
         FlightBooking booking = new FlightBooking();
-        booking.booked.listen(bk -> { System.out.println(bk); });
+        Listener l = booking.booked.listen(bk -> { System.out.println(bk); });
+        booking.addWindowListener(new WindowAdapter() {
+            public void windowClosing(WindowEvent e) {
+                l.unlisten();
+                System.exit(0);
+            }
+        });
         booking.pack();
         booking.setVisible(true);
     }
