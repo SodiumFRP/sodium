@@ -5,7 +5,8 @@ module FRP.Sodium.C.Sodium where
 
 import Control.Applicative
 import Control.Monad.State.Strict
-import Data.ByteString (ByteString)
+import Data.ByteString.Char8 (ByteString)
+import qualified Data.ByteString.Char8 as C
 import Data.Int
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IM
@@ -13,6 +14,9 @@ import Data.List
 import Data.Map (Map)
 import qualified Data.Map as M
 import Data.Maybe
+import Data.Monoid
+import Data.Set (Set)
+import qualified Data.Set as S
 import Data.Word
 import Language.C
 import Language.C.Data.Ident
@@ -40,11 +44,13 @@ konstant i = r $ Value {
 variable :: Ident -> Value
 variable ident = Value [] [] (CVar ident undefNode)
 
-formatValue :: Ident -> Value -> [CBlockItem]
-formatValue var va =
+formatValue :: (CExpr -> CBlockItem) -> Value -> [CBlockItem]
+formatValue processOutput va =
     map CBlockDecl (vaDecls va) ++
     map CBlockStmt (vaStmts va) ++
-    map CBlockStmt [CExpr (Just $ CAssign CAssignOp (CVar var undefNode) (vaExpr va) undefNode) undefNode]
+    [
+        processOutput (vaExpr va)
+    ]
 
 class RType (R a) => RNum a where
     data R a :: *
@@ -141,7 +147,14 @@ typeOf (To t _) = t
 typeOf (MapE t _ _) = t
 typeOf (Code t _ _) = t
 
+data Header = AngleHeader ByteString | QuoteHeader ByteString deriving (Eq, Ord)
+
+formatHeader :: Header -> ByteString
+formatHeader (AngleHeader h) = "#include <" `mappend` h `mappend` ">\n"
+formatHeader (QuoteHeader h) = "#include \"" `mappend` h `mappend` "\"\n"
+
 data ReactiveState = ReactiveState {
+        rsHeaders   :: Set Header,
         rsInputType :: CTypeSpec,
         rsInputs    :: [Int],
         rsNextIdent :: String,
@@ -151,6 +164,7 @@ data ReactiveState = ReactiveState {
 
 newReactiveState :: CTypeSpec -> ReactiveState
 newReactiveState typ = ReactiveState {
+        rsHeaders   = S.fromList [AngleHeader "stdint.h"],
         rsInputType = typ,
         rsInputs    = [],
         rsNextIdent = "__a",
@@ -159,7 +173,7 @@ newReactiveState typ = ReactiveState {
     }
 
 toC :: ReactiveState -> [CExtDecl]
-toC rs = funcs
+toC rs = prototypes ++ funcs
   where
     implsType :: [EventImpl] -> CTypeSpec
     implsType = fromMaybe (CVoidType undefNode) .
@@ -180,18 +194,49 @@ toC rs = funcs
         modify succIdent
         return $ Ident ident 0 undefNode
 
+    prototypes :: [CExtDecl]
+    prototypes = flip map (IM.toList (rsEvents rs)) $ \(ix, impls0) ->
+        let impls = reverse impls0
+            itype = implsType impls
+            ivar = Ident "a" 0 undefNode
+            declr = CDeclr (Just $ mkLabel ix) [
+                    CFunDeclr (Right ([
+                        mkVarDecl itype ivar
+                    ], False)) [] undefNode
+                ] Nothing [] undefNode
+        in 
+            CDeclExt $ CDecl [
+                    CTypeSpec (CVoidType undefNode)
+                ] [(Just declr, Nothing, Nothing)] undefNode
+           {-
+            CFDefExt $ CFunDef [
+                    CTypeSpec (CVoidType undefNode)
+                ]
+                (
+                    CDeclr (Just $ mkLabel ix) [
+                            CFunDeclr (Right ([
+                                mkVarDecl itype ivar
+                            ], False)) [] undefNode
+                        ] Nothing [] undefNode
+                )
+                []
+                (
+                    CExpr Nothing undefNode
+                )
+                undefNode
+            -}
+
     funcs :: [CExtDecl]
     funcs = flip evalState (rsNextIdent rs) $ do
-        forM (IM.toList (rsEvents rs)) $ \(ix, impls) -> do
+        forM (IM.toList (rsEvents rs)) $ \(ix, impls0) -> do
+            let impls = reverse impls0
             ivar <- allocIdent
-            let ovar = Ident "out" 0 undefNode
             let itype = implsType impls
+                call to expr = CBlockStmt $ CExpr (Just $ CCall (CVar (mkLabel to) undefNode) [expr] undefNode) undefNode
                 stmts = flip concatMap impls $ \impl ->
                     case impl of
-                        To ty to -> [CBlockStmt $ CGoto (mkLabel to) undefNode]
-                        MapE ty f to ->
-                            (formatValue ovar (f (variable ivar)))
-                            -- CBlockStmt $ CGoto (mkLabel to) undefNode
+                        To ty to -> [call to (CVar ivar undefNode)]
+                        MapE ty f to -> formatValue (call to) (f (variable ivar))
                         Code ty var stmt -> [
                                 CBlockDecl (
                                     let declr = CDeclr (Just (Ident var 0 undefNode)) [] Nothing [] undefNode
@@ -257,25 +302,33 @@ mapE f (Event ea) = do
     connect ea (MapE ty (\v -> unr (f (r v))) eb)
     return $ Event eb
 
+addHeader :: Header -> Reactive ()
+addHeader h = Reactive $ modify $ \rs -> rs { rsHeaders = S.insert h (rsHeaders rs) }
+
 listen :: forall a . RType a => Event a
+       -> [Header]   -- ^ Header
        -> String     -- ^ Variable identifier
        -> ByteString -- ^ Statement or statement block to handle it
        -> Reactive ()
-listen (Event ea) ident statement = do
+listen (Event ea) headers ident statement = do
+    mapM_ addHeader headers
     case execParser statementP statement (position 0 "blah" 1 1) [Ident "hello" 0 undefNode] (map Name [0..]) of
         Left err -> fail $ "parse failed in listen: " ++ show err
         Right (stmt, _) -> do
             let ty = ctype (undefined :: a)
             connect ea (Code ty ident stmt)
 
-react :: forall a . RType a => (Event a -> Reactive ()) -> ReactiveState
-react r = execState (unReactive (r (Event 1))) (newReactiveState (ctype (undefined :: a)))
+react :: forall a . RType a => (Event a -> Reactive ()) -> ByteString
+react r =
+    let rs = execState (unReactive (r (Event 1))) (newReactiveState (ctype (undefined :: a)))
+    in  mconcat (map formatHeader (S.toList $ rsHeaders rs)) `mappend`
+        C.pack (show $ pretty $ CTranslUnit (toC rs) undefNode)
 
 main :: IO ()
-main = do
-    let st = react $ \ea -> do
-            eb <- mapE (`plus` constant (1 :: Int32)) ea
-            listen eb "x" "{ printf(\"x=%d\\n\", x); }"
-            return ()
-    putStrLn $ show $ pretty $ CTranslUnit (toC st) undefNode
+main =
+    C.putStrLn $ react $ \ea -> do
+        eb <- mapE (`plus` constant (1 :: Int32)) ea
+        ec <- mapE (`plus` constant (100 :: Int32)) ea
+        ed <- merge eb ec
+        listen ed [AngleHeader "stdio.h"] "x" "printf(\"x=%d\\n\", x);"
 
