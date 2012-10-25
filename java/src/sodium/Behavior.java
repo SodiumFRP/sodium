@@ -101,6 +101,24 @@ public class Behavior<A> {
 	}
 
 	/**
+	 * Lift a ternary function into behaviors.
+	 */
+	public final <B,C,D> Behavior<D> lift(Lambda3<A,B,C,D> f, Behavior<B> b, Behavior<C> c)
+	{
+		Lambda1<A, Lambda1<B, Lambda1<C,D>>> ffa = (A aa) -> (B bb) -> (C cc) -> f.evaluate(aa,bb,cc);
+		Behavior<Lambda1<B, Lambda1<C, D>>> bf = map(ffa);
+		return apply(apply(bf, b), c);
+	}
+
+	/**
+	 * Lift a ternaru function into behaviors.
+	 */
+	public static final <A,B,C,D> Behavior<D> lift(Lambda3<A,B,C,D> f, Behavior<A> a, Behavior<B> b, Behavior<C> c)
+	{
+		return a.lift(f, b, c);
+	}
+
+	/**
 	 * Apply a value inside a behavior to a function inside a behavior. This is the
 	 * primitive for all function lifting.
 	 */

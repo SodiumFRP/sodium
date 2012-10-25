@@ -330,5 +330,6 @@ main =
         eb <- mapE (`plus` constant (1 :: Int32)) ea
         ec <- mapE (`plus` constant (100 :: Int32)) ea
         ed <- merge eb ec
-        listen ed [AngleHeader "stdio.h"] "x" "printf(\"x=%d\\n\", x);"
+        listen ec [AngleHeader "stdio.h"] "x" "printf(\"ec=%d\\n\", x);"
+        listen ed [AngleHeader "stdio.h"] "x" "printf(\"ed=%d\\n\", x);"
 
