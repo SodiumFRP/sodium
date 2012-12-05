@@ -45,6 +45,8 @@ public class Node implements Comparable<Node> {
 
 	@Override
 	public int compareTo(Node o) {
-		return Long.compare(rank, o.rank);
+		if (rank < o.rank) return -1;
+		if (rank > o.rank) return 1;
+		return 0;
 	}
 }

@@ -47,21 +47,29 @@ public class Event<A> {
 	 * method to cause the listener to be removed. This is the observer pattern.
      */
 	public final Listener listen(final Handler<A> action) {
-		return listen_(Node.NULL, (Transaction trans2, A a) -> { action.run(a); });
+		return listen_(Node.NULL, new TransactionHandler<A>() {
+			public void run(Transaction trans2, A a) {
+				action.run(a);
+			}
+		});
 	}
 
-	final Listener listen_(Node target, TransactionHandler<A> action) {
-		return Transaction.evaluate((Transaction trans1) ->
-		    listen(target, trans1, action, false));
+	final Listener listen_(final Node target, final TransactionHandler<A> action) {
+		return Transaction.evaluate(new Lambda1<Transaction, Listener>() {
+			public Listener evaluate(Transaction trans1) {
+				return listen(target, trans1, action, false);
+			}
+		});
 	}
 
+	@SuppressWarnings("unchecked")
 	final Listener listen(Node target, Transaction trans, TransactionHandler<A> action, boolean suppressEarlierFirings) {
 		if (node.linkTo(target))
 		    trans.toRegen = true;
 		Object[] aNow = sampleNow();
 		if (aNow != null) {    // In cases like values(), we start with an initial value.
 		    for (int i = 0; i < aNow.length; i++)
-                action.run(trans, (A)aNow[i]);
+                action.run(trans, (A)aNow[i]);  // <-- unchecked warning is here
         }
 		listeners.add(action);
 		if (!suppressEarlierFirings) {
@@ -80,7 +88,8 @@ public class Event<A> {
 	{
 	    final Event<A> ev = this;
 	    final EventSink<B> out = new EventSink<B>() {
-    		@Override
+    		@SuppressWarnings("unchecked")
+			@Override
             protected Object[] sampleNow()
             {
                 Object[] oi = ev.sampleNow();
@@ -94,8 +103,10 @@ public class Event<A> {
                     return null;
             }
 	    };
-        Listener l = listen_(out.node, (Transaction trans2, A a) -> {
-            out.send(trans2, f.evaluate(a));
+        Listener l = listen_(out.node, new TransactionHandler<A>() {
+        	public void run(Transaction trans2, A a) {
+	            out.send(trans2, f.evaluate(a));
+	        }
         });
         return out.addCleanup(l);
 	}
@@ -107,9 +118,12 @@ public class Event<A> {
      * That is, state updates caused by event firings get processed at the end of
      * the transaction.
      */
-	public final Behavior<A> hold(A initValue) {
-		return Transaction.evaluate((Transaction trans) ->
-		    new Behavior<A>(lastFiringOnly(trans), initValue));
+	public final Behavior<A> hold(final A initValue) {
+		return Transaction.evaluate(new Lambda1<Transaction, Behavior<A>>() {
+			public Behavior<A> evaluate(Transaction trans) {
+			    return new Behavior<A>(lastFiringOnly(trans), initValue);
+			}
+		});
 	}
 
 	/**
@@ -117,7 +131,11 @@ public class Event<A> {
 	 */
 	public final <B> Event<B> snapshot(Behavior<B> beh)
 	{
-	    return snapshot(beh, (A a, B b) -> b);
+	    return snapshot(beh, new Lambda2<A,B,B>() {
+	    	public B evaluate(A a, B b) {
+	    		return b;
+	    	}
+	    });
 	}
 
 	/**
@@ -128,8 +146,9 @@ public class Event<A> {
 	public final <B,C> Event<C> snapshot(final Behavior<B> b, final Lambda2<A,B,C> f)
 	{
 	    final Event<A> ev = this;
-		EventSink<C> out = new EventSink<C>() {
-    		@Override
+		final EventSink<C> out = new EventSink<C>() {
+    		@SuppressWarnings("unchecked")
+			@Override
             protected Object[] sampleNow()
             {
                 Object[] oi = ev.sampleNow();
@@ -143,8 +162,10 @@ public class Event<A> {
                     return null;
             }
 		};
-        Listener l = listen_(out.node, (Transaction trans2, A a) -> {
-            out.send(trans2, f.evaluate(a, b.value));
+        Listener l = listen_(out.node, new TransactionHandler<A>() {
+        	public void run(Transaction trans2, A a) {
+	            out.send(trans2, f.evaluate(a, b.value));
+	        }
         });
         return out.addCleanup(l);
 	}
@@ -160,7 +181,7 @@ public class Event<A> {
      */
 	public static <A> Event<A> merge(final Event<A> ea, final Event<A> eb)
 	{
-	    EventSink<A> out = new EventSink<A>() {
+	    final EventSink<A> out = new EventSink<A>() {
     		@Override
             protected Object[] sampleNow()
             {
@@ -180,8 +201,10 @@ public class Event<A> {
                     return ob;
             }
 	    };
-        TransactionHandler<A> h = (Transaction trans, A a) -> {
-            out.send(trans, a);
+        TransactionHandler<A> h = new TransactionHandler<A>() {
+        	public void run(Transaction trans, A a) {
+	            out.send(trans, a);
+	        }
         };
         Listener l1 = ea.listen_(out.node, h);
         Listener l2 = eb.listen_(out.node, h);
@@ -199,19 +222,24 @@ public class Event<A> {
      */
 	public final Event<A> coalesce(final Lambda2<A,A,A> f)
 	{
-	    return Transaction.evaluate((Transaction trans) -> coalesce(trans, f));
+	    return Transaction.evaluate(new Lambda1<Transaction, Event<A>>() {
+	    	public Event<A> evaluate(Transaction trans) {
+	    		return coalesce(trans, f);
+	    	}
+	    });
 	}
 
 	final Event<A> coalesce(Transaction trans1, final Lambda2<A,A,A> f)
 	{
 	    final Event<A> ev = this;
 	    final EventSink<A> out = new EventSink<A>() {
-    		@Override
+    		@SuppressWarnings("unchecked")
+			@Override
             protected Object[] sampleNow()
             {
                 Object[] oi = ev.sampleNow();
                 if (oi != null) {
-                    A o = (A)oi[0];
+					A o = (A)oi[0];
                     for (int i = 1; i < oi.length; i++)
                         o = f.evaluate(o, (A)oi[i]);
                     return new Object[] { o };
@@ -220,25 +248,7 @@ public class Event<A> {
                     return null;
             }
 	    };
-        TransactionHandler<A> h = new TransactionHandler<A>() {
-            private boolean accumValid = false;
-            private A accum;
-            @Override
-            public void run(Transaction trans1, A a) {
-                if (accumValid)
-                    accum = f.evaluate(accum, a);
-                else {
-                    trans1.prioritized(out.node, (Transaction trans2) -> {
-                        out.send(trans2, this.accum);
-                        this.accumValid = false;
-                        this.accum = null;
-                    });
-                    accum = a;
-                    accumValid = true;
-                }
-            }
-        };
-
+        TransactionHandler<A> h = new CoalesceHandler<A>(f, out);
         Listener l = listen(out.node, trans1, h, false);
         return out.addCleanup(l);
     }
@@ -248,7 +258,9 @@ public class Event<A> {
      */
     final Event<A> lastFiringOnly(Transaction trans)
     {
-        return coalesce(trans, (A first, A second) -> second);
+        return coalesce(trans, new Lambda2<A,A,A>() {
+        	public A evaluate(A first, A second) { return second; }
+        });
     }
 
     /**
@@ -270,8 +282,9 @@ public class Event<A> {
     public final Event<A> filter(final Lambda1<A,Boolean> f)
     {
         final Event<A> ev = this;
-        EventSink<A> out = new EventSink<A>() {
-    		@Override
+        final EventSink<A> out = new EventSink<A>() {
+    		@SuppressWarnings("unchecked")
+			@Override
             protected Object[] sampleNow()
             {
                 Object[] oi = ev.sampleNow();
@@ -293,8 +306,10 @@ public class Event<A> {
                     return null;
             }
         };
-        Listener l = listen_(out.node, (Transaction trans2, A a) -> {
-            if (f.evaluate(a)) out.send(trans2, a);
+        Listener l = listen_(out.node, new TransactionHandler<A>() {
+        	public void run(Transaction trans2, A a) {
+	            if (f.evaluate(a)) out.send(trans2, a);
+	        }
         });
         return out.addCleanup(l);
     }
@@ -304,7 +319,9 @@ public class Event<A> {
      */
     public final Event<A> filterNotNull()
     {
-        return filter((A a) -> a != null);
+        return filter(new Lambda1<A,Boolean>() {
+        	public Boolean evaluate(A a) { return a != null; }
+        });
     }
 
 	/**
@@ -313,12 +330,14 @@ public class Event<A> {
 	 */
     public static <A,B> B loop(Lambda1<Event<A>,Tuple2<B,Event<A>>> f)
     {
-        EventSink<A> ea_in = new EventSink();
+        final EventSink<A> ea_in = new EventSink<A>();
         Tuple2<B,Event<A>> b_ea = f.evaluate(ea_in);
         B b = b_ea.a;
         Event<A> ea_out = b_ea.b;
-        Listener l = ea_out.listen_(ea_in.node, (Transaction trans, A a) -> {
-            ea_in.send(trans, a);
+        Listener l = ea_out.listen_(ea_in.node, new TransactionHandler<A>() {
+        	public void run(Transaction trans, A a) {
+	            ea_in.send(trans, a);
+	        }
         });
         ea_in.addCleanup(l);
         return b;
@@ -331,7 +350,9 @@ public class Event<A> {
      */
     public final Event<A> gate(Behavior<Boolean> bPred)
     {
-        return snapshot(bPred, (A a, Boolean pred) -> pred ? a : null).filterNotNull();
+        return snapshot(bPred, new Lambda2<A,Boolean,A>() {
+        	public A evaluate(A a, Boolean pred) { return pred ? a : null; }
+        }).filterNotNull();
     }
 
     /**
@@ -346,8 +367,12 @@ public class Event<A> {
                 public Tuple2<Event<B>,Event<S>> evaluate(Event<S> es) {
                     Behavior<S> s = es.hold(initState);
                     Event<Tuple2<B,S>> ebs = ea.snapshot(s, f);
-                    Event<B> eb = ebs.map(bs -> bs.a);
-                    Event<S> es_out = ebs.map(bs -> bs.b);
+                    Event<B> eb = ebs.map(new Lambda1<Tuple2<B,S>,B>() {
+                    	public B evaluate(Tuple2<B,S> bs) { return bs.a; }
+                    });
+                    Event<S> es_out = ebs.map(new Lambda1<Tuple2<B,S>,S>() {
+                    	public S evaluate(Tuple2<B,S> bs) { return bs.b; }
+                    });
                     return new Tuple2<Event<B>,Event<S>>(eb, es_out);
                 }
             }
@@ -376,7 +401,11 @@ public class Event<A> {
      */
     public final Event<Integer> countE()
     {
-        return map((A a) -> 1).accum(0, (a,b)->a+b);
+        return map(new Lambda1<A,Integer>() {
+        	public Integer evaluate(A a) { return 1; }
+        }).accum(0, new Lambda2<Integer,Integer,Integer>() {
+        	public Integer evaluate(Integer a, Integer b) { return a+b; }
+        });
     }
 
     /**
@@ -396,7 +425,7 @@ public class Event<A> {
         // the listener.
         final Event<A> ev = this;
         final Listener[] la = new Listener[1];
-        EventSink<A> out = new EventSink<A>() {
+        final EventSink<A> out = new EventSink<A>() {
             @Override
             protected Object[] sampleNow()
             {
@@ -413,12 +442,14 @@ public class Event<A> {
                 return oo;
             }
         };
-        la[0] = ev.listen_(out.node, (Transaction trans, A a) -> {
-            out.send(trans, a);
-            if (la[0] != null) {
-                la[0].unlisten();
-                la[0] = null;
-            }
+        la[0] = ev.listen_(out.node, new TransactionHandler<A>() {
+        	public void run(Transaction trans, A a) {
+	            out.send(trans, a);
+	            if (la[0] != null) {
+	                la[0].unlisten();
+	                la[0] = null;
+	            }
+	        }
         });
         return out.addCleanup(la[0]);
     }
@@ -434,5 +465,35 @@ public class Event<A> {
 		for (Listener l : finalizers)
 			l.unlisten();
 	}
+}
+
+class CoalesceHandler<A> implements TransactionHandler<A>
+{
+	public CoalesceHandler(Lambda2<A,A,A> f, EventSink<A> out)
+	{
+	    this.f = f;
+	    this.out = out;
+	}
+	private Lambda2<A,A,A> f;
+	private EventSink<A> out;
+    private boolean accumValid = false;
+    private A accum;
+    @Override
+    public void run(Transaction trans1, A a) {
+        if (accumValid)
+            accum = f.evaluate(accum, a);
+        else {
+        	final CoalesceHandler<A> thiz = this;
+            trans1.prioritized(out.node, new Handler<Transaction>() {
+            	public void run(Transaction trans2) {
+                    out.send(trans2, thiz.accum);
+                    thiz.accumValid = false;
+                    thiz.accum = null;
+                }
+            });
+            accum = a;
+            accumValid = true;
+        }
+    }
 }
 

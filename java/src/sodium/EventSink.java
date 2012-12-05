@@ -10,16 +10,21 @@ public class EventSink<A> extends Event<A> {
 	    return null;
 	}
 
-	public void send(A a) {
-		Transaction.run((Transaction trans) -> { send(trans, a); });
+	public void send(final A a) {
+		Transaction.run(new Handler<Transaction>() {
+			public void run(Transaction trans) { send(trans, a); }
+		});
 	}
 
     void send(Transaction trans, A a) {
         if (firings.isEmpty())
-            trans.last(() -> { firings.clear(); });
+            trans.last(new Runnable() {
+            	public void run() { firings.clear(); }
+            });
         firings.add(a);
         
-        List<TransactionHandler<A>> listeners = (List<TransactionHandler<A>>)this.listeners.clone();
+        @SuppressWarnings("unchecked")
+		List<TransactionHandler<A>> listeners = (List<TransactionHandler<A>>)this.listeners.clone();
     	for (TransactionHandler<A> action : listeners) {
     		try {
                 action.run(trans, a);

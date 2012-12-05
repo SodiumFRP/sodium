@@ -25,8 +25,10 @@ public final class Transaction {
 		@Override
 		public int compareTo(Entry o) {
 			int answer = rank.compareTo(o.rank);
-			if (answer == 0)  // Same rank: preserve chronological sequence.
-			    answer = Long.compare(seq, o.seq);
+			if (answer == 0) {  // Same rank: preserve chronological sequence.
+				if (seq < o.seq) answer = -1; else
+				if (seq > o.seq) answer = 1;
+			}
 			return answer;
 		}
 
