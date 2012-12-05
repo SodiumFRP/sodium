@@ -1,1 +1,1 @@
-export CLASSPATH=`pwd`/../../../build/jar/sodium.jar:.
+export CLASSPATH=`pwd`/../../../sodium/sodium.jar:.
