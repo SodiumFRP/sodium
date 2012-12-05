@@ -1,40 +1,55 @@
 <project default="jar">
 
-	<target name="clean">
-		<delete dir="build" />
-	</target>
+    <target name="clean">
+        <delete dir="build"/>
+        <delete file="sodium/sodium.jar"/>
+        <delete>
+            <fileset dir="." includes="TEST-*.txt"/>
+        </delete>
+    </target>
 
-	<target name="compile">
-		<mkdir dir="build/classes" />
-		<javac debug="true" srcdir="src" destdir="build/classes" />
-	</target>
+    <target name="compile">
+        <mkdir dir="build/src" />
+        <javac debug="true" srcdir="sodium/src" destdir="build/src" />
+    </target>
 
-	<target name="jar" depends="compile">
-		<mkdir dir="build/jar" />
-		<jar destfile="build/jar/Sodium.jar" basedir="build/classes">
-			<manifest>
-				<attribute name="Main-Class" value="oata.HelloWorld" />
-			</manifest>
-		</jar>
-	</target>
+    <target name="jar" depends="compile">
+        <mkdir dir="build/jar" />
+        <jar destfile="sodium/sodium.jar" basedir="build/src">
+            <manifest>
+                <attribute name="Main-Class" value="oata.HelloWorld" />
+            </manifest>
+        </jar>
+    </target>
 
-	<target name="run">
-		<java jar="build/jar/Sodium.jar" fork="true" />
-	</target>
+    <target name="run">
+        <java jar="sodium/sodium.jar" fork="true" />
+    </target>
 
-	<target name="tests" depends="jar">
-		<junit printsummary="yes" showoutput="yes">
-			<formatter type="plain" />
-			<classpath>
-				<pathelement location="build/classes" />
-			</classpath>
+    <target name="tests-java8-classes" depends="jar">
+        <mkdir dir="build/tests/java8"/>
+        <javac debug="true" srcdir="tests/java8" destdir="build/tests/java8">
+            <classpath>
+                <pathelement location="sodium/sodium.jar"/>
+                <pathelement location="build/java8"/>
+            </classpath>
+        </javac>
+    </target>
 
-			<batchtest>
-				<fileset dir="build/classes">
-					<include name="sodium/*Tester.class" />
-				</fileset>
-			</batchtest>
-		</junit>
-	</target>
+    <target name="tests-java8" depends="jar,tests-java8-classes">
+        <junit printsummary="yes" showoutput="yes">
+            <formatter type="plain" />
+            <classpath>
+                <pathelement location="sodium/sodium.jar"/>
+                <pathelement location="build/tests/java8"/>
+            </classpath>
+
+            <batchtest>
+                <fileset dir="build/tests/java8">
+                    <include name="sodium/*Tester.class" />
+                </fileset>
+            </batchtest>
+        </junit>
+    </target>
 
 </project>

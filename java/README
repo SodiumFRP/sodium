@@ -1,0 +1,5 @@
+Ant targets:
+
+    ant clean         clean all built files
+    ant jar           build sodium/sodium.jar
+    ant tests-java8   build and run the test cases (requires java8 with lambda support)

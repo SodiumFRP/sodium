@@ -134,7 +134,6 @@ instance RType (R Word8) where
     r = RWord8
     unr (RWord8 v) = v
 
-data Behavior a = Behavior Int
 data Event a = Event Int
 
 data EventImpl where
@@ -208,23 +207,6 @@ toC rs = prototypes ++ funcs
             CDeclExt $ CDecl [
                     CTypeSpec (CVoidType undefNode)
                 ] [(Just declr, Nothing, Nothing)] undefNode
-           {-
-            CFDefExt $ CFunDef [
-                    CTypeSpec (CVoidType undefNode)
-                ]
-                (
-                    CDeclr (Just $ mkLabel ix) [
-                            CFunDeclr (Right ([
-                                mkVarDecl itype ivar
-                            ], False)) [] undefNode
-                        ] Nothing [] undefNode
-                )
-                []
-                (
-                    CExpr Nothing undefNode
-                )
-                undefNode
-            -}
 
     funcs :: [CExtDecl]
     funcs = flip evalState (rsNextIdent rs) $ do
@@ -287,6 +269,12 @@ allocEvent = Reactive $ do
     modify $ \rs -> rs { rsNextEvent = rsNextEvent rs + 1 }
     return e
 
+allocIdent :: Reactive Ident
+allocIdent = Reactive $ do
+    i <- gets rsNextIdent
+    modify $ \rs -> rs { rsNextIdent = succIdent (rsNextIdent rs) }
+    return i
+
 merge :: forall a . RType a => Event a -> Event a -> Reactive (Event a)
 merge (Event ea) (Event eb) = do
     ec <- allocEvent
@@ -302,6 +290,23 @@ mapE f (Event ea) = do
     connect ea (MapE ty (\v -> unr (f (r v))) eb)
     return $ Event eb
 
+data Behavior a = Behavior {
+       behEvent :: Event a,
+       behVar   :: CExpr
+    }
+
+hold :: forall a . RType a => a -> Event a -> Reactive (Behavior a)
+hold init ea = do
+    i <- allocIdent
+    return (Behavior ea (CVar i))
+
+snapshotWith :: forall a b c . (RType a, RType b, RType c) => (a -> b -> c) -> Event a -> Behavior b -> Reactive (Event c)
+snapshotWith f ea bb = do
+    ec <- allocEvent
+    let ty = ctype (undefined :: a)
+    connect ea (SnapshotWith ty (\va vb -> unr (f (r va) (r vb))) bb)
+    return $ Event ec
+
 addHeader :: Header -> Reactive ()
 addHeader h = Reactive $ modify $ \rs -> rs { rsHeaders = S.insert h (rsHeaders rs) }
 
@@ -312,7 +317,7 @@ listen :: forall a . RType a => Event a
        -> Reactive ()
 listen (Event ea) headers ident statement = do
     mapM_ addHeader headers
-    case execParser statementP statement (position 0 "blah" 1 1) [Ident "hello" 0 undefNode] (map Name [0..]) of
+    case execParser statementP statement (position 0 "blah" 1 1) [] (map Name [0..]) of
         Left err -> fail $ "parse failed in listen: " ++ show err
         Right (stmt, _) -> do
             let ty = ctype (undefined :: a)
@@ -326,10 +331,15 @@ react r =
 
 main :: IO ()
 main =
+    {-
     C.putStrLn $ react $ \ea -> do
         eb <- mapE (`plus` constant (1 :: Int32)) ea
         ec <- mapE (`plus` constant (100 :: Int32)) ea
         ed <- merge eb ec
         listen ec [AngleHeader "stdio.h"] "x" "printf(\"ec=%d\\n\", x);"
         listen ed [AngleHeader "stdio.h"] "x" "printf(\"ed=%d\\n\", x);"
-
+    -}
+    C.putStrLn $ react $ \ea -> do
+        ba <- hold (constant (0 :: Int32)) ea
+        eb <- snapshotWith (\e b -> b) ea ba
+        listen eb [AngleHeader "stdio.h"] "x" "printf(\"%d\\n\", (int)x);"
