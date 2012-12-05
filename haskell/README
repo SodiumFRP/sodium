@@ -1,0 +1,2 @@
+Sodium can be installed from Hackage via the cabal command.
+The package description is at http://hackage.haskell.org/package/sodium

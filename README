@@ -1,4 +1,5 @@
 Sodium - Reactive Programming in Java, Haskell and C++
+(other languages to be added)
 
 This is based on Flapjax, Yampa, scala.React and a number of other Reactive
 programming efforts, as well as a lot of personal experience. Enjoy.
@@ -7,6 +8,7 @@ Status:
   Haskell - complete
   Java - complete (but some love still needed)
   C++ - work in progress
+  Embedded-C - just an experiment
 
 Drop by our blog at 
   http://reactiveprogramming.org/
