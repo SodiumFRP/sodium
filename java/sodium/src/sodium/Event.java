@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 public class Event<A> {
-	private static final class ListenerImplementation<A> implements Listener {
+	private static final class ListenerImplementation<A> extends Listener {
 		/**
 		 * It's essential that we keep the listener alive while the caller holds
 		 * the Listener, so that the finalizer doesn't get triggered.
