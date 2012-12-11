@@ -12,11 +12,12 @@ public class Listener {
      * Combine listeners into one where a single unlisten() invocation will unlisten
      * both the inputs.
      */
-    public Listener append(final Listener l) {
+    public final Listener append(final Listener two) {
+        final Listener one = this;
         return new Listener() {
             public void unlisten() {
-                this.unlisten();
-                l.unlisten();
+                one.unlisten();
+                two.unlisten();
             }
         };
     }
