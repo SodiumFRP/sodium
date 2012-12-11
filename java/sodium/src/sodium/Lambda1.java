@@ -1,6 +1,6 @@
 package sodium;
 
 public interface Lambda1<A,B> {
-    B evaluate(A a);
+    B apply(A a);
 }
 

@@ -62,8 +62,8 @@ public class Behavior<A> {
      */
     public final Event<A> values()
     {
-        return Transaction.evaluate(new Lambda1<Transaction, Event<A>>() {
-        	public Event<A> evaluate(Transaction trans) {
+        return Transaction.apply(new Lambda1<Transaction, Event<A>>() {
+        	public Event<A> apply(Transaction trans) {
         		return values(trans);
         	}
         });
@@ -92,7 +92,7 @@ public class Behavior<A> {
      */
 	public final <B> Behavior<B> map(Lambda1<A,B> f)
 	{
-		return changes().map(f).hold(f.evaluate(value));
+		return changes().map(f).hold(f.apply(value));
 	}
 
 	/**
@@ -101,10 +101,10 @@ public class Behavior<A> {
 	public final <B,C> Behavior<C> lift(final Lambda2<A,B,C> f, Behavior<B> b)
 	{
 		Lambda1<A, Lambda1<B,C>> ffa = new Lambda1<A, Lambda1<B,C>>() {
-			public Lambda1<B,C> evaluate(final A aa) {
+			public Lambda1<B,C> apply(final A aa) {
 				return new Lambda1<B,C>() {
-					public C evaluate(B bb) {
-						return f.evaluate(aa,bb);
+					public C apply(B bb) {
+						return f.apply(aa,bb);
 					}
 				};
 			}
@@ -127,12 +127,12 @@ public class Behavior<A> {
 	public final <B,C,D> Behavior<D> lift(final Lambda3<A,B,C,D> f, Behavior<B> b, Behavior<C> c)
 	{
 		Lambda1<A, Lambda1<B, Lambda1<C,D>>> ffa = new Lambda1<A, Lambda1<B, Lambda1<C,D>>>() {
-			public Lambda1<B, Lambda1<C,D>> evaluate(final A aa) {
+			public Lambda1<B, Lambda1<C,D>> apply(final A aa) {
 				return new Lambda1<B, Lambda1<C,D>>() {
-					public Lambda1<C,D> evaluate(final B bb) {
+					public Lambda1<C,D> apply(final B bb) {
 						return new Lambda1<C,D>() {
-							public D evaluate(C cc) {
-								return f.evaluate(aa,bb,cc);
+							public D apply(C cc) {
+								return f.apply(aa,bb,cc);
 							}
 						};
 					}
@@ -169,7 +169,7 @@ public class Behavior<A> {
                 fired = true;
                 trans1.prioritized(out.node, new Handler<Transaction>() {
                 	public void run(Transaction trans2) {
-                        out.send(trans2, bf.newValue().evaluate(ba.newValue()));
+                        out.send(trans2, bf.newValue().apply(ba.newValue()));
                         fired = false;
                     }
             	});
@@ -186,7 +186,7 @@ public class Behavior<A> {
 	            h.run(trans1);
 	        }
         });
-        return out.addCleanup(l1).addCleanup(l2).hold(bf.value.evaluate(ba.value));
+        return out.addCleanup(l1).addCleanup(l2).hold(bf.value.apply(ba.value));
 	}
 
 	/**
@@ -230,8 +230,8 @@ public class Behavior<A> {
 	 */
 	public static <A> Event<A> switchE(final Behavior<Event<A>> bea)
 	{
-        return Transaction.evaluate(new Lambda1<Transaction, Event<A>>() {
-        	public Event<A> evaluate(final Transaction trans) {
+        return Transaction.apply(new Lambda1<Transaction, Event<A>>() {
+        	public Event<A> apply(final Transaction trans) {
                 return switchE(trans, bea);
         	}
         });
@@ -278,8 +278,8 @@ public class Behavior<A> {
         return Event.loop(
             // Lambda syntax doesn't work here - compiler bug?
             new Lambda1<Event<A>,Tuple2<B,Event<A>>>() {
-                public Tuple2<B,Event<A>> evaluate(Event<A> ea) {
-                    Tuple2<B,Behavior<A>> b_ba = f.evaluate(ea.hold(null));
+                public Tuple2<B,Event<A>> apply(Event<A> ea) {
+                    Tuple2<B,Behavior<A>> b_ba = f.apply(ea.hold(null));
                     return new Tuple2<B, Event<A>>(b_ba.a, b_ba.b.values());
                 }
             }
@@ -293,22 +293,22 @@ public class Behavior<A> {
     public final <B,S> Behavior<B> collect(final S initState, final Lambda2<A, S, Tuple2<B, S>> f)
     {
         final Event<A> ea = changes().coalesce(new Lambda2<A,A,A>() {
-        	public A evaluate(A fst, A snd) { return snd; }
+        	public A apply(A fst, A snd) { return snd; }
         });
         final A za = value;
-        final Tuple2<B, S> zbs = f.evaluate(za, initState);
+        final Tuple2<B, S> zbs = f.apply(za, initState);
         return Event.loop(
             new Lambda1<Event<Tuple2<B,S>>, Tuple2<Behavior<B>,Event<Tuple2<B,S>>>>() {
-                public Tuple2<Behavior<B>,Event<Tuple2<B,S>>> evaluate(Event<Tuple2<B,S>> ebs) {
+                public Tuple2<Behavior<B>,Event<Tuple2<B,S>>> apply(Event<Tuple2<B,S>> ebs) {
                     Behavior<Tuple2<B,S>> bbs = ebs.hold(zbs);
                     Behavior<S> bs = bbs.map(new Lambda1<Tuple2<B,S>,S>() {
-                    	public S evaluate(Tuple2<B,S> x) {
+                    	public S apply(Tuple2<B,S> x) {
                     	    return x.b;
                     	}
                     });
                     Event<Tuple2<B,S>> ebs_out = ea.snapshot(bs, f);
                     return new Tuple2<Behavior<B>,Event<Tuple2<B,S>>>(bbs.map(new Lambda1<Tuple2<B,S>,B>() {
-                    	public B evaluate(Tuple2<B,S> x) {
+                    	public B apply(Tuple2<B,S> x) {
                     	    return x.a;
                     	}
                     }), ebs_out);
@@ -323,13 +323,13 @@ public class Behavior<A> {
     public final <S> Behavior<S> accum(final S initState, final Lambda2<A, S, S> f)
     {
         final Event<A> ea = changes().coalesce(new Lambda2<A,A,A>() {
-        	public A evaluate(A fst, A snd) { return snd; }
+        	public A apply(A fst, A snd) { return snd; }
         });
         final A za = value;
-        final S zs = f.evaluate(za, initState);
+        final S zs = f.apply(za, initState);
         return Event.loop(
             new Lambda1<Event<S>, Tuple2<Behavior<S>,Event<S>>>() {
-                public Tuple2<Behavior<S>,Event<S>> evaluate(Event<S> es) {
+                public Tuple2<Behavior<S>,Event<S>> apply(Event<S> es) {
                     Behavior<S> bs = es.hold(zs);
                     Event<S> es_out = ea.snapshot(bs, f);
                     return new Tuple2<Behavior<S>,Event<S>>(bs, es_out);

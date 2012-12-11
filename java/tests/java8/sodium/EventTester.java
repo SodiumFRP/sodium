@@ -111,7 +111,7 @@ public class EventTester extends TestCase {
             // [javac]   required: Event<Integer>
             // [javac]   found: Object
             new Lambda1<Event<Integer>,Tuple2<Event<Integer>,Event<Integer>>>() {
-                public Tuple2<Event<Integer>,Event<Integer>> evaluate(Event<Integer> eb) {
+                public Tuple2<Event<Integer>,Event<Integer>> apply(Event<Integer> eb) {
                     Event<Integer> ec = Event.mergeWith((x, y) -> x+y, ea.map(x -> x % 10), eb);
                     Event<Integer> eb_out = ea.map(x -> x / 10).filter(x -> x != 0);
                     return new Tuple2(ec, eb_out);
@@ -148,7 +148,7 @@ public class EventTester extends TestCase {
         Event<Integer> sum = ea.collect(100,
             //(a,s) -> new Tuple2(a+s, a+s)
             new Lambda2<Integer, Integer, Tuple2<Integer,Integer>>() {
-                public Tuple2<Integer,Integer> evaluate(Integer a, Integer s) {
+                public Tuple2<Integer,Integer> apply(Integer a, Integer s) {
                     return new Tuple2<Integer,Integer>(a+s, a+s);
                 }
             }

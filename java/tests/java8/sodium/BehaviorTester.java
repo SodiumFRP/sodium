@@ -360,7 +360,7 @@ public class BehaviorTester extends TestCase {
         Behavior<Integer> sum = Behavior.loop(
             // Lambda syntax doesn't seem to work here - compiler bug?
             new Lambda1<Behavior<Integer>,Tuple2<Behavior<Integer>,Behavior<Integer>>>() {
-                public Tuple2<Behavior<Integer>,Behavior<Integer>> evaluate(Behavior<Integer> sum_last) {
+                public Tuple2<Behavior<Integer>,Behavior<Integer>> apply(Behavior<Integer> sum_last) {
                     Behavior<Integer> sum = ea.snapshot(sum_last, (x, y) -> x+y).hold(0);
                     return new Tuple2(sum, sum);
                 }
@@ -382,7 +382,7 @@ public class BehaviorTester extends TestCase {
         Behavior<Integer> sum = ea.hold(100).collect(0,
             //(a,s) -> new Tuple2(a+s, a+s)
             new Lambda2<Integer, Integer, Tuple2<Integer,Integer>>() {
-                public Tuple2<Integer,Integer> evaluate(Integer a, Integer s) {
+                public Tuple2<Integer,Integer> apply(Integer a, Integer s) {
                     return new Tuple2<Integer,Integer>(a+s, a+s);
                 }
             }

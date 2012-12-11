@@ -55,8 +55,8 @@ public class Event<A> {
 	}
 
 	final Listener listen_(final Node target, final TransactionHandler<A> action) {
-		return Transaction.evaluate(new Lambda1<Transaction, Listener>() {
-			public Listener evaluate(Transaction trans1) {
+		return Transaction.apply(new Lambda1<Transaction, Listener>() {
+			public Listener apply(Transaction trans1) {
 				return listen(target, trans1, action, false);
 			}
 		});
@@ -96,7 +96,7 @@ public class Event<A> {
                 if (oi != null) {
                     Object[] oo = new Object[oi.length];
                     for (int i = 0; i < oo.length; i++)
-                        oo[i] = f.evaluate((A)oi[i]);
+                        oo[i] = f.apply((A)oi[i]);
                     return oo;
                 }
                 else
@@ -105,7 +105,7 @@ public class Event<A> {
 	    };
         Listener l = listen_(out.node, new TransactionHandler<A>() {
         	public void run(Transaction trans2, A a) {
-	            out.send(trans2, f.evaluate(a));
+	            out.send(trans2, f.apply(a));
 	        }
         });
         return out.addCleanup(l);
@@ -119,8 +119,8 @@ public class Event<A> {
      * the transaction.
      */
 	public final Behavior<A> hold(final A initValue) {
-		return Transaction.evaluate(new Lambda1<Transaction, Behavior<A>>() {
-			public Behavior<A> evaluate(Transaction trans) {
+		return Transaction.apply(new Lambda1<Transaction, Behavior<A>>() {
+			public Behavior<A> apply(Transaction trans) {
 			    return new Behavior<A>(lastFiringOnly(trans), initValue);
 			}
 		});
@@ -132,7 +132,7 @@ public class Event<A> {
 	public final <B> Event<B> snapshot(Behavior<B> beh)
 	{
 	    return snapshot(beh, new Lambda2<A,B,B>() {
-	    	public B evaluate(A a, B b) {
+	    	public B apply(A a, B b) {
 	    		return b;
 	    	}
 	    });
@@ -155,7 +155,7 @@ public class Event<A> {
                 if (oi != null) {
                     Object[] oo = new Object[oi.length];
                     for (int i = 0; i < oo.length; i++)
-                        oo[i] = f.evaluate((A)oi[i], b.value);
+                        oo[i] = f.apply((A)oi[i], b.value);
                     return oo;
                 }
                 else
@@ -164,7 +164,7 @@ public class Event<A> {
 		};
         Listener l = listen_(out.node, new TransactionHandler<A>() {
         	public void run(Transaction trans2, A a) {
-	            out.send(trans2, f.evaluate(a, b.value));
+	            out.send(trans2, f.apply(a, b.value));
 	        }
         });
         return out.addCleanup(l);
@@ -222,8 +222,8 @@ public class Event<A> {
      */
 	public final Event<A> coalesce(final Lambda2<A,A,A> f)
 	{
-	    return Transaction.evaluate(new Lambda1<Transaction, Event<A>>() {
-	    	public Event<A> evaluate(Transaction trans) {
+	    return Transaction.apply(new Lambda1<Transaction, Event<A>>() {
+	    	public Event<A> apply(Transaction trans) {
 	    		return coalesce(trans, f);
 	    	}
 	    });
@@ -241,7 +241,7 @@ public class Event<A> {
                 if (oi != null) {
 					A o = (A)oi[0];
                     for (int i = 1; i < oi.length; i++)
-                        o = f.evaluate(o, (A)oi[i]);
+                        o = f.apply(o, (A)oi[i]);
                     return new Object[] { o };
                 }
                 else
@@ -259,7 +259,7 @@ public class Event<A> {
     final Event<A> lastFiringOnly(Transaction trans)
     {
         return coalesce(trans, new Lambda2<A,A,A>() {
-        	public A evaluate(A first, A second) { return second; }
+        	public A apply(A first, A second) { return second; }
         });
     }
 
@@ -292,7 +292,7 @@ public class Event<A> {
                     Object[] oo = new Object[oi.length];
                     int j = 0;
                     for (int i = 0; i < oi.length; i++)
-                        if (f.evaluate((A)oi[i]))
+                        if (f.apply((A)oi[i]))
                             oo[j++] = oi[i];
                     if (j < oo.length) {
                         Object[] oo2 = new Object[j];
@@ -308,7 +308,7 @@ public class Event<A> {
         };
         Listener l = listen_(out.node, new TransactionHandler<A>() {
         	public void run(Transaction trans2, A a) {
-	            if (f.evaluate(a)) out.send(trans2, a);
+	            if (f.apply(a)) out.send(trans2, a);
 	        }
         });
         return out.addCleanup(l);
@@ -320,7 +320,7 @@ public class Event<A> {
     public final Event<A> filterNotNull()
     {
         return filter(new Lambda1<A,Boolean>() {
-        	public Boolean evaluate(A a) { return a != null; }
+        	public Boolean apply(A a) { return a != null; }
         });
     }
 
@@ -331,7 +331,7 @@ public class Event<A> {
     public static <A,B> B loop(Lambda1<Event<A>,Tuple2<B,Event<A>>> f)
     {
         final EventSink<A> ea_in = new EventSink<A>();
-        Tuple2<B,Event<A>> b_ea = f.evaluate(ea_in);
+        Tuple2<B,Event<A>> b_ea = f.apply(ea_in);
         B b = b_ea.a;
         Event<A> ea_out = b_ea.b;
         Listener l = ea_out.listen_(ea_in.node, new TransactionHandler<A>() {
@@ -351,7 +351,7 @@ public class Event<A> {
     public final Event<A> gate(Behavior<Boolean> bPred)
     {
         return snapshot(bPred, new Lambda2<A,Boolean,A>() {
-        	public A evaluate(A a, Boolean pred) { return pred ? a : null; }
+        	public A apply(A a, Boolean pred) { return pred ? a : null; }
         }).filterNotNull();
     }
 
@@ -364,14 +364,14 @@ public class Event<A> {
         final Event<A> ea = this;
         return Event.loop(
             new Lambda1<Event<S>, Tuple2<Event<B>,Event<S>>>() {
-                public Tuple2<Event<B>,Event<S>> evaluate(Event<S> es) {
+                public Tuple2<Event<B>,Event<S>> apply(Event<S> es) {
                     Behavior<S> s = es.hold(initState);
                     Event<Tuple2<B,S>> ebs = ea.snapshot(s, f);
                     Event<B> eb = ebs.map(new Lambda1<Tuple2<B,S>,B>() {
-                    	public B evaluate(Tuple2<B,S> bs) { return bs.a; }
+                    	public B apply(Tuple2<B,S> bs) { return bs.a; }
                     });
                     Event<S> es_out = ebs.map(new Lambda1<Tuple2<B,S>,S>() {
-                    	public S evaluate(Tuple2<B,S> bs) { return bs.b; }
+                    	public S apply(Tuple2<B,S> bs) { return bs.b; }
                     });
                     return new Tuple2<Event<B>,Event<S>>(eb, es_out);
                 }
@@ -387,7 +387,7 @@ public class Event<A> {
         final Event<A> ea = this;
         return Event.loop(
             new Lambda1<Event<S>, Tuple2<Event<S>,Event<S>>>() {
-                public Tuple2<Event<S>,Event<S>> evaluate(Event<S> es) {
+                public Tuple2<Event<S>,Event<S>> apply(Event<S> es) {
                     Behavior<S> s = es.hold(initState);
                     Event<S> es_out = ea.snapshot(s, f);
                     return new Tuple2<Event<S>,Event<S>>(es_out, es_out);
@@ -402,9 +402,9 @@ public class Event<A> {
     public final Event<Integer> countE()
     {
         return map(new Lambda1<A,Integer>() {
-        	public Integer evaluate(A a) { return 1; }
+        	public Integer apply(A a) { return 1; }
         }).accum(0, new Lambda2<Integer,Integer,Integer>() {
-        	public Integer evaluate(Integer a, Integer b) { return a+b; }
+        	public Integer apply(Integer a, Integer b) { return a+b; }
         });
     }
 
@@ -481,7 +481,7 @@ class CoalesceHandler<A> implements TransactionHandler<A>
     @Override
     public void run(Transaction trans1, A a) {
         if (accumValid)
-            accum = f.evaluate(accum, a);
+            accum = f.apply(accum, a);
         else {
         	final CoalesceHandler<A> thiz = this;
             trans1.prioritized(out.node, new Handler<Transaction>() {

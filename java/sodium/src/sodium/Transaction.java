@@ -50,10 +50,10 @@ public final class Transaction {
 		}
 	}
 
-	public static <A> A evaluate(Lambda1<Transaction, A> code) {
+	public static <A> A apply(Lambda1<Transaction, A> code) {
 		Transaction trans = new Transaction();
 		try {
-			return code.evaluate(trans);
+			return code.apply(trans);
 		} finally {
 			trans.close();
 		}
