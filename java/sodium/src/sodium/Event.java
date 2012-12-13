@@ -294,6 +294,9 @@ public class Event<A> {
                     for (int i = 0; i < oi.length; i++)
                         if (f.apply((A)oi[i]))
                             oo[j++] = oi[i];
+                    if (j == 0)
+                        oo = null;
+                    else
                     if (j < oo.length) {
                         Object[] oo2 = new Object[j];
                         for (int i = 0; i < j; i++)
