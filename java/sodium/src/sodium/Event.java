@@ -211,6 +211,29 @@ public class Event<A> {
         return out.addCleanup(l1).addCleanup(l2);
 	}
 
+	/**
+	 * Push each event occurrence onto a new transaction.
+	 */
+	public final Event<A> delay()
+	{
+	    final EventSink<A> out = new EventSink<A>();
+	    Listener l1 = listen_(out.node, new TransactionHandler<A>() {
+	        public void run(Transaction trans, final A a) {
+	            trans.post(new Runnable() {
+                    public void run() {
+                        Transaction trans = new Transaction();
+                        try {
+                            out.send(trans, a);
+                        } finally {
+                            trans.close();
+                        }
+                    }
+	            });
+	        }
+	    });
+	    return out.addCleanup(l1);
+	}
+
     /**
      * If there's more than one firing in a single transaction, combine them into
      * one using the specified combining function.

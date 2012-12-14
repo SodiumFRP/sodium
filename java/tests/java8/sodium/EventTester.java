@@ -213,5 +213,18 @@ public class EventTester extends TestCase {
         l.unlisten();
         assertEquals(Arrays.asList('A'), out);
     }
+
+    public void testDelay()
+    {
+        EventSink<Character> e = new EventSink();
+        Behavior<Character> b = e.hold(' ');
+        List<Character> out = new ArrayList();
+        Listener l = e.delay().snapshot(b).listen((x) -> { out.add(x); });
+        e.send('C');
+        e.send('B');
+        e.send('A');
+        l.unlisten();
+        assertEquals(Arrays.asList('C','B','A'), out);
+    }
 }
 

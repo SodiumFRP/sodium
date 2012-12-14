@@ -7,6 +7,8 @@ import java.util.Set;
 import java.util.HashSet;
 
 public final class Transaction {
+    private static final Object lock = new Object();
+
     // True if we need to re-generate the priority queue.
     boolean toRegen = false;
 
@@ -37,26 +39,31 @@ public final class Transaction {
 	private PriorityQueue<Entry> prioritizedQ = new PriorityQueue<Entry>();
 	private Set<Entry> entries = new HashSet<Entry>();
 	private List<Runnable> lastQ = new ArrayList<Runnable>(); 
+	private List<Runnable> postQ;
 
-	private Transaction() {
+	Transaction() {
 	}
 
 	public static void run(Handler<Transaction> code) {
-		Transaction trans = new Transaction();
-		try {
-			code.run(trans);
-		} finally {
-			trans.close();
-		}
+	    synchronized (lock) {
+            Transaction trans = new Transaction();
+            try {
+                code.run(trans);
+            } finally {
+                trans.close();
+            }
+        }
 	}
 
 	public static <A> A apply(Lambda1<Transaction, A> code) {
-		Transaction trans = new Transaction();
-		try {
-			return code.apply(trans);
-		} finally {
-			trans.close();
-		}
+	    synchronized (lock) {
+            Transaction trans = new Transaction();
+            try {
+                return code.apply(trans);
+            } finally {
+                trans.close();
+            }
+        }
 	}
 
 	public void prioritized(Node rank, Handler<Transaction> action) {
@@ -65,8 +72,20 @@ public final class Transaction {
 		entries.add(e);
 	}
 
+	/**
+     * Add an action to run after all prioritized() actions.
+     */
 	public void last(Runnable action) {
 	    lastQ.add(action);
+	}
+
+	/**
+     * Add an action to run after all last() actions.
+     */
+	public void post(Runnable action) {
+	    if (postQ == null)
+	        postQ = new ArrayList<Runnable>();
+	    postQ.add(action);
 	}
 
 	/**
@@ -94,5 +113,10 @@ public final class Transaction {
 		for (Runnable action : lastQ)
 			action.run();
 		lastQ.clear();
+		if (postQ != null) {
+            for (Runnable action : postQ)
+                action.run();
+            postQ.clear();
+		}
 	}
 }
