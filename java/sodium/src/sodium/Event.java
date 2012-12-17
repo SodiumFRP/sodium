@@ -159,7 +159,7 @@ public class Event<A> {
                 if (oi != null) {
                     Object[] oo = new Object[oi.length];
                     for (int i = 0; i < oo.length; i++)
-                        oo[i] = f.apply((A)oi[i], b.value);
+                        oo[i] = f.apply((A)oi[i], b.sample());
                     return oo;
                 }
                 else
@@ -168,7 +168,7 @@ public class Event<A> {
 		};
         Listener l = listen_(out.node, new TransactionHandler<A>() {
         	public void run(Transaction trans2, A a) {
-	            out.send(trans2, f.apply(a, b.value));
+	            out.send(trans2, f.apply(a, b.sample()));
 	        }
         });
         return out.addCleanup(l);

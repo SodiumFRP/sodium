@@ -47,6 +47,24 @@ public class Behavior<A> {
     }
 
     /**
+     * Sample the behavior's current value.
+     *
+     * This should generally be avoided in favour of values().listen(..) so you don't
+     * miss any updates, but in many circumstances it makes sense.
+     *
+     * It can be best to use it inside an explicit transaction (using Transaction.run()).
+     * For example, a b.sample() inside an explicit transaction along with a
+     * b.changes().listen(..) will capture the current value and any updates without risk
+     * of missing any in between.
+     */
+    public final A sample()
+    {
+        // Since pointers in Java are atomic, we don't need to explicitly create a
+        // transaction.
+        return value;
+    }
+
+    /**
      * An event that gives the updates for the behavior. It doesn't do any equality
      * comparison as the name might imply.
      */
@@ -75,7 +93,7 @@ public class Behavior<A> {
     		@Override
             protected Object[] sampleNow()
             {
-                return new Object[] { value };
+                return new Object[] { sample() };
             }
     	};
         Listener l = event.listen(out.node, trans1,
@@ -92,7 +110,7 @@ public class Behavior<A> {
      */
 	public final <B> Behavior<B> map(Lambda1<A,B> f)
 	{
-		return changes().map(f).hold(f.apply(value));
+		return changes().map(f).hold(f.apply(sample()));
 	}
 
 	/**
@@ -186,7 +204,7 @@ public class Behavior<A> {
 	            h.run(trans1);
 	        }
         });
-        return out.addCleanup(l1).addCleanup(l2).hold(bf.value.apply(ba.value));
+        return out.addCleanup(l1).addCleanup(l2).hold(bf.sample().apply(ba.sample()));
 	}
 
 	/**
@@ -194,7 +212,7 @@ public class Behavior<A> {
 	 */
 	public static <A> Behavior<A> switchB(final Behavior<Behavior<A>> bba)
 	{
-	    A za = bba.value.value;
+	    A za = bba.sample().sample();
 	    final EventSink<A> out = new EventSink<A>();
         TransactionHandler<Behavior<A>> h = new TransactionHandler<Behavior<A>>() {
             private Listener currentListener;
@@ -246,7 +264,7 @@ public class Behavior<A> {
 	        }
         };
         TransactionHandler<Event<A>> h1 = new TransactionHandler<Event<A>>() {
-            private Listener currentListener = bea.value.listen(out.node, trans1, h2, false);
+            private Listener currentListener = bea.sample().listen(out.node, trans1, h2, false);
 
             @Override
             public void run(final Transaction trans2, final Event<A> ea) {
@@ -295,7 +313,7 @@ public class Behavior<A> {
         final Event<A> ea = changes().coalesce(new Lambda2<A,A,A>() {
         	public A apply(A fst, A snd) { return snd; }
         });
-        final A za = value;
+        final A za = sample();
         final Tuple2<B, S> zbs = f.apply(za, initState);
         return Event.loop(
             new Lambda1<Event<Tuple2<B,S>>, Tuple2<Behavior<B>,Event<Tuple2<B,S>>>>() {
@@ -325,7 +343,7 @@ public class Behavior<A> {
         final Event<A> ea = changes().coalesce(new Lambda2<A,A,A>() {
         	public A apply(A fst, A snd) { return snd; }
         });
-        final A za = value;
+        final A za = sample();
         final S zs = f.apply(za, initState);
         return Event.loop(
             new Lambda1<Event<S>, Tuple2<Behavior<S>,Event<S>>>() {
