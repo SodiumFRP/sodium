@@ -20,8 +20,10 @@ public class Event<A> {
 		}
 
 		public void unlisten() {
-			event.listeners.remove(action);
-			event.node.unlinkTo(target);
+		    synchronized (Transaction.listenersLock) {
+                event.listeners.remove(action);
+                event.node.unlinkTo(target);
+            }
 		}
 
 		protected void finalize() throws Throwable {
@@ -64,14 +66,16 @@ public class Event<A> {
 
 	@SuppressWarnings("unchecked")
 	final Listener listen(Node target, Transaction trans, TransactionHandler<A> action, boolean suppressEarlierFirings) {
-		if (node.linkTo(target))
-		    trans.toRegen = true;
+        synchronized (Transaction.listenersLock) {
+            if (node.linkTo(target))
+                trans.toRegen = true;
+            listeners.add(action);
+        }
 		Object[] aNow = sampleNow();
 		if (aNow != null) {    // In cases like values(), we start with an initial value.
 		    for (int i = 0; i < aNow.length; i++)
                 action.run(trans, (A)aNow[i]);  // <-- unchecked warning is here
         }
-		listeners.add(action);
 		if (!suppressEarlierFirings) {
             // Anything sent already in this transaction must be sent now so that
             // there's no order dependency between send and listen.

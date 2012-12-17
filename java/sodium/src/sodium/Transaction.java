@@ -7,7 +7,10 @@ import java.util.Set;
 import java.util.HashSet;
 
 public final class Transaction {
-    private static final Object lock = new Object();
+    // Coarse-grained lock that's held during the whole transaction.
+    static final Object transactionLock = new Object();
+    // Fine-grained lock that protects listeners and nodes.
+    static final Object listenersLock = new Object();
 
     // True if we need to re-generate the priority queue.
     boolean toRegen = false;
@@ -44,24 +47,62 @@ public final class Transaction {
 	Transaction() {
 	}
 
-	public static void run(Handler<Transaction> code) {
-	    synchronized (lock) {
-            Transaction trans = new Transaction();
+	private static Transaction currentTransaction;
+
+	/**
+	 * Run the specified code inside a single transaction.
+	 *
+	 * In most cases this is not needed, because all APIs will create their own
+	 * transaction automatically. It is useful where you want to run multiple
+	 * reactive operations atomically.
+	 */
+	public static void run(Runnable code) {
+        synchronized (transactionLock) {
+            // If we are already inside a transaction (which must be on the same
+            // thread otherwise we wouldn't have acquired transactionLock), then
+            // keep using that same transaction.
+            Transaction transWas = currentTransaction;
             try {
-                code.run(trans);
+                if (currentTransaction == null)
+                    currentTransaction = new Transaction();
+                code.run();
             } finally {
-                trans.close();
+                currentTransaction.close();
+                currentTransaction = transWas;
             }
         }
 	}
 
-	public static <A> A apply(Lambda1<Transaction, A> code) {
-	    synchronized (lock) {
-            Transaction trans = new Transaction();
+	static void run(Handler<Transaction> code) {
+        synchronized (transactionLock) {
+            // If we are already inside a transaction (which must be on the same
+            // thread otherwise we wouldn't have acquired transactionLock), then
+            // keep using that same transaction.
+            Transaction transWas = currentTransaction;
             try {
-                return code.apply(trans);
+                if (currentTransaction == null)
+                    currentTransaction = new Transaction();
+                code.run(currentTransaction);
             } finally {
-                trans.close();
+                currentTransaction.close();
+                currentTransaction = transWas;
+            }
+        }
+	}
+
+	static <A> A apply(Lambda1<Transaction, A> code) {
+        synchronized (transactionLock) {
+            // If we are already inside a transaction (which must be on the same
+            // thread otherwise we wouldn't have acquired transactionLock), then
+            // keep using that same transaction.
+            Transaction transWas = currentTransaction;
+            try {
+                if (currentTransaction == null)
+                    currentTransaction = new Transaction();
+                return code.apply(currentTransaction);
+            } finally {
+                currentTransaction.close();
+                currentTransaction = transWas;
             }
         }
 	}
