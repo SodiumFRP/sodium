@@ -10,9 +10,12 @@
 #define _SODIUM_TRANSACTION_H_
 
 #include <boost/shared_ptr.hpp>
+#include <boost/optional.hpp>
 #include <sodium/unit.h>
 #include <pthread.h>
 #include <map>
+#include <set>
+#include <list>
 
 namespace sodium {
 
@@ -95,41 +98,48 @@ namespace sodium {
         };
 
         extern long long nexttransactionID;
+
+        struct transaction_impl;
+
+        struct prioritized_entry {
+            prioritized_entry(const std::shared_ptr<impl::node>& target,
+                              const std::function<void(transaction_impl*)>& action)
+                : target(target), action(action)
+            {
+            }
+            std::shared_ptr<node> target;
+            std::function<void(transaction_impl*)> action;
+        };
+
+        struct transaction_impl {
+            transaction_impl();
+            ~transaction_impl();
+            entryID next_entry_id;
+            std::map<entryID, prioritized_entry> entries;
+            std::multimap<unsigned long long, entryID> prioritizedQ;
+            std::list<std::function<void()>> lastQ;
+            std::list<std::function<void()>> postQ;
+
+            void prioritized(const std::shared_ptr<impl::node>& target, const std::function<void(impl::transaction_impl*)>& action);
+            void last(const std::function<void()>& action);
+            void post(const std::function<void()>& action);
+
+            bool to_regen;
+            void regen();
+        };
     };
 
     class transaction
     {
         private:
-            struct entry {
-                entry(const std::shared_ptr<node>& target, const std::function<void(transaction::state*)>& action)
-                    : target(target), action(action)
-                {
-                }
-                std::shared_ptr<node> target;
-                std::function<void(transaction::state*)> action;
-            };
-            struct state {
-                state();
-                ~state();
-                entryID next_entry_id;
-                std::map<entryID, entry> entries;
-                std::multimap<unsigned long long, entryID> prioritizedQ;
-                std::list<std::function<void()>> lastQ;
-                std::list<std::function<void()>> postQ;
-
-                bool to_regen;
-                void regen();
-            };
-            static state* current_transaction;
-            state* transaction_was;
-
-            void prioritized(const std::shared_ptr<node>& target, const std::function<void(transaction::state*)>& action);
-            void last(const std::function<void()>& action);
-            void post(const std::function<void()>& action);
+            static impl::transaction_impl* current_transaction;
+            impl::transaction_impl* transaction_was;
 
         public:
             transaction();
             ~transaction();
+
+            impl::transaction_impl* impl() const { return current_transaction; }
     };
 
     struct cleaner_upper

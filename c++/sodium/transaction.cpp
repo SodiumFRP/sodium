@@ -77,20 +77,15 @@ namespace sodium {
             nextnodeID = nextnodeID.succ();
             return id;
         }
-    }; // end namespace impl
-
-// ------ transaction -----------------------------------------------
-
-    namespace impl {
         
-        transaction::state* transaction::current_transaction;
+        transaction_impl* transaction::current_transaction;
         
-        transaction::state::state()
+        transaction_impl::state()
             : to_regen(false)
         {
         }
 
-        transaction::state::check_regen() {
+        transaction_impl::check_regen() {
             if (to_regen) {
                 to_regen = false;
                 prioritizedQ.clear();
@@ -99,7 +94,7 @@ namespace sodium {
             }
         }
 
-        transaction::state::~state()
+        transaction_impl::~state()
         {
             while (true) {
                 check_regen();
@@ -121,46 +116,44 @@ namespace sodium {
             }
         }
 
-        transaction::transaction()
+        void transaction_impl::prioritized(const std::shared_ptr<node>& target, const std::function<void(transaction*)>& f)
         {
-            auto part = partition_state::instance();
-            pthread_mutex_lock(&part->transaction_lock);
-            transaction_was = current_transaction;
-            if (current_transaction == null)
-                current_transaction = new state;
-        }
-
-        transaction::~transaction()
-        {
-            if (transaction_was == null)
-                delete current_transaction;
-            current_transaction = transaction_was;
-            auto part = partition_state::instance();
-            pthrad_mutex_unlock(&part->transaction_lock);
-        }
-
-        void transaction::prioritized(const std::shared_ptr<node>& target, const std::function<void(transaction*)>& f)
-        {
-            entryID id = current_transaction->nextEntryID;
-            current_transaction->nextEntryID = current_transaction->nextEntryID.succ();
+            entryID id = nextEntryID;
+            nextEntryID = nextEntryID.succ();
             Entry entry(target, f);
-            current_transaction->entries.insert(id, entry);
-            current_transaction->prioritizedQ.insert(pair<unsigned long long, entryID>(rankOf(target), id));
+            entries.insert(id, entry);
+            prioritizedQ.insert(pair<unsigned long long, entryID>(rankOf(target), id));
         }
-
-        void transaction::last(const std::function<void()>& action)
+    
+        void transaction_impl::last(const std::function<void()>& action)
         {
-            current_transaction->lastQ.push_back(action);
+            lastQ.push_back(action);
         }
-
-        void transaction::post(const std::function<void()>& action)
+    
+        void transaction_impl::post(const std::function<void()>& action)
         {
-            current_transaction->postQ.push_back(action);
+            postQ.push_back(action);
         }
 
     };  // end namespace impl
 
-// ------ transaction ---------------------------------------------------------
+    transaction::transaction()
+    {
+        auto part = partition_state::instance();
+        pthread_mutex_lock(&part->transaction_lock);
+        transaction_was = current_transaction;
+        if (current_transaction == null)
+            current_transaction = new state;
+    }
+
+    transaction::~transaction()
+    {
+        if (transaction_was == null)
+            delete current_transaction;
+        current_transaction = transaction_was;
+        auto part = partition_state::instance();
+        pthrad_mutex_unlock(&part->transaction_lock);
+    }
 
 };  // end namespace sodium
 
