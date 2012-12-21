@@ -1,19 +1,19 @@
 #include <sodium/sodium.h>
+#include <limits.h>
 
 using namespace std;
 using namespace boost;
-using namespace heist;
 
 namespace sodium {
 
     namespace impl {
 
-        void node::link(void* handler, const std::shared_ptr<node>& target) {
-            if (target) {
+        void node::link(void* handler, const std::shared_ptr<node>& targ) {
+            if (targ) {
                 std::set<node*> visited;
-                target->ensure_bigger_than(visited, rank);
+                targ->ensure_bigger_than(visited, rank);
             }
-            targets.push_back(target(handler, target));
+            targets.push_back(target(handler, targ));
         }
 
         bool node::unlink(void* handler) {
@@ -33,8 +33,8 @@ namespace sodium {
                 visited.insert(this);
                 rank = limit + 1;
                 for (auto it = targets.begin(); it != targets.end(); ++it)
-                    if (it->target)
-                        it->target->ensure_bigger_than(visited, rank);
+                    if (it->n)
+                        it->n->ensure_bigger_than(visited, rank);
             }
         }
 
@@ -46,12 +46,12 @@ namespace sodium {
                 return ULLONG_MAX;
         }
 
-        static const std::shared_ptr<partition_state>& instance()
+        /*static*/ const std::shared_ptr<partition_state>& partition_state::instance()
         {
             static std::shared_ptr<partition_state> st;
             // to do: make it properly thread-safe
             if (!st)
-                st = shared_ptr<partition_state>(new partition_state());
+                st = std::shared_ptr<partition_state>(new partition_state());
             return st;
         }
 
@@ -78,50 +78,48 @@ namespace sodium {
             return id;
         }
         
-        transaction_impl* transaction::current_transaction;
-        
-        transaction_impl::state()
+        transaction_impl::transaction_impl()
             : to_regen(false)
         {
         }
 
-        transaction_impl::check_regen() {
+        void transaction_impl::check_regen() {
             if (to_regen) {
                 to_regen = false;
                 prioritizedQ.clear();
                 for (auto it = entries.begin(); it != entries.end(); ++it)
-                    prioritizedQ.insert(pair<unsigned long long, entryID>(rankOf(it->second.target), it->first);
+                    prioritizedQ.insert(pair<unsigned long long, entryID>(rankOf(it->second.target), it->first));
             }
         }
 
-        transaction_impl::~state()
+        transaction_impl::~transaction_impl()
         {
             while (true) {
                 check_regen();
                 auto pit = prioritizedQ.begin();
                 if (pit == prioritizedQ.end()) break;
-                auto eit = entries.find(pit.second);
+                auto eit = entries.find(pit->second);
                 assert(eit != entries.end());
-                std::function<void(transaction*)> action = eit->second.action;
-                entries.remove(eit);
-                action.run(this);
+                std::function<void(transaction_impl*)> action = eit->second.action;
+                entries.erase(eit);
+                action(this);
             }
-            while (lastQ.begin() != lastQ.end())
+            while (lastQ.begin() != lastQ.end()) {
                 (*lastQ.begin())();
                 lastQ.erase(lastQ.begin());
             }
-            while (postQ.begin() != postQ.end())
+            while (postQ.begin() != postQ.end()) {
                 (*postQ.begin())();
                 postQ.erase(postQ.begin());
             }
         }
 
-        void transaction_impl::prioritized(const std::shared_ptr<node>& target, const std::function<void(transaction*)>& f)
+        void transaction_impl::prioritized(const std::shared_ptr<node>& target,
+                                           const std::function<void(transaction_impl*)>& f)
         {
-            entryID id = nextEntryID;
-            nextEntryID = nextEntryID.succ();
-            Entry entry(target, f);
-            entries.insert(id, entry);
+            entryID id = next_entry_id;
+            next_entry_id = next_entry_id.succ();
+            entries.insert(pair<entryID, prioritized_entry>(id, prioritized_entry(target, f)));
             prioritizedQ.insert(pair<unsigned long long, entryID>(rankOf(target), id));
         }
     
@@ -136,23 +134,25 @@ namespace sodium {
         }
 
     };  // end namespace impl
+        
+    impl::transaction_impl* transaction::current_transaction;
 
     transaction::transaction()
     {
-        auto part = partition_state::instance();
+        auto part = impl::partition_state::instance();
         pthread_mutex_lock(&part->transaction_lock);
         transaction_was = current_transaction;
-        if (current_transaction == null)
-            current_transaction = new state;
+        if (current_transaction == NULL)
+            current_transaction = new impl::transaction_impl;
     }
 
     transaction::~transaction()
     {
-        if (transaction_was == null)
+        if (transaction_was == NULL)
             delete current_transaction;
         current_transaction = transaction_was;
-        auto part = partition_state::instance();
-        pthrad_mutex_unlock(&part->transaction_lock);
+        auto part = impl::partition_state::instance();
+        pthread_mutex_unlock(&part->transaction_lock);
     }
 
 };  // end namespace sodium

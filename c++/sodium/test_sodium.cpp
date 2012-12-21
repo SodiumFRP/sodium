@@ -7,14 +7,16 @@
  * C++ implementation courtesy of International Telematics Ltd.
  */
 
-#include "test_sodium.h"
+#include "sodium/test_sodium.h"
+#include "sodium/sodium.h"
 
+using namespace std;
 using namespace sodium;
 
 
 void test_sodium::event1()
 {
-    auto p = newEvent<int>();
+    auto p = new_event<int>();
     auto ev = get<0>(p);
     auto push = get<1>(p);
     std::shared_ptr<string> pOut(new string);
@@ -37,5 +39,10 @@ void test_sodium::event1()
     unlisten();
     push('!');
     CPPUNIT_ASSERT_EQUAL(string("hello"), *pOut);
+}
+
+int main(int argc, char* argv[])
+{
+    
 }
 

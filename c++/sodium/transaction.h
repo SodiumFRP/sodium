@@ -79,7 +79,6 @@ namespace sodium {
 
         unsigned long long rankOf(const std::shared_ptr<node>& target);
 
-        class transaction_impl;
         class partition_state {
             public:
                 pthread_mutex_t transaction_lock;
@@ -97,10 +96,7 @@ namespace sodium {
                 int nextlistenerID;
         };
 
-        extern long long nexttransactionID;
-
         struct transaction_impl;
-
         struct prioritized_entry {
             prioritized_entry(const std::shared_ptr<impl::node>& target,
                               const std::function<void(transaction_impl*)>& action)
@@ -120,12 +116,13 @@ namespace sodium {
             std::list<std::function<void()>> lastQ;
             std::list<std::function<void()>> postQ;
 
-            void prioritized(const std::shared_ptr<impl::node>& target, const std::function<void(impl::transaction_impl*)>& action);
+            void prioritized(const std::shared_ptr<impl::node>& target,
+                             const std::function<void(impl::transaction_impl*)>& action);
             void last(const std::function<void()>& action);
             void post(const std::function<void()>& action);
 
             bool to_regen;
-            void regen();
+            void check_regen();
         };
     };
 
