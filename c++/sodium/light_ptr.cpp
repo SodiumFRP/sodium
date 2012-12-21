@@ -1,3 +1,11 @@
+/**
+ * Copyright (c) 2012, Stephen Blackheath and Anthony Jones
+ * All rights reserved.
+ *
+ * Released under a BSD3 licence.
+ *
+ * C++ implementation courtesy of International Telematics Ltd.
+ */
 #include <sodium/light_ptr.h>
 #include <pthread.h>
 
@@ -30,14 +38,14 @@ namespace sodium {
     { \
         GET_LOCK; \
         LOCK; \
-        count->count++; \
+        count->c++; \
         UNLOCK; \
     } \
      \
     Name::~Name() { \
         GET_LOCK; \
         LOCK; \
-        if (count != NULL && --count->count == 0) { \
+        if (count != NULL && --count->c == 0) { \
             UNLOCK; \
             count->del(value); delete count; \
         } \
@@ -49,7 +57,7 @@ namespace sodium {
     Name& Name::operator = (const Name& other) { \
         GET_LOCK; \
         LOCK; \
-        if (--count->count == 0) { \
+        if (--count->c == 0) { \
             UNLOCK; \
             count->del(value); delete count; \
         } \
@@ -59,7 +67,7 @@ namespace sodium {
         value = other.value; \
         count = other.count; \
         LOCK; \
-        count->count++; \
+        count->c++; \
         UNLOCK; \
         return *this; \
     }

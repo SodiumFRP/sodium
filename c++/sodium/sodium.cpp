@@ -1,3 +1,11 @@
+/**
+ * Copyright (c) 2012, Stephen Blackheath and Anthony Jones
+ * All rights reserved.
+ *
+ * Released under a BSD3 licence.
+ *
+ * C++ implementation courtesy of International Telematics Ltd.
+ */
 #include <sodium/sodium.h>
 
 using namespace std;
@@ -265,7 +273,7 @@ namespace sodium {
                     {
                         MutexLock ml(part._impl_mutex());
                         if (node->firings.begin() == node->firings.end())
-                            trans.on_phase_2_cleanup([node] (long long id) {
+                            trans.last([node] (long long id) {
                                 node->firings.clear();
                             });
                         node->firings.push_back(ptr);
@@ -317,7 +325,7 @@ namespace sodium {
                     bool first = !state->update;
                     state->update = boost::optional<light_ptr>(ptr);
                     if (first)
-                        trans.on_phase_2_cleanup([state] (long long tid) {
+                        trans.last([state] (long long tid) {
                             state->current = state->update;
                             state->update = boost::optional<light_ptr>();
                         });
@@ -371,44 +379,6 @@ namespace sodium {
         }
 #endif
 
-        void node::link(void* handler, const std::shared_ptr<node>& target) {
-            if (target) {
-                std::set<node*> visited;
-                target->ensure_bigger_than(visited, rank);
-            }
-            targets.push_back(target(handler, target));
-        }
-
-        bool node::unlink(void* handler) {
-            for (auto it = targets.begin(); it != targets.end(); ++it)
-                if (it->handler == handler) {
-                    targets.erase(it);
-                    return true;
-                }
-            return false;
-        }
-
-        void node::ensure_bigger_than(std::set<node*>& visited, unsigned long long limit)
-        {
-            if (rank > limit || visited.find(this) != visited.end())
-                ;
-            else {
-                visited.insert(this);
-                rank = limit + 1;
-                for (auto it = targets.begin(); it != targets.end(); ++it)
-                    if (it->target)
-                        it->target->ensure_bigger_than(visited, rank);
-            }
-        }
-
-        unsigned long long rankOf(const std::shared_ptr<node>& target)
-        {
-            if (target.get() != NULL)
-                return target->rank;
-            else
-                return ULLONG_MAX;
-        }
-
         /* Clean up the listener so if there are multiple firings per transaction, they're
            combined into one. */
         std::function<std::function<void()>(const transaction<untyped>&, const std::shared_ptr<node>&,
@@ -429,7 +399,7 @@ namespace sodium {
                 return listen_raw(trans, target, [handle, combine, pState, target] (const transaction<untyped>& trans, const light_ptr& ptr) {
                     if (!pState->oValue) {
                         pState->oValue = boost::optional<light_ptr>(ptr);
-                        trans.on_phase_1_cleanup(rankOf(target), [handle, pState] (const std::shared_ptr<transaction_impl>& impl) {
+                        trans.prioritized(rankOf(target), [handle, pState] (const std::shared_ptr<transaction_impl>& impl) {
                             if (pState->oValue) {
                                 transaction<untyped> resurrected(impl);
                                 handle(resurrected, pState->oValue.get());
@@ -460,7 +430,7 @@ namespace sodium {
                 return listen_raw(trans, target, [handle, combine, pState, target] (const transaction<untyped>& trans, const light_ptr& ptr) {
                     if (!pState->oValue) {
                         pState->oValue = boost::optional<light_ptr>(ptr);
-                        trans.on_phase_1_cleanup(rankOf(target), [handle, pState] (const std::shared_ptr<transaction_impl>& impl) {
+                        trans.prioritized(rankOf(target), [handle, pState] (const std::shared_ptr<transaction_impl>& impl) {
                             if (pState->oValue) {
                                 transaction<untyped> resurrected(impl);
                                 handle(resurrected, pState->oValue.get());
@@ -488,7 +458,7 @@ namespace sodium {
                     bool first = !(bool)pState->oValue;
                     pState->oValue = boost::optional<light_ptr>(ptr);
                     if (first)
-                        trans.on_phase_1_cleanup(rankOf(target), [handle, pState] (const std::shared_ptr<transaction_impl>& impl) {
+                        trans.prioritized(rankOf(target), [handle, pState] (const std::shared_ptr<transaction_impl>& impl) {
                             if (pState->oValue) {
                                 transaction<untyped> resurrected(impl);
                                 handle(resurrected, pState->oValue.get());
@@ -516,7 +486,7 @@ namespace sodium {
                     bool first = !(bool)pState->oValue;
                     pState->oValue = boost::optional<light_ptr>(ptr);
                     if (first)
-                        trans.on_phase_1_cleanup(rankOf(target), [handle, pState] (const std::shared_ptr<transaction_impl>& impl) {
+                        trans.prioritized(rankOf(target), [handle, pState] (const std::shared_ptr<transaction_impl>& impl) {
                             if (pState->oValue) {
                                 transaction<untyped> resurrected(impl);
                                 handle(resurrected, pState->oValue.get());
@@ -564,13 +534,13 @@ namespace sodium {
             boost::optional<light_ptr> ocf = bf.getConstantValue();
             if (ocf) { // function is constant
                 auto f = *ocf.get().castPtr<std::function<light_ptr(const light_ptr&)>>(NULL);
-                return impl::fmap(f, ba);  // fmap optimizes to a constant where ba is constant
+                return impl::map(f, ba);  // map optimizes to a constant where ba is constant
             }
             else {
                 boost::optional<light_ptr> oca = ba.getConstantValue();
                 if (oca) {  // 'a' value is constant but function is not
                     auto a = oca.get();
-                    return impl::fmap([a] (const light_ptr& pf) -> light_ptr {
+                    return impl::map([a] (const light_ptr& pf) -> light_ptr {
                         const std::function<light_ptr(const light_ptr&)>& f =
                             *pf.castPtr<std::function<light_ptr(const light_ptr&)>>(NULL);
                         return f(a);
@@ -617,7 +587,7 @@ namespace sodium {
         /*!
          * Map a function over this event to modify the output value.
          */
-        event_ fmap(const std::function<light_ptr(const light_ptr&)>& f, const event_& ev)
+        event_ map(const std::function<light_ptr(const light_ptr&)>& f, const event_& ev)
         {
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
             if (ev.is_never())
@@ -640,7 +610,7 @@ namespace sodium {
                 );
         }
 
-        behavior_ fmap(const std::function<light_ptr(const light_ptr&)>& f, const behavior_& beh) {
+        behavior_ map(const std::function<light_ptr(const light_ptr&)>& f, const behavior_& beh) {
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
             auto ca = beh.getConstantValue();
             if (ca)
@@ -649,7 +619,7 @@ namespace sodium {
 #endif
                 return behavior_(
                     NULL,
-                    fmap(f, underlyingevent_(beh)),
+                    map(f, underlyingevent_(beh)),
                     [f, beh] () -> boost::optional<light_ptr> {
                         boost::optional<light_ptr> oValue = beh.getSample()();
                         return oValue

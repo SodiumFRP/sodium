@@ -1,3 +1,11 @@
+/**
+ * Copyright (c) 2012, Stephen Blackheath and Anthony Jones
+ * All rights reserved.
+ *
+ * Released under a BSD3 licence.
+ *
+ * C++ implementation courtesy of International Telematics Ltd.
+ */
 #ifndef _SODIUM_LIGHTPTR_H_
 #define _SODIUM_LIGHTPTR_H_
 
@@ -12,10 +20,10 @@ namespace sodium {
         typedef void (*deleter)(void*);
         struct count {
             count(
-                int count,
+                int c,
                 deleter del
-            ) : count(count), del(del) {}
-            int count;
+            ) : c(c), del(del) {}
+            int c;
             deleter del;
         };
     };

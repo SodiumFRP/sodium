@@ -1,58 +1,27 @@
+/**
+ * Copyright (c) 2012, Stephen Blackheath and Anthony Jones
+ * All rights reserved.
+ *
+ * Released under a BSD3 licence.
+ *
+ * C++ implementation courtesy of International Telematics Ltd.
+ */
 #ifndef _SODIUM_SODIUM_H_
 #define _SODIUM_SODIUM_H_
 
+#include <sodium/light_ptr.h>
+#include <sodium/transaction.h>
 #include <functional>
 #include <boost/optional.hpp>
 #include <memory>
+#include <list>
+#include <set>
 
 #define SODIUM_CONSTANT_OPTIMIZATION
 
 namespace sodium {
 
     namespace impl {
-        template <class A>
-        struct ordered_value {
-            ordered_value() : tid(-1) {}
-            long long tid;
-            boost::optional<A> oa;
-        };
-
-        struct ID {
-            ID() : id(0) {}
-            ID(unsigned id) : id(id) {}
-            unsigned id;
-            ID succ() const { return ID(id+1); }
-            inline bool operator < (const ID& other) const { return id < other.id; }
-        };
-
-        class node
-        {
-            public:
-                struct target {
-                    target(
-                        void* handler,
-                        const std::shared_ptr<node>& target
-                    ) : handler(handler),
-                        target(target) {}
-                    void* handler;
-                    std::shared_ptr<node> target;
-                };
-
-            public:
-                node() : rank(0) {}
-
-                unsigned long long rank;
-                std::list<node::target> targets;
-                std::list<light_ptr> firings;
-
-                void link(void* handler, const std::shared_ptr<node>& target);
-                bool unlink(void* handler);
-
-            private:
-                void ensure_bigger_than(std::set<node*>& visited, unsigned long long limit);
-        };
-
-        unsigned long long rankOf(const std::shared_ptr<node>& target);
 
         struct untyped {
         };
@@ -110,45 +79,72 @@ namespace sodium {
                 return cleanerUpper;
             }
         };
+        #define FRP_DETYPE_FUNCTION1(A,B,f) \
+                   [f] (const light_ptr& a) -> light_ptr { \
+                        return light_ptr::create<B>(f(*a.castPtr<A>(NULL))); \
+                   }
+
+        Event_ map_(const std::function<heist::LightPtr(const heist::LightPtr&)>& f,
+            const Event_& ca);
     };  // end namespace impl
 
     template <class P, class A>
     class event : public impl::event_ {
-    public:
-        /*!
-         * The 'never' event (that never fires).
-         */
-        event() {}
-        event(const listen& listen)
-            : impl::event_(listen) {}
-
-        event(const impl::event_& ev) : impl::event_(ev) {}
-
-        std::function<void()> listen_raw(
-                    const transaction<P>& trans0,
-                    const std::shared_ptr<impl::node>& target,
-                    const std::function<void(const transaction<impl::untyped>&, const light_ptr&)>& handle) const
-        {
-            return listen_raw_(trans0.cast__((impl::untyped*)NULL), target, handle);
-        }
-
-        /*!
-         * High-level interface to obtain an event's value.
-         */
-        std::function<void()> listen(const transaction<P>& trans0, std::function<void(const A&)> handle) const {
-            return listen_raw(trans0, std::shared_ptr<impl::node>(), [handle] (const transaction<impl::untyped>& trans, const light_ptr& ptr) {
-                handle(*ptr.castPtr<A>(NULL));
-            });
-        };
-
-        /*!
-         * High-level interface to obtain an event's value, variant that gives you the transaction.
-         */
-        std::function<void()> listen_trans(const transaction<P>& trans0, std::function<void(const transaction<P>&, const A&)> handle) const {
-            return listen_raw(trans0, std::shared_ptr<impl::node>(), [handle] (const transaction<impl::untyped>& trans, const light_ptr& ptr) {
-                handle(trans.cast__((P*)NULL), *ptr.castPtr<A>(NULL));
-            });
-        };
+        public:
+            /*!
+             * The 'never' event (that never fires).
+             */
+            event() {}
+            event(const listen& listen)
+                : impl::event_(listen) {}
+    
+            event(const impl::event_& ev) : impl::event_(ev) {}
+    
+            std::function<void()> listen_raw(
+                        const transaction<P>& trans0,
+                        const std::shared_ptr<impl::node>& target,
+                        const std::function<void(const transaction<impl::untyped>&, const light_ptr&)>& handle) const
+            {
+                return listen_raw_(trans0.cast__((impl::untyped*)NULL), target, handle);
+            }
+    
+            /*!
+             * High-level interface to obtain an event's value.
+             */
+            std::function<void()> listen(const transaction<P>& trans0, std::function<void(const A&)> handle) const {
+                return listen_raw(trans0, std::shared_ptr<impl::node>(), [handle] (const transaction<impl::untyped>& trans, const light_ptr& ptr) {
+                    handle(*ptr.castPtr<A>(NULL));
+                });
+            };
+    
+            /*!
+             * High-level interface to obtain an event's value, variant that gives you the transaction.
+             */
+            std::function<void()> listen_trans(const transaction<P>& trans0, std::function<void(const transaction<P>&, const A&)> handle) const {
+                return listen_raw(trans0, std::shared_ptr<impl::node>(), [handle] (const transaction<impl::untyped>& trans, const light_ptr& ptr) {
+                    handle(trans.cast__((P*)NULL), *ptr.castPtr<A>(NULL));
+                });
+            };
+    
+            /*!
+             * Map a function over this event to modify the output value.
+             */
+            template <class B>
+            frp::Event<P,B> map(const std::function<B(const A&)>& f) const {
+                return event<P,B>(impl::map_(FRP_DETYPE_FUNCTION1(A,B,f), *this));
+            }
+    
+            /*!
+             * Map a function over this event to modify the output value.
+             *
+             * g++-4.7.2 has a bug where, under a 'using namespace std' it will interpret
+             * b.template map<A>(f) as if it were std::map. If you get this problem, you can
+             * work around it with map_.
+             */
+            template <class B>
+            frp::Event<P,B> map_(const std::function<B(const A&)>& f) const {
+                return event<P,B>(impl::map_(FRP_DETYPE_FUNCTION1(A,B,f), *this));
+            }
     };
 
     namespace impl {
@@ -485,6 +481,9 @@ namespace sodium {
                     return impl->listen_value_raw()(trans, target, handle);
                 };
         };
+
+        behavior_ map_(const std::function<light_ptr(const light_ptr&)>& f,
+            const behavior_& beh);
     };  // end namespace impl
 
     /*!
@@ -547,8 +546,8 @@ namespace sodium {
                         // Way 2: Push a value out the event in the initial transaction.
                         // In the second case, we may get here. In order to make sure we
                         // always catch the event, we have to wait till the end of the
-                        // transaction. So we do that with on_phase_1_cleanup.
-                        trans.on_phase_1_cleanup(rankOf(target), [impl, handle] (const std::shared_ptr<frp::impl::transaction_impl>& transImpl) -> void {
+                        // transaction. So we do that with prioritized.
+                        trans.prioritized(rankOf(target), [impl, handle] (const std::shared_ptr<frp::impl::transaction_impl>& transImpl) -> void {
                             handle(transaction<P>(transImpl), impl->sample());
                         });
                     }
@@ -590,6 +589,25 @@ namespace sodium {
             behavior<P,A> add_cleanup(const std::function<void()>& newCleanup) const {
                 return behavior<P,A>(std::shared_ptr<impl::behavior_impl>(
                         new impl::behavior_impl(impl->seq.get(), impl->changes.add_cleanup(newCleanup), impl->sample)));
+            }
+
+            /*!
+             * Map a function over this behaviour to modify the output value.
+             */
+            template <class B>
+            behavior<P,B> map(const std::function<B(const A&)>& f) const {
+                return behavior<P,B>(impl::map(FRP_DETYPE_FUNCTION1(A,B,f), *this));
+            }
+            /*!
+             * Map a function over this behaviour to modify the output value.
+             *
+             * g++-4.7.2 has a bug where, under a 'using namespace std' it will interpret
+             * b.template map<A>(f) as if it were std::map. If you get this problem, you can
+             * work around it with map_.
+             */
+            template <class B>
+            behavior<P,B> map_(const std::function<B(const A&)>& f) const {
+                return behavior<P,B>(impl::map(FRP_DETYPE_FUNCTION1(A,B,f), *this));
             }
     };
 
@@ -688,7 +706,7 @@ namespace sodium {
     }
 
     /*!
-     * Same pure semantics as fmap but suitable for code with effects.
+     * Same pure semantics as map but suitable for code with effects.
      * Also supplies the transaction to the function.
      */
     template <class P, class A, class B>
@@ -722,34 +740,6 @@ namespace sodium {
     }
 
     namespace impl {
-        event_ fmap(const std::function<light_ptr(const light_ptr&)>& f,
-            const event_& ca);
-        behavior_ fmap(const std::function<light_ptr(const light_ptr&)>& f,
-            const behavior_& beh);
-    };
-
-    #define FRP_DETYPE_FUNCTION1(A,B,f) \
-                [f] (const light_ptr& a) -> light_ptr { \
-                    return light_ptr::create<B>(f(*a.castPtr<A>(NULL))); \
-                }
-
-    /*!
-     * Map a function over this event to modify the output value.
-     */
-    template <class P, class A, class B>
-    event<P,B> fmap(const std::function<B(const A&)>& f, const event<P,A>& e) {
-        return event<P,B>(impl::fmap(FRP_DETYPE_FUNCTION1(A,B,f), e));
-    }
-
-    /*!
-     * Map a function over this behavior to modify the output value.
-     */
-    template <class P, class A, class B>
-    behavior<P,B> fmap(const std::function<B(const A&)>& f, const behavior<P,A>& beh) {
-        return behavior<P,B>(impl::fmap(FRP_DETYPE_FUNCTION1(A,B,f), beh));
-    }
-
-    namespace impl {
         behavior_ apply(const transaction<untyped>& trans0, const behavior_& bf, const behavior_& ba);
     };
 
@@ -757,12 +747,12 @@ namespace sodium {
     behavior<P,B> apply(const transaction<P>& trans0, const behavior<P,std::function<B(const A&)>>& bf, const behavior<P,A>& ba) {
         return behavior<P,B>(impl::apply(
             trans0.cast__((impl::untyped*)NULL),
-            impl::fmap([] (const light_ptr& pf) {
+            bf.map_([] (const light_ptr& pf) {
                 const std::function<B(const A&)>& f = *pf.castPtr<std::function<B(const A&)>>(NULL);
                 return light_ptr::create<std::function<light_ptr(const light_ptr&)>>(
                         FRP_DETYPE_FUNCTION1(A, B, f)
                     );
-            }, bf),
+            }),
             ba
         ));
     }
@@ -995,7 +985,7 @@ namespace sodium {
                 return [f, a] (const B& b) -> C { return f(a, b); };
             }
         );
-        return apply<P, B, C>(trans0, fmap(fa, ba), bb);
+        return apply<P, B, C>(trans0, ba.map_(fa), bb);
     }
 
     template <class P, class A, class B, class C, class D>
@@ -1015,7 +1005,7 @@ namespace sodium {
                 };
             }
         );
-        return apply(trans0, apply(trans0, fmap(fa, ba), bb), bc);
+        return apply(trans0, apply(trans0, ba.map_(fa), bb), bc);
     }
 
     /*!

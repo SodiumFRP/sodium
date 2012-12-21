@@ -67,7 +67,8 @@ public final class Transaction {
                     currentTransaction = new Transaction();
                 code.run();
             } finally {
-                currentTransaction.close();
+                if (transWas == null)
+                    currentTransaction.close();
                 currentTransaction = transWas;
             }
         }
@@ -84,7 +85,8 @@ public final class Transaction {
                     currentTransaction = new Transaction();
                 code.run(currentTransaction);
             } finally {
-                currentTransaction.close();
+                if (transWas == null)
+                    currentTransaction.close();
                 currentTransaction = transWas;
             }
         }
