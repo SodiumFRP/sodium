@@ -101,6 +101,7 @@ namespace sodium {
                 auto eit = entries.find(pit->second);
                 assert(eit != entries.end());
                 std::function<void(transaction_impl*)> action = eit->second.action;
+                prioritizedQ.erase(pit);
                 entries.erase(eit);
                 action(this);
             }

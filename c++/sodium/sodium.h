@@ -37,7 +37,7 @@ namespace sodium {
         public:
             listen listen_impl_;
     
-        private:
+        protected:
             std::shared_ptr<cleaner_upper> cleanerUpper;
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
             bool is_never_;
@@ -86,60 +86,7 @@ namespace sodium {
 
         event_ map_(const std::function<light_ptr(const light_ptr&)>& f,
             const event_& ca);
-    };  // end namespace impl
 
-    template <class A>
-    class event : public impl::event_ {
-        public:
-            /*!
-             * The 'never' event (that never fires).
-             */
-            event() {}
-            event(const listen& listen)
-                : impl::event_(listen) {}
-    
-            event(const impl::event_& ev) : impl::event_(ev) {}
-
-            std::function<void()> listen_raw(
-                        impl::transaction_impl* trans0,
-                        const std::shared_ptr<impl::node>& target,
-                        const std::function<void(impl::transaction_impl*, const light_ptr&)>& handle) const
-            {
-                return listen_raw_(trans0, target, handle);
-            }
-
-            /*!
-             * High-level interface to obtain an event's value.
-             */
-            std::function<void()> listen(std::function<void(const A&)> handle) const {
-                transaction trans;
-                return listen_raw(trans.impl(), std::shared_ptr<impl::node>(), [handle] (impl::transaction_impl* trans, const light_ptr& ptr) {
-                    handle(*ptr.castPtr<A>(NULL));
-                });
-            };
-    
-            /*!
-             * Map a function over this event to modify the output value.
-             */
-            template <class B>
-            event<B> map(const std::function<B(const A&)>& f) const {
-                return event<B>(impl::map_(FRP_DETYPE_FUNCTION1(A,B,f), *this));
-            }
-    
-            /*!
-             * Map a function over this event to modify the output value.
-             *
-             * g++-4.7.2 has a bug where, under a 'using namespace std' it will interpret
-             * b.template map<A>(f) as if it were std::map. If you get this problem, you can
-             * work around it with map_.
-             */
-            template <class B>
-            event<B> map_(const std::function<B(const A&)>& f) const {
-                return event<B>(impl::map_(FRP_DETYPE_FUNCTION1(A,B,f), *this));
-            }
-    };
-
-    namespace impl {
         /*!
          * Creates an event, and a function to push a value into it.
          * Unsafe variant: Assumes 'push' is called on the partition's sequence.
@@ -235,29 +182,97 @@ namespace sodium {
             );
     };
 
-    /*!
-     * If an event has multiple firings in one transaction, throw all away except for
-     * the last of them.
-     */
     template <class A>
-    event<A> coalesce(const event<A>& ea)
-    {
-        return event<A>(impl::coalesce_cu([ea] (impl::transaction_impl* trans, const std::shared_ptr<impl::node>& target,
-                                    const std::function<void(impl::transaction_impl*, const light_ptr&)>& handle,
-                                    const std::shared_ptr<cleaner_upper>&)
-                                                              -> std::function<void()> {
-            return ea.listen_raw_(trans, target, handle);
-        }));
-    }
+    class event : public impl::event_ {
+        public:
+            /*!
+             * The 'never' event (that never fires).
+             */
+            event() {}
+            event(const listen& listen) : impl::event_(listen) {}
+            event(const impl::event_& ev) : impl::event_(ev) {}
+        private:
+            event(const listen& listen, const std::shared_ptr<cleaner_upper>& cleanerUpper
+#if defined(SODIUM_CONSTANT_OPTIMIZATION)
+                    , bool is_never_
+#endif
+                )
+            : impl::event_(listen, cleanerUpper
+#if defined(SODIUM_CONSTANT_OPTIMIZATION)
+                    , is_never_
+#endif
+                ) {}
+        public:
 
-    /*!
-     * If an event has multiple firings in one transaction, combine them into one.
-     */
-    template <class A>
-    event<A> coalesce_with(const std::function<A(const A&, const A&)>& combine, const event<A>& ea)
-    {
-        return event<A>(impl::coalesce_with_cu<A>(combine, ea.listen_impl_));
-    }
+            std::function<void()> listen_raw(
+                        impl::transaction_impl* trans0,
+                        const std::shared_ptr<impl::node>& target,
+                        const std::function<void(impl::transaction_impl*, const light_ptr&)>& handle) const
+            {
+                return listen_raw_(trans0, target, handle);
+            }
+
+            /*!
+             * High-level interface to obtain an event's value.
+             */
+            std::function<void()> listen(std::function<void(const A&)> handle) const {
+                transaction trans;
+                return listen_raw(trans.impl(), std::shared_ptr<impl::node>(), [handle] (impl::transaction_impl* trans, const light_ptr& ptr) {
+                    handle(*ptr.castPtr<A>(NULL));
+                });
+            };
+    
+            /*!
+             * Map a function over this event to modify the output value.
+             */
+            template <class B>
+            event<B> map(const std::function<B(const A&)>& f) const {
+                return event<B>(impl::map_(FRP_DETYPE_FUNCTION1(A,B,f), *this));
+            }
+    
+            /*!
+             * Map a function over this event to modify the output value.
+             *
+             * g++-4.7.2 has a bug where, under a 'using namespace std' it will interpret
+             * b.template map<A>(f) as if it were std::map. If you get this problem, you can
+             * work around it with map_.
+             */
+            template <class B>
+            event<B> map_(const std::function<B(const A&)>& f) const {
+                return event<B>(impl::map_(FRP_DETYPE_FUNCTION1(A,B,f), *this));
+            }
+
+            event<A> merge(const event<A>& other) const {
+                transaction trans;
+                auto p = impl::unsafe_new_event();
+                auto push = std::get<1>(p);
+                auto target = std::get<2>(p);
+                auto kill_one = this->listen_raw(trans.impl(), target, push);
+                auto kill_two = other.listen_raw(trans.impl(), target, push);
+                return std::get<0>(p).add_cleanup([kill_one, kill_two] () {
+                    kill_one();
+                    kill_two();
+                });
+            }
+
+            /*!
+             * If there's more than one firing in a single transaction, combine them into
+             * one using the specified combining function.
+             *
+             * If the event firings are ordered, then the first will appear at the left
+             * input of the combining function. In most common cases it's best not to
+             * make any assumptions about the ordering, and the combining function would
+             * ideally be commutative.
+             */
+            event<A> coalesce(const std::function<A(const A&, const A&)>& combine) const
+            {
+                return event<A>(impl::coalesce_with_cu<A>(combine, listen_impl_), cleanerUpper
+#if defined(SODIUM_CONSTANT_OPTIMIZATION)
+                        , is_never_
+#endif
+                    );
+            }
+    };
 
     /*!
      * Creates an event, and a function to push a value into it.
@@ -276,19 +291,6 @@ namespace sodium {
                 push(trans.impl(), ptr);
             }
         );
-    }
-
-    template <class A>
-    event<A> merge(impl::transaction_impl* trans, const event<A>& one, const event<A>& two) {
-        auto p = impl::unsafe_new_event();
-        auto push = std::get<1>(p);
-        auto target = std::get<2>(p);
-        auto kill_one = one.listen_raw(trans, target, push);
-        auto kill_two = two.listen_raw(trans, target, push);
-        return std::get<0>(p).add_cleanup([kill_one, kill_two] () {
-            kill_one();
-            kill_two();
-        });
     }
 
     namespace impl {

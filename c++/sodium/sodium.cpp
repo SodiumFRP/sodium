@@ -512,7 +512,7 @@ namespace sodium {
         /*!
          * Map a function over this event to modify the output value.
          */
-        event_ map(const std::function<light_ptr(const light_ptr&)>& f, const event_& ev)
+        event_ map_(const std::function<light_ptr(const light_ptr&)>& f, const event_& ev)
         {
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
             if (ev.is_never())
@@ -535,7 +535,7 @@ namespace sodium {
                 );
         }
 
-        behavior_ map(const std::function<light_ptr(const light_ptr&)>& f, const behavior_& beh) {
+        behavior_ map_(const std::function<light_ptr(const light_ptr&)>& f, const behavior_& beh) {
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
             auto ca = beh.getConstantValue();
             if (ca)
@@ -543,7 +543,7 @@ namespace sodium {
             else
 #endif
                 return behavior_(
-                    map(f, underlyingevent_(beh)),
+                    map_(f, underlyingevent_(beh)),
                     [f, beh] () -> light_ptr {
                         return f(beh.impl->sample());
                     }
