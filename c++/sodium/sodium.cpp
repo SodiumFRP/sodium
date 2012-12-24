@@ -268,11 +268,17 @@ namespace sodium {
                     push(trans, ptr);
                 });
                 auto changes = out.add_cleanup(unlisten);
-                auto sample = [state] () { return state->current; };
+                auto sample = [state] () {
+                    return state->current;
+                };
                 return new behavior_impl(changes, sample);
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
             }
 #endif
+        }
+
+        behavior_::behavior_()
+        {
         }
 
         behavior_::behavior_(behavior_impl* impl)

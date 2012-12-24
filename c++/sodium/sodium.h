@@ -16,6 +16,7 @@
 #include <memory>
 #include <list>
 #include <set>
+#include <stdexcept>
 
 #define SODIUM_CONSTANT_OPTIMIZATION
 
@@ -180,7 +181,177 @@ namespace sodium {
                                 const std::function<void(transaction_impl*, const light_ptr&)>&,
                                 const std::shared_ptr<cleaner_upper>&)>& listen_raw
             );
+
+        struct behavior_impl {
+            behavior_impl(const light_ptr& constant);
+            behavior_impl(
+                const event_& changes,
+                const std::function<light_ptr()>& sample);
+
+            event_ changes;  // Having this here allows references to behavior to keep the
+                             // underlying event's cleanups alive, and provides access to the
+                             // underlying event, for certain primitives.
+
+            std::function<light_ptr()> sample;
+
+            std::function<std::function<void()>(transaction_impl*, const std::shared_ptr<node>&,
+                             const std::function<void(transaction_impl*, const light_ptr&)>&)> listen_value_raw() const;
+        };
+
+        behavior_impl* hold(transaction_impl* trans0,
+                            const light_ptr& initValue,
+                            const event_& input);
+
+        struct behavior_state {
+            behavior_state(const light_ptr& initA);
+            ~behavior_state();
+            light_ptr current;
+            boost::optional<light_ptr> update;
+        };
+
+        class behavior_ {
+            friend impl::event_ underlyingevent_(const behavior_& beh);
+            public:
+                behavior_();
+                behavior_(behavior_impl* impl);
+                behavior_(const std::shared_ptr<behavior_impl>& impl);
+                behavior_(const light_ptr& a);
+                behavior_(
+                    const event_& changes,
+                    const std::function<light_ptr()>& sample
+                );
+                std::shared_ptr<impl::behavior_impl> impl;
+
+#if defined(SODIUM_CONSTANT_OPTIMIZATION)
+                /*!
+                 * For optimization, if this behavior is a constant, then return its value.
+                 */
+                boost::optional<light_ptr> getConstantValue() const;
+#endif
+
+                std::function<void()> listen_value_raw(impl::transaction_impl* trans, const std::shared_ptr<impl::node>& target,
+                                   const std::function<void(impl::transaction_impl*, const light_ptr&)>& handle) const {
+                    return impl->listen_value_raw()(trans, target, handle);
+                };
+        };
+
+        behavior_ map_(const std::function<light_ptr(const light_ptr&)>& f,
+            const behavior_& beh);
+    };  // end namespace impl
+
+    /*!
+     * A like an event, but it tracks the input event's current value and causes it
+     * always to be output once at the beginning for each listener.
+     */
+    template <class A>
+    class behavior : public impl::behavior_ {
+        template <class AA>
+        friend class event;
+        private:
+            behavior(const std::shared_ptr<impl::behavior_impl>& impl)
+                : impl::behavior_(impl)
+            {
+            }
+
+        protected:
+#if 0
+            behavior(
+                const event_& changes,
+                const std::function<boost::optional<light_ptr>()>& sample
+            )
+                : impl::behavior_(changes, sample)
+            {
+            }
+
+            behavior(
+                const impl::event_& changes,
+                const std::function<boost::optional<light_ptr>()>& sample,
+                const impl::untyped*
+            )
+                : impl::behavior_(changes, sample)
+            {
+            }
+#endif
+            behavior() {}
+
+        public:
+            /*!
+             * Constant value.
+             */
+            behavior(const A& a)
+                : impl::behavior_(light_ptr::create<A>(a))
+            {
+            }
+
+            behavior(const behavior_& beh) : behavior_(beh) {}
+
+            /*!
+             * Sample the value of this behavior.
+             */
+            A sample() const {
+                return *impl->sample().template castPtr<A>(NULL);
+            }
+
+            std::function<void()> listen_value_linked_raw(impl::transaction_impl* trans, const std::shared_ptr<impl::node>& target,
+                               const std::function<void(impl::transaction_impl*, const light_ptr&)>& handle) const {
+                return impl::coalesce(impl->listen_value_raw())(trans, target, handle);
+            };
+
+            std::function<void()> listen_value_linked(impl::transaction_impl* trans, const std::shared_ptr<impl::node>& target,
+                               const std::function<void(impl::transaction_impl*, const A&)>& handle) const {
+                return impl::coalesce(impl->listen_value_raw())(trans, target,
+                               [handle] (impl::transaction_impl* trans, const light_ptr& ptr) {
+                    handle(trans, *ptr.castPtr<A>(NULL));
+                });
+            };
+
+            /*!
+             * listen to the underlying event, i.e. to updates.
+             */
+            std::function<void()> listen_raw(impl::transaction_impl* trans, const std::shared_ptr<impl::node>& target,
+                                const std::function<void(impl::transaction_impl*, const light_ptr&)>& handle) const {
+                return impl->changes.listen_raw_(trans, target, handle);
+            }
+
+            behavior<A> add_cleanup(const std::function<void()>& newCleanup) const {
+                return behavior<A>(std::shared_ptr<impl::behavior_impl>(
+                        new impl::behavior_impl(impl->changes.add_cleanup(newCleanup), impl->sample)));
+            }
+
+            /*!
+             * Map a function over this behaviour to modify the output value.
+             */
+            template <class B>
+            behavior<B> map(const std::function<B(const A&)>& f) const {
+                return behavior<B>(impl::map_(FRP_DETYPE_FUNCTION1(A,B,f), *this));
+            }
+
+            /*!
+             * Map a function over this behaviour to modify the output value.
+             *
+             * g++-4.7.2 has a bug where, under a 'using namespace std' it will interpret
+             * b.template map<A>(f) as if it were std::map. If you get this problem, you can
+             * work around it with map_.
+             */
+            template <class B>
+            behavior<B> map_(const std::function<B(const A&)>& f) const {
+                return behavior<B>(impl::map_(FRP_DETYPE_FUNCTION1(A,B,f), *this));
+            }
+
+#if 0
+            /*!
+             * Returns an event describing the changes in a behavior.
+             */
+            template <class A>
+            event<A> changes(const behavior<A>& beh) {return event<A>(beh.impl->changes);}
+#endif
     };
+
+    template <class A>
+    class event;
+
+    template <class A>
+    event<A> filter_optional(const event<boost::optional<A>>& input);
 
     template <class A>
     class event : public impl::event_ {
@@ -274,7 +445,21 @@ namespace sodium {
             }
 
             /*!
-             * Filter this event based on the specified predicate.
+             * Merge two streams of events of the same type, combining simultaneous
+             * event occurrences.
+             *
+             * In the case where multiple event occurrences are simultaneous (i.e. all
+             * within the same transaction), they are combined using the same logic as
+             * 'coalesce'.
+             */
+            event<A> merge(const event<A>& other, const std::function<A(const A&, const A&)>& combine) const
+            {
+                return merge(other).coalesce(combine);
+            }
+
+            /*!
+             * Filter this event based on the specified predicate, passing through values
+             * where the predicate returns true.
              */
             event<A> filter(const std::function<bool(const A&)>& pred)
             {
@@ -288,26 +473,82 @@ namespace sodium {
                 });
                 return std::get<0>(p).add_cleanup(kill);
             }
+
+            behavior<A> hold(const A& initA)
+            {
+                transaction trans;
+                return behavior<A>(
+                    std::shared_ptr<impl::behavior_impl>(impl::hold(trans.impl(), light_ptr::create<A>(initA), *this))
+                );
+            }
+
+            /*!
+             * Sample the behavior's value as at the transaction before the
+             * current one, i.e. no changes from the current transaction are
+             * taken.
+             */
+            template <class B, class C>
+            event<C> snapshot(const behavior<B>& beh, const std::function<C(A,B)>& combine)
+            {
+                transaction trans;
+                auto p = impl::unsafe_new_event();
+                auto push = std::get<1>(p);
+                auto target = std::get<2>(p);
+                auto kill = listen_raw(trans.impl(), target,
+                        [beh, push, combine] (impl::transaction_impl* trans, const light_ptr& ptr) {
+                    push(trans, light_ptr::create<C>(combine(*ptr.castPtr<A>(NULL), beh.sample())));
+                });
+                return std::get<0>(p).add_cleanup(kill);
+            }
+
+            /*!
+             * Sample the behavior's value as at the transaction before the
+             * current one, i.e. no changes from the current transaction are
+             * taken.
+             */
+            template <class B>
+            event<B> snapshot(const behavior<B>& beh)
+            {
+                return snapshot<B, B>(beh, [] (const A&, const B& b) { return b; });
+            }
+
+            /*!
+             * Allow events through only when the behavior's value is true.
+             */
+            event<A> gate(const behavior<bool>& g)
+            {
+                transaction trans;
+                return filter_optional<A>(snapshot<bool, boost::optional<A>>(
+                    g,
+                    [] (const A& a, const bool& gated) {
+                        return gated ? boost::optional<A>(a) : boost::optional<A>();
+                    })
+                );
+            }
+
     };
 
-    /*!
-     * Creates an event, and a function to push a value into it.
-     */
     template <class A>
-    std::tuple<event<A>, std::function<void(const A&)>> new_event()
+    class event_sink : public event<A>
     {
-        auto p = impl::unsafe_new_event();
-        auto evt = std::get<0>(p);
-        auto push = std::get<1>(p);
-        return std::tuple<event<A>, std::function<void(const A&)>>(
-            event<A>(evt),
-            [push] (const A& a) {
+        private:
+            std::function<void(impl::transaction_impl*, const light_ptr&)> push;
+
+        public:
+            event_sink<A>()
+            {
+                auto p = impl::unsafe_new_event();
+                *this = event_sink<A>(std::get<0>(p));
+                push = std::get<1>(p);
+            }
+            event_sink(const impl::event_& ev) : event<A>(ev) {}
+
+            void send(const A& a) const {
                 light_ptr ptr = light_ptr::create<A>(a);
                 transaction trans;
                 push(trans.impl(), ptr);
             }
-        );
-    }
+    };
 
     namespace impl {
         template <class S>
@@ -416,183 +657,25 @@ namespace sodium {
         return std::get<0>(p).add_cleanup(kill);
     }
 
-    namespace impl {
-
-        struct behavior_impl {
-            behavior_impl(const light_ptr& constant);
-            behavior_impl(
-                const event_& changes,
-                const std::function<light_ptr()>& sample);
-
-            event_ changes;  // Having this here allows references to behavior to keep the
-                             // underlying event's cleanups alive, and provides access to the
-                             // underlying event, for certain primitives.
-
-            std::function<light_ptr()> sample;
-
-            std::function<std::function<void()>(transaction_impl*, const std::shared_ptr<node>&,
-                             const std::function<void(transaction_impl*, const light_ptr&)>&)> listen_value_raw() const;
-        };
-
-        behavior_impl* hold(transaction_impl* trans0,
-                            const light_ptr& initValue,
-                            const event_& input);
-
-        struct behavior_state {
-            behavior_state(const light_ptr& initA);
-            ~behavior_state();
-            light_ptr current;
-            boost::optional<light_ptr> update;
-        };
-
-        class behavior_ {
-            friend impl::event_ underlyingevent_(const behavior_& beh);
-            public:
-                behavior_();
-                behavior_(behavior_impl* impl);
-                behavior_(const std::shared_ptr<behavior_impl>& impl);
-                behavior_(const light_ptr& a);
-                behavior_(
-                    const event_& changes,
-                    const std::function<light_ptr()>& sample
-                );
-                std::shared_ptr<impl::behavior_impl> impl;
-
-#if defined(SODIUM_CONSTANT_OPTIMIZATION)
-                /*!
-                 * For optimization, if this behavior is a constant, then return its value.
-                 */
-                boost::optional<light_ptr> getConstantValue() const;
-#endif
-
-                std::function<void()> listen_value_raw(impl::transaction_impl* trans, const std::shared_ptr<impl::node>& target,
-                                   const std::function<void(impl::transaction_impl*, const light_ptr&)>& handle) const {
-                    return impl->listen_value_raw()(trans, target, handle);
-                };
-        };
-
-        behavior_ map_(const std::function<light_ptr(const light_ptr&)>& f,
-            const behavior_& beh);
-    };  // end namespace impl
-
-    /*!
-     * A like an event, but it tracks the input event's current value and causes it
-     * always to be output once at the beginning for each listener.
-     */
     template <class A>
-    class behavior : public impl::behavior_ {
-        template <class AA>
-        friend event<AA> changes(const behavior<AA>& beh);
+    class behavior_sink : public behavior<A>
+    {
         private:
-            behavior(const std::shared_ptr<impl::behavior_impl>& impl)
-                : impl::behavior_(impl)
-            {
-            }
+            event_sink<A> e;
+
+            behavior_sink(const behavior<A>& beh) : behavior<A>(beh) {}
 
         public:
-            behavior(
-                const event<A>& changes,
-                const std::function<boost::optional<light_ptr>()>& sample
-            )
-                : impl::behavior_(changes, sample)
+            behavior_sink(const A& initA)
             {
+                *dynamic_cast<behavior<A>*>(this) = e.hold(initA);
             }
 
-            behavior(
-                const impl::event_& changes,
-                const std::function<boost::optional<light_ptr>()>& sample,
-                const impl::untyped*
-            )
-                : impl::behavior_(changes, sample)
+            void send(const A& a)
             {
-            }
-
-            /*!
-             * Constant value.
-             */
-            behavior(const A& a)
-                : impl::behavior_(light_ptr::create<A>(a))
-            {
-            }
-
-            behavior(const behavior_& beh) : behavior_(beh) {}
-
-            /*!
-             * Sample the value of this behavior.
-             */
-            A sample() const {
-                return impl->sample().template castPtr<A>(NULL);
-            }
-
-            std::function<void()> listen_value_linked_raw(impl::transaction_impl* trans, const std::shared_ptr<impl::node>& target,
-                               const std::function<void(impl::transaction_impl*, const light_ptr&)>& handle) const {
-                return impl::coalesce(impl->listen_value_raw())(trans, target, handle);
-            };
-
-            std::function<void()> listen_value_linked(impl::transaction_impl* trans, const std::shared_ptr<impl::node>& target,
-                               const std::function<void(impl::transaction_impl*, const A&)>& handle) const {
-                return impl::coalesce(impl->listen_value_raw())(trans, target,
-                               [handle] (impl::transaction_impl* trans, const light_ptr& ptr) {
-                    handle(trans, *ptr.castPtr<A>(NULL));
-                });
-            };
-
-            /*!
-             * listen to the underlying event, i.e. to updates.
-             */
-            std::function<void()> listen_raw(impl::transaction_impl* trans, const std::shared_ptr<impl::node>& target,
-                                const std::function<void(impl::transaction_impl*, const light_ptr&)>& handle) const {
-                return impl->changes.listen_raw_(trans, target, handle);
-            }
-
-            behavior<A> add_cleanup(const std::function<void()>& newCleanup) const {
-                return behavior<A>(std::shared_ptr<impl::behavior_impl>(
-                        new impl::behavior_impl(impl->changes.add_cleanup(newCleanup), impl->sample)));
-            }
-
-            /*!
-             * Map a function over this behaviour to modify the output value.
-             */
-            template <class B>
-            behavior<B> map(const std::function<B(const A&)>& f) const {
-                return behavior<B>(impl::map_(FRP_DETYPE_FUNCTION1(A,B,f), *this));
-            }
-            /*!
-             * Map a function over this behaviour to modify the output value.
-             *
-             * g++-4.7.2 has a bug where, under a 'using namespace std' it will interpret
-             * b.template map<A>(f) as if it were std::map. If you get this problem, you can
-             * work around it with map_.
-             */
-            template <class B>
-            behavior<B> map_(const std::function<B(const A&)>& f) const {
-                return behavior<B>(impl::map_(FRP_DETYPE_FUNCTION1(A,B,f), *this));
+                e.send(a);
             }
     };
-
-    template <class A>
-    behavior<A> hold(const A& initA, const event<A>& ev)
-    {
-        transaction trans;
-        return behavior<A>(trans.impl(), boost::optional<A>(initA), ev);
-    }
-
-    /*!
-     * Helper for creating a new_event and holding it.
-     */
-    template <class A>
-    std::tuple<behavior<A>, std::function<void(impl::transaction_impl*, const A&)>> new_behavior(
-            impl::transaction_impl* trans, const A& initA)
-    {
-        auto p = new_event<A>();
-        return std::make_tuple(hold(trans, initA, std::get<0>(p)), std::get<1>(p));
-    }
-
-    /*!
-     * Returns an event describing the changes in a behavior.
-     */
-    template <class A>
-    event<A> changes(const behavior<A>& beh) {return event<A>(beh.impl->changes);}
 
     namespace impl {
         /*!
@@ -720,71 +803,81 @@ namespace sodium {
     }
 
     /*!
-     * Sample the behavior's value as at the transaction before the
-     * current one, i.e. no changes from the current transaction are
-     * taken.
-     */
-    template <class A, class B, class C>
-    event<C> snapshotWith(impl::transaction_impl* trans0,
-        const std::function<C(A,B)>& combine,
-        const event<A>& ev, const behavior<B>& beh)
-    {
-        auto p = impl::unsafe_new_event();
-        auto push = std::get<1>(p);
-        auto target = std::get<2>(p);
-        auto kill = ev.listen_raw(trans0, target,
-                [beh, push, combine, target] (impl::transaction_impl* trans, const light_ptr& ptr) {
-            beh.sample_raw(trans, target,
-                     [push, combine, ptr] (impl::transaction_impl* trans, const boost::optional<light_ptr>& ob) {
-                if (ob)
-                    push(trans, light_ptr::create<C>(combine(*ptr.castPtr<A>(NULL), *ob.get().castPtr<B>(NULL))));
-            });
-        });
-        return std::get<0>(p).add_cleanup(kill);
-    }
-
-    /*!
-     * Sample the behavior's value as at the transaction before the
-     * current one, i.e. no changes from the current transaction are
-     * taken.
-     */
-    template <class A, class B>
-    event<B> tag(impl::transaction_impl* trans0,
-        const event<A>& ev, const behavior<B>& beh)
-    {
-        return snapshotWith<A, B, B>(trans0, [] (const A&, const B& b) { return b; }, ev, beh);
-    }
-
-    /*!
-     * Allow events through only when the behavior's value is true.
+     * Enable the construction of event loops, like this. This gives the ability to
+     * forward reference an event.
+     *
+     *   event_loop<A> ea;
+     *   auto ea_out = doSomething(ea);
+     *   ea.loop(ea_out);  // ea is now the same as ea_out
      */
     template <class A>
-    event<A> gate(impl::transaction_impl* trans0,
-                  const event<A>& input, const behavior<bool>& gate)
+    class event_loop : public event<A>
     {
-        transaction trans;
-        return filter_optional<A>(snapshotWith<A, bool, boost::optional<A>>(
-            [] (const A& a, const bool& gated) {
-                return gated ? boost::optional<A>(a) : boost::optional<A>();
-            },
-            input, gate)
-        );
-    }
+        private:
+            struct info {
+                info(
+                    const std::function<void(impl::transaction_impl*, const light_ptr&)>& pushIn,
+                    const std::shared_ptr<impl::node>& target,
+                    const std::shared_ptr<std::function<void()>>& pKill
+                )
+                : pushIn(pushIn), target(target), pKill(pKill)
+                {
+                }
+                std::function<void(impl::transaction_impl*, const light_ptr&)> pushIn;
+                std::shared_ptr<impl::node> target;
+                std::shared_ptr<std::function<void()>> pKill;
+            };
+            std::shared_ptr<info> i;
 
+        private:
+            event_loop(const impl::event_& ev, const std::shared_ptr<info>& i) : event<A>(ev), i(i) {}
+
+        public:
+            event_loop() : i(NULL)
+            {
+                std::shared_ptr<std::function<void()>> pKill(
+                    std::shared_ptr<std::function<void()>>(
+                        new std::function<void()>(
+                            [] () {
+                                throw std::runtime_error("event_loop not looped back");
+                            }
+                        )
+                    )
+                );
+                auto p = impl::unsafe_new_event();
+                *this = event_loop<A>(
+                    std::get<0>(p).add_cleanup([pKill] () {
+                        std::function<void()> kill = *pKill;
+                        kill();
+                    }),
+                    std::shared_ptr<info>(new info(std::get<1>(p), std::get<2>(p), pKill))
+                );
+            }
+
+            void loop(const event<A>& e)
+            {
+                if (i) {
+                    transaction trans;
+                    *i->pKill = e.listen_raw(trans.impl(), i->target, i->pushIn);
+                    i = std::shared_ptr<info>();
+                }
+                else
+                    throw std::runtime_error("event_loop looped back more than once");
+            }
+    };
+
+#if 0
     /*!
      * Enable the construction of event loops, like this:
      *
-     *   auto loop = event_loop<A>(seq);
+     *   auto loop = event_loop<A>();
      *   auto inEv = get<0>(loop);
      *   auto feedBack = get<1>(loop);
      *   auto outEv = doSomething(inEv);
      *   feedBack(outEv);  // Now doSomething's output event is fed back into its input
-     *
-     * To do: This won't get cleaned up properly, so please currently only use on
-     *   things with application lifetime.
      */
     template <class A>
-    std::tuple<event<A>, std::function<void(impl::transaction_impl*, const event<A>&)>> event_loop()
+    std::tuple<event<A>, std::function<void(const event<A>&)>> event_loop()
     {
         auto p = impl::unsafe_new_event();
         auto in = std::get<0>(p);
@@ -793,7 +886,7 @@ namespace sodium {
         std::shared_ptr<std::function<void()>> pKill(
             new std::function<void()>(
                 [] () {
-                    throw std::exception("event_loop not looped back");
+                    throw std::runtime_error("event_loop not looped back");
                 }
             )
         );
@@ -802,11 +895,13 @@ namespace sodium {
                 std::function<void()> kill = *pKill;
                 kill();
             }),
-            [pKill, pushIn, target] (impl::transaction_impl* trans, const event<A>& out) {
-                *pKill = out.listen_raw(trans, target, pushIn);
+            [pKill, pushIn, target] (const event<A>& out) {
+                transaction trans;
+                *pKill = out.listen_raw(trans.impl(), target, pushIn);
             }
         );
     }
+#endif
 
 #if 0
     template <class A>
@@ -865,13 +960,13 @@ namespace sodium {
                                                   const std::tuple<long long, event<A>>& pea) {
             auto ix = std::get<0>(pea);
             auto ea = std::get<1>(pea);
-            auto unlisten = snapshotWith<A, std::tuple<long long, event<A>>, boost::optional<A>>(
-                trans1, [ix] (const A& a, const std::tuple<long long, event<A>>& active) -> boost::optional<A> {
+            auto unlisten = ea.template snapshot<std::tuple<long long, event<A>>, boost::optional<A>>(
+                beaId, [ix] (const A& a, const std::tuple<long long, event<A>>& active) -> boost::optional<A> {
                     if (std::get<0>(active) == ix)
                         return boost::optional<A>(a);
                     else
                         return boost::optional<A>();
-                }, ea, beaId).listen_raw(trans1, target,
+                }).listen_raw(trans1, target,
                         [pState, push, ix] (impl::transaction_impl* trans2, const light_ptr& poa) {
                     const boost::optional<A>& oa = *poa.castPtr<boost::optional<A>>(NULL);
                     if (oa) {
