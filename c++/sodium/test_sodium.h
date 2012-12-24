@@ -19,6 +19,8 @@ class test_sodium : public CppUnit::TestFixture {
     CPPUNIT_TEST(merge_non_simultaneous);
     CPPUNIT_TEST(merge_simultaneous);
     CPPUNIT_TEST(coalesce);
+    CPPUNIT_TEST(filter);
+    CPPUNIT_TEST(filter_optional1);
     CPPUNIT_TEST_SUITE_END();
 
     void event1();
@@ -26,6 +28,8 @@ class test_sodium : public CppUnit::TestFixture {
     void merge_non_simultaneous();
     void merge_simultaneous();
     void coalesce();
+    void filter();
+    void filter_optional1();
 };
 
 #endif

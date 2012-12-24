@@ -12,6 +12,7 @@
 
 #include <cppunit/ui/text/TestRunner.h>
 #include <stdio.h>
+#include <ctype.h>
 #include <iostream>
 
 using namespace std;
@@ -111,11 +112,39 @@ void test_sodium::coalesce()
     send_e1(8);
     send_e2(40);
     unlisten();
-    cerr << "items:" << endl;
-    for (auto it = pOut->begin(); it != pOut->end(); ++it)
-        cerr << *it << endl;
     vector<int> shouldBe = {202, 808, 40};
     CPPUNIT_ASSERT(shouldBe == *pOut);
+}
+
+void test_sodium::filter()
+{
+    auto p = new_event<char>();
+    auto e = get<0>(p);
+    auto send_e = get<1>(p);
+    shared_ptr<string> pOut(new string);
+    auto unlisten = e.filter([] (const char& c) { return isupper(c); })
+                     .listen([pOut] (const char& c) { (*pOut) += c; });
+    send_e('H');
+    send_e('o');
+    send_e('I');
+    unlisten();
+    CPPUNIT_ASSERT_EQUAL(string("HI"), *pOut);
+}
+
+void test_sodium::filter_optional1()
+{
+    auto p = new_event<boost::optional<string>>();
+    auto e = get<0>(p);
+    auto send_e = get<1>(p);
+    shared_ptr<vector<string>> pOut(new vector<string>);
+    auto unlisten = filter_optional(e).listen([pOut] (const string& s) {
+        pOut->push_back(s);
+    });
+    send_e(boost::optional<string>("tomato"));
+    send_e(boost::optional<string>());
+    send_e(boost::optional<string>("peach"));
+    unlisten();
+    CPPUNIT_ASSERT(vector<string>({ string("tomato"), string("peach") }) == *pOut);
 }
 
 int main(int argc, char* argv[])

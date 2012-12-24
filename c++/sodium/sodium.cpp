@@ -341,7 +341,7 @@ namespace sodium {
                 }, cleanerUpper);
             };
         }
-        
+
         /* Clean up the listener so if there are multiple firings per transaction, they're
            combined into one. */
         std::function<std::function<void()>(transaction_impl*, const std::shared_ptr<node>&,

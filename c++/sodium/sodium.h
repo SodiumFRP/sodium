@@ -272,6 +272,22 @@ namespace sodium {
 #endif
                     );
             }
+
+            /*!
+             * Filter this event based on the specified predicate.
+             */
+            event<A> filter(const std::function<bool(const A&)>& pred)
+            {
+                transaction trans;
+                auto p = impl::unsafe_new_event();
+                auto push = std::get<1>(p);
+                auto target = std::get<2>(p);
+                auto kill = listen_raw(trans.impl(), target,
+                        [pred, push] (impl::transaction_impl* trans, const light_ptr& ptr) {
+                    if (pred(*ptr.castPtr<A>(NULL))) push(trans, ptr);
+                });
+                return std::get<0>(p).add_cleanup(kill);
+            }
     };
 
     /*!
@@ -386,31 +402,16 @@ namespace sodium {
      * Filter an event of optionals, keeping only the defined values.
      */
     template <class A>
-    event<A> filter_optional(impl::transaction_impl* trans0, const event<boost::optional<A>>& input)
+    event<A> filter_optional(const event<boost::optional<A>>& input)
     {
+        transaction trans;
         auto p = impl::unsafe_new_event();
         auto push = std::get<1>(p);
         auto target = std::get<2>(p);
-        auto kill = input.listen_raw(trans0, target,
+        auto kill = input.listen_raw(trans.impl(), target,
                            [push] (impl::transaction_impl* trans, const light_ptr& poa) {
             const boost::optional<A>& oa = *poa.castPtr<boost::optional<A>>(NULL);
             if (oa) push(trans, light_ptr::create<A>(oa.get()));
-        });
-        return std::get<0>(p).add_cleanup(kill);
-    }
-
-    /*!
-     * Filter this event based on the specified predicate.
-     */
-    template <class A>
-    event<A> filter_e(impl::transaction_impl* trans0, const std::function<bool(const A&)>& pred, const event<A>& input)
-    {
-        auto p = impl::unsafe_new_event();
-        auto push = std::get<1>(p);
-        auto target = std::get<2>(p);
-        auto kill = input.listen_raw(trans0, target,
-                [pred, push] (impl::transaction_impl* trans, const light_ptr& ptr) {
-            if (pred(*ptr.castPtr<A>(NULL))) push(trans, ptr);
         });
         return std::get<0>(p).add_cleanup(kill);
     }
@@ -761,8 +762,9 @@ namespace sodium {
     event<A> gate(impl::transaction_impl* trans0,
                   const event<A>& input, const behavior<bool>& gate)
     {
-        return filter_optional<A>(trans0, snapshotWith<A, bool, boost::optional<A>>(
-            trans0, [] (const A& a, const bool& gated) {
+        transaction trans;
+        return filter_optional<A>(snapshotWith<A, bool, boost::optional<A>>(
+            [] (const A& a, const bool& gated) {
                 return gated ? boost::optional<A>(a) : boost::optional<A>();
             },
             input, gate)
