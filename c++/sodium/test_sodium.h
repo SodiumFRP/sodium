@@ -23,6 +23,11 @@ class test_sodium : public CppUnit::TestFixture {
     CPPUNIT_TEST(filter_optional1);
     CPPUNIT_TEST(loop_event);
     CPPUNIT_TEST(gate1);
+    CPPUNIT_TEST(collect1);
+    CPPUNIT_TEST(accum1);
+    CPPUNIT_TEST(countE1);
+    CPPUNIT_TEST(count1);
+    //CPPUNIT_TEST(once1);
     CPPUNIT_TEST_SUITE_END();
 
     void event1();
@@ -34,6 +39,11 @@ class test_sodium : public CppUnit::TestFixture {
     void filter_optional1();
     void loop_event();
     void gate1();
+    void collect1();
+    void accum1();
+    void countE1();
+    void count1();
+    //void once1();
 };
 
 #endif

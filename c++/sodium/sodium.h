@@ -239,6 +239,9 @@ namespace sodium {
             const behavior_& beh);
     };  // end namespace impl
 
+    template <class A>
+    class event;
+
     /*!
      * A like an event, but it tracks the input event's current value and causes it
      * always to be output once at the beginning for each listener.
@@ -338,17 +341,35 @@ namespace sodium {
                 return behavior<B>(impl::map_(FRP_DETYPE_FUNCTION1(A,B,f), *this));
             }
 
-#if 0
             /*!
              * Returns an event describing the changes in a behavior.
              */
-            template <class A>
-            event<A> changes(const behavior<A>& beh) {return event<A>(beh.impl->changes);}
-#endif
-    };
+            event<A> changes(const behavior<A>& beh) const {
+                return event<A>(beh.impl->changes);
+            }
 
-    template <class A>
-    class event;
+            /*!
+             * Returns an event describing the value of a behavior, where there's an initial event
+             * giving the current value.
+             */
+            event<A> values() {
+                transaction trans;
+                auto p = impl::unsafe_new_event();
+                auto out = std::get<0>(p);
+                auto push = std::get<1>(p);
+                auto target = std::get<2>(p);
+                auto kill = listen_value_linked_raw(trans.impl(), target, push);
+                return out.add_cleanup(kill);
+            }
+    };  // end class behavior
+
+    namespace impl {
+        template <class S>
+        struct collect_state {
+            collect_state(const S& s) : s(s) {}
+            S s;
+        };
+    }
 
     template <class A>
     event<A> filter_optional(const event<boost::optional<A>>& input);
@@ -461,7 +482,7 @@ namespace sodium {
              * Filter this event based on the specified predicate, passing through values
              * where the predicate returns true.
              */
-            event<A> filter(const std::function<bool(const A&)>& pred)
+            event<A> filter(const std::function<bool(const A&)>& pred) const
             {
                 transaction trans;
                 auto p = impl::unsafe_new_event();
@@ -474,7 +495,7 @@ namespace sodium {
                 return std::get<0>(p).add_cleanup(kill);
             }
 
-            behavior<A> hold(const A& initA)
+            behavior<A> hold(const A& initA) const
             {
                 transaction trans;
                 return behavior<A>(
@@ -488,7 +509,7 @@ namespace sodium {
              * taken.
              */
             template <class B, class C>
-            event<C> snapshot(const behavior<B>& beh, const std::function<C(A,B)>& combine)
+            event<C> snapshot(const behavior<B>& beh, const std::function<C(A,B)>& combine) const
             {
                 transaction trans;
                 auto p = impl::unsafe_new_event();
@@ -507,7 +528,7 @@ namespace sodium {
              * taken.
              */
             template <class B>
-            event<B> snapshot(const behavior<B>& beh)
+            event<B> snapshot(const behavior<B>& beh) const
             {
                 return snapshot<B, B>(beh, [] (const A&, const B& b) { return b; });
             }
@@ -515,7 +536,7 @@ namespace sodium {
             /*!
              * Allow events through only when the behavior's value is true.
              */
-            event<A> gate(const behavior<bool>& g)
+            event<A> gate(const behavior<bool>& g) const
             {
                 transaction trans;
                 return filter_optional<A>(snapshot<bool, boost::optional<A>>(
@@ -526,7 +547,62 @@ namespace sodium {
                 );
             }
 
-    };
+            /*!
+             * Adapt an event to a new event statefully.  Always outputs one output for each
+             * input.
+             */
+            template <class S, class B>
+            event<B> collect(
+                const S& initS,
+                const std::function<std::tuple<B, S>(const A&, const S&)>& f
+            ) const
+            {
+                transaction trans;
+                std::shared_ptr<impl::collect_state<S>> pState(new impl::collect_state<S>(initS));
+                auto p = impl::unsafe_new_event();
+                auto push = std::get<1>(p);
+                auto target = std::get<2>(p);
+                auto kill = listen_raw(trans.impl(), target,
+                         [pState, push, f] (impl::transaction_impl* trans, const light_ptr& ptr) {
+                    auto outsSt = f(*ptr.castPtr<A>(NULL), pState->s);
+                    pState->s = std::get<1>(outsSt);
+                    push(trans, light_ptr::create<B>(std::get<0>(outsSt)));
+                });
+                return std::get<0>(p).add_cleanup(kill);
+            }
+            
+            template <class B>
+            event<B> accum(
+                const B& initB,
+                const std::function<B(const A&, const B&)>& f
+            ) const
+            {
+                transaction trans;
+                std::shared_ptr<impl::collect_state<B>> pState(new impl::collect_state<B>(initB));
+                auto p = impl::unsafe_new_event();
+                auto push = std::get<1>(p);
+                auto target = std::get<2>(p);
+                auto kill = listen_raw(trans.impl(), target,
+                         [pState, push, f] (impl::transaction_impl* trans, const light_ptr& ptr) {
+                    pState->s = f(*ptr.castPtr<A>(NULL), pState->s);
+                    push(trans, light_ptr::create<B>(pState->s));
+                });
+                return std::get<0>(p).add_cleanup(kill);
+            }
+
+            event<int> countE() const
+            {
+                return accum<int>(0, [] (const A&, const int& total) -> int {
+                    return total+1;
+                });
+            }
+
+            behavior<int> count() const
+            {
+                return countE().hold(0);
+            }
+
+    };  // end class event
 
     template <class A>
     class event_sink : public event<A>
@@ -549,14 +625,6 @@ namespace sodium {
                 push(trans.impl(), ptr);
             }
     };
-
-    namespace impl {
-        template <class S>
-        struct collect_state {
-            collect_state(const S& s) : s(s) {}
-            S s;
-        };
-    }
 
 #if 0
     /*!
@@ -615,31 +683,6 @@ namespace sodium {
 #endif
 
     /*!
-     * Adapt an event to a new event statefully.  Always outputs one output for each
-     * input.
-     */
-    template <class S, class A, class B>
-    event<B> collect(
-        impl::transaction_impl* trans0,
-        const event<A>& input,
-        const S& initS,
-        const std::function<std::tuple<B, S>(const A&, const S&)>& f
-    )
-    {
-        std::shared_ptr<impl::collect_state<S>> pState(new impl::collect_state<S>(initS));
-        auto p = impl::unsafe_new_event();
-        auto push = std::get<1>(p);
-        auto target = std::get<2>(p);
-        auto kill = input.listen_raw(trans0, target,
-                 [pState, push, f] (impl::transaction_impl* trans, const light_ptr& ptr) {
-            auto outsSt = f(*ptr.castPtr<A>(NULL), pState->s);
-            pState->s = std::get<1>(outsSt);
-            push(trans, light_ptr::create<B>(std::get<0>(outsSt)));
-        });
-        return std::get<0>(p).add_cleanup(kill);
-    }
-
-    /*!
      * Filter an event of optionals, keeping only the defined values.
      */
     template <class A>
@@ -683,20 +726,6 @@ namespace sodium {
          */
         inline impl::event_ underlyingevent_(const impl::behavior_& beh) {return beh.impl->changes;}
     };
-
-    /*!
-     * Returns an event describing the value of a behavior, where there's an initial event
-     * giving the current value.
-     */
-    template <class A>
-    event<A> values(impl::transaction_impl* trans0, const behavior<A>& beh) {
-        auto p = impl::unsafe_new_event();
-        auto out = std::get<0>(p);
-        auto push = std::get<1>(p);
-        auto target = std::get<2>(p);
-        auto kill = beh.listen_value_linked_raw(trans0, target, push);
-        return out.add_cleanup(kill);
-    }
 
 #if 0
     /*!
@@ -781,7 +810,7 @@ namespace sodium {
         const behavior<A>& input
     )
     {
-        return behavior<B>(trans0, boost::optional<B>(), effectfully(trans0, f, values<A>(trans0, input)));
+        return behavior<B>(trans0, boost::optional<B>(), effectfully(trans0, f, input.values()));
     }
 
     namespace impl {
@@ -1097,6 +1126,6 @@ namespace sodium {
         );
     }
 #endif
-};
+}  // end namespace sodium
 #endif
 

@@ -22,14 +22,14 @@ using namespace sodium;
 void test_sodium::event1()
 {
     event_sink<int> ev;
-    shared_ptr<string> pOut(new string);
+    shared_ptr<string> out(new string);
     ev.send('?');
     function<void()> unlisten;
     {
         transaction trans;
         ev.send('h');
-        unlisten = ev.listen([pOut] (int ch) {
-            *pOut = *pOut + (char)ch;
+        unlisten = ev.listen([out] (int ch) {
+            *out = *out + (char)ch;
         });
         ev.send('e');
     };
@@ -41,7 +41,7 @@ void test_sodium::event1()
     }
     unlisten();
     ev.send('!');
-    CPPUNIT_ASSERT_EQUAL(string("hello"), *pOut);
+    CPPUNIT_ASSERT_EQUAL(string("hello"), *out);
 }
 
 void test_sodium::map()
@@ -52,108 +52,82 @@ void test_sodium::map()
         sprintf(buf, "%d", x);
         return string(buf);
     });
-    shared_ptr<vector<string>> pOut(new vector<string>);
-    auto unlisten = m.listen([pOut] (const string& x) { pOut->push_back(x); });
+    shared_ptr<vector<string>> out(new vector<string>);
+    auto unlisten = m.listen([out] (const string& x) { out->push_back(x); });
     e.send(5);
     unlisten();
     vector<string> shouldBe = { string("5") };
-    CPPUNIT_ASSERT(shouldBe == *pOut);
+    CPPUNIT_ASSERT(shouldBe == *out);
 }
 
 void test_sodium::merge_non_simultaneous()
 {
     event_sink<int> e1;
     event_sink<int> e2;
-    shared_ptr<vector<int>> pOut(new vector<int>);
-    auto unlisten = e1.merge(e2).listen([pOut] (const int& x) { pOut->push_back(x); });
+    shared_ptr<vector<int>> out(new vector<int>);
+    auto unlisten = e1.merge(e2).listen([out] (const int& x) { out->push_back(x); });
     e1.send(7);
     e2.send(9);
     e1.send(8);
     unlisten();
     vector<int> shouldBe = {7,9,8};
-    CPPUNIT_ASSERT(shouldBe == *pOut);
+    CPPUNIT_ASSERT(shouldBe == *out);
 }
 
 void test_sodium::merge_simultaneous()
 {
     event_sink<int> e;
-    shared_ptr<vector<int>> pOut(new vector<int>);
-    auto unlisten = e.merge(e).listen([pOut] (const int& x) { pOut->push_back(x); });
+    shared_ptr<vector<int>> out(new vector<int>);
+    auto unlisten = e.merge(e).listen([out] (const int& x) { out->push_back(x); });
     e.send(7);
     e.send(9);
     unlisten();
     vector<int> shouldBe = {7,7,9,9};
-    CPPUNIT_ASSERT(shouldBe == *pOut);
+    CPPUNIT_ASSERT(shouldBe == *out);
 }
 
 void test_sodium::coalesce()
 {
     event_sink<int> e1;
     event_sink<int> e2;
-    shared_ptr<vector<int>> pOut(new vector<int>);
+    shared_ptr<vector<int>> out(new vector<int>);
     auto unlisten = e1.merge(e1.map<int>([] (const int& x) -> int { return x * 100; }).merge(e2))
                       .coalesce([] (const int& a, const int& b) -> int { return a+b; })
-                      .listen([pOut] (const int& x) { pOut->push_back(x); });
+                      .listen([out] (const int& x) { out->push_back(x); });
     e1.send(2);
     e1.send(8);
     e2.send(40);
     unlisten();
     vector<int> shouldBe = {202, 808, 40};
-    CPPUNIT_ASSERT(shouldBe == *pOut);
+    CPPUNIT_ASSERT(shouldBe == *out);
 }
 
 void test_sodium::filter()
 {
     event_sink<char> e;
-    shared_ptr<string> pOut(new string);
+    shared_ptr<string> out(new string);
     auto unlisten = e.filter([] (const char& c) { return isupper(c); })
-                     .listen([pOut] (const char& c) { (*pOut) += c; });
+                     .listen([out] (const char& c) { (*out) += c; });
     e.send('H');
     e.send('o');
     e.send('I');
     unlisten();
-    CPPUNIT_ASSERT_EQUAL(string("HI"), *pOut);
+    CPPUNIT_ASSERT_EQUAL(string("HI"), *out);
 }
 
 void test_sodium::filter_optional1()
 {
     event_sink<boost::optional<string>> e;
-    shared_ptr<vector<string>> pOut(new vector<string>);
-    auto unlisten = filter_optional(e).listen([pOut] (const string& s) {
-        pOut->push_back(s);
+    shared_ptr<vector<string>> out(new vector<string>);
+    auto unlisten = filter_optional(e).listen([out] (const string& s) {
+        out->push_back(s);
     });
     e.send(boost::optional<string>("tomato"));
     e.send(boost::optional<string>());
     e.send(boost::optional<string>("peach"));
     unlisten();
-    CPPUNIT_ASSERT(vector<string>({ string("tomato"), string("peach") }) == *pOut);
+    CPPUNIT_ASSERT(vector<string>({ string("tomato"), string("peach") }) == *out);
 }
-
-#if 0
-void test_sodium::loop_event()
-{
-    auto p = new_event<int>();
-    auto ea = get<0>(p);
-    auto send_ea = get<1>(p);
-    event<int> ec;
-    {
-        auto lp = event_loop<int>();
-        auto eb = get<0>(lp);
-        auto loop = get<1>(lp);
-        ec = ea.map<int>([] (const int& x) { return x % 10; })
-                    .merge(eb, [] (const int& x, const int& y) { return x+y; });
-        auto eb_out = ea.map<int>([] (const int& x) { return x / 10; })
-                        .filter([] (const int& x) { return x != 0; });
-        loop(eb_out);
-    }
-    shared_ptr<vector<int>> pOut(new vector<int>);
-    auto unlisten = ec.listen([pOut] (const int& x) { pOut->push_back(x); });
-    send_ea(2);
-    send_ea(52);
-    unlisten();
-    CPPUNIT_ASSERT(vector<int>({ 2, 7 }) == *pOut);
-}
-#endif
 
 void test_sodium::loop_event()
 {
@@ -167,28 +141,125 @@ void test_sodium::loop_event()
                         .filter([] (const int& x) { return x != 0; });
         eb.loop(eb_out);
     }
-    shared_ptr<vector<int>> pOut(new vector<int>);
-    auto unlisten = ec.listen([pOut] (const int& x) { pOut->push_back(x); });
+    shared_ptr<vector<int>> out(new vector<int>);
+    auto unlisten = ec.listen([out] (const int& x) { out->push_back(x); });
     ea.send(2);
     ea.send(52);
     unlisten();
-    CPPUNIT_ASSERT(vector<int>({ 2, 7 }) == *pOut);
+    CPPUNIT_ASSERT(vector<int>({ 2, 7 }) == *out);
 }
 
 void test_sodium::gate1()
 {
     event_sink<char> ec;
     behavior_sink<bool> pred(true);
-    shared_ptr<string> pOut(new string);
-    auto unlisten = ec.gate(pred).listen([pOut] (const char& c) { *pOut += c; });
+    shared_ptr<string> out(new string);
+    auto unlisten = ec.gate(pred).listen([out] (const char& c) { *out += c; });
     ec.send('H');
     pred.send(false);
     ec.send('O');
     pred.send(true);
     ec.send('I');
     unlisten();
-    CPPUNIT_ASSERT_EQUAL(string("HI"), *pOut);
+    CPPUNIT_ASSERT_EQUAL(string("HI"), *out);
 }
+
+/*
+    public void testCollect()
+    {
+        EventSink<Integer> ea = new EventSink();
+        List<Integer> out = new ArrayList();
+        Event<Integer> sum = ea.collect(100,
+            //(a,s) -> new Tuple2(a+s, a+s)
+            new Lambda2<Integer, Integer, Tuple2<Integer,Integer>>() {
+                public Tuple2<Integer,Integer> apply(Integer a, Integer s) {
+                    return new Tuple2<Integer,Integer>(a+s, a+s);
+                }
+            }
+        );
+        Listener l = sum.listen((x) -> { out.add(x); });
+        ea.send(5);
+        ea.send(7);
+        ea.send(1);
+        ea.send(2);
+        ea.send(3);
+        l.unlisten();
+        assertEquals(Arrays.asList(105,112,113,115,118), out);
+    }
+    */
+    
+void test_sodium::collect1()
+{
+    event_sink<int> ea;
+    shared_ptr<vector<int>> out(new vector<int>);
+    event<int> sum = ea.collect<int, int>(100, [] (const int& a, const int& s) {
+        return tuple<int, int>(a+s, a+s);
+    });
+    auto unlisten = sum.listen([out] (const int& x) { out->push_back(x); });
+    ea.send(5);
+    ea.send(7);
+    ea.send(1);
+    ea.send(2);
+    ea.send(3);
+    unlisten();
+    CPPUNIT_ASSERT(std::vector<int>({ 105, 112, 113, 115, 118 }) == *out);
+}
+
+void test_sodium::accum1()
+{
+    event_sink<int> ea;
+    shared_ptr<vector<int>> out(new vector<int>);
+    event<int> sum = ea.accum<int>(100, [] (const int& a, const int& s) -> int {
+        return a+s;
+    });
+    auto unlisten = sum.listen([out] (const int& x) { out->push_back(x); });
+    ea.send(5);
+    ea.send(7);
+    ea.send(1);
+    ea.send(2);
+    ea.send(3);
+    unlisten();
+    CPPUNIT_ASSERT(std::vector<int>({ 105, 112, 113, 115, 118 }) == *out);
+}
+
+void test_sodium::countE1()
+{
+    event_sink<unit> ea;
+    shared_ptr<vector<int>> out(new vector<int>);
+    event<int> sum = ea.countE();
+    auto unlisten = sum.listen([out] (const int& x) { out->push_back(x); });
+    ea.send(unit());
+    ea.send(unit());
+    ea.send(unit());
+    unlisten();
+    CPPUNIT_ASSERT(std::vector<int>({ 1, 2, 3 }) == *out);
+}
+
+void test_sodium::count1()
+{
+    event_sink<unit> ea;
+    shared_ptr<vector<int>> out(new vector<int>);
+    event<int> sum = ea.count().values();
+    auto unlisten = sum.listen([out] (const int& x) { out->push_back(x); });
+    ea.send(unit());
+    ea.send(unit());
+    ea.send(unit());
+    unlisten();
+    CPPUNIT_ASSERT(std::vector<int>({ 1, 2, 3 }) == *out);
+}
+
+/*
+void test_sodium::once1()
+{
+    event_sink<char> e;
+    auto unlisten = e.once().listen([] (const char& x) { *out += c; });
+    e.send('A');
+    e.send('B');
+    e.send('C');
+    unlisten();
+    CPPUNUIT_ASSERT_EQUALS(string("A"), *out);
+}
+*/
 
 int main(int argc, char* argv[])
 {
