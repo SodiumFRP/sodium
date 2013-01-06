@@ -14,6 +14,7 @@
 
 class test_sodium : public CppUnit::TestFixture {
     CPPUNIT_TEST_SUITE(test_sodium);
+    // event tests
     CPPUNIT_TEST(event1);
     CPPUNIT_TEST(map);
     CPPUNIT_TEST(merge_non_simultaneous);
@@ -27,7 +28,14 @@ class test_sodium : public CppUnit::TestFixture {
     CPPUNIT_TEST(accum1);
     CPPUNIT_TEST(countE1);
     CPPUNIT_TEST(count1);
-    //CPPUNIT_TEST(once1);
+    CPPUNIT_TEST(once1);
+    // behaviour tests
+    CPPUNIT_TEST(hold1);
+    CPPUNIT_TEST(snapshot1);
+    CPPUNIT_TEST(values1);
+    CPPUNIT_TEST(constant_behavior);
+    CPPUNIT_TEST(values_then_map);
+    CPPUNIT_TEST(values_twice_then_map);
     CPPUNIT_TEST_SUITE_END();
 
     void event1();
@@ -43,7 +51,13 @@ class test_sodium : public CppUnit::TestFixture {
     void accum1();
     void countE1();
     void count1();
-    //void once1();
+    void once1();
+    void hold1();
+    void snapshot1();
+    void values1();
+    void constant_behavior();
+    void values_then_map();
+    void values_twice_then_map();
 };
 
 #endif

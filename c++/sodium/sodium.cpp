@@ -144,6 +144,47 @@ namespace sodium {
                     );
         }
 
+        event_ event_::once_() const
+        {
+            transaction trans0;
+            auto p = impl::unsafe_new_event();
+            auto push = std::get<1>(p);
+            auto target = std::get<2>(p);
+            std::shared_ptr<function<void()>*> ppKill(new function<void()>*(NULL));
+            auto kill = listen_raw_(trans0.impl(), target,
+                        [push, ppKill] (impl::transaction_impl* trans, const light_ptr& ptr) {
+                push(trans, ptr);
+                function<void()>*& pKill = *ppKill;
+                if (pKill != NULL) {
+                    (*pKill)();
+                    delete pKill;
+                    pKill = NULL;
+                }
+            });
+            (*ppKill) = new std::function<void()>(kill);
+            return std::get<0>(p).add_cleanup([ppKill] () {
+                function<void()>*& pKill = *ppKill;
+                if (pKill != NULL) {
+                    (*pKill)();
+                    delete pKill;
+                    pKill = NULL;
+                }
+            });
+        }
+
+        event_ event_::merge_(const event_& other) const {
+            transaction trans;
+            auto p = impl::unsafe_new_event();
+            auto push = std::get<1>(p);
+            auto target = std::get<2>(p);
+            auto kill_one = this->listen_raw_(trans.impl(), target, push);
+            auto kill_two = other.listen_raw_(trans.impl(), target, push);
+            return std::get<0>(p).add_cleanup([kill_one, kill_two] () {
+                kill_one();
+                kill_two();
+            });
+        }
+
         struct holder {
             holder(
                 const std::function<void(transaction_impl*, const light_ptr&)>& handle,
@@ -302,6 +343,28 @@ namespace sodium {
         )
             : impl(new behavior_impl(changes, sample))
         {
+        }
+
+        event_ behavior_::values_() const
+        {
+            auto sample = impl->sample;
+            auto listen = impl->changes.listen_impl_;
+            return event_(
+                [sample, listen] (
+                    transaction_impl* trans,
+                    const std::shared_ptr<impl::node>& target,
+                    const std::function<void(transaction_impl*, const light_ptr&)>& handler,
+                    const std::shared_ptr<cleaner_upper>& cleaner_upper
+                ) {
+                    light_ptr value = sample();
+                    handler(trans, value);
+                    return listen(trans, target, handler, cleaner_upper);
+                },
+                impl->changes.get_cleaner_upper()
+#if defined(SODIUM_CONSTANT_OPTIMIZATION)
+                , impl->changes.is_never()
+#endif
+            );
         }
 
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)

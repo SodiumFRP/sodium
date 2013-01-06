@@ -164,30 +164,6 @@ void test_sodium::gate1()
     CPPUNIT_ASSERT_EQUAL(string("HI"), *out);
 }
 
-/*
-    public void testCollect()
-    {
-        EventSink<Integer> ea = new EventSink();
-        List<Integer> out = new ArrayList();
-        Event<Integer> sum = ea.collect(100,
-            //(a,s) -> new Tuple2(a+s, a+s)
-            new Lambda2<Integer, Integer, Tuple2<Integer,Integer>>() {
-                public Tuple2<Integer,Integer> apply(Integer a, Integer s) {
-                    return new Tuple2<Integer,Integer>(a+s, a+s);
-                }
-            }
-        );
-        Listener l = sum.listen((x) -> { out.add(x); });
-        ea.send(5);
-        ea.send(7);
-        ea.send(1);
-        ea.send(2);
-        ea.send(3);
-        l.unlisten();
-        assertEquals(Arrays.asList(105,112,113,115,118), out);
-    }
-    */
-    
 void test_sodium::collect1()
 {
     event_sink<int> ea;
@@ -245,21 +221,112 @@ void test_sodium::count1()
     ea.send(unit());
     ea.send(unit());
     unlisten();
-    CPPUNIT_ASSERT(std::vector<int>({ 1, 2, 3 }) == *out);
+    CPPUNIT_ASSERT(std::vector<int>({ 0, 1, 2, 3 }) == *out);
 }
 
-/*
 void test_sodium::once1()
 {
     event_sink<char> e;
-    auto unlisten = e.once().listen([] (const char& x) { *out += c; });
+    shared_ptr<string> out(new string);
+    auto unlisten = e.once().listen([out] (const char& c) { *out += c; });
     e.send('A');
     e.send('B');
     e.send('C');
     unlisten();
-    CPPUNUIT_ASSERT_EQUALS(string("A"), *out);
+    CPPUNIT_ASSERT_EQUAL(string("A"), *out);
 }
-*/
+
+void test_sodium::hold1()
+{
+    event_sink<int> e;
+    behavior<int> b = e.hold(0);
+    shared_ptr<vector<int>> out(new vector<int>);
+    auto unlisten = b.changes().listen([out] (const int& x) { out->push_back(x); });
+    e.send(2);
+    e.send(9);
+    unlisten();
+    CPPUNIT_ASSERT(vector<int>({ 2, 9 }) == *out);
+}
+
+void test_sodium::snapshot1()
+{
+    behavior_sink<int> b(0);
+    event_sink<long> trigger;
+    shared_ptr<vector<string>> out(new vector<string>);
+    auto unlisten = trigger.snapshot<long,string>(b, [out] (const long& x, const int& y) -> string {
+        char buf[129];
+        sprintf(buf, "%ld %d", x, y);
+        return buf;
+    }).listen([out] (const string& s) {
+        out->push_back(s);
+    });
+    trigger.send(100l);
+    b.send(2);
+    trigger.send(200l);
+    b.send(9);
+    b.send(1);
+    trigger.send(300l);
+    unlisten();
+    CPPUNIT_ASSERT(vector<string>({ string("100 0"), string("200 2"), string("300 1") }) == *out);
+}
+
+void test_sodium::values1()
+{
+    behavior_sink<int> b(9);
+    shared_ptr<vector<int>> out(new vector<int>);
+    auto unlisten = b.values().listen([out] (const int& x) { out->push_back(x); });
+    b.send(2);
+    b.send(7);
+    unlisten();
+    CPPUNIT_ASSERT(vector<int>({ 9, 2, 7 }) == *out);
+}
+
+void test_sodium::constant_behavior()
+{
+    behavior_sink<int> b(12);
+    shared_ptr<vector<int>> out(new vector<int>);
+    auto unlisten = b.values().listen([out] (const int& x) { out->push_back(x); });
+    unlisten();
+    CPPUNIT_ASSERT(vector<int>({ 12 }) == *out);
+}
+
+void test_sodium::values_then_map()
+{
+    behavior_sink<int> b(9);
+    shared_ptr<vector<int>> out(new vector<int>);
+    auto unlisten = b.values().map<int>([] (const int& x) { return x + 100; })
+        .listen([out] (const int& x) { out->push_back(x); });
+    b.send(2);
+    b.send(7);
+    unlisten();
+    CPPUNIT_ASSERT(vector<int>({ 109, 102, 107 }) == *out);
+}
+
+/*
+ * This is used for tests where values() produces a single initial value on listen,
+ * and then we double that up by causing that single initial event to be repeated.
+ * This needs testing separately, because the code must be done carefully to achieve
+ * this.
+ */
+template <class A>
+event<A> doubleUp(const event<A>& ea)
+{
+    return ea.merge(ea);
+}
+
+void test_sodium::values_twice_then_map()
+{
+    behavior_sink<int> b(9);
+    shared_ptr<vector<int>> out(new vector<int>);
+    auto unlisten = doubleUp<int>(b.values()).map<int>([] (const int& x) { return x + 100; })
+        .listen([out] (const int& x) { out->push_back(x); });
+    b.send(2);
+    b.send(7);
+    unlisten();
+    for (auto it = out->begin(); it != out->end(); ++it)
+        printf("%d\n", *it);
+    CPPUNIT_ASSERT(vector<int>({ 109,109,102,102,107,107 }) == *out);
+}
 
 int main(int argc, char* argv[])
 {

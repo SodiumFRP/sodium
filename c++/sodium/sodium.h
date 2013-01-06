@@ -79,6 +79,10 @@ namespace sodium {
             const std::shared_ptr<cleaner_upper>& get_cleaner_upper() const {
                 return cleanerUpper;
             }
+            
+        protected:
+            event_ once_() const;
+            event_ merge_(const event_& other) const;
         };
         #define FRP_DETYPE_FUNCTION1(A,B,f) \
                    [f] (const light_ptr& a) -> light_ptr { \
@@ -233,6 +237,8 @@ namespace sodium {
                                    const std::function<void(impl::transaction_impl*, const light_ptr&)>& handle) const {
                     return impl->listen_value_raw()(trans, target, handle);
                 };
+
+                event_ values_() const;
         };
 
         behavior_ map_(const std::function<light_ptr(const light_ptr&)>& f,
@@ -344,8 +350,8 @@ namespace sodium {
             /*!
              * Returns an event describing the changes in a behavior.
              */
-            event<A> changes(const behavior<A>& beh) const {
-                return event<A>(beh.impl->changes);
+            event<A> changes() const {
+                return event<A>(impl->changes);
             }
 
             /*!
@@ -353,13 +359,7 @@ namespace sodium {
              * giving the current value.
              */
             event<A> values() {
-                transaction trans;
-                auto p = impl::unsafe_new_event();
-                auto out = std::get<0>(p);
-                auto push = std::get<1>(p);
-                auto target = std::get<2>(p);
-                auto kill = listen_value_linked_raw(trans.impl(), target, push);
-                return out.add_cleanup(kill);
+                return event<A>(values_());
             }
     };  // end class behavior
 
@@ -435,16 +435,7 @@ namespace sodium {
             }
 
             event<A> merge(const event<A>& other) const {
-                transaction trans;
-                auto p = impl::unsafe_new_event();
-                auto push = std::get<1>(p);
-                auto target = std::get<2>(p);
-                auto kill_one = this->listen_raw(trans.impl(), target, push);
-                auto kill_two = other.listen_raw(trans.impl(), target, push);
-                return std::get<0>(p).add_cleanup([kill_one, kill_two] () {
-                    kill_one();
-                    kill_two();
-                });
+                return event<A>(merge_(other));
             }
 
             /*!
@@ -509,7 +500,7 @@ namespace sodium {
              * taken.
              */
             template <class B, class C>
-            event<C> snapshot(const behavior<B>& beh, const std::function<C(A,B)>& combine) const
+            event<C> snapshot(const behavior<B>& beh, const std::function<C(const A&, const B&)>& combine) const
             {
                 transaction trans;
                 auto p = impl::unsafe_new_event();
@@ -600,6 +591,11 @@ namespace sodium {
             behavior<int> count() const
             {
                 return countE().hold(0);
+            }
+
+            event<A> once() const
+            {
+                return event<A>(once_());
             }
 
     };  // end class event
@@ -1092,40 +1088,6 @@ namespace sodium {
         );
         return apply(trans0, apply(trans0, ba.map_(fa), bb), bc);
     }
-
-#if 0
-    /*!
-     * Only let the first occurrence of the event through.
-     */
-    template <class A>
-    event<A> once(impl::transaction_impl* trans0, const event<A>& input) {
-        return collect_n<bool,A,A>(trans0, input, true, [] (A a, bool open) -> std::tuple<List<A>, bool> {
-            if (open)
-                return std::tuple<List<A>, bool>(List<A>(a, List<A>()), false);
-            else
-                return std::tuple<List<A>, bool>(List<A>(), false);
-        });
-    }
-#endif
-
-#if 0
-    /*!
-     * Convert a list of behaviors of A into a behavior containing a list of A.
-     */
-    template <class A>
-    behavior<List<A>> append(
-            impl::transaction_impl* trans0, const List<frp::behavior<A>>& behs) {
-        return foldr<frp::behavior<List<A>>, frp::behavior<A>>(
-            [trans0] (const frp::behavior<A>& bX, const frp::behavior<List<A>>& bXS) {
-                return lift2<A, List<A>, List<A>>(trans0, [] (const A& x, const List<A>& xs) {
-                    return x %= xs;
-                }, bX, bXS);
-            },
-            frp::behavior<List<A>>(List<A>()),
-            behs
-        );
-    }
-#endif
 }  // end namespace sodium
 #endif
 
