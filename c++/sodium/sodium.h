@@ -484,7 +484,7 @@ namespace sodium {
                 return std::get<0>(p).add_cleanup(kill);
             }
 
-            event<int, P> countE() const
+            event<int, P> count_e() const
             {
                 return accum<int>(0, [] (const A&, const int& total) -> int {
                     return total+1;
@@ -493,7 +493,7 @@ namespace sodium {
 
             behavior<int, P> count() const
             {
-                return countE().hold(0);
+                return count_e().hold(0);
             }
 
             event<A, P> once() const
