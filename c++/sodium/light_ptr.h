@@ -46,8 +46,8 @@ namespace sodium {
             void* value; \
             impl::count* count; \
          \
-            template <class A> inline A* castPtr(A*) {return (A*)value;} \
-            template <class A> inline const A* castPtr(A*) const {return (A*)value;} \
+            template <class A> inline A* cast_ptr(A*) {return (A*)value;} \
+            template <class A> inline const A* cast_ptr(A*) const {return (A*)value;} \
         };
 
     SODIUM_DECLARE_LIGHTPTR(light_ptr)        // Thread-safe variant

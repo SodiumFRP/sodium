@@ -150,6 +150,14 @@ namespace sodium {
                     );
         }
 
+        behavior_ event_::hold_(const light_ptr& initA) const
+        {
+            transaction trans;
+            return behavior_(
+                std::shared_ptr<impl::behavior_impl>(impl::hold(trans.impl(), initA, *this))
+            );
+        }
+
         event_ event_::once_() const
         {
             transaction trans0;
@@ -164,8 +172,9 @@ namespace sodium {
             };
             auto sample_now = this->sample_now_;
             auto p = impl::unsafe_new_event([killOnce, sample_now] (vector<light_ptr>& items) {
+                size_t start = items.size();
                 sample_now(items);
-                if (items.begin() != items.end()) {
+                if (items.begin() + start != items.end()) {
                     auto it = items.begin();
                     ++it;
                     items.erase(it, items.end());
@@ -229,15 +238,16 @@ namespace sodium {
                         cleanerUpper);
                 },
                 [sample_now_, combine] (vector<light_ptr>& items) {
+                    size_t start = items.size();
                     sample_now_(items);
-                    if (items.begin() != items.end()) {
-                        auto it = items.begin();
-                        it++;
+                    auto first = items.begin() + start;
+                    if (first != items.end()) {
+                        auto it = first + 1;
                         if (it != items.end()) {
-                            light_ptr sum = *items.begin();
+                            light_ptr sum = *first;
                             while (it != items.end())
                                 sum = combine(sum, *it++);
-                            items.clear();
+                            items.erase(first, items.end());
                             items.push_back(sum);
                         }
                     }
@@ -247,6 +257,13 @@ namespace sodium {
                 , is_never_
 #endif
             );
+        }
+        
+        event_ event_::last_firing_only_() const
+        {
+            return coalesce_([] (const light_ptr& fst, const light_ptr& snd) {
+                return snd;
+            });
         }
 
         /*!
@@ -259,8 +276,9 @@ namespace sodium {
             transaction trans;
             auto sample_now = this->sample_now_;
             auto p = impl::unsafe_new_event([sample_now, combine, beh] (vector<light_ptr>& items) {
+                size_t start = items.size();
                 sample_now(items);
-                for (auto it = items.begin(); it != items.end(); ++it)
+                for (auto it = items.begin() + start; it != items.end(); ++it)
                     *it = combine(*it, beh.impl->sample());
             });
             auto push = std::get<1>(p);
@@ -481,7 +499,7 @@ namespace sodium {
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
                 , impl->changes.is_never()
 #endif
-            );
+            ).last_firing_only_();
         }
 
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
@@ -494,136 +512,6 @@ namespace sodium {
                                             : boost::optional<light_ptr>();
         }
 #endif
-
-        /* Clean up the listener so if there are multiple firings per transaction, they're
-           combined into one. */
-        std::function<std::function<void()>(transaction_impl*, const std::shared_ptr<node>&,
-                                            const std::function<void(transaction_impl*, const light_ptr&)>&,
-                                            const std::shared_ptr<cleaner_upper>&)>
-            coalesce_with_cu_impl(
-                const std::function<light_ptr(const light_ptr&, const light_ptr&)>& combine,
-                const std::function<std::function<void()>(transaction_impl*, const std::shared_ptr<node>&,
-                                const std::function<void(transaction_impl*, const light_ptr&)>&,
-                                const std::shared_ptr<cleaner_upper>&)>& listen_raw
-            )
-        {
-            return [combine, listen_raw] (transaction_impl* trans, const std::shared_ptr<node>& target,
-                                const std::function<void(transaction_impl*, const light_ptr&)>& handle,
-                                const std::shared_ptr<cleaner_upper>& cleanerUpper)
-                                                                            -> std::function<void()> {
-                std::shared_ptr<coalesce_state> pState(new coalesce_state);
-                return listen_raw(trans, target, [handle, combine, pState, target] (transaction_impl* trans, const light_ptr& ptr) {
-                    if (!pState->oValue) {
-                        pState->oValue = boost::optional<light_ptr>(ptr);
-                        trans->prioritized(target, [handle, pState] (transaction_impl* trans) {
-                            if (pState->oValue) {
-                                handle(trans, pState->oValue.get());
-                                pState->oValue = boost::optional<light_ptr>();
-                            }
-                        });
-                    }
-                    else
-                        pState->oValue = make_optional(combine(pState->oValue.get(), ptr));
-                }, cleanerUpper);
-            };
-        }
-
-        /* Clean up the listener so if there are multiple firings per transaction, they're
-           combined into one. */
-        std::function<std::function<void()>(transaction_impl*, const std::shared_ptr<node>&,
-                                            const std::function<void(transaction_impl*, const light_ptr&)>&)>
-            coalesce_with_impl(
-                const std::function<light_ptr(const light_ptr&, const light_ptr&)>& combine,
-                const std::function<std::function<void()>(transaction_impl*, const std::shared_ptr<node>&,
-                                const std::function<void(transaction_impl*, const light_ptr&)>&)>& listen_raw
-            )
-        {
-            return [combine, listen_raw] (transaction_impl* trans, const std::shared_ptr<node>& target,
-                                const std::function<void(transaction_impl*, const light_ptr&)>& handle)
-                                                                            -> std::function<void()> {
-                std::shared_ptr<coalesce_state> pState(new coalesce_state);
-                return listen_raw(trans, target, [handle, combine, pState, target] (transaction_impl* trans, const light_ptr& ptr) {
-                    if (!pState->oValue) {
-                        pState->oValue = boost::optional<light_ptr>(ptr);
-                        trans->prioritized(target, [handle, pState] (transaction_impl* trans) {
-                            if (pState->oValue) {
-                                handle(trans, pState->oValue.get());
-                                pState->oValue = boost::optional<light_ptr>();
-                            }
-                        });
-                    }
-                    else
-                        pState->oValue = make_optional(combine(pState->oValue.get(), ptr));
-                });
-            };
-        }
-
-        std::function<std::function<void()>(transaction_impl*, const std::shared_ptr<node>&,
-                                            const std::function<void(transaction_impl*, const light_ptr&)>&)>
-            coalesce(
-                const std::function<std::function<void()>(transaction_impl*, const std::shared_ptr<node>&,
-                                                    const std::function<void(transaction_impl*, const light_ptr&)>&)>& listen_raw
-            )
-        {
-            return [listen_raw] (transaction_impl* trans, const std::shared_ptr<node>& target,
-                                const std::function<void(transaction_impl*, const light_ptr&)>& handle) -> std::function<void()> {
-                std::shared_ptr<coalesce_state> pState(new coalesce_state);
-                return listen_raw(trans, target, [handle, pState, target] (transaction_impl* trans, const light_ptr& ptr) {
-                    bool first = !(bool)pState->oValue;
-                    pState->oValue = boost::optional<light_ptr>(ptr);
-                    if (first)
-                        trans->prioritized(target, [handle, pState] (transaction_impl* trans) {
-                            if (pState->oValue) {
-                                handle(trans, pState->oValue.get());
-                                pState->oValue = boost::optional<light_ptr>();
-                            }
-                        });
-                });
-            };
-        }
-
-        std::function<std::function<void()>(transaction_impl*, const std::shared_ptr<node>&,
-                                            const std::function<void(transaction_impl*, const light_ptr&)>&,
-                                            const std::shared_ptr<cleaner_upper>&)>
-            coalesce_cu(
-                const std::function<std::function<void()>(transaction_impl*, const std::shared_ptr<node>&,
-                                                    const std::function<void(transaction_impl*, const light_ptr&)>&,
-                                                    const std::shared_ptr<cleaner_upper>&)>& listen_raw
-            )
-        {
-            return [listen_raw] (transaction_impl* trans, const std::shared_ptr<node>& target,
-                                const std::function<void(transaction_impl*, const light_ptr&)>& handle,
-                                const std::shared_ptr<cleaner_upper>& cleanerUpper) -> std::function<void()> {
-                std::shared_ptr<coalesce_state> pState(new coalesce_state);
-                return listen_raw(trans, target, [handle, pState, target] (transaction_impl* trans, const light_ptr& ptr) {
-                    bool first = !(bool)pState->oValue;
-                    pState->oValue = boost::optional<light_ptr>(ptr);
-                    if (first)
-                        trans->prioritized(target, [handle, pState] (transaction_impl* trans) {
-                            if (pState->oValue) {
-                                handle(trans, pState->oValue.get());
-                                pState->oValue = boost::optional<light_ptr>();
-                            }
-                        });
-                }, cleanerUpper);
-            };
-        }
-
-        std::function<std::function<void()>(transaction_impl*, const std::shared_ptr<node>&,
-                         const std::function<void(transaction_impl*, const light_ptr&)>&)>
-                                             behavior_impl::listen_value_raw() const
-        {
-            const event_& changes(this->changes);
-            const std::function<boost::optional<light_ptr>()>& sample(this->sample);
-            return [changes, sample] (transaction_impl* trans, const std::shared_ptr<node>& target,
-                               const std::function<void(transaction_impl*, const light_ptr&)>& handle
-                           ) -> std::function<void()> {
-                auto oValue = sample();
-                if (oValue)
-                    handle(trans, oValue.get());
-                return changes.listen_raw_(trans, target, handle);
-            };
-        }
 
         struct applicative_state {
             applicative_state() {}
@@ -642,7 +530,7 @@ namespace sodium {
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
             boost::optional<light_ptr> ocf = bf.getConstantValue();
             if (ocf) { // function is constant
-                auto f = *ocf.get().castPtr<std::function<light_ptr(const light_ptr&)>>(NULL);
+                auto f = *ocf.get().cast_ptr<std::function<light_ptr(const light_ptr&)>>(NULL);
                 return impl::map_(f, ba);  // map optimizes to a constant where ba is constant
             }
             else {
@@ -651,7 +539,7 @@ namespace sodium {
                     auto a = oca.get();
                     return impl::map_([a] (const light_ptr& pf) -> light_ptr {
                         const std::function<light_ptr(const light_ptr&)>& f =
-                            *pf.castPtr<std::function<light_ptr(const light_ptr&)>>(NULL);
+                            *pf.cast_ptr<std::function<light_ptr(const light_ptr&)>>(NULL);
                         return f(a);
                     }, bf);
                 }
@@ -668,32 +556,28 @@ namespace sodium {
                         if (oo)
                             push(trans, oo.get());
                     };
-                    auto kill1 = bf.listen_value_raw(trans0, target,
+                    auto kill1 = bf.values_().listen_raw_(trans0, target,
                             [state, update] (transaction_impl* trans, const light_ptr& pf) {
-                        state->oF = boost::make_optional(*pf.castPtr<std::function<light_ptr(const light_ptr&)>>(NULL));
+                        state->oF = boost::make_optional(*pf.cast_ptr<std::function<light_ptr(const light_ptr&)>>(NULL));
                         update(trans);
                     });
-                    auto kill2 = ba.listen_value_raw(trans0, target,
+                    auto kill2 = ba.values_().listen_raw_(trans0, target,
                             [state, update] (transaction_impl* trans, const light_ptr& pa) {
                         state->oA = boost::make_optional(pa);
                         update(trans);
                     });
-                    auto f = *bf.impl->sample().castPtr<std::function<light_ptr(const light_ptr&)>>(NULL);
+                    auto f = *bf.impl->sample().cast_ptr<std::function<light_ptr(const light_ptr&)>>(NULL);
                     return behavior_(impl::hold(
                         trans0,
                         f(ba.impl->sample()),
                         std::get<0>(p).add_cleanup(kill1)
                                       .add_cleanup(kill2)
                     ));
-    #if defined(SODIUM_CONSTANT_OPTIMIZATION)
+#if defined(SODIUM_CONSTANT_OPTIMIZATION)
                 }
             }
-    #endif
+#endif
         }
-
-    };  // end namespace impl
-
-    namespace impl {
 
         /*!
          * Map a function over this event to modify the output value.
@@ -716,8 +600,9 @@ namespace sodium {
                         }, cu);
                     },
                     [sample_now, f] (vector<light_ptr>& items) {
+                        size_t start = items.size();
                         sample_now(items);
-                        for (auto it = items.begin(); it != items.end(); ++it)
+                        for (auto it = items.begin() + start; it != items.end(); ++it)
                             *it = f(*it);
                     },
                     ev.get_cleaner_upper()
@@ -742,5 +627,37 @@ namespace sodium {
                     }
                 );
         }
+
+        behavior_ switch_b(const behavior_& bba)
+        {
+            transaction trans0;
+            light_ptr za = bba.impl->sample().cast_ptr<behavior_>(NULL)->impl->sample();
+            std::shared_ptr<optional<function<void()>>> pKillInner(new optional<function<void()>>);
+            auto killInner = [pKillInner] () {
+                if (*pKillInner) {
+                    pKillInner->get()();
+                    *pKillInner = optional<function<void()>>();
+                }
+            };
+            auto p = unsafe_new_event();
+            auto push = std::get<1>(p);
+            auto target = std::get<2>(p);
+            auto killOuter = bba.values_().listen_raw_(trans0.impl(), target,
+                [killInner, pKillInner, target, push] (transaction_impl* trans, const light_ptr& pa) {
+                // Note: If any switch takes place during a transaction, then the
+                // values().listen will always cause a sample to be fetched from the
+                // one we just switched to. The caller will be fetching our output
+                // using values().listen, and values() throws away all firings except
+                // for the last one. Therefore, anything from the old input behaviour
+                // that might have happened during this transaction will be suppressed.
+                killInner();
+                const behavior_& ba = *pa.cast_ptr<behavior_>(NULL);
+                *pKillInner = optional<function<void()>>(
+                    ba.values_().listen_raw_(trans, target, push)
+                );
+            });
+            return std::get<0>(p).add_cleanup(killInner).add_cleanup(killOuter).hold_(za);
+        }
+
     };  // end namespace impl
 };  // end namespace sodium

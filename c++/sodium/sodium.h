@@ -27,6 +27,8 @@ namespace sodium {
         class behavior_;
 
         class event_ {
+        friend class behavior_;
+        friend behavior_ switch_b(const behavior_& bba);
         public:
             typedef std::function<std::function<void()>(
                 transaction_impl* trans,
@@ -83,15 +85,17 @@ namespace sodium {
             }
 
         protected:
+            behavior_ hold_(const light_ptr& initA) const;
             event_ once_() const;
             event_ merge_(const event_& other) const;
             event_ coalesce_(const std::function<light_ptr(const light_ptr&, const light_ptr&)>& combine) const;
+            event_ last_firing_only_() const;
             event_ snapshot_(const behavior_& beh, const std::function<light_ptr(const light_ptr&, const light_ptr&)>& combine) const;
             event_ filter_(const std::function<bool(const light_ptr&)>& pred) const;
         };
         #define FRP_DETYPE_FUNCTION1(A,B,f) \
                    [f] (const light_ptr& a) -> light_ptr { \
-                        return light_ptr::create<B>(f(*a.castPtr<A>(NULL))); \
+                        return light_ptr::create<B>(f(*a.cast_ptr<A>(NULL))); \
                    }
 
         event_ map_(const std::function<light_ptr(const light_ptr&)>& f,
@@ -115,86 +119,6 @@ namespace sodium {
         struct coalesce_state {
             boost::optional<light_ptr> oValue;
         };
-
-        std::function<std::function<void()>(transaction_impl*, const std::shared_ptr<node>&,
-                                            const std::function<void(transaction_impl*, const light_ptr&)>&,
-                                            const std::shared_ptr<cleaner_upper>&)>
-            coalesce_with_cu_impl(
-                const std::function<light_ptr(const light_ptr&, const light_ptr&)>& combine,
-                const std::function<std::function<void()>(transaction_impl*, const std::shared_ptr<node>&,
-                                const std::function<void(transaction_impl*, const light_ptr&)>&,
-                                const std::shared_ptr<cleaner_upper>&)>& listen_raw
-            );
-
-        /* Clean up the listener so if there are multiple firings per transaction, they're
-           combined into one. */
-        template <class A>
-        inline std::function<std::function<void()>(transaction_impl*, const std::shared_ptr<node>&,
-                                            const std::function<void(transaction_impl*, const light_ptr&)>&,
-                                            const std::shared_ptr<cleaner_upper>&)>
-            coalesce_with_cu(
-                const std::function<A(const A&, const A&)>& combine,
-                const std::function<std::function<void()>(transaction_impl*, const std::shared_ptr<node>&,
-                                const std::function<void(transaction_impl*, const light_ptr&)>&,
-                                const std::shared_ptr<cleaner_upper>&)>& listen_raw
-            )
-        {
-            return coalesce_with_cu_impl(
-                [combine] (const light_ptr& a, const light_ptr& b) -> light_ptr {
-                    return light_ptr::create<A>(combine(*a.castPtr<A>(NULL), *b.castPtr<A>(NULL)));
-                },
-                listen_raw);
-        }
-
-        std::function<std::function<void()>(transaction_impl*, const std::shared_ptr<node>&,
-                                            const std::function<void(transaction_impl*, const light_ptr&)>&)>
-            coalesce_with_impl(
-                const std::function<light_ptr(const light_ptr&, const light_ptr&)>& combine,
-                const std::function<std::function<void()>(transaction_impl*, const std::shared_ptr<node>&,
-                                const std::function<void(transaction_impl*, const light_ptr&)>&)>& listen_raw
-            );
-
-        /* Clean up the listener so if there are multiple firings per transaction, they're
-           combined into one. */
-        template <class A>
-        inline std::function<std::function<void()>(transaction_impl*, const std::shared_ptr<node>&,
-                                            const std::function<void(transaction_impl*, const light_ptr&)>&)>
-            coalesce_with(
-                const std::function<A(const A&, const A&)>& combine,
-                const std::function<std::function<void()>(transaction_impl*, const std::shared_ptr<node>&,
-                                const std::function<void(transaction_impl*, const light_ptr&)>&)>& listen_raw
-            )
-        {
-            return coalesce_with_cu_impl([combine] (
-                const light_ptr& a, const light_ptr& b) -> light_ptr {
-                    return light_ptr::create<A>(combine(*a.castPtr<A>(NULL), *b.castPtr<A>(NULL)));
-                },
-                listen_raw);
-        }
-
-        /* Clean up the listener so it gives only one value per transaction, specifically
-           the last one. This is cut-and-pasted instead of being written in terms of coalesce_with
-           because it's so commonly used, it's worth doing that to produce less template bloat.
-         */
-        std::function<std::function<void()>(transaction_impl*, const std::shared_ptr<node>&,
-                                            const std::function<void(transaction_impl*, const light_ptr&)>&)>
-            coalesce(
-                const std::function<std::function<void()>(transaction_impl*, const std::shared_ptr<node>&,
-                                const std::function<void(transaction_impl*, const light_ptr&)>&)>& listen_raw
-            );
-
-        /* Clean up the listener so it gives only one value per transaction, specifically
-           the last one. This is cut-and-pasted instead of being written in terms of coalesce_with
-           because it's so commonly used, it's worth doing that to produce less template bloat.
-         */
-        std::function<std::function<void()>(transaction_impl*, const std::shared_ptr<node>&,
-                                            const std::function<void(transaction_impl*, const light_ptr&)>&,
-                                            const std::shared_ptr<cleaner_upper>&)>
-            coalesce_cu(
-                const std::function<std::function<void()>(transaction_impl*, const std::shared_ptr<node>&,
-                                const std::function<void(transaction_impl*, const light_ptr&)>&,
-                                const std::shared_ptr<cleaner_upper>&)>& listen_raw
-            );
 
         struct behavior_impl {
             behavior_impl(const light_ptr& constant);
@@ -243,10 +167,12 @@ namespace sodium {
                 boost::optional<light_ptr> getConstantValue() const;
 #endif
 
+#if 0
                 std::function<void()> listen_value_raw(impl::transaction_impl* trans, const std::shared_ptr<impl::node>& target,
                                    const std::function<void(impl::transaction_impl*, const light_ptr&)>& handle) const {
                     return impl->listen_value_raw()(trans, target, handle);
                 };
+#endif
 
                 event_ values_() const;
         };
@@ -308,21 +234,8 @@ namespace sodium {
              * Sample the value of this behavior.
              */
             A sample() const {
-                return *impl->sample().template castPtr<A>(NULL);
+                return *impl->sample().template cast_ptr<A>(NULL);
             }
-
-            std::function<void()> listen_value_linked_raw(impl::transaction_impl* trans, const std::shared_ptr<impl::node>& target,
-                               const std::function<void(impl::transaction_impl*, const light_ptr&)>& handle) const {
-                return impl::coalesce(impl->listen_value_raw())(trans, target, handle);
-            };
-
-            std::function<void()> listen_value_linked(impl::transaction_impl* trans, const std::shared_ptr<impl::node>& target,
-                               const std::function<void(impl::transaction_impl*, const A&)>& handle) const {
-                return impl::coalesce(impl->listen_value_raw())(trans, target,
-                               [handle] (impl::transaction_impl* trans, const light_ptr& ptr) {
-                    handle(trans, *ptr.castPtr<A>(NULL));
-                });
-            };
 
             /*!
              * listen to the underlying event, i.e. to updates.
@@ -368,7 +281,7 @@ namespace sodium {
              * Returns an event describing the value of a behavior, where there's an initial event
              * giving the current value.
              */
-            event<A> values() {
+            event<A> values() const {
                 return event<A>(values_());
             }
     };  // end class behavior
@@ -421,7 +334,7 @@ namespace sodium {
             std::function<void()> listen(std::function<void(const A&)> handle) const {
                 transaction trans;
                 return listen_raw(trans.impl(), std::shared_ptr<impl::node>(), [handle] (impl::transaction_impl* trans, const light_ptr& ptr) {
-                    handle(*ptr.castPtr<A>(NULL));
+                    handle(*ptr.cast_ptr<A>(NULL));
                 });
             };
     
@@ -461,7 +374,7 @@ namespace sodium {
             event<A> coalesce(const std::function<A(const A&, const A&)>& combine) const
             {
                 return event<A>(coalesce_([combine] (const light_ptr& a, const light_ptr& b) -> light_ptr {
-                    return light_ptr::create<A>(combine(*a.castPtr<A>(NULL), *b.castPtr<A>(NULL)));
+                    return light_ptr::create<A>(combine(*a.cast_ptr<A>(NULL), *b.cast_ptr<A>(NULL)));
                 }));
             }
 
@@ -485,16 +398,13 @@ namespace sodium {
             event<A> filter(const std::function<bool(const A&)>& pred) const
             {
                 return event<A>(filter_([pred] (const light_ptr& a) {
-                    return pred(*a.castPtr<A>(NULL));
+                    return pred(*a.cast_ptr<A>(NULL));
                 }));
             }
 
             behavior<A> hold(const A& initA) const
             {
-                transaction trans;
-                return behavior<A>(
-                    std::shared_ptr<impl::behavior_impl>(impl::hold(trans.impl(), light_ptr::create<A>(initA), *this))
-                );
+                return behavior<A>(hold_(light_ptr::create<A>(initA)));
             }
 
             /*!
@@ -506,7 +416,7 @@ namespace sodium {
             event<C> snapshot(const behavior<B>& beh, const std::function<C(const A&, const B&)>& combine) const
             {
                 return event<C>(snapshot_(beh, [combine] (const light_ptr& a, const light_ptr& b) -> light_ptr {
-                    return light_ptr::create<C>(combine(*a.castPtr<A>(NULL), *b.castPtr<B>(NULL)));
+                    return light_ptr::create<C>(combine(*a.cast_ptr<A>(NULL), *b.cast_ptr<B>(NULL)));
                 }));
             }
 
@@ -552,7 +462,7 @@ namespace sodium {
                 auto target = std::get<2>(p);
                 auto kill = listen_raw(trans.impl(), target,
                          [pState, push, f] (impl::transaction_impl* trans, const light_ptr& ptr) {
-                    auto outsSt = f(*ptr.castPtr<A>(NULL), pState->s);
+                    auto outsSt = f(*ptr.cast_ptr<A>(NULL), pState->s);
                     pState->s = std::get<1>(outsSt);
                     push(trans, light_ptr::create<B>(std::get<0>(outsSt)));
                 });
@@ -572,7 +482,7 @@ namespace sodium {
                 auto target = std::get<2>(p);
                 auto kill = listen_raw(trans.impl(), target,
                          [pState, push, f] (impl::transaction_impl* trans, const light_ptr& ptr) {
-                    pState->s = f(*ptr.castPtr<A>(NULL), pState->s);
+                    pState->s = f(*ptr.cast_ptr<A>(NULL), pState->s);
                     push(trans, light_ptr::create<B>(pState->s));
                 });
                 return std::get<0>(p).add_cleanup(kill);
@@ -638,7 +548,7 @@ namespace sodium {
         auto target = std::get<2>(p);
         auto kill = input.listen_raw(trans0, target,
                     [pState, f, push] (impl::transaction_impl* trans, const light_ptr& ptr) {
-            auto outsSt = f(*ptr.castPtr<A>(NULL), pState->s);
+            auto outsSt = f(*ptr.cast_ptr<A>(NULL), pState->s);
             pState->s = std::get<1>(outsSt);
             for (auto outputs = std::get<0>(outsSt); outputs; outputs = outputs.tail())
                 push(trans, light_ptr::create<B>(outputs.head()));
@@ -666,7 +576,7 @@ namespace sodium {
         auto target = std::get<2>(p);
         auto kill = input.listen_raw(trans0, target,
                     [pState, push, f] (impl::transaction_impl* trans, const light_ptr& ptr) {
-            auto outsSt = f(trans.cast__((P*)NULL), *ptr.castPtr<A>(NULL), pState->s);
+            auto outsSt = f(trans.cast__((P*)NULL), *ptr.cast_ptr<A>(NULL), pState->s);
             pState->s = std::get<1>(outsSt);
             for (auto outputs = std::get<0>(outsSt); outputs; outputs = outputs.tail())
                 push(trans, light_ptr::create<B>(outputs.head()));
@@ -687,7 +597,7 @@ namespace sodium {
         auto target = std::get<2>(p);
         auto kill = input.listen_raw(trans.impl(), target,
                            [push] (impl::transaction_impl* trans, const light_ptr& poa) {
-            const boost::optional<A>& oa = *poa.castPtr<boost::optional<A>>(NULL);
+            const boost::optional<A>& oa = *poa.cast_ptr<boost::optional<A>>(NULL);
             if (oa) push(trans, light_ptr::create<A>(oa.get()));
         });
         return std::get<0>(p).add_cleanup(kill);
@@ -788,7 +698,7 @@ namespace sodium {
         auto target = std::get<2>(p);
         auto kill = input.listen_raw(trans0, target,
                 [push, f] (impl::transaction_impl* trans, const light_ptr& ptr) {
-            push(trans, light_ptr::create<B>(f(trans, *ptr.castPtr<A>(NULL))));
+            push(trans, light_ptr::create<B>(f(trans, *ptr.cast_ptr<A>(NULL))));
         });
         return std::get<0>(p).add_cleanup(kill);
     }
@@ -817,7 +727,7 @@ namespace sodium {
         return behavior<B>(impl::apply(
             trans.impl(),
             impl::map_([] (const light_ptr& pf) -> light_ptr {
-                const std::function<B(const A&)>& f = *pf.castPtr<std::function<B(const A&)>>(NULL);
+                const std::function<B(const A&)>& f = *pf.cast_ptr<std::function<B(const A&)>>(NULL);
                 return light_ptr::create<std::function<light_ptr(const light_ptr&)>>(
                         FRP_DETYPE_FUNCTION1(A, B, f)
                     );
@@ -992,7 +902,7 @@ namespace sodium {
                         return boost::optional<A>();
                 }).listen_raw(trans1, target,
                         [pState, push, ix] (impl::transaction_impl* trans2, const light_ptr& poa) {
-                    const boost::optional<A>& oa = *poa.castPtr<boost::optional<A>>(NULL);
+                    const boost::optional<A>& oa = *poa.cast_ptr<boost::optional<A>>(NULL);
                     if (oa) {
                         push(trans2, light_ptr::create<A>(oa.get()));
                         // If we get a valid value at this ix, clean up any listeners that are older.
@@ -1009,68 +919,33 @@ namespace sodium {
         });
         return std::get<0>(p).add_cleanup(kill);
     }
-
-    struct switch_b_state {
-        switch_b_state() : activeIx(0) {}
-        long long activeIx;
-        std::map<long long, std::function<void()>> cleanups;
+    
+    namespace impl {
+        behavior_ switch_b(const behavior_& bba);
     };
 
     /*!
      * behavior variant of switch.
      */
     template <class A>
-    behavior<A> switch_b(impl::transaction_impl* trans0, const behavior<behavior<A>>& bba)
+    behavior<A> switch_b(const behavior<behavior<A>>& bba)
     {
-        std::shared_ptr<switch_b_state> pState(new switch_b_state);
-        auto p = impl::unsafe_new_event();
-        auto push = std::get<1>(p);
-        auto target = std::get<2>(p);
-        auto kill = bba.listen_value_linked(trans0, target, [pState, push, target] (impl::transaction_impl* trans1, const behavior<A>& ba) {
-            long long ix;
-            {
-                ix = ++pState->activeIx;
-            }
-            auto unlisten = ba.listen_value_linked_raw(trans1, target,
-                    [pState, push, ix, target] (impl::transaction_impl* trans2, const light_ptr& pa) {
-                long long activeIx;
-                std::list<std::function<void()>> cleanups;
-                {
-                    activeIx = pState->activeIx;
-                    while (pState->cleanups.begin() != pState->cleanups.end()
-                                      && pState->cleanups.begin()->first < activeIx) {
-                        std::function<void()> unlisten = pState->cleanups.begin()->second;
-                        cleanups.push_back(unlisten);
-                        pState->cleanups.erase(pState->cleanups.begin());
-                    }
-                }
-                for (auto it = cleanups.begin(); it != cleanups.end(); ++it)
-                    (*it)();
-                if (ix == activeIx)
-                    push(trans2, pa);
-            });
-            {
-                pState->cleanups[ix] = unlisten;
-            }
-        });
-        return behavior<A>(trans0, boost::optional<A>(), std::get<0>(p).add_cleanup(kill));
+        return behavior<A>(impl::switch_b(bba));
     }
 
     template <class A, class B, class C>
-    behavior<C> lift2(impl::transaction_impl* trans0,
-            const std::function<C(const A&, const B&)>& f, const behavior<A>& ba, const behavior<B>& bb)
+    behavior<C> lift(const std::function<C(const A&, const B&)>& f, const behavior<A>& ba, const behavior<B>& bb)
     {
         std::function<std::function<C(const B&)>(const A&)> fa(
             [f] (const A& a) -> std::function<C(const B&)> {
                 return [f, a] (const B& b) -> C { return f(a, b); };
             }
         );
-        return apply<B, C>(trans0, ba.map_(fa), bb);
+        return apply<B, C>(ba.map_(fa), bb);
     }
 
     template <class A, class B, class C, class D>
-    behavior<D> lift3(impl::transaction_impl* trans0,
-        const std::function<D(const A&, const B&, const C&)>& f,
+    behavior<D> lift(const std::function<D(const A&, const B&, const C&)>& f,
         const behavior<A>& ba,
         const behavior<B>& bb,
         const behavior<C>& bc
@@ -1085,7 +960,7 @@ namespace sodium {
                 };
             }
         );
-        return apply(trans0, apply(trans0, ba.map_(fa), bb), bc);
+        return apply(apply(ba.map_(fa), bb), bc);
     }
 }  // end namespace sodium
 #endif

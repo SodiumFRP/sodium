@@ -17,12 +17,13 @@
 
 using namespace std;
 using namespace sodium;
+using namespace boost;
 
 
 void test_sodium::event1()
 {
     event_sink<int> ev;
-    shared_ptr<string> out(new string);
+    std::shared_ptr<string> out(new string);
     ev.send('?');
     function<void()> unlisten;
     {
@@ -52,7 +53,7 @@ void test_sodium::map()
         sprintf(buf, "%d", x);
         return string(buf);
     });
-    shared_ptr<vector<string>> out(new vector<string>);
+    std::shared_ptr<vector<string>> out(new vector<string>);
     auto unlisten = m.listen([out] (const string& x) { out->push_back(x); });
     e.send(5);
     unlisten();
@@ -64,7 +65,7 @@ void test_sodium::merge_non_simultaneous()
 {
     event_sink<int> e1;
     event_sink<int> e2;
-    shared_ptr<vector<int>> out(new vector<int>);
+    std::shared_ptr<vector<int>> out(new vector<int>);
     auto unlisten = e1.merge(e2).listen([out] (const int& x) { out->push_back(x); });
     e1.send(7);
     e2.send(9);
@@ -77,7 +78,7 @@ void test_sodium::merge_non_simultaneous()
 void test_sodium::merge_simultaneous()
 {
     event_sink<int> e;
-    shared_ptr<vector<int>> out(new vector<int>);
+    std::shared_ptr<vector<int>> out(new vector<int>);
     auto unlisten = e.merge(e).listen([out] (const int& x) { out->push_back(x); });
     e.send(7);
     e.send(9);
@@ -90,7 +91,7 @@ void test_sodium::coalesce()
 {
     event_sink<int> e1;
     event_sink<int> e2;
-    shared_ptr<vector<int>> out(new vector<int>);
+    std::shared_ptr<vector<int>> out(new vector<int>);
     auto unlisten = e1.merge(e1.map<int>([] (const int& x) -> int { return x * 100; }).merge(e2))
                       .coalesce([] (const int& a, const int& b) -> int { return a+b; })
                       .listen([out] (const int& x) { out->push_back(x); });
@@ -105,7 +106,7 @@ void test_sodium::coalesce()
 void test_sodium::filter()
 {
     event_sink<char> e;
-    shared_ptr<string> out(new string);
+    std::shared_ptr<string> out(new string);
     auto unlisten = e.filter([] (const char& c) { return isupper(c); })
                      .listen([out] (const char& c) { (*out) += c; });
     e.send('H');
@@ -118,7 +119,7 @@ void test_sodium::filter()
 void test_sodium::filter_optional1()
 {
     event_sink<boost::optional<string>> e;
-    shared_ptr<vector<string>> out(new vector<string>);
+    std::shared_ptr<vector<string>> out(new vector<string>);
     auto unlisten = filter_optional(e).listen([out] (const string& s) {
         out->push_back(s);
     });
@@ -141,7 +142,7 @@ void test_sodium::loop_event()
                         .filter([] (const int& x) { return x != 0; });
         eb.loop(eb_out);
     }
-    shared_ptr<vector<int>> out(new vector<int>);
+    std::shared_ptr<vector<int>> out(new vector<int>);
     auto unlisten = ec.listen([out] (const int& x) { out->push_back(x); });
     ea.send(2);
     ea.send(52);
@@ -153,7 +154,7 @@ void test_sodium::gate1()
 {
     event_sink<char> ec;
     behavior_sink<bool> pred(true);
-    shared_ptr<string> out(new string);
+    std::shared_ptr<string> out(new string);
     auto unlisten = ec.gate(pred).listen([out] (const char& c) { *out += c; });
     ec.send('H');
     pred.send(false);
@@ -167,7 +168,7 @@ void test_sodium::gate1()
 void test_sodium::collect1()
 {
     event_sink<int> ea;
-    shared_ptr<vector<int>> out(new vector<int>);
+    std::shared_ptr<vector<int>> out(new vector<int>);
     event<int> sum = ea.collect<int, int>(100, [] (const int& a, const int& s) {
         return tuple<int, int>(a+s, a+s);
     });
@@ -184,7 +185,7 @@ void test_sodium::collect1()
 void test_sodium::accum1()
 {
     event_sink<int> ea;
-    shared_ptr<vector<int>> out(new vector<int>);
+    std::shared_ptr<vector<int>> out(new vector<int>);
     event<int> sum = ea.accum<int>(100, [] (const int& a, const int& s) -> int {
         return a+s;
     });
@@ -201,7 +202,7 @@ void test_sodium::accum1()
 void test_sodium::countE1()
 {
     event_sink<unit> ea;
-    shared_ptr<vector<int>> out(new vector<int>);
+    std::shared_ptr<vector<int>> out(new vector<int>);
     event<int> sum = ea.countE();
     auto unlisten = sum.listen([out] (const int& x) { out->push_back(x); });
     ea.send(unit());
@@ -214,7 +215,7 @@ void test_sodium::countE1()
 void test_sodium::count1()
 {
     event_sink<unit> ea;
-    shared_ptr<vector<int>> out(new vector<int>);
+    std::shared_ptr<vector<int>> out(new vector<int>);
     event<int> sum = ea.count().values();
     auto unlisten = sum.listen([out] (const int& x) { out->push_back(x); });
     ea.send(unit());
@@ -227,7 +228,7 @@ void test_sodium::count1()
 void test_sodium::once1()
 {
     event_sink<char> e;
-    shared_ptr<string> out(new string);
+    std::shared_ptr<string> out(new string);
     auto unlisten = e.once().listen([out] (const char& c) { *out += c; });
     e.send('A');
     e.send('B');
@@ -240,7 +241,7 @@ void test_sodium::hold1()
 {
     event_sink<int> e;
     behavior<int> b = e.hold(0);
-    shared_ptr<vector<int>> out(new vector<int>);
+    std::shared_ptr<vector<int>> out(new vector<int>);
     auto unlisten = b.changes().listen([out] (const int& x) { out->push_back(x); });
     e.send(2);
     e.send(9);
@@ -252,7 +253,7 @@ void test_sodium::snapshot1()
 {
     behavior_sink<int> b(0);
     event_sink<long> trigger;
-    shared_ptr<vector<string>> out(new vector<string>);
+    std::shared_ptr<vector<string>> out(new vector<string>);
     auto unlisten = trigger.snapshot<long,string>(b, [out] (const long& x, const int& y) -> string {
         char buf[129];
         sprintf(buf, "%ld %d", x, y);
@@ -273,7 +274,7 @@ void test_sodium::snapshot1()
 void test_sodium::values1()
 {
     behavior_sink<int> b(9);
-    shared_ptr<vector<int>> out(new vector<int>);
+    std::shared_ptr<vector<int>> out(new vector<int>);
     auto unlisten = b.values().listen([out] (const int& x) { out->push_back(x); });
     b.send(2);
     b.send(7);
@@ -284,7 +285,7 @@ void test_sodium::values1()
 void test_sodium::constant_behavior()
 {
     behavior_sink<int> b(12);
-    shared_ptr<vector<int>> out(new vector<int>);
+    std::shared_ptr<vector<int>> out(new vector<int>);
     auto unlisten = b.values().listen([out] (const int& x) { out->push_back(x); });
     unlisten();
     CPPUNIT_ASSERT(vector<int>({ 12 }) == *out);
@@ -293,7 +294,7 @@ void test_sodium::constant_behavior()
 void test_sodium::values_then_map()
 {
     behavior_sink<int> b(9);
-    shared_ptr<vector<int>> out(new vector<int>);
+    std::shared_ptr<vector<int>> out(new vector<int>);
     auto unlisten = b.values().map<int>([] (const int& x) { return x + 100; })
         .listen([out] (const int& x) { out->push_back(x); });
     b.send(2);
@@ -317,7 +318,7 @@ event<A> doubleUp(const event<A>& ea)
 void test_sodium::values_twice_then_map()
 {
     behavior_sink<int> b(9);
-    shared_ptr<vector<int>> out(new vector<int>);
+    std::shared_ptr<vector<int>> out(new vector<int>);
     auto unlisten = doubleUp<int>(b.values()).map<int>([] (const int& x) { return x + 100; })
         .listen([out] (const int& x) { out->push_back(x); });
     b.send(2);
@@ -329,7 +330,7 @@ void test_sodium::values_twice_then_map()
 void test_sodium::values_then_coalesce()
 {
     behavior_sink<int> b(9);
-    shared_ptr<vector<int>> out(new vector<int>);
+    std::shared_ptr<vector<int>> out(new vector<int>);
     auto unlisten = b.values().coalesce([] (const int& fst, const int& snd) -> int { return snd; })
         .listen([out] (const int& x) { out->push_back(x); });
     b.send(2);
@@ -341,7 +342,7 @@ void test_sodium::values_then_coalesce()
 void test_sodium::values_twice_then_coalesce()
 {
     behavior_sink<int> b(9);
-    shared_ptr<vector<int>> out(new vector<int>);
+    std::shared_ptr<vector<int>> out(new vector<int>);
     auto unlisten = doubleUp(b.values()).coalesce([] (const int& fst, const int& snd) -> int { return fst + snd; })
         .listen([out] (const int& x) { out->push_back(x); });
     b.send(2);
@@ -354,7 +355,7 @@ void test_sodium::values_then_snapshot()
 {
     behavior_sink<int> bi(9);
     behavior_sink<char> bc('a');
-    shared_ptr<string> out(new string);
+    std::shared_ptr<string> out(new string);
     auto unlisten = bi.values().snapshot(bc).listen([out] (const char& c) { *out += c; });
     bc.send('b');
     bi.send(2);
@@ -368,7 +369,7 @@ void test_sodium::values_twice_then_snapshot()
 {
     behavior_sink<int> bi(9);
     behavior_sink<char> bc('a');
-    shared_ptr<string> out(new string);
+    std::shared_ptr<string> out(new string);
     auto unlisten = doubleUp(bi.values()).snapshot(bc).listen([out] (const char& c) { *out += c; });
     bc.send('b');
     bi.send(2);
@@ -382,7 +383,7 @@ void test_sodium::values_then_merge()
 {
     behavior_sink<int> bi(9);
     behavior_sink<int> bj(2);
-    shared_ptr<vector<int>> out(new vector<int>);
+    std::shared_ptr<vector<int>> out(new vector<int>);
     auto unlisten = bi.values().merge(bj.values(), [] (const int& x, const int& y) -> int { return x+y; })
         .listen([out] (const int& z) { out->push_back(z); });
     bi.send(1);
@@ -394,7 +395,7 @@ void test_sodium::values_then_merge()
 void test_sodium::values_then_filter()
 {
     behavior_sink<int> b(9);
-    shared_ptr<vector<int>> out(new vector<int>);
+    std::shared_ptr<vector<int>> out(new vector<int>);
     auto unlisten = b.values().filter([] (const int& x) { return true; })
         .listen([out] (const int& x) { out->push_back(x); });
     b.send(2);
@@ -406,7 +407,7 @@ void test_sodium::values_then_filter()
 void test_sodium::values_twice_then_filter()
 {
     behavior_sink<int> b(9);
-    shared_ptr<vector<int>> out(new vector<int>);
+    std::shared_ptr<vector<int>> out(new vector<int>);
     auto unlisten = doubleUp(b.values()).filter([] (const int& x) { return true; })
         .listen([out] (const int& x) { out->push_back(x); });
     b.send(2);
@@ -418,7 +419,7 @@ void test_sodium::values_twice_then_filter()
 void test_sodium::values_then_once()
 {
     behavior_sink<int> b(9);
-    shared_ptr<vector<int>> out(new vector<int>);
+    std::shared_ptr<vector<int>> out(new vector<int>);
     auto unlisten = b.values().once()
         .listen([out] (const int& x) { out->push_back(x); });
     b.send(2);
@@ -430,7 +431,7 @@ void test_sodium::values_then_once()
 void test_sodium::values_twice_then_once()
 {
     behavior_sink<int> b(9);
-    shared_ptr<vector<int>> out(new vector<int>);
+    std::shared_ptr<vector<int>> out(new vector<int>);
     auto unlisten = doubleUp(b.values()).once()
         .listen([out] (const int& x) { out->push_back(x); });
     b.send(2);
@@ -443,7 +444,7 @@ void test_sodium::values_late_listen()
 {
     behavior_sink<int> b(9);
     b.send(8);
-    shared_ptr<vector<int>> out(new vector<int>);
+    std::shared_ptr<vector<int>> out(new vector<int>);
     auto unlisten = b.values().listen([out] (const int& x) { out->push_back(x); });
     b.send(2);
     unlisten();
@@ -453,7 +454,7 @@ void test_sodium::values_late_listen()
 void test_sodium::mapB1()
 {
     behavior_sink<int> b(6);
-    shared_ptr<vector<string>> out(new vector<string>);
+    std::shared_ptr<vector<string>> out(new vector<string>);
     auto unlisten = b.map<string>([] (const int& x) {
         char buf[128];
         sprintf(buf, "%d", x);
@@ -467,7 +468,7 @@ void test_sodium::mapB1()
 void test_sodium::mapB_late_listen()
 {
     behavior_sink<int> b(6);
-    shared_ptr<vector<string>> out(new vector<string>);
+    std::shared_ptr<vector<string>> out(new vector<string>);
     b.send(2);
     auto unlisten = b.map<string>([] (const int& x) {
         char buf[128];
@@ -491,7 +492,7 @@ void test_sodium::apply1()
         return string("1 ")+fmtInt(b);
     });
     behavior_sink<int> ba(5);
-    shared_ptr<vector<string>> out(new vector<string>);
+    std::shared_ptr<vector<string>> out(new vector<string>);
     auto unlisten = apply<int,string>(bf, ba).values().listen([out] (const string& x) {
         out->push_back(x);
     });
@@ -499,6 +500,83 @@ void test_sodium::apply1()
     ba.send(6);
     unlisten();
     CPPUNIT_ASSERT(vector<string>({ string("1 5"), string("12 5"), string("12 6") }) == *out);
+}
+
+void test_sodium::lift1()
+{
+    behavior_sink<int> a(1);
+    behavior_sink<int> b(5);
+    std::shared_ptr<vector<string>> out(new vector<string>);
+    auto unlisten = lift<int,int,string>([] (const int& a, const int& b) {
+        return fmtInt(a)+" "+fmtInt(b);
+    }, a, b).values().listen([out] (const string& x) {
+        out->push_back(x);
+    });
+    a.send(12);
+    b.send(6);
+    unlisten();
+    CPPUNIT_ASSERT(vector<string>({ string("1 5"), string("12 5"), string("12 6") }) == *out);
+}
+
+void test_sodium::lift_glitch()
+{
+    behavior_sink<int> a(1);
+    behavior<int> a3 = a.map<int>([] (const int& x) { return x * 3; });
+    behavior<int> a5 = a.map<int>([] (const int& x) { return x * 5; });
+    behavior<string> b = lift<int,int,string>([] (const int& x, const int& y) {
+        return fmtInt(x)+" "+fmtInt(y);
+    }, a3, a5);
+    std::shared_ptr<vector<string>> out(new vector<string>);
+    auto unlisten = b.values().listen([out] (const string& s) { out->push_back(s); });
+    a.send(2);
+    unlisten();
+    CPPUNIT_ASSERT(vector<string>({ string("3 5"), string("6 10") }) == *out);
+}
+
+void test_sodium::hold_is_delayed()
+{
+    event_sink<int> e;
+    behavior<int> h = e.hold(0);
+    event<string> pair = e.snapshot<int,string>(h, [] (const int& a, const int& b) { return fmtInt(a) + " " + fmtInt(b); });
+    std::shared_ptr<vector<string>> out(new vector<string>);
+    auto unlisten = pair.listen([out] (const string& s) { out->push_back(s); });
+    e.send(2);
+    e.send(3);
+    unlisten();
+    CPPUNIT_ASSERT(vector<string>({string("2 0"), string("3 2")}) == *out);
+}
+
+struct SB
+{
+    SB(optional<char> oa, optional<char> ob, optional<behavior<char>> osw) : oa(oa), ob(ob), osw(osw) {}
+    optional<char> oa;
+    optional<char> ob;
+    optional<behavior<char>> osw;
+};
+
+void test_sodium::switchB1()
+{
+    event_sink<SB> esb;
+    // Split each field out of SB so we can update multiple behaviours in a
+    // single transaction.
+    behavior<char> ba = filter_optional(esb.map<optional<char>>([] (const SB& s) { return s.oa; })).hold('A');
+    behavior<char> bb = filter_optional(esb.map<optional<char>>([] (const SB& s) { return s.ob; })).hold('a');
+    behavior<behavior<char>> bsw = filter_optional(esb.map<optional<behavior<char>>>([] (const SB& s) { return s.osw; })).hold(ba);
+    behavior<char> bo = switch_b(bsw);
+    std::shared_ptr<string> out(new string);
+    auto unlisten = bo.values().listen([out] (const char& c) { *out += c; });
+    esb.send(SB(optional<char>('B'),optional<char>('b'),optional<behavior<char>>()));
+    esb.send(SB(optional<char>('C'),optional<char>('c'),optional<behavior<char>>(bb)));
+    esb.send(SB(optional<char>('D'),optional<char>('d'),optional<behavior<char>>()));
+    esb.send(SB(optional<char>('E'),optional<char>('e'),optional<behavior<char>>(ba)));
+    esb.send(SB(optional<char>('F'),optional<char>('f'),optional<behavior<char>>()));
+    esb.send(SB(optional<char>(),   optional<char>(),   optional<behavior<char>>(bb)));
+    esb.send(SB(optional<char>(),   optional<char>(),   optional<behavior<char>>(ba)));
+    esb.send(SB(optional<char>('G'),optional<char>('g'),optional<behavior<char>>(bb)));
+    esb.send(SB(optional<char>('H'),optional<char>('h'),optional<behavior<char>>(ba)));
+    esb.send(SB(optional<char>('I'),optional<char>('i'),optional<behavior<char>>(ba)));
+    unlisten();
+    CPPUNIT_ASSERT_EQUAL(string("ABcdEFfFgHI"), *out);
 }
 
 int main(int argc, char* argv[])

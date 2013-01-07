@@ -49,6 +49,10 @@ class test_sodium : public CppUnit::TestFixture {
     CPPUNIT_TEST(mapB1);
     CPPUNIT_TEST(mapB_late_listen);
     CPPUNIT_TEST(apply1);
+    CPPUNIT_TEST(lift1);
+    CPPUNIT_TEST(lift_glitch);
+    CPPUNIT_TEST(hold_is_delayed);
+    CPPUNIT_TEST(switchB1);
     CPPUNIT_TEST_SUITE_END();
 
     void event1();
@@ -84,6 +88,10 @@ class test_sodium : public CppUnit::TestFixture {
     void mapB1();
     void mapB_late_listen();
     void apply1();
+    void lift1();
+    void lift_glitch();
+    void hold_is_delayed();
+    void switchB1();
 };
 
 #endif
