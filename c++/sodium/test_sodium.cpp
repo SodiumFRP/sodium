@@ -165,40 +165,6 @@ void test_sodium::gate1()
     CPPUNIT_ASSERT_EQUAL(string("HI"), *out);
 }
 
-void test_sodium::collect1()
-{
-    event_sink<int> ea;
-    std::shared_ptr<vector<int>> out(new vector<int>);
-    event<int> sum = ea.collect<int, int>(100, [] (const int& a, const int& s) {
-        return tuple<int, int>(a+s, a+s);
-    });
-    auto unlisten = sum.listen([out] (const int& x) { out->push_back(x); });
-    ea.send(5);
-    ea.send(7);
-    ea.send(1);
-    ea.send(2);
-    ea.send(3);
-    unlisten();
-    CPPUNIT_ASSERT(std::vector<int>({ 105, 112, 113, 115, 118 }) == *out);
-}
-
-void test_sodium::accum1()
-{
-    event_sink<int> ea;
-    std::shared_ptr<vector<int>> out(new vector<int>);
-    event<int> sum = ea.accum<int>(100, [] (const int& a, const int& s) -> int {
-        return a+s;
-    });
-    auto unlisten = sum.listen([out] (const int& x) { out->push_back(x); });
-    ea.send(5);
-    ea.send(7);
-    ea.send(1);
-    ea.send(2);
-    ea.send(3);
-    unlisten();
-    CPPUNIT_ASSERT(std::vector<int>({ 105, 112, 113, 115, 118 }) == *out);
-}
-
 void test_sodium::countE1()
 {
     event_sink<unit> ea;
@@ -623,6 +589,40 @@ void test_sodium::loop_behavior()
     unlisten();
     CPPUNIT_ASSERT(vector<int>({ 0, 2, 5, 6 }) == *out);
     CPPUNIT_ASSERT(sum.sample() == 6);
+}
+
+void test_sodium::collect1()
+{
+    event_sink<int> ea;
+    std::shared_ptr<vector<int>> out(new vector<int>);
+    event<int> sum = ea.collect<int, int>(100, [] (const int& a, const int& s) {
+        return tuple<int, int>(a+s, a+s);
+    });
+    auto unlisten = sum.listen([out] (const int& x) { out->push_back(x); });
+    ea.send(5);
+    ea.send(7);
+    ea.send(1);
+    ea.send(2);
+    ea.send(3);
+    unlisten();
+    CPPUNIT_ASSERT(std::vector<int>({ 105, 112, 113, 115, 118 }) == *out);
+}
+
+void test_sodium::accum1()
+{
+    event_sink<int> ea;
+    std::shared_ptr<vector<int>> out(new vector<int>);
+    event<int> sum = ea.accum<int>(100, [] (const int& a, const int& s) -> int {
+        return a+s;
+    });
+    auto unlisten = sum.listen([out] (const int& x) { out->push_back(x); });
+    ea.send(5);
+    ea.send(7);
+    ea.send(1);
+    ea.send(2);
+    ea.send(3);
+    unlisten();
+    CPPUNIT_ASSERT(std::vector<int>({ 105, 112, 113, 115, 118 }) == *out);
 }
 
 int main(int argc, char* argv[])
