@@ -554,7 +554,7 @@ struct SB
     optional<behavior<char>> osw;
 };
 
-void test_sodium::switchB1()
+void test_sodium::switch_b1()
 {
     event_sink<SB> esb;
     // Split each field out of SB so we can update multiple behaviours in a
@@ -577,6 +577,37 @@ void test_sodium::switchB1()
     esb.send(SB(optional<char>('I'),optional<char>('i'),optional<behavior<char>>(ba)));
     unlisten();
     CPPUNIT_ASSERT_EQUAL(string("ABcdEFfFgHI"), *out);
+}
+
+struct SE
+{
+    SE(optional<char> oa, optional<char> ob, optional<event<char>> osw) : oa(oa), ob(ob), osw(osw) {}
+    optional<char> oa;
+    optional<char> ob;
+    optional<event<char>> osw;
+};
+
+void test_sodium::switch_e1()
+{
+    event_sink<SE> ese;
+    event<char> ea = filter_optional(ese.map<optional<char>>([] (const SE& s) { return s.oa; }));
+    event<char> eb = filter_optional(ese.map<optional<char>>([] (const SE& s) { return s.ob; }));
+    behavior<event<char>> bsw = filter_optional(ese.map<optional<event<char>>>([] (const SE& s) { return s.osw; }))
+        .hold(ea);
+    event<char> eo = switch_e(bsw);
+    std::shared_ptr<string> out(new string);
+    auto unlisten = eo.listen([out] (const char& c) { *out += c; });
+    ese.send(SE(optional<char>('A'),optional<char>('a'),optional<event<char>>()));
+    ese.send(SE(optional<char>('B'),optional<char>('b'),optional<event<char>>()));
+    ese.send(SE(optional<char>('C'),optional<char>('c'),optional<event<char>>(eb)));
+    ese.send(SE(optional<char>('D'),optional<char>('d'),optional<event<char>>()));
+    ese.send(SE(optional<char>('E'),optional<char>('e'),optional<event<char>>(ea)));
+    ese.send(SE(optional<char>('F'),optional<char>('f'),optional<event<char>>()));
+    ese.send(SE(optional<char>('G'),optional<char>('g'),optional<event<char>>(eb)));
+    ese.send(SE(optional<char>('H'),optional<char>('h'),optional<event<char>>(ea)));
+    ese.send(SE(optional<char>('I'),optional<char>('i'),optional<event<char>>(ea)));
+    unlisten();
+    CPPUNIT_ASSERT_EQUAL(string("ABCdeFGhI"), *out);
 }
 
 int main(int argc, char* argv[])

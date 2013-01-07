@@ -58,6 +58,7 @@ namespace sodium {
                     [] (transaction_impl* trans,
                         const std::shared_ptr<impl::node>&,
                         const std::function<void(transaction_impl*, const light_ptr&)>&,
+                        bool suppressEarlierFirings,
                         const std::shared_ptr<cleaner_upper>&)
                     {
                         return [] () {};
@@ -112,7 +113,8 @@ namespace sodium {
         std::function<void()> event_::listen_raw_(
                     transaction_impl* trans0,
                     const std::shared_ptr<impl::node>& target,
-                    const std::function<void(transaction_impl*, const light_ptr&)>& handle) const
+                    const std::function<void(transaction_impl*, const light_ptr&)>& handle,
+                    bool suppressEarlierFirings) const
         {
             {
                 vector<light_ptr> items;
@@ -120,7 +122,7 @@ namespace sodium {
                 for (auto it = items.begin(); it != items.end(); ++it)
                     handle(trans0, *it);
             }
-            return listen_impl_(trans0, target, handle, cleanerUpper);
+            return listen_impl_(trans0, target, handle, suppressEarlierFirings, cleanerUpper);
         }
 
         void touch(const cleaner_upper&)
@@ -187,7 +189,7 @@ namespace sodium {
                         [push, killOnce] (impl::transaction_impl* trans, const light_ptr& ptr) {
                 push(trans, ptr);
                 killOnce();
-            });
+            }, false);
             (*ppKill) = new std::function<void()>(kill);
             return std::get<0>(p).add_cleanup(killOnce);
         }
@@ -202,8 +204,8 @@ namespace sodium {
             });
             auto push = std::get<1>(p);
             auto target = std::get<2>(p);
-            auto kill_one = this->listen_raw_(trans.impl(), target, push);
-            auto kill_two = other.listen_raw_(trans.impl(), target, push);
+            auto kill_one = this->listen_raw_(trans.impl(), target, push, false);
+            auto kill_two = other.listen_raw_(trans.impl(), target, push, false);
             return std::get<0>(p).add_cleanup([kill_one, kill_two] () {
                 kill_one();
                 kill_two();
@@ -217,6 +219,7 @@ namespace sodium {
             return event_(
                 [combine, listen_impl_] (transaction_impl* trans, const std::shared_ptr<node>& target,
                                 const std::function<void(transaction_impl*, const light_ptr&)>& handle,
+                                bool suppressEarlierFirings,
                                 const std::shared_ptr<cleaner_upper>& cleanerUpper)
                                                                             -> std::function<void()> {
                     std::shared_ptr<coalesce_state> pState(new coalesce_state);
@@ -235,6 +238,7 @@ namespace sodium {
                             else
                                 pState->oValue = make_optional(combine(pState->oValue.get(), ptr));
                         },
+                        suppressEarlierFirings,
                         cleanerUpper);
                 },
                 [sample_now_, combine] (vector<light_ptr>& items) {
@@ -286,7 +290,7 @@ namespace sodium {
             auto kill = listen_raw_(trans.impl(), target,
                     [beh, push, combine] (impl::transaction_impl* trans, const light_ptr& a) {
                 push(trans, combine(a, beh.impl->sample()));
-            });
+            }, false);
             return std::get<0>(p).add_cleanup(kill);
         }
 
@@ -310,7 +314,7 @@ namespace sodium {
             auto kill = listen_raw_(trans.impl(), target,
                     [pred, push] (impl::transaction_impl* trans, const light_ptr& ptr) {
                 if (pred(ptr)) push(trans, ptr);
-            });
+            }, false);
             return std::get<0>(p).add_cleanup(kill);
         }
 
@@ -348,6 +352,7 @@ namespace sodium {
                     [n] (transaction_impl* trans,
                             const std::shared_ptr<node>& target,
                             const std::function<void(transaction_impl*, const light_ptr&)>& handle,
+                            bool suppressEarlierFirings,
                             const std::shared_ptr<cleaner_upper>& cleanerUpper) {  // Register listener
                         std::list<light_ptr> firings;
                         void* h = new holder(handle, cleanerUpper);
@@ -358,7 +363,7 @@ namespace sodium {
                             pthread_mutex_unlock(&part->listeners_lock);
                             firings = n->firings;
                         }
-                        if (firings.begin() != firings.end())
+                        if (!suppressEarlierFirings && firings.begin() != firings.end())
                             for (auto it = firings.begin(); it != firings.end(); it++)
                                 handle(trans, *it);
                         return [n, h] () {  // Unregister listener
@@ -451,7 +456,7 @@ namespace sodium {
                             state->update = boost::optional<light_ptr>();
                         });
                     push(trans, ptr);
-                });
+                }, false);
                 auto changes = out.add_cleanup(unlisten);
                 auto sample = [state] () {
                     return state->current;
@@ -493,11 +498,11 @@ namespace sodium {
         {
             auto sample = impl->sample;
             return event_(
-                impl->changes.listen_impl_,
+                changes_().listen_impl_,
                 [sample] (vector<light_ptr>& items) { items.push_back(sample()); },
-                impl->changes.get_cleaner_upper()
+                changes_().get_cleaner_upper()
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
-                , impl->changes.is_never()
+                , changes_().is_never()
 #endif
             ).last_firing_only_();
         }
@@ -560,12 +565,12 @@ namespace sodium {
                             [state, update] (transaction_impl* trans, const light_ptr& pf) {
                         state->oF = boost::make_optional(*pf.cast_ptr<std::function<light_ptr(const light_ptr&)>>(NULL));
                         update(trans);
-                    });
+                    }, false);
                     auto kill2 = ba.values_().listen_raw_(trans0, target,
                             [state, update] (transaction_impl* trans, const light_ptr& pa) {
                         state->oA = boost::make_optional(pa);
                         update(trans);
-                    });
+                    }, false);
                     auto f = *bf.impl->sample().cast_ptr<std::function<light_ptr(const light_ptr&)>>(NULL);
                     return behavior_(impl::hold(
                         trans0,
@@ -594,10 +599,11 @@ namespace sodium {
                     [f,ev] (transaction_impl* trans0,
                             std::shared_ptr<node> target,
                             const std::function<void(transaction_impl*, const light_ptr&)>& handle,
+                            bool suppressEarlierFirings,
                             const std::shared_ptr<cleaner_upper>& cu) {
                         return ev.listen_impl_(trans0, target, [handle, f] (transaction_impl* trans, const light_ptr& ptr) {
                             handle(trans, f(ptr));
-                        }, cu);
+                        }, suppressEarlierFirings, cu);
                     },
                     [sample_now, f] (vector<light_ptr>& items) {
                         size_t start = items.size();
@@ -628,6 +634,34 @@ namespace sodium {
                 );
         }
 
+        event_ switch_e(const behavior_& bea)
+        {
+            transaction trans0;
+            auto p = unsafe_new_event();
+            auto push = std::get<1>(p);
+            auto target = std::get<2>(p);
+            std::shared_ptr<optional<function<void()>>> pKillInner(new optional<function<void()>>(
+                bea.impl->sample().cast_ptr<event_>(NULL)->listen_raw_(trans0.impl(), target, push, false)
+            ));
+            auto killInner = [pKillInner] () {
+                if (*pKillInner) {
+                    pKillInner->get()();
+                    *pKillInner = optional<function<void()>>();
+                }
+            };
+            auto killOuter = bea.changes_().listen_raw_(trans0.impl(), target,
+                [killInner, pKillInner, target, push] (impl::transaction_impl* trans1, const light_ptr& pea) {
+                    const event_& ea = *pea.cast_ptr<event_>(NULL);
+                    trans1->last([killInner, pKillInner, ea, trans1, target, push] () {
+                        killInner();
+                        *pKillInner = ea.listen_raw_(trans1, target, push, true);
+                    });
+                },
+                false
+            );
+            return std::get<0>(p).add_cleanup(killInner).add_cleanup(killOuter);
+        }
+
         behavior_ switch_b(const behavior_& bba)
         {
             transaction trans0;
@@ -653,9 +687,9 @@ namespace sodium {
                 killInner();
                 const behavior_& ba = *pa.cast_ptr<behavior_>(NULL);
                 *pKillInner = optional<function<void()>>(
-                    ba.values_().listen_raw_(trans, target, push)
+                    ba.values_().listen_raw_(trans, target, push, false)
                 );
-            });
+            }, false);
             return std::get<0>(p).add_cleanup(killInner).add_cleanup(killOuter).hold_(za);
         }
 

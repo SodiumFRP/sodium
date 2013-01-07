@@ -34,6 +34,7 @@ namespace sodium {
                 transaction_impl* trans,
                 const std::shared_ptr<impl::node>&,
                 const std::function<void(transaction_impl*, const light_ptr&)>&,
+                bool suppressEarlierFirings,
                 const std::shared_ptr<cleaner_upper>&)> listen;
             typedef std::function<void(std::vector<light_ptr>&)> sample_now;
 
@@ -72,7 +73,8 @@ namespace sodium {
             std::function<void()> listen_raw_(
                         transaction_impl* trans0,
                         const std::shared_ptr<impl::node>& target,
-                        const std::function<void(transaction_impl*, const light_ptr&)>& handle) const;
+                        const std::function<void(transaction_impl*, const light_ptr&)>& handle,
+                        bool suppressEarlierFirings) const;
 
             /*!
              * The specified cleanup is performed whenever nobody is referencing this event
@@ -175,6 +177,7 @@ namespace sodium {
 #endif
 
                 event_ values_() const;
+                const event_& changes_() const { return impl->changes; }
         };
 
         behavior_ map_(const std::function<light_ptr(const light_ptr&)>& f,
@@ -242,7 +245,7 @@ namespace sodium {
              */
             std::function<void()> listen_raw(impl::transaction_impl* trans, const std::shared_ptr<impl::node>& target,
                                 const std::function<void(impl::transaction_impl*, const light_ptr&)>& handle) const {
-                return impl->changes.listen_raw_(trans, target, handle);
+                return impl->changes.listen_raw_(trans, target, handle, false);
             }
 
             behavior<A> add_cleanup(const std::function<void()>& newCleanup) const {
@@ -320,6 +323,7 @@ namespace sodium {
                 ) {}
         public:
 
+        #if 0
             std::function<void()> listen_raw(
                         impl::transaction_impl* trans0,
                         const std::shared_ptr<impl::node>& target,
@@ -327,15 +331,16 @@ namespace sodium {
             {
                 return listen_raw_(trans0, target, handle);
             }
+        #endif
 
             /*!
              * High-level interface to obtain an event's value.
              */
             std::function<void()> listen(std::function<void(const A&)> handle) const {
                 transaction trans;
-                return listen_raw(trans.impl(), std::shared_ptr<impl::node>(), [handle] (impl::transaction_impl* trans, const light_ptr& ptr) {
+                return listen_raw_(trans.impl(), std::shared_ptr<impl::node>(), [handle] (impl::transaction_impl* trans, const light_ptr& ptr) {
                     handle(*ptr.cast_ptr<A>(NULL));
-                });
+                }, false);
             };
     
             /*!
@@ -460,12 +465,12 @@ namespace sodium {
                 auto p = impl::unsafe_new_event();
                 auto push = std::get<1>(p);
                 auto target = std::get<2>(p);
-                auto kill = listen_raw(trans.impl(), target,
+                auto kill = listen_raw_(trans.impl(), target,
                          [pState, push, f] (impl::transaction_impl* trans, const light_ptr& ptr) {
                     auto outsSt = f(*ptr.cast_ptr<A>(NULL), pState->s);
                     pState->s = std::get<1>(outsSt);
                     push(trans, light_ptr::create<B>(std::get<0>(outsSt)));
-                });
+                }, false);
                 return std::get<0>(p).add_cleanup(kill);
             }
             
@@ -480,11 +485,11 @@ namespace sodium {
                 auto p = impl::unsafe_new_event();
                 auto push = std::get<1>(p);
                 auto target = std::get<2>(p);
-                auto kill = listen_raw(trans.impl(), target,
+                auto kill = listen_raw_(trans.impl(), target,
                          [pState, push, f] (impl::transaction_impl* trans, const light_ptr& ptr) {
                     pState->s = f(*ptr.cast_ptr<A>(NULL), pState->s);
                     push(trans, light_ptr::create<B>(pState->s));
-                });
+                }, false);
                 return std::get<0>(p).add_cleanup(kill);
             }
 
@@ -595,11 +600,11 @@ namespace sodium {
         auto p = impl::unsafe_new_event();
         auto push = std::get<1>(p);
         auto target = std::get<2>(p);
-        auto kill = input.listen_raw(trans.impl(), target,
+        auto kill = input.listen_raw_(trans.impl(), target,
                            [push] (impl::transaction_impl* trans, const light_ptr& poa) {
             const boost::optional<A>& oa = *poa.cast_ptr<boost::optional<A>>(NULL);
             if (oa) push(trans, light_ptr::create<A>(oa.get()));
-        });
+        }, false);
         return std::get<0>(p).add_cleanup(kill);
     }
 
@@ -792,50 +797,13 @@ namespace sodium {
             {
                 if (i) {
                     transaction trans;
-                    *i->pKill = e.listen_raw(trans.impl(), i->target, i->pushIn);
+                    *i->pKill = e.listen_raw_(trans.impl(), i->target, i->pushIn, false);
                     i = std::shared_ptr<info>();
                 }
                 else
                     throw std::runtime_error("event_loop looped back more than once");
             }
     };
-
-#if 0
-    /*!
-     * Enable the construction of event loops, like this:
-     *
-     *   auto loop = event_loop<A>();
-     *   auto inEv = get<0>(loop);
-     *   auto feedBack = get<1>(loop);
-     *   auto outEv = doSomething(inEv);
-     *   feedBack(outEv);  // Now doSomething's output event is fed back into its input
-     */
-    template <class A>
-    std::tuple<event<A>, std::function<void(const event<A>&)>> event_loop()
-    {
-        auto p = impl::unsafe_new_event();
-        auto in = std::get<0>(p);
-        auto pushIn = std::get<1>(p);
-        auto target = std::get<2>(p);
-        std::shared_ptr<std::function<void()>> pKill(
-            new std::function<void()>(
-                [] () {
-                    throw std::runtime_error("event_loop not looped back");
-                }
-            )
-        );
-        return std::make_tuple(
-            in.add_cleanup([pKill] () {
-                std::function<void()> kill = *pKill;
-                kill();
-            }),
-            [pKill, pushIn, target] (const event<A>& out) {
-                transaction trans;
-                *pKill = out.listen_raw(trans.impl(), target, pushIn);
-            }
-        );
-    }
-#endif
 
 #if 0
     template <class A>
@@ -863,9 +831,9 @@ namespace sodium {
     }
 #endif
 
-    struct switch_e_state {
-        std::map<long long, std::function<void()>> cleanups;
-    };
+    namespace impl {
+        event_ switch_e(const behavior_& bea);
+    }
 
     /*!
      * Flatten a behavior that contains an event to give an event that reflects
@@ -874,55 +842,14 @@ namespace sodium {
      * event won't come through until the following transaction.
      */
     template <class A>
-    event<A> switch_e(impl::transaction_impl* trans0, const behavior<event<A>>& bea)
+    event<A> switch_e(const behavior<event<A>>& bea)
     {
-        // Number each incoming event.
-        behavior<std::tuple<long long, event<A>>> beaId = collect<long long, event<A>, std::tuple<long long, event<A>>>(
-            trans0, bea, 1,
-            [] (const event<A>& ea, long long nextID) {
-                return std::tuple<std::tuple<long long, event<A>>, long long>(
-                    std::tuple<long long, event<A>>(nextID, ea),
-                    nextID+1
-                );
-            });
-
-        std::shared_ptr<switch_e_state> pState(new switch_e_state);
-        auto p = impl::unsafe_new_event();
-        auto push = std::get<1>(p);
-        auto target = std::get<2>(p);
-        auto kill = beaId.listen_value_linked(trans0, target, [pState, beaId, push, target] (impl::transaction_impl* trans1,
-                                                  const std::tuple<long long, event<A>>& pea) {
-            auto ix = std::get<0>(pea);
-            auto ea = std::get<1>(pea);
-            auto unlisten = ea.template snapshot<std::tuple<long long, event<A>>, boost::optional<A>>(
-                beaId, [ix] (const A& a, const std::tuple<long long, event<A>>& active) -> boost::optional<A> {
-                    if (std::get<0>(active) == ix)
-                        return boost::optional<A>(a);
-                    else
-                        return boost::optional<A>();
-                }).listen_raw(trans1, target,
-                        [pState, push, ix] (impl::transaction_impl* trans2, const light_ptr& poa) {
-                    const boost::optional<A>& oa = *poa.cast_ptr<boost::optional<A>>(NULL);
-                    if (oa) {
-                        push(trans2, light_ptr::create<A>(oa.get()));
-                        // If we get a valid value at this ix, clean up any listeners that are older.
-                        // (events will come in order due to listenOrdered).
-                        while (pState->cleanups.begin() != pState->cleanups.end()
-                                          && pState->cleanups.begin()->first < ix) {
-                            std::function<void()> unlisten = pState->cleanups.begin()->second; 
-                            unlisten();
-                            pState->cleanups.erase(pState->cleanups.begin());
-                        }
-                    }
-                });
-            pState->cleanups[ix] = unlisten;
-        });
-        return std::get<0>(p).add_cleanup(kill);
+        return event<A>(impl::switch_e(bea));
     }
-    
+
     namespace impl {
         behavior_ switch_b(const behavior_& bba);
-    };
+    }
 
     /*!
      * behavior variant of switch.
