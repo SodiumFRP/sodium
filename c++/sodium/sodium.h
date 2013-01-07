@@ -21,6 +21,8 @@
 #define SODIUM_CONSTANT_OPTIMIZATION
 
 namespace sodium {
+    
+    struct def_part {};
 
     namespace impl {
 
@@ -184,16 +186,16 @@ namespace sodium {
             const behavior_& beh);
     };  // end namespace impl
 
-    template <class A>
+    template <class A, class P>
     class event;
 
     /*!
      * A like an event, but it tracks the input event's current value and causes it
      * always to be output once at the beginning for each listener.
      */
-    template <class A>
+    template <class A, class P = def_part>
     class behavior : public impl::behavior_ {
-        template <class AA>
+        template <class AA, class PP>
         friend class event;
         private:
             behavior(const std::shared_ptr<impl::behavior_impl>& impl)
@@ -237,8 +239,8 @@ namespace sodium {
                 return impl->changes.listen_raw_(trans, target, handle, false);
             }
 
-            behavior<A> add_cleanup(const std::function<void()>& newCleanup) const {
-                return behavior<A>(std::shared_ptr<impl::behavior_impl>(
+            behavior<A, P> add_cleanup(const std::function<void()>& newCleanup) const {
+                return behavior<A, P>(std::shared_ptr<impl::behavior_impl>(
                         new impl::behavior_impl(impl->changes.add_cleanup(newCleanup), impl->sample)));
             }
 
@@ -246,8 +248,8 @@ namespace sodium {
              * Map a function over this behaviour to modify the output value.
              */
             template <class B>
-            behavior<B> map(const std::function<B(const A&)>& f) const {
-                return behavior<B>(impl::map_(FRP_DETYPE_FUNCTION1(A,B,f), *this));
+            behavior<B, P> map(const std::function<B(const A&)>& f) const {
+                return behavior<B, P>(impl::map_(FRP_DETYPE_FUNCTION1(A,B,f), *this));
             }
 
             /*!
@@ -258,23 +260,23 @@ namespace sodium {
              * work around it with map_.
              */
             template <class B>
-            behavior<B> map_(const std::function<B(const A&)>& f) const {
-                return behavior<B>(impl::map_(FRP_DETYPE_FUNCTION1(A,B,f), *this));
+            behavior<B, P> map_(const std::function<B(const A&)>& f) const {
+                return behavior<B, P>(impl::map_(FRP_DETYPE_FUNCTION1(A,B,f), *this));
             }
 
             /*!
              * Returns an event describing the changes in a behavior.
              */
-            event<A> changes() const {
-                return event<A>(impl->changes);
+            event<A, P> changes() const {
+                return event<A, P>(impl->changes);
             }
 
             /*!
              * Returns an event describing the value of a behavior, where there's an initial event
              * giving the current value.
              */
-            event<A> values() const {
-                return event<A>(values_());
+            event<A, P> values() const {
+                return event<A, P>(values_());
             }
     };  // end class behavior
 
@@ -286,10 +288,10 @@ namespace sodium {
         };
     }
 
-    template <class A>
-    event<A> filter_optional(const event<boost::optional<A>>& input);
+    template <class A, class P = def_part>
+    event<A, P> filter_optional(const event<boost::optional<A>, P>& input);
 
-    template <class A>
+    template <class A, class P = def_part>
     class event : public impl::event_ {
         public:
             /*!
@@ -336,8 +338,8 @@ namespace sodium {
              * Map a function over this event to modify the output value.
              */
             template <class B>
-            event<B> map(const std::function<B(const A&)>& f) const {
-                return event<B>(impl::map_(FRP_DETYPE_FUNCTION1(A,B,f), *this));
+            event<B, P> map(const std::function<B(const A&)>& f) const {
+                return event<B, P>(impl::map_(FRP_DETYPE_FUNCTION1(A,B,f), *this));
             }
     
             /*!
@@ -348,12 +350,12 @@ namespace sodium {
              * work around it with map_.
              */
             template <class B>
-            event<B> map_(const std::function<B(const A&)>& f) const {
-                return event<B>(impl::map_(FRP_DETYPE_FUNCTION1(A,B,f), *this));
+            event<B, P> map_(const std::function<B(const A&)>& f) const {
+                return event<B, P>(impl::map_(FRP_DETYPE_FUNCTION1(A,B,f), *this));
             }
 
-            event<A> merge(const event<A>& other) const {
-                return event<A>(merge_(other));
+            event<A, P> merge(const event<A, P>& other) const {
+                return event<A, P>(merge_(other));
             }
 
             /*!
@@ -365,9 +367,9 @@ namespace sodium {
              * make any assumptions about the ordering, and the combining function would
              * ideally be commutative.
              */
-            event<A> coalesce(const std::function<A(const A&, const A&)>& combine) const
+            event<A, P> coalesce(const std::function<A(const A&, const A&)>& combine) const
             {
-                return event<A>(coalesce_([combine] (const light_ptr& a, const light_ptr& b) -> light_ptr {
+                return event<A, P>(coalesce_([combine] (const light_ptr& a, const light_ptr& b) -> light_ptr {
                     return light_ptr::create<A>(combine(*a.cast_ptr<A>(NULL), *b.cast_ptr<A>(NULL)));
                 }));
             }
@@ -380,7 +382,7 @@ namespace sodium {
              * within the same transaction), they are combined using the same logic as
              * 'coalesce'.
              */
-            event<A> merge(const event<A>& other, const std::function<A(const A&, const A&)>& combine) const
+            event<A, P> merge(const event<A, P>& other, const std::function<A(const A&, const A&)>& combine) const
             {
                 return merge(other).coalesce(combine);
             }
@@ -389,16 +391,16 @@ namespace sodium {
              * Filter this event based on the specified predicate, passing through values
              * where the predicate returns true.
              */
-            event<A> filter(const std::function<bool(const A&)>& pred) const
+            event<A, P> filter(const std::function<bool(const A&)>& pred) const
             {
-                return event<A>(filter_([pred] (const light_ptr& a) {
+                return event<A, P>(filter_([pred] (const light_ptr& a) {
                     return pred(*a.cast_ptr<A>(NULL));
                 }));
             }
 
-            behavior<A> hold(const A& initA) const
+            behavior<A, P> hold(const A& initA) const
             {
-                return behavior<A>(hold_(light_ptr::create<A>(initA)));
+                return behavior<A, P>(hold_(light_ptr::create<A>(initA)));
             }
 
             /*!
@@ -407,9 +409,9 @@ namespace sodium {
              * taken.
              */
             template <class B, class C>
-            event<C> snapshot(const behavior<B>& beh, const std::function<C(const A&, const B&)>& combine) const
+            event<C, P> snapshot(const behavior<B, P>& beh, const std::function<C(const A&, const B&)>& combine) const
             {
-                return event<C>(snapshot_(beh, [combine] (const light_ptr& a, const light_ptr& b) -> light_ptr {
+                return event<C, P>(snapshot_(beh, [combine] (const light_ptr& a, const light_ptr& b) -> light_ptr {
                     return light_ptr::create<C>(combine(*a.cast_ptr<A>(NULL), *b.cast_ptr<B>(NULL)));
                 }));
             }
@@ -420,7 +422,7 @@ namespace sodium {
              * taken.
              */
             template <class B>
-            event<B> snapshot(const behavior<B>& beh) const
+            event<B, P> snapshot(const behavior<B, P>& beh) const
             {
                 return snapshot<B, B>(beh, [] (const A&, const B& b) { return b; });
             }
@@ -428,7 +430,7 @@ namespace sodium {
             /*!
              * Allow events through only when the behavior's value is true.
              */
-            event<A> gate(const behavior<bool>& g) const
+            event<A, P> gate(const behavior<bool, P>& g) const
             {
                 transaction trans;
                 return filter_optional<A>(snapshot<bool, boost::optional<A>>(
@@ -444,7 +446,7 @@ namespace sodium {
              * input.
              */
             template <class S, class B>
-            event<B> collect(
+            event<B, P> collect(
                 const S& initS,
                 const std::function<std::tuple<B, S>(const A&, const S&)>& f
             ) const
@@ -464,7 +466,7 @@ namespace sodium {
             }
             
             template <class B>
-            event<B> accum(
+            event<B, P> accum(
                 const B& initB,
                 const std::function<B(const A&, const B&)>& f
             ) const
@@ -482,39 +484,39 @@ namespace sodium {
                 return std::get<0>(p).add_cleanup(kill);
             }
 
-            event<int> countE() const
+            event<int, P> countE() const
             {
                 return accum<int>(0, [] (const A&, const int& total) -> int {
                     return total+1;
                 });
             }
 
-            behavior<int> count() const
+            behavior<int, P> count() const
             {
                 return countE().hold(0);
             }
 
-            event<A> once() const
+            event<A, P> once() const
             {
-                return event<A>(once_());
+                return event<A, P>(once_());
             }
 
     };  // end class event
 
-    template <class A>
-    class event_sink : public event<A>
+    template <class A, class P = def_part>
+    class event_sink : public event<A, P>
     {
         private:
             std::function<void(impl::transaction_impl*, const light_ptr&)> push;
 
         public:
-            event_sink<A>()
+            event_sink()
             {
                 auto p = impl::unsafe_new_event();
                 *this = event_sink<A>(std::get<0>(p));
                 push = std::get<1>(p);
             }
-            event_sink(const impl::event_& ev) : event<A>(ev) {}
+            event_sink(const impl::event_& ev) : event<A, P>(ev) {}
 
             void send(const A& a) const {
                 light_ptr ptr = light_ptr::create<A>(a);
@@ -523,67 +525,11 @@ namespace sodium {
             }
     };
 
-#if 0
-    /*!
-     * Adapt an event to a new event statefully, with the ability to output any number
-     * of outputs for a given input.
-     */
-    template <class S, class A, class B>
-    event<B> collect_n(
-        impl::transaction_impl* trans0,
-        const event<A>& input,
-        const S& initS,
-        const std::function<std::tuple<List<B>, S>(const A&, const S&)>& f
-    )
-    {
-        std::shared_ptr<impl::collect_state<S>> pState(new impl::collect_state<S>(initS));
-        auto p = impl::unsafe_new_event();
-        auto push = std::get<1>(p);
-        auto target = std::get<2>(p);
-        auto kill = input.listen_raw(trans0, target,
-                    [pState, f, push] (impl::transaction_impl* trans, const light_ptr& ptr) {
-            auto outsSt = f(*ptr.cast_ptr<A>(NULL), pState->s);
-            pState->s = std::get<1>(outsSt);
-            for (auto outputs = std::get<0>(outsSt); outputs; outputs = outputs.tail())
-                push(trans, light_ptr::create<B>(outputs.head()));
-        });
-        return std::get<0>(p).add_cleanup(kill);
-    }
-#endif
-
-#if 0
-    /*!
-     * Adapt an event to a new event statefully, with the ability to output any number
-     * of outputs for a given input.
-     */
-    template <class S, class A, class B>
-    event<B> collect_n_transaction(
-        impl::transaction_impl* trans0,
-        const event<A>& input,
-        const S& initS,
-        const std::function<std::tuple<List<B>, S>(impl::transaction_impl*, const A&, const S&)>& f
-    )
-    {
-        std::shared_ptr<impl::collect_state<S>> pState(new impl::collect_state<S>(initS));
-        auto p = impl::unsafe_new_event();
-        auto push = std::get<1>(p);
-        auto target = std::get<2>(p);
-        auto kill = input.listen_raw(trans0, target,
-                    [pState, push, f] (impl::transaction_impl* trans, const light_ptr& ptr) {
-            auto outsSt = f(trans.cast__((P*)NULL), *ptr.cast_ptr<A>(NULL), pState->s);
-            pState->s = std::get<1>(outsSt);
-            for (auto outputs = std::get<0>(outsSt); outputs; outputs = outputs.tail())
-                push(trans, light_ptr::create<B>(outputs.head()));
-        });
-        return std::get<0>(p).add_cleanup(kill);
-    }
-#endif
-
     /*!
      * Filter an event of optionals, keeping only the defined values.
      */
-    template <class A>
-    event<A> filter_optional(const event<boost::optional<A>>& input)
+    template <class A, class P = def_part>
+    event<A, P> filter_optional(const event<boost::optional<A>, P>& input)
     {
         transaction trans;
         auto p = impl::unsafe_new_event();
@@ -597,18 +543,18 @@ namespace sodium {
         return std::get<0>(p).add_cleanup(kill);
     }
 
-    template <class A>
-    class behavior_sink : public behavior<A>
+    template <class A, class P = def_part>
+    class behavior_sink : public behavior<A, P>
     {
         private:
             event_sink<A> e;
 
-            behavior_sink(const behavior<A>& beh) : behavior<A>(beh) {}
+            behavior_sink(const behavior<A, P>& beh) : behavior<A, P>(beh) {}
 
         public:
             behavior_sink(const A& initA)
             {
-                *dynamic_cast<behavior<A>*>(this) = e.hold(initA);
+                *dynamic_cast<behavior<A, P>*>(this) = e.hold(initA);
             }
 
             void send(const A& a)
@@ -624,101 +570,15 @@ namespace sodium {
         inline impl::event_ underlyingevent_(const impl::behavior_& beh) {return beh.impl->changes;}
     };
 
-#if 0
-    /*!
-     * Adapt a behavior to a new behavior statefully, with the ability to output any number
-     * of outputs for a given input.
-     */
-    template <class S, class A, class B>
-    behavior<B> collect_n(
-        impl::transaction_impl* trans0,
-        const behavior<A>& input,
-        const S& initS,                        // Initial state
-        const boost::optional<B>& initOutput,  // Initial output value
-        const std::function<std::tuple<List<B>, S>(const A&, const S&)>& f
-    )
-    {
-        std::shared_ptr<S> state(new S(initS));
-        auto p = impl::unsafe_new_event();
-        auto push = std::get<1>(p);
-        auto target = std::get<2>(p);
-        auto kill = input.listen_value_linked(trans0, target, [state, f, push] (impl::transaction_impl* trans, const A& a) {
-            auto outsSt = f(a, *state);
-            *state = std::get<1>(outsSt);
-            for (auto outputs = std::get<0>(outsSt); outputs; outputs = outputs.tail())
-                push(trans, outputs.head());
-        });
-        return behavior<B>(trans0, initOutput, std::get<0>(p).add_cleanup(kill));
-    }
-#endif
-
-    /*!
-     * Adapt a behavior to a new behavior statefully.  Always outputs one output for each
-     * input.
-     */
-    template <class S, class A, class B>
-    behavior<B> collect(
-        impl::transaction_impl* trans0,
-        const behavior<A>& input,
-        const S& initS,                        // Initial state
-        const std::function<std::tuple<B, S>(const A&, const S&)>& f
-    )
-    {
-        std::shared_ptr<S> state(new S(initS));
-        auto p = impl::unsafe_new_event();
-        auto push = std::get<1>(p);
-        auto target = std::get<2>(p);
-        auto kill = input.listen_value_linked(trans0, target, [state, f, push] (impl::transaction_impl* trans, const A& a) {
-            auto outsSt = f(a, *state);
-            *state = std::get<1>(outsSt);
-            push(trans, light_ptr::create<B>(std::get<0>(outsSt)));
-        });
-        return behavior<B>(trans0, boost::optional<B>(), std::get<0>(p).add_cleanup(kill));
-    }
-
-    /*!
-     * Same pure semantics as map but suitable for code with effects.
-     * Also supplies the transaction to the function.
-     */
-    template <class A, class B>
-    event<B> effectfully(
-        impl::transaction_impl* trans0,
-        const std::function<B(impl::transaction_impl*, const A&)>& f,
-        const event<A>& input
-    )
-    {
-        auto p = impl::unsafe_new_event();
-        auto push = std::get<1>(p);
-        auto target = std::get<2>(p);
-        auto kill = input.listen_raw(trans0, target,
-                [push, f] (impl::transaction_impl* trans, const light_ptr& ptr) {
-            push(trans, light_ptr::create<B>(f(trans, *ptr.cast_ptr<A>(NULL))));
-        });
-        return std::get<0>(p).add_cleanup(kill);
-    }
-
-    /*!
-     * behavior variant of effectfully.
-     */
-    template <class A, class B>
-    behavior<B> effectfully(
-        impl::transaction_impl* trans0,
-        const std::function<B(impl::transaction_impl*, const A&)>& f,
-        const behavior<A>& input
-    )
-    {
-        return behavior<B>(trans0, boost::optional<B>(), effectfully(trans0, f, input.values()));
-    }
-
     namespace impl {
         behavior_ apply(transaction_impl* trans, const behavior_& bf, const behavior_& ba);
     };
 
-    template <class A, class B>
-    behavior<B> apply(const behavior<std::function<B(const A&)>>& bf, const behavior<A>& ba)
+    template <class A, class B, class P = def_part>
+    behavior<B, P> apply(const behavior<std::function<B(const A&)>, P>& bf, const behavior<A, P>& ba)
     {
         transaction trans;
-        return behavior<B>(impl::apply(
+        return behavior<B, P>(impl::apply(
             trans.impl(),
             impl::map_([] (const light_ptr& pf) -> light_ptr {
                 const std::function<B(const A&)>& f = *pf.cast_ptr<std::function<B(const A&)>>(NULL);
@@ -738,8 +598,8 @@ namespace sodium {
      *   auto ea_out = doSomething(ea);
      *   ea.loop(ea_out);  // ea is now the same as ea_out
      */
-    template <class A>
-    class event_loop : public event<A>
+    template <class A, class P = def_part>
+    class event_loop : public event<A, P>
     {
         private:
             struct info {
@@ -758,7 +618,7 @@ namespace sodium {
             std::shared_ptr<info> i;
 
         private:
-            event_loop(const impl::event_& ev, const std::shared_ptr<info>& i) : event<A>(ev), i(i) {}
+            event_loop(const impl::event_& ev, const std::shared_ptr<info>& i) : event<A, P>(ev), i(i) {}
 
         public:
             event_loop() : i(NULL)
@@ -782,7 +642,7 @@ namespace sodium {
                 );
             }
 
-            void loop(const event<A>& e)
+            void loop(const event<A, P>& e)
             {
                 if (i) {
                     transaction trans;
@@ -802,8 +662,8 @@ namespace sodium {
      *   auto ea_out = doSomething(ea);
      *   ea.loop(ea_out);  // ea is now the same as ea_out
      */
-    template <class A>
-    class behavior_loop : public behavior<A>
+    template <class A, class P = def_part>
+    class behavior_loop : public behavior<A, P>
     {
         private:
             event_loop<A> elp;
@@ -811,7 +671,7 @@ namespace sodium {
 
         public:
             behavior_loop()
-                : behavior<A>(impl::behavior_()),
+                : behavior<A, P>(impl::behavior_()),
                   pSample(new std::function<light_ptr()>([] () -> light_ptr {
                       throw std::runtime_error("behavior_loop sampled before it was looped");
                   }))
@@ -822,7 +682,7 @@ namespace sodium {
                     [pSample] () { return (*pSample)(); }));
             }
 
-            void loop(const behavior<A>& b)
+            void loop(const behavior<A, P>& b)
             {
                 elp.loop(b.changes());
                 *pSample = b.impl->sample;
@@ -839,10 +699,10 @@ namespace sodium {
      * due to behavior's delay semantics, event occurrences for the new
      * event won't come through until the following transaction.
      */
-    template <class A>
-    event<A> switch_e(const behavior<event<A>>& bea)
+    template <class A, class P = def_part>
+    event<A, P> switch_e(const behavior<event<A, P>, P>& bea)
     {
-        return event<A>(impl::switch_e(bea));
+        return event<A, P>(impl::switch_e(bea));
     }
 
     namespace impl {
@@ -852,14 +712,14 @@ namespace sodium {
     /*!
      * behavior variant of switch.
      */
-    template <class A>
-    behavior<A> switch_b(const behavior<behavior<A>>& bba)
+    template <class A, class P = def_part>
+    behavior<A, P> switch_b(const behavior<behavior<A, P>, P>& bba)
     {
-        return behavior<A>(impl::switch_b(bba));
+        return behavior<A, P>(impl::switch_b(bba));
     }
 
-    template <class A, class B, class C>
-    behavior<C> lift(const std::function<C(const A&, const B&)>& f, const behavior<A>& ba, const behavior<B>& bb)
+    template <class A, class B, class C, class P = def_part>
+    behavior<C, P> lift(const std::function<C(const A&, const B&)>& f, const behavior<A, P>& ba, const behavior<B, P>& bb)
     {
         std::function<std::function<C(const B&)>(const A&)> fa(
             [f] (const A& a) -> std::function<C(const B&)> {
@@ -869,11 +729,11 @@ namespace sodium {
         return apply<B, C>(ba.map_(fa), bb);
     }
 
-    template <class A, class B, class C, class D>
-    behavior<D> lift(const std::function<D(const A&, const B&, const C&)>& f,
-        const behavior<A>& ba,
-        const behavior<B>& bb,
-        const behavior<C>& bc
+    template <class A, class B, class C, class D, class P = def_part>
+    behavior<D, P> lift(const std::function<D(const A&, const B&, const C&)>& f,
+        const behavior<A, P>& ba,
+        const behavior<B, P>& bb,
+        const behavior<C, P>& bc
     )
     {
         std::function<std::function<std::function<D(const C&)>(const B&)>(const A&)> fa(
