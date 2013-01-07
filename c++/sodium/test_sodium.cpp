@@ -323,9 +323,182 @@ void test_sodium::values_twice_then_map()
     b.send(2);
     b.send(7);
     unlisten();
-    for (auto it = out->begin(); it != out->end(); ++it)
-        printf("%d\n", *it);
     CPPUNIT_ASSERT(vector<int>({ 109,109,102,102,107,107 }) == *out);
+}
+
+void test_sodium::values_then_coalesce()
+{
+    behavior_sink<int> b(9);
+    shared_ptr<vector<int>> out(new vector<int>);
+    auto unlisten = b.values().coalesce([] (const int& fst, const int& snd) -> int { return snd; })
+        .listen([out] (const int& x) { out->push_back(x); });
+    b.send(2);
+    b.send(7);
+    unlisten();
+    CPPUNIT_ASSERT(vector<int>({ 9, 2, 7 }) == *out);
+}
+
+void test_sodium::values_twice_then_coalesce()
+{
+    behavior_sink<int> b(9);
+    shared_ptr<vector<int>> out(new vector<int>);
+    auto unlisten = doubleUp(b.values()).coalesce([] (const int& fst, const int& snd) -> int { return fst + snd; })
+        .listen([out] (const int& x) { out->push_back(x); });
+    b.send(2);
+    b.send(7);
+    unlisten();
+    CPPUNIT_ASSERT(vector<int>({ 18, 4, 14 }) == *out);
+}
+
+void test_sodium::values_then_snapshot()
+{
+    behavior_sink<int> bi(9);
+    behavior_sink<char> bc('a');
+    shared_ptr<string> out(new string);
+    auto unlisten = bi.values().snapshot(bc).listen([out] (const char& c) { *out += c; });
+    bc.send('b');
+    bi.send(2);
+    bc.send('c');
+    bi.send(7);
+    unlisten();
+    CPPUNIT_ASSERT_EQUAL(string("abc"), *out);
+}
+
+void test_sodium::values_twice_then_snapshot()
+{
+    behavior_sink<int> bi(9);
+    behavior_sink<char> bc('a');
+    shared_ptr<string> out(new string);
+    auto unlisten = doubleUp(bi.values()).snapshot(bc).listen([out] (const char& c) { *out += c; });
+    bc.send('b');
+    bi.send(2);
+    bc.send('c');
+    bi.send(7);
+    unlisten();
+    CPPUNIT_ASSERT_EQUAL(string("aabbcc"), *out);
+}
+
+void test_sodium::values_then_merge()
+{
+    behavior_sink<int> bi(9);
+    behavior_sink<int> bj(2);
+    shared_ptr<vector<int>> out(new vector<int>);
+    auto unlisten = bi.values().merge(bj.values(), [] (const int& x, const int& y) -> int { return x+y; })
+        .listen([out] (const int& z) { out->push_back(z); });
+    bi.send(1);
+    bj.send(4);
+    unlisten();
+    CPPUNIT_ASSERT(vector<int>({ 11, 1, 4 }) == *out);
+}
+
+void test_sodium::values_then_filter()
+{
+    behavior_sink<int> b(9);
+    shared_ptr<vector<int>> out(new vector<int>);
+    auto unlisten = b.values().filter([] (const int& x) { return true; })
+        .listen([out] (const int& x) { out->push_back(x); });
+    b.send(2);
+    b.send(7);
+    unlisten();
+    CPPUNIT_ASSERT(vector<int>({ 9, 2, 7 }) == *out);
+}
+
+void test_sodium::values_twice_then_filter()
+{
+    behavior_sink<int> b(9);
+    shared_ptr<vector<int>> out(new vector<int>);
+    auto unlisten = doubleUp(b.values()).filter([] (const int& x) { return true; })
+        .listen([out] (const int& x) { out->push_back(x); });
+    b.send(2);
+    b.send(7);
+    unlisten();
+    CPPUNIT_ASSERT(vector<int>({ 9, 9, 2, 2, 7, 7 }) == *out);
+}
+
+void test_sodium::values_then_once()
+{
+    behavior_sink<int> b(9);
+    shared_ptr<vector<int>> out(new vector<int>);
+    auto unlisten = b.values().once()
+        .listen([out] (const int& x) { out->push_back(x); });
+    b.send(2);
+    b.send(7);
+    unlisten();
+    CPPUNIT_ASSERT(vector<int>({ 9 }) == *out);
+}
+
+void test_sodium::values_twice_then_once()
+{
+    behavior_sink<int> b(9);
+    shared_ptr<vector<int>> out(new vector<int>);
+    auto unlisten = doubleUp(b.values()).once()
+        .listen([out] (const int& x) { out->push_back(x); });
+    b.send(2);
+    b.send(7);
+    unlisten();
+    CPPUNIT_ASSERT(vector<int>({ 9 }) == *out);
+}
+
+void test_sodium::values_late_listen()
+{
+    behavior_sink<int> b(9);
+    b.send(8);
+    shared_ptr<vector<int>> out(new vector<int>);
+    auto unlisten = b.values().listen([out] (const int& x) { out->push_back(x); });
+    b.send(2);
+    unlisten();
+    CPPUNIT_ASSERT(vector<int>({ 8, 2 }) == *out);
+}
+	
+void test_sodium::mapB1()
+{
+    behavior_sink<int> b(6);
+    shared_ptr<vector<string>> out(new vector<string>);
+    auto unlisten = b.map<string>([] (const int& x) {
+        char buf[128];
+        sprintf(buf, "%d", x);
+        return string(buf);
+    }).values().listen([out] (const string& x) { out->push_back(x); });
+    b.send(8);
+    unlisten();
+    CPPUNIT_ASSERT(vector<string>({ string("6"), string("8") }) == *out);
+}
+
+void test_sodium::mapB_late_listen()
+{
+    behavior_sink<int> b(6);
+    shared_ptr<vector<string>> out(new vector<string>);
+    b.send(2);
+    auto unlisten = b.map<string>([] (const int& x) {
+        char buf[128];
+        sprintf(buf, "%d", x);
+        return string(buf);
+    }).values().listen([out] (const string& x) { out->push_back(x); });
+    b.send(8);
+    unlisten();
+    CPPUNIT_ASSERT(vector<string>({ string("2"), string("8") }) == *out);
+}
+
+static string fmtInt(const int& x) {
+    char buf[128];
+    sprintf(buf, "%d", x);
+    return string(buf);
+}
+
+void test_sodium::apply1()
+{
+    behavior_sink<function<string(const int&)>> bf([] (const int& b) {
+        return string("1 ")+fmtInt(b);
+    });
+    behavior_sink<int> ba(5);
+    shared_ptr<vector<string>> out(new vector<string>);
+    auto unlisten = apply<int,string>(bf, ba).values().listen([out] (const string& x) {
+        out->push_back(x);
+    });
+    bf.send([] (const int& b) { return string("12 ")+fmtInt(b); });
+    ba.send(6);
+    unlisten();
+    CPPUNIT_ASSERT(vector<string>({ string("1 5"), string("12 5"), string("12 6") }) == *out);
 }
 
 int main(int argc, char* argv[])

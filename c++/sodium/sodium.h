@@ -24,9 +24,8 @@ namespace sodium {
 
     namespace impl {
 
-        struct untyped {
-        };
-    
+        class behavior_;
+
         class event_ {
         public:
             typedef std::function<std::function<void()>(
@@ -34,34 +33,37 @@ namespace sodium {
                 const std::shared_ptr<impl::node>&,
                 const std::function<void(transaction_impl*, const light_ptr&)>&,
                 const std::shared_ptr<cleaner_upper>&)> listen;
-    
+            typedef std::function<void(std::vector<light_ptr>&)> sample_now;
+
         public:
             listen listen_impl_;
-    
+            sample_now sample_now_;
+
         protected:
             std::shared_ptr<cleaner_upper> cleanerUpper;
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
             bool is_never_;
 #endif
-    
+
         public:
             event_();
-            event_(const listen& listen_impl_);
-            event_(const listen& listen_impl_, const std::shared_ptr<cleaner_upper>& cleanerUpper
+            event_(const listen& listen_impl_, const sample_now& sample_now_,
+                   const std::shared_ptr<cleaner_upper>& cleanerUpper
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
                     , bool is_never_
 #endif
                 );
-            event_(const listen& listen_impl_, const std::function<void()>& f
+            event_(const listen& listen_impl_, const sample_now& sample_now_,
+                   const std::function<void()>& f
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
                     , bool is_never_
 #endif
                 );
-    
+
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
             bool is_never() const { return is_never_; }
 #endif
-    
+
             /*!
              * listen to events.
              */
@@ -69,20 +71,23 @@ namespace sodium {
                         transaction_impl* trans0,
                         const std::shared_ptr<impl::node>& target,
                         const std::function<void(transaction_impl*, const light_ptr&)>& handle) const;
-    
+
             /*!
              * The specified cleanup is performed whenever nobody is referencing this event
              * any more.
              */
             event_ add_cleanup(const std::function<void()>& newCleanup) const;
-    
+
             const std::shared_ptr<cleaner_upper>& get_cleaner_upper() const {
                 return cleanerUpper;
             }
-            
+
         protected:
             event_ once_() const;
             event_ merge_(const event_& other) const;
+            event_ coalesce_(const std::function<light_ptr(const light_ptr&, const light_ptr&)>& combine) const;
+            event_ snapshot_(const behavior_& beh, const std::function<light_ptr(const light_ptr&, const light_ptr&)>& combine) const;
+            event_ filter_(const std::function<bool(const light_ptr&)>& pred) const;
         };
         #define FRP_DETYPE_FUNCTION1(A,B,f) \
                    [f] (const light_ptr& a) -> light_ptr { \
@@ -96,6 +101,11 @@ namespace sodium {
          * Creates an event, and a function to push a value into it.
          * Unsafe variant: Assumes 'push' is called on the partition's sequence.
          */
+        std::tuple<
+                event_,
+                std::function<void(transaction_impl*, const light_ptr&)>,
+                std::shared_ptr<node>
+            > unsafe_new_event(const event_::sample_now& sample_now);
         std::tuple<
                 event_,
                 std::function<void(transaction_impl*, const light_ptr&)>,
@@ -292,7 +302,7 @@ namespace sodium {
             {
             }
 
-            behavior(const behavior_& beh) : behavior_(beh) {}
+            behavior(const impl::behavior_& beh) : impl::behavior_(beh) {}
 
             /*!
              * Sample the value of this behavior.
@@ -384,12 +394,13 @@ namespace sodium {
             event(const listen& listen) : impl::event_(listen) {}
             event(const impl::event_& ev) : impl::event_(ev) {}
         private:
-            event(const listen& listen, const std::shared_ptr<cleaner_upper>& cleanerUpper
+            event(const listen& listen, const sample_now& sample_now_,
+                  const std::shared_ptr<cleaner_upper>& cleanerUpper
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
                     , bool is_never_
 #endif
                 )
-            : impl::event_(listen, cleanerUpper
+            : impl::event_(listen, sample_now_, cleanerUpper
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
                     , is_never_
 #endif
@@ -449,11 +460,9 @@ namespace sodium {
              */
             event<A> coalesce(const std::function<A(const A&, const A&)>& combine) const
             {
-                return event<A>(impl::coalesce_with_cu<A>(combine, listen_impl_), cleanerUpper
-#if defined(SODIUM_CONSTANT_OPTIMIZATION)
-                        , is_never_
-#endif
-                    );
+                return event<A>(coalesce_([combine] (const light_ptr& a, const light_ptr& b) -> light_ptr {
+                    return light_ptr::create<A>(combine(*a.castPtr<A>(NULL), *b.castPtr<A>(NULL)));
+                }));
             }
 
             /*!
@@ -475,15 +484,9 @@ namespace sodium {
              */
             event<A> filter(const std::function<bool(const A&)>& pred) const
             {
-                transaction trans;
-                auto p = impl::unsafe_new_event();
-                auto push = std::get<1>(p);
-                auto target = std::get<2>(p);
-                auto kill = listen_raw(trans.impl(), target,
-                        [pred, push] (impl::transaction_impl* trans, const light_ptr& ptr) {
-                    if (pred(*ptr.castPtr<A>(NULL))) push(trans, ptr);
-                });
-                return std::get<0>(p).add_cleanup(kill);
+                return event<A>(filter_([pred] (const light_ptr& a) {
+                    return pred(*a.castPtr<A>(NULL));
+                }));
             }
 
             behavior<A> hold(const A& initA) const
@@ -502,15 +505,9 @@ namespace sodium {
             template <class B, class C>
             event<C> snapshot(const behavior<B>& beh, const std::function<C(const A&, const B&)>& combine) const
             {
-                transaction trans;
-                auto p = impl::unsafe_new_event();
-                auto push = std::get<1>(p);
-                auto target = std::get<2>(p);
-                auto kill = listen_raw(trans.impl(), target,
-                        [beh, push, combine] (impl::transaction_impl* trans, const light_ptr& ptr) {
-                    push(trans, light_ptr::create<C>(combine(*ptr.castPtr<A>(NULL), beh.sample())));
-                });
-                return std::get<0>(p).add_cleanup(kill);
+                return event<C>(snapshot_(beh, [combine] (const light_ptr& a, const light_ptr& b) -> light_ptr {
+                    return light_ptr::create<C>(combine(*a.castPtr<A>(NULL), *b.castPtr<B>(NULL)));
+                }));
             }
 
             /*!
@@ -814,15 +811,17 @@ namespace sodium {
     };
 
     template <class A, class B>
-    behavior<B> apply(impl::transaction_impl* trans0, const behavior<std::function<B(const A&)>>& bf, const behavior<A>& ba) {
+    behavior<B> apply(const behavior<std::function<B(const A&)>>& bf, const behavior<A>& ba)
+    {
+        transaction trans;
         return behavior<B>(impl::apply(
-            trans0,
-            bf.map_([] (const light_ptr& pf) {
+            trans.impl(),
+            impl::map_([] (const light_ptr& pf) -> light_ptr {
                 const std::function<B(const A&)>& f = *pf.castPtr<std::function<B(const A&)>>(NULL);
                 return light_ptr::create<std::function<light_ptr(const light_ptr&)>>(
                         FRP_DETYPE_FUNCTION1(A, B, f)
                     );
-            }),
+            }, bf),
             ba
         ));
     }

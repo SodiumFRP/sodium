@@ -36,6 +36,19 @@ class test_sodium : public CppUnit::TestFixture {
     CPPUNIT_TEST(constant_behavior);
     CPPUNIT_TEST(values_then_map);
     CPPUNIT_TEST(values_twice_then_map);
+    CPPUNIT_TEST(values_then_coalesce);
+    CPPUNIT_TEST(values_twice_then_coalesce);
+    CPPUNIT_TEST(values_then_snapshot);
+    CPPUNIT_TEST(values_twice_then_snapshot);
+    CPPUNIT_TEST(values_then_merge);
+    CPPUNIT_TEST(values_then_filter);
+    CPPUNIT_TEST(values_twice_then_filter);
+    CPPUNIT_TEST(values_then_once);
+    CPPUNIT_TEST(values_twice_then_once);
+    CPPUNIT_TEST(values_late_listen);
+    CPPUNIT_TEST(mapB1);
+    CPPUNIT_TEST(mapB_late_listen);
+    CPPUNIT_TEST(apply1);
     CPPUNIT_TEST_SUITE_END();
 
     void event1();
@@ -58,6 +71,19 @@ class test_sodium : public CppUnit::TestFixture {
     void constant_behavior();
     void values_then_map();
     void values_twice_then_map();
+    void values_then_coalesce();
+    void values_twice_then_coalesce();
+    void values_then_snapshot();
+    void values_twice_then_snapshot();
+    void values_then_merge();
+    void values_then_filter();
+    void values_twice_then_filter();
+    void values_then_once();
+    void values_twice_then_once();
+    void values_late_listen();
+    void mapB1();
+    void mapB_late_listen();
+    void apply1();
 };
 
 #endif
