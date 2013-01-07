@@ -373,6 +373,7 @@ public class BehaviorTester extends TestCase {
         ea.send(1);
         l.unlisten();
         assertEquals(Arrays.asList(0,2,5,6), out);
+        assertEquals((int)6, (int)sum.sample());
     }
 
     public void testCollect()

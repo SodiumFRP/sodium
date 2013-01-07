@@ -294,7 +294,6 @@ public class Behavior<A> {
     public static <A,B> B loop(final Lambda1<Behavior<A>,Tuple2<B,Behavior<A>>> f)
     {
         return Event.loop(
-            // Lambda syntax doesn't work here - compiler bug?
             new Lambda1<Event<A>,Tuple2<B,Event<A>>>() {
                 public Tuple2<B,Event<A>> apply(Event<A> ea) {
                     Tuple2<B,Behavior<A>> b_ba = f.apply(ea.hold(null));

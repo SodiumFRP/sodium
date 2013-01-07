@@ -54,6 +54,7 @@ class test_sodium : public CppUnit::TestFixture {
     CPPUNIT_TEST(hold_is_delayed);
     CPPUNIT_TEST(switch_b1);
     CPPUNIT_TEST(switch_e1);
+    CPPUNIT_TEST(loop_behavior);
     CPPUNIT_TEST_SUITE_END();
 
     void event1();
@@ -94,6 +95,7 @@ class test_sodium : public CppUnit::TestFixture {
     void hold_is_delayed();
     void switch_b1();
     void switch_e1();
+    void loop_behavior();
 };
 
 #endif

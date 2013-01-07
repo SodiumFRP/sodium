@@ -610,6 +610,21 @@ void test_sodium::switch_e1()
     CPPUNIT_ASSERT_EQUAL(string("ABCdeFGhI"), *out);
 }
 
+void test_sodium::loop_behavior()
+{
+    event_sink<int> ea;
+    behavior_loop<int> sum;
+    sum.loop(ea.snapshot<int,int>(sum, [] (const int& x, const int& y) { return x+y; }).hold(0));
+    std::shared_ptr<vector<int>> out(new vector<int>);
+    auto unlisten = sum.values().listen([out] (const int& x) { out->push_back(x); });
+    ea.send(2);
+    ea.send(3);
+    ea.send(1);
+    unlisten();
+    CPPUNIT_ASSERT(vector<int>({ 0, 2, 5, 6 }) == *out);
+    CPPUNIT_ASSERT(sum.sample() == 6);
+}
+
 int main(int argc, char* argv[])
 {
     CppUnit::TextUi::TestRunner runner;

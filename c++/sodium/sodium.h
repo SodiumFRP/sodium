@@ -202,24 +202,13 @@ namespace sodium {
             }
 
         protected:
-#if 0
-            behavior(
-                const event_& changes,
-                const std::function<boost::optional<light_ptr>()>& sample
-            )
-                : impl::behavior_(changes, sample)
-            {
-            }
-
             behavior(
                 const impl::event_& changes,
-                const std::function<boost::optional<light_ptr>()>& sample,
-                const impl::untyped*
+                const std::function<light_ptr()>& sample
             )
                 : impl::behavior_(changes, sample)
             {
             }
-#endif
             behavior() {}
 
         public:
@@ -805,31 +794,40 @@ namespace sodium {
             }
     };
 
-#if 0
+    /*!
+     * Enable the construction of behavior loops, like this. This gives the ability to
+     * forward reference a behavior.
+     *
+     *   behavior_loop<A> ea;
+     *   auto ea_out = doSomething(ea);
+     *   ea.loop(ea_out);  // ea is now the same as ea_out
+     */
     template <class A>
-    std::tuple<behavior<A>, std::function<void(impl::transaction_impl*, const behavior<A>&)>>
-        behavior_loop()
+    class behavior_loop : public behavior<A>
     {
-        auto p = event_loop<A>();
-        auto in = std::get<0>(p);
-        auto feedBack = std::get<1>(p);
-        MVar<std::function<boost::optional<light_ptr>()>> mvSample;
-        return std::make_tuple(
-            behavior<A>(
-                part.sequence(),
-                in,
-                [mvSample] () -> boost::optional<light_ptr> {
-                    auto sample = mvSample.read();
-                    return sample();
-                }
-            ),
-            [feedBack, mvSample] (impl::transaction_impl* trans, const behavior<A>& out) {
-                feedBack(trans, changes<A>(out));
-                mvSample.put(out.getSample());
+        private:
+            event_loop<A> elp;
+            std::shared_ptr<std::function<light_ptr()>> pSample;
+
+        public:
+            behavior_loop()
+                : behavior<A>(impl::behavior_()),
+                  pSample(new std::function<light_ptr()>([] () -> light_ptr {
+                      throw std::runtime_error("behavior_loop sampled before it was looped");
+                  }))
+            {
+                auto pSample = this->pSample;
+                this->impl = std::shared_ptr<impl::behavior_impl>(new impl::behavior_impl(
+                    elp,
+                    [pSample] () { return (*pSample)(); }));
             }
-        );
-    }
-#endif
+
+            void loop(const behavior<A>& b)
+            {
+                elp.loop(b.changes());
+                *pSample = b.impl->sample;
+            }
+    };
 
     namespace impl {
         event_ switch_e(const behavior_& bea);
