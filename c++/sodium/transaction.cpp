@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2012, Stephen Blackheath and Anthony Jones
+ * Released under a BSD3 licence.
+ *
+ * C++ implementation courtesy of International Telematics Ltd.
+ */
 #include <sodium/sodium.h>
 #include <limits.h>
 
