@@ -309,6 +309,7 @@ namespace sodium {
     class event : public impl::event_ {
         template <class AA, class PP> friend class event;
         template <class AA, class PP> friend class behavior;
+        template <class AA, class PP> friend class event_sink;
         template <class AA, class PP> friend event<AA, PP> filter_optional(const event<boost::optional<AA>, PP>& input);
         template <class AA, class PP> friend event<AA, PP> switch_e(const behavior<event<AA, PP>, PP>& bea);
         template <class AA, class PP> friend event<AA, PP> split(const event<std::list<AA>, PP>& e);
@@ -507,26 +508,32 @@ namespace sodium {
                 return event<A, P>(add_cleanup_(newCleanup));
             }
     };  // end class event
+    
+    namespace impl {
+        struct event_sink_impl {
+            event_sink_impl();
+            event_ construct();
+            void send(const light_ptr& ptr) const;
+            std::shared_ptr<impl::node> target;
+            std::function<void(impl::transaction_impl*, const light_ptr&)> push;
+        };
+    }
 
     template <class A, class P = def_part>
     class event_sink : public event<A, P>
     {
         private:
-            std::function<void(impl::transaction_impl*, const light_ptr&)> push;
+            impl::event_sink_impl impl;
+            event_sink(const impl::event_& e) : event<A, P>(e) {}
 
         public:
             event_sink()
             {
-                auto p = impl::unsafe_new_event();
-                *this = event_sink<A>(std::get<0>(p));
-                push = std::get<1>(p);
+                *static_cast<event<A,P>*>(this) = impl.construct();
             }
-            event_sink(const impl::event_& ev) : event<A, P>(ev) {}
 
             void send(const A& a) const {
-                light_ptr ptr = light_ptr::create<A>(a);
-                transaction trans;
-                push(trans.impl(), ptr);
+                impl.send(light_ptr::create<A>(a));
             }
     };
 

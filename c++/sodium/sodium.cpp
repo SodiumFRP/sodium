@@ -414,6 +414,27 @@ namespace sodium {
             );
         }
 
+        event_sink_impl::event_sink_impl()
+        {
+        }
+
+        event_ event_sink_impl::construct()
+        {
+            auto p = impl::unsafe_new_event();
+            this->push = std::get<1>(p);
+            this->target = std::get<2>(p);
+            return std::get<0>(p);
+        }
+
+        void event_sink_impl::send(const light_ptr& ptr) const
+        {
+            transaction trans;
+            auto push(this->push);
+            trans.impl()->prioritized(target, [push, ptr] (transaction_impl* trans_impl) {
+                push(trans_impl, ptr);
+            });
+        }
+
         /*!
          * Creates an event, and a function to push a value into it.
          * Unsafe variant: Assumes 'push' is called on the partition's sequence.

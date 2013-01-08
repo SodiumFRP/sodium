@@ -145,6 +145,27 @@ namespace sodium {
         cleaner_upper(const std::function<void()>& f) : f(f) {}
         ~cleaner_upper() { f(); }
     };
+
+    class policy {
+    public:
+        policy() {}
+        virtual ~policy() {}
+
+        static policy* get_global();
+        static void set_global(policy* policy);
+
+        // Get the current thread's active transaction
+        virtual impl::transaction_impl* get_transaction() = 0;
+        virtual void initiate(impl::transaction_impl* trans) = 0;
+        virtual void dispatch(impl::transaction_impl* trans,
+            const std::function<void()>& transactional,
+            const std::function<void()>& post) = 0;
+    };
+
+    class simple_policy : public policy
+    {
+    public:
+    };
 };  // end namespace sodium
 
 #endif

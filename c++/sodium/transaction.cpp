@@ -165,5 +165,18 @@ namespace sodium {
         pthread_mutex_unlock(&part->transaction_lock);
     }
 
+    static policy* global_policy /* = new simple_policy*/;
+
+    static policy* get_global()
+    {
+        return global_policy;
+    }
+
+    static void set_global(policy* policy)
+    {
+        delete global_policy;
+        global_policy = policy;
+    }
+
 };  // end namespace sodium
 
