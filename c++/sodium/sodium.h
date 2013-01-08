@@ -49,7 +49,7 @@ namespace sodium {
         friend event_ switch_e(transaction_impl* trans, const behavior_& bea);
         public:
             typedef std::function<std::function<void()>(
-                transaction_impl* trans,
+                transaction_impl*,
                 const std::shared_ptr<impl::node>&,
                 const std::function<void(transaction_impl*, const light_ptr&)>&,
                 bool suppressEarlierFirings,
@@ -659,7 +659,7 @@ namespace sodium {
             event_loop(const impl::event_& ev, const std::shared_ptr<info>& i) : event<A, P>(ev), i(i) {}
 
         public:
-            event_loop() : i(NULL)
+            event_loop()
             {
                 std::shared_ptr<std::function<void()>> pKill(
                     std::shared_ptr<std::function<void()>>(

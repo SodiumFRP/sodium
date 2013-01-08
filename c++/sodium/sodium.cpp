@@ -21,20 +21,24 @@ namespace sodium {
 
     namespace impl {
 #ifdef WORKAROUND_GCC_46_BUG
-        struct Nulllistener {
-            std::function<void()> operator () (transaction_impl*, const std::shared_ptr<impl::node>&,
-                        const std::function<void(transaction_impl*, const light_ptr&)>&,
-                        const std::shared_ptr<cleaner_upper>&) {
+        struct null_listener {
+            std::function<void()> operator () (
+                transaction_impl* trans,
+                const std::shared_ptr<impl::node>&,
+                const std::function<void(transaction_impl*, const light_ptr&)>&,
+                bool suppressEarlierFirings,
+                const std::shared_ptr<cleaner_upper>&
+            ) {
                 return [] () {};
             }
         };
 
         // Save a bit of memory by having one global instance of the 'never' listener.
-        static const Nulllistener& getNever()
+        static const null_listener& getNever()
         {
-            static Nulllistener* l;
+            static null_listener* l;
             if (l == NULL)
-                l = new Nulllistener;
+                l = new null_listener;
             return *l;
         }
 
@@ -331,6 +335,42 @@ namespace sodium {
             const std::function<light_ptr()>& sample)
         : changes(changes), sample(sample) {}
 
+#if defined(WORKAROUND_GCC_46_BUG)
+        struct new_event_listener {
+            new_event_listener(const std::shared_ptr<node>& n) : n(n) {}
+            std::shared_ptr<node> n;
+            std::function<void()> operator () (
+                transaction_impl* trans,
+                const std::shared_ptr<impl::node>& target,
+                const std::function<void(transaction_impl*, const light_ptr&)>& handle,
+                bool suppressEarlierFirings,
+                const std::shared_ptr<cleaner_upper>& cleanerUpper
+            ) {
+                std::list<light_ptr> firings;
+                void* h = new holder(handle, cleanerUpper);
+                {
+                    trans->part->mx.lock();
+                    n->link(h, target);
+                    trans->part->mx.unlock();
+                    firings = n->firings;
+                }
+                if (!suppressEarlierFirings && firings.begin() != firings.end())
+                    for (auto it = firings.begin(); it != firings.end(); it++)
+                        handle(trans, *it);
+                partition* part = trans->part;
+                return [part, n, h] () {  // Unregister listener
+                    part->mx.lock();
+                    if (n->unlink(h)) {
+                        part->mx.unlock();
+                        delete (holder*)h;
+                    }
+                    else
+                        part->mx.unlock();
+                };
+            }
+        };
+#endif
+
         /*!
          * Creates an event, and a function to push a value into it.
          * Unsafe variant: Assumes 'push' is called on the partition's sequence.
@@ -342,6 +382,9 @@ namespace sodium {
             return std::make_tuple(
                 // The event
                 event_(
+#if defined(WORKAROUND_GCC_46_BUG)
+                    new_event_listener(n),
+#else
                     [n] (transaction_impl* trans,
                             const std::shared_ptr<node>& target,
                             const std::function<void(transaction_impl*, const light_ptr&)>& handle,
@@ -369,6 +412,7 @@ namespace sodium {
                                 part->mx.unlock();
                         };
                     },
+#endif
                     sample_now,
                     std::shared_ptr<cleaner_upper>()
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
