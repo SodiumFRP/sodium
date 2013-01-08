@@ -22,6 +22,7 @@ namespace sodium {
 
     struct def_part {};
     template <class A, class P> class event;
+    template <class A, class P> class behavior;
     template <class A, class P> class event_loop;
     template <class A, class P> class behavior;
     template <class A, class B, class P = def_part>
@@ -37,6 +38,7 @@ namespace sodium {
         class event_ {
         friend class behavior_;
         template <class A, class P> friend class sodium::event;
+        template <class A, class P> friend class sodium::behavior;
         template <class A, class P> friend class sodium::event_loop;
         friend behavior_ switch_b(const behavior_& bba);
         friend behavior_impl* hold(transaction_impl* trans0, const light_ptr& initValue, const event_& input);
@@ -196,7 +198,7 @@ namespace sodium {
 
         behavior_ map_(const std::function<light_ptr(const light_ptr&)>& f,
             const behavior_& beh);
-    };  // end namespace impl
+    }  // end namespace impl
 
     template <class A, class P>
     class event;
@@ -254,7 +256,7 @@ namespace sodium {
                 return impl->changes.listen_raw_(trans, target, handle, false);
             }
 
-            behavior<A, P> add_cleanup_(const std::function<void()>& newCleanup) const {
+            behavior<A, P> add_cleanup(const std::function<void()>& newCleanup) const {
                 return behavior<A, P>(std::shared_ptr<impl::behavior_impl>(
                         new impl::behavior_impl(impl->changes.add_cleanup_(newCleanup), impl->sample)));
             }
@@ -500,11 +502,10 @@ namespace sodium {
              * Add a clean-up operation to be performed when this event is no longer
              * referenced.
              */
-            event<A> add_cleanup(const std::function<void()>& newCleanup) const
+            event<A, P> add_cleanup(const std::function<void()>& newCleanup) const
             {
-                return event<A>(add_cleanup_(newCleanup));
+                return event<A, P>(add_cleanup_(newCleanup));
             }
-
     };  // end class event
 
     template <class A, class P = def_part>
@@ -530,6 +531,28 @@ namespace sodium {
     };
 
     /*!
+     * Make the specified event cross to partition Q.
+     */
+    template <class A, class P, class Q>
+    event<A, Q> cross(const event<A, P>& e)
+    {
+        transaction trans;
+        event_sink<A, Q> s;
+        auto kill = e.listen([s] (const A& a) { s.send(a); });
+        return s.add_cleanup(kill);
+    }
+
+    /*!
+     * Make the specified behavior cross to partition Q.
+     */
+    template <class A, class P, class Q>
+    behavior<A, Q> cross(const behavior<A, P>& b)
+    {
+        transaction trans;
+        return cross<A, P, Q>(b.changes()).hold(b.sample());
+    }
+
+    /*!
      * Filter an event of optionals, keeping only the defined values.
      */
     template <class A, class P>
@@ -551,7 +574,7 @@ namespace sodium {
     class behavior_sink : public behavior<A, P>
     {
         private:
-            event_sink<A> e;
+            event_sink<A, P> e;
 
             behavior_sink(const behavior<A, P>& beh) : behavior<A, P>(beh) {}
 
@@ -561,7 +584,7 @@ namespace sodium {
                 *dynamic_cast<behavior<A, P>*>(this) = e.hold(initA);
             }
 
-            void send(const A& a)
+            void send(const A& a) const
             {
                 e.send(a);
             }
