@@ -193,8 +193,12 @@ namespace sodium {
      */
     template <class A, class P = def_part>
     class behavior : public impl::behavior_ {
+        template <class AA, class PP> friend class event;
+        template <class AA, class PP> friend class behavior;
+        template <class AA, class BB, class PP>
+        friend behavior<BB, PP> apply(const behavior<std::function<BB(const AA&)>, PP>& bf, const behavior<AA, PP>& ba);
         template <class AA, class PP>
-        friend class event;
+        friend behavior<AA, PP> switch_b(const behavior<behavior<AA, PP>, PP>& bba);
         private:
             behavior(const std::shared_ptr<impl::behavior_impl>& impl)
                 : impl::behavior_(impl)
@@ -210,6 +214,7 @@ namespace sodium {
             {
             }
             behavior() {}
+            behavior(const impl::behavior_& beh) : impl::behavior_(beh) {}
 
         public:
             /*!
@@ -219,8 +224,6 @@ namespace sodium {
                 : impl::behavior_(light_ptr::create<A>(a))
             {
             }
-
-            behavior(const impl::behavior_& beh) : impl::behavior_(beh) {}
 
             /*!
              * Sample the value of this behavior.
@@ -291,37 +294,20 @@ namespace sodium {
 
     template <class A, class P = def_part>
     class event : public impl::event_ {
+        template <class AA, class PP> friend class event;
+        template <class AA, class PP> friend class behavior;
+        template <class AA, class PP> friend event<AA, PP> filter_optional(const event<boost::optional<AA>, PP>& input);
+        template <class AA, class PP> friend event<AA, PP> switch_e(const behavior<event<AA, PP>, PP>& bea);
+        template <class AA, class PP> friend event<AA, PP> split(const event<std::list<AA>, PP>& e);
         public:
             /*!
              * The 'never' event (that never fires).
              */
             event() {}
+        protected:
             event(const listen& listen) : impl::event_(listen) {}
             event(const impl::event_& ev) : impl::event_(ev) {}
-        private:
-            event(const listen& listen, const sample_now& sample_now_,
-                  const std::shared_ptr<cleaner_upper>& cleanerUpper
-#if defined(SODIUM_CONSTANT_OPTIMIZATION)
-                    , bool is_never_
-#endif
-                )
-            : impl::event_(listen, sample_now_, cleanerUpper
-#if defined(SODIUM_CONSTANT_OPTIMIZATION)
-                    , is_never_
-#endif
-                ) {}
         public:
-
-        #if 0
-            std::function<void()> listen_raw(
-                        impl::transaction_impl* trans0,
-                        const std::shared_ptr<impl::node>& target,
-                        const std::function<void(impl::transaction_impl*, const light_ptr&)>& handle) const
-            {
-                return listen_raw_(trans0, target, handle);
-            }
-        #endif
-
             /*!
              * High-level interface to obtain an event's value.
              */
@@ -745,6 +731,30 @@ namespace sodium {
         );
         return apply(apply(ba.map_(fa), bb), bc);
     }
+
+    /*!
+     * Take each list item and put it into a new transaction of its own.
+     *
+     * An example use case of this might be a situation where we are splitting
+     * a block of input data into frames. We obviously want each frame to have
+     * its own transaction so that state is correctly updated after each frame.
+     */
+    template <class A, class P = def_part>
+    event<A, P> split(const event<std::list<A>, P>& e)
+    {
+        event_sink<A, P> out;
+        transaction trans;
+        auto kill = e.listen_raw_(trans.impl(), std::shared_ptr<impl::node>(),
+            [out] (impl::transaction_impl* trans, const light_ptr& ptr) {
+                const std::list<A>& la = *ptr.cast_ptr<std::list<A>>(NULL);
+                trans->post([la, out] () {
+                    for (auto it = la.begin(); it != la.end(); ++it)
+                        out.send(*it);
+                });
+            }, false);
+        return out.add_cleanup(kill);
+    }
+
 }  // end namespace sodium
 #endif
 

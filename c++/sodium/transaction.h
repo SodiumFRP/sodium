@@ -126,6 +126,7 @@ namespace sodium {
 
     class transaction
     {
+        friend class impl::transaction_impl;
         private:
             static impl::transaction_impl* current_transaction;
             impl::transaction_impl* transaction_was;

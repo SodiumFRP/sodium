@@ -173,7 +173,7 @@ void test_sodium::count_e1()
     ea.send(unit());
     ea.send(unit());
     unlisten();
-    CPPUNIT_ASSERT(std::vector<int>({ 1, 2, 3 }) == *out);
+    CPPUNIT_ASSERT(vector<int>({ 1, 2, 3 }) == *out);
 }
 
 void test_sodium::count1()
@@ -186,7 +186,7 @@ void test_sodium::count1()
     ea.send(unit());
     ea.send(unit());
     unlisten();
-    CPPUNIT_ASSERT(std::vector<int>({ 0, 1, 2, 3 }) == *out);
+    CPPUNIT_ASSERT(vector<int>({ 0, 1, 2, 3 }) == *out);
 }
 
 void test_sodium::once1()
@@ -218,7 +218,7 @@ void test_sodium::snapshot1()
     behavior_sink<int> b(0);
     event_sink<long> trigger;
     std::shared_ptr<vector<string>> out(new vector<string>);
-    auto unlisten = trigger.snapshot<long,string>(b, [out] (const long& x, const int& y) -> string {
+    auto unlisten = trigger.snapshot<int,string>(b, [out] (const long& x, const int& y) -> string {
         char buf[129];
         sprintf(buf, "%ld %d", x, y);
         return buf;
@@ -603,7 +603,7 @@ void test_sodium::collect1()
     ea.send(2);
     ea.send(3);
     unlisten();
-    CPPUNIT_ASSERT(std::vector<int>({ 105, 112, 113, 115, 118 }) == *out);
+    CPPUNIT_ASSERT(vector<int>({ 105, 112, 113, 115, 118 }) == *out);
 }
 
 void test_sodium::accum1()
@@ -620,7 +620,33 @@ void test_sodium::accum1()
     ea.send(2);
     ea.send(3);
     unlisten();
-    CPPUNIT_ASSERT(std::vector<int>({ 105, 112, 113, 115, 118 }) == *out);
+    CPPUNIT_ASSERT(vector<int>({ 105, 112, 113, 115, 118 }) == *out);
+}
+
+void test_sodium::split1()
+{
+    event_sink<string> ea;
+    std::shared_ptr<vector<string>> out(new vector<string>);
+    event<string> eo = split(ea.map<list<string>>([] (const string& text0) -> list<string> {
+        size_t p;
+        string text = text0;
+        list<string> tokens;
+        while ((p = text.find(' ')) != string::npos) {
+            tokens.push_back(text.substr(0, p));
+            text = text.substr(p+1);
+        }
+        if (text.length() != 0)
+            tokens.push_back(text);
+        return tokens;
+    }))
+    // coalesce so we'll fail if split didn't put each string into its own transaction
+    .coalesce([] (const string& a, const string& b) { return b; });
+    auto unlisten = eo.listen([out] (const string& x) { out->push_back(x); });
+    ea.send("the common cormorant");
+    ea.send("or shag");
+    unlisten();
+    CPPUNIT_ASSERT(vector<string>({ string("the"), string("common"), string("cormorant"),
+                                    string("or"), string("shag") }) == *out);
 }
 
 int main(int argc, char* argv[])

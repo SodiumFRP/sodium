@@ -12,6 +12,8 @@ using namespace boost;
 
 namespace sodium {
 
+    impl::transaction_impl* transaction::current_transaction;
+
     namespace impl {
 
         void node::link(void* handler, const std::shared_ptr<node>& targ) {
@@ -115,6 +117,8 @@ namespace sodium {
                 (*lastQ.begin())();
                 lastQ.erase(lastQ.begin());
             }
+            transaction::current_transaction = NULL;  // Allow new transactions to be created during
+                                         // postQ processing
             while (postQ.begin() != postQ.end()) {
                 (*postQ.begin())();
                 postQ.erase(postQ.begin());
@@ -141,8 +145,6 @@ namespace sodium {
         }
 
     };  // end namespace impl
-        
-    impl::transaction_impl* transaction::current_transaction;
 
     transaction::transaction()
     {
@@ -156,8 +158,9 @@ namespace sodium {
     transaction::~transaction()
     {
         if (transaction_was == NULL)
-            delete current_transaction;
-        current_transaction = transaction_was;
+            delete current_transaction;  // clears current_transaction just before processing postQ
+        else
+            current_transaction = transaction_was;
         auto part = impl::partition_state::instance();
         pthread_mutex_unlock(&part->transaction_lock);
     }
