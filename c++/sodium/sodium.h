@@ -19,8 +19,6 @@
 #define SODIUM_CONSTANT_OPTIMIZATION
 
 namespace sodium {
-
-    struct def_part {};
     template <class A, class P> class event;
     template <class A, class P> class behavior;
     template <class A, class P> class event_loop;
@@ -40,7 +38,7 @@ namespace sodium {
         template <class A, class P> friend class sodium::event;
         template <class A, class P> friend class sodium::behavior;
         template <class A, class P> friend class sodium::event_loop;
-        friend behavior_ switch_b(const behavior_& bba);
+        friend behavior_ switch_b(transaction_impl* trans, const behavior_& bba);
         friend behavior_impl* hold(transaction_impl* trans0, const light_ptr& initValue, const event_& input);
         template <class A, class B, class P>
         friend behavior<B, P> sodium::apply(const behavior<std::function<B(const A&)>, P>& bf, const behavior<A, P>& ba);
@@ -48,7 +46,7 @@ namespace sodium {
         friend event<A, P> sodium::filter_optional(const event<boost::optional<A>, P>& input);
         friend behavior_ apply(transaction_impl* trans0, const behavior_& bf, const behavior_& ba);
         friend event_ map_(const std::function<light_ptr(const light_ptr&)>& f, const event_& ev);
-        friend event_ switch_e(const behavior_& bea);
+        friend event_ switch_e(transaction_impl* trans, const behavior_& bea);
         public:
             typedef std::function<std::function<void()>(
                 transaction_impl* trans,
@@ -104,13 +102,13 @@ namespace sodium {
                 return cleanerUpper;
             }
 
-            behavior_ hold_(const light_ptr& initA) const;
-            event_ once_() const;
-            event_ merge_(const event_& other) const;
+            behavior_ hold_(transaction_impl* trans, const light_ptr& initA) const;
+            event_ once_(transaction_impl* trans) const;
+            event_ merge_(transaction_impl* trans, const event_& other) const;
             event_ coalesce_(const std::function<light_ptr(const light_ptr&, const light_ptr&)>& combine) const;
             event_ last_firing_only_() const;
-            event_ snapshot_(const behavior_& beh, const std::function<light_ptr(const light_ptr&, const light_ptr&)>& combine) const;
-            event_ filter_(const std::function<bool(const light_ptr&)>& pred) const;
+            event_ snapshot_(transaction_impl* trans, const behavior_& beh, const std::function<light_ptr(const light_ptr&, const light_ptr&)>& combine) const;
+            event_ filter_(transaction_impl* trans, const std::function<bool(const light_ptr&)>& pred) const;
         };
         #define SODIUM_DETYPE_FUNCTION1(A,B,f) \
                    [f] (const light_ptr& a) -> light_ptr { \
@@ -326,7 +324,7 @@ namespace sodium {
              * High-level interface to obtain an event's value.
              */
             std::function<void()> listen(std::function<void(const A&)> handle) const {
-                transaction trans;
+                transaction<P> trans;
                 return listen_raw_(trans.impl(), std::shared_ptr<impl::node>(), [handle] (impl::transaction_impl* trans, const light_ptr& ptr) {
                     handle(*ptr.cast_ptr<A>(NULL));
                 }, false);
@@ -353,7 +351,8 @@ namespace sodium {
             }
 
             event<A, P> merge(const event<A, P>& other) const {
-                return event<A, P>(merge_(other));
+                transaction<P> trans;
+                return event<A, P>(merge_(trans.impl(), other));
             }
 
             /*!
@@ -391,14 +390,16 @@ namespace sodium {
              */
             event<A, P> filter(const std::function<bool(const A&)>& pred) const
             {
-                return event<A, P>(filter_([pred] (const light_ptr& a) {
+                transaction<P> trans;
+                return event<A, P>(filter_(trans.impl(), [pred] (const light_ptr& a) {
                     return pred(*a.cast_ptr<A>(NULL));
                 }));
             }
 
             behavior<A, P> hold(const A& initA) const
             {
-                return behavior<A, P>(hold_(light_ptr::create<A>(initA)));
+                transaction<P> trans;
+                return behavior<A, P>(hold_(trans.impl(), light_ptr::create<A>(initA)));
             }
 
             /*!
@@ -409,7 +410,8 @@ namespace sodium {
             template <class B, class C>
             event<C, P> snapshot(const behavior<B, P>& beh, const std::function<C(const A&, const B&)>& combine) const
             {
-                return event<C, P>(snapshot_(beh, [combine] (const light_ptr& a, const light_ptr& b) -> light_ptr {
+                transaction<P> trans;
+                return event<C, P>(snapshot_(trans.impl(), beh, [combine] (const light_ptr& a, const light_ptr& b) -> light_ptr {
                     return light_ptr::create<C>(combine(*a.cast_ptr<A>(NULL), *b.cast_ptr<B>(NULL)));
                 }));
             }
@@ -430,7 +432,7 @@ namespace sodium {
              */
             event<A, P> gate(const behavior<bool, P>& g) const
             {
-                transaction trans;
+                transaction<P> trans;
                 return filter_optional<A>(snapshot<bool, boost::optional<A>>(
                     g,
                     [] (const A& a, const bool& gated) {
@@ -449,7 +451,7 @@ namespace sodium {
                 const std::function<std::tuple<B, S>(const A&, const S&)>& f
             ) const
             {
-                transaction trans;
+                transaction<P> trans;
                 std::shared_ptr<impl::collect_state<S>> pState(new impl::collect_state<S>(initS));
                 auto p = impl::unsafe_new_event();
                 auto push = std::get<1>(p);
@@ -469,7 +471,7 @@ namespace sodium {
                 const std::function<B(const A&, const B&)>& f
             ) const
             {
-                transaction trans;
+                transaction<P> trans;
                 std::shared_ptr<impl::collect_state<B>> pState(new impl::collect_state<B>(initB));
                 auto p = impl::unsafe_new_event();
                 auto push = std::get<1>(p);
@@ -496,7 +498,8 @@ namespace sodium {
 
             event<A, P> once() const
             {
-                return event<A, P>(once_());
+                transaction<P> trans;
+                return event<A, P>(once_(trans.impl()));
             }
 
             /*!
@@ -513,7 +516,7 @@ namespace sodium {
         struct event_sink_impl {
             event_sink_impl();
             event_ construct();
-            void send(const light_ptr& ptr) const;
+            void send(transaction_impl* trans, const light_ptr& ptr) const;
             std::shared_ptr<impl::node> target;
             std::function<void(impl::transaction_impl*, const light_ptr&)> push;
         };
@@ -533,7 +536,8 @@ namespace sodium {
             }
 
             void send(const A& a) const {
-                impl.send(light_ptr::create<A>(a));
+                transaction<P> trans;
+                impl.send(trans.impl(), light_ptr::create<A>(a));
             }
     };
 
@@ -543,7 +547,7 @@ namespace sodium {
     template <class A, class P, class Q>
     event<A, Q> cross(const event<A, P>& e)
     {
-        transaction trans;
+        transaction<P> trans;
         event_sink<A, Q> s;
         auto kill = e.listen([s] (const A& a) { s.send(a); });
         return s.add_cleanup(kill);
@@ -555,7 +559,7 @@ namespace sodium {
     template <class A, class P, class Q>
     behavior<A, Q> cross(const behavior<A, P>& b)
     {
-        transaction trans;
+        transaction<P> trans;
         return cross<A, P, Q>(b.changes()).hold(b.sample());
     }
 
@@ -565,7 +569,7 @@ namespace sodium {
     template <class A, class P>
     event<A, P> filter_optional(const event<boost::optional<A>, P>& input)
     {
-        transaction trans;
+        transaction<P> trans;
         auto p = impl::unsafe_new_event();
         auto push = std::get<1>(p);
         auto target = std::get<2>(p);
@@ -611,7 +615,7 @@ namespace sodium {
     template <class A, class B, class P>
     behavior<B, P> apply(const behavior<std::function<B(const A&)>, P>& bf, const behavior<A, P>& ba)
     {
-        transaction trans;
+        transaction<P> trans;
         return behavior<B, P>(impl::apply(
             trans.impl(),
             impl::map_([] (const light_ptr& pf) -> light_ptr {
@@ -679,7 +683,7 @@ namespace sodium {
             void loop(const event<A, P>& e)
             {
                 if (i) {
-                    transaction trans;
+                    transaction<P> trans;
                     *i->pKill = e.listen_raw_(trans.impl(), i->target, i->pushIn, false);
                     i = std::shared_ptr<info>();
                 }
@@ -724,7 +728,7 @@ namespace sodium {
     };
 
     namespace impl {
-        event_ switch_e(const behavior_& bea);
+        event_ switch_e(transaction_impl* trans, const behavior_& bea);
     }
 
     /*!
@@ -736,11 +740,12 @@ namespace sodium {
     template <class A, class P = def_part>
     event<A, P> switch_e(const behavior<event<A, P>, P>& bea)
     {
-        return event<A, P>(impl::switch_e(bea));
+        transaction<P> trans;
+        return event<A, P>(impl::switch_e(trans.impl(), bea));
     }
 
     namespace impl {
-        behavior_ switch_b(const behavior_& bba);
+        behavior_ switch_b(transaction_impl* trans, const behavior_& bba);
     }
 
     /*!
@@ -749,7 +754,8 @@ namespace sodium {
     template <class A, class P = def_part>
     behavior<A, P> switch_b(const behavior<behavior<A, P>, P>& bba)
     {
-        return behavior<A, P>(impl::switch_b(bba));
+        transaction<P> trans;
+        return behavior<A, P>(impl::switch_b(trans.impl(), bba));
     }
 
     template <class A, class B, class C, class P = def_part>
@@ -793,7 +799,7 @@ namespace sodium {
     event<A, P> split(const event<std::list<A>, P>& e)
     {
         event_sink<A, P> out;
-        transaction trans;
+        transaction<P> trans;
         auto kill = e.listen_raw_(trans.impl(), std::shared_ptr<impl::node>(),
             [out] (impl::transaction_impl* trans, const light_ptr& ptr) {
                 const std::list<A>& la = *ptr.cast_ptr<std::list<A>>(NULL);

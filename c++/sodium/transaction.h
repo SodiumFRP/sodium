@@ -17,6 +17,38 @@
 
 namespace sodium {
 
+    class mutex
+    {
+    private:
+        pthread_mutex_t mx;
+    public:
+        mutex();
+        ~mutex();
+        void lock()
+        {
+            pthread_mutex_lock(&mx);
+        }
+        void unlock()
+        {
+            pthread_mutex_unlock(&mx);
+        }
+    };
+
+    struct partition {
+        partition();
+        ~partition();
+        mutex mx;
+        int depth;
+        pthread_key_t key;
+    };
+
+    /*!
+     * The default partition which gets chosen when you don't specify one.
+     */
+    struct def_part {
+        static partition* part();
+    };
+
     namespace impl {
         struct nodeID {
             nodeID() : id(0) {}
@@ -77,26 +109,11 @@ namespace sodium {
 
         unsigned long long rankOf(const std::shared_ptr<node>& target);
 
-        class partition_state {
-            public:
-                pthread_mutex_t transaction_lock;
-                pthread_mutex_t listeners_lock;
-
-                partition_state();
-                ~partition_state();
-
-                nodeID allocNodeID();
-
-                static const std::shared_ptr<partition_state>& instance(); 
-
-            private:
-                nodeID nextnodeID;
-                int nextlistenerID;
-        };
+        nodeID allocNodeID();
 
         struct transaction_impl;
         struct prioritized_entry {
-            prioritized_entry(const std::shared_ptr<impl::node>& target,
+            prioritized_entry(const std::shared_ptr<node>& target,
                               const std::function<void(transaction_impl*)>& action)
                 : target(target), action(action)
             {
@@ -106,8 +123,9 @@ namespace sodium {
         };
 
         struct transaction_impl {
-            transaction_impl();
+            transaction_impl(partition* part);
             ~transaction_impl();
+            partition* part;
             entryID next_entry_id;
             std::map<entryID, prioritized_entry> entries;
             std::multimap<unsigned long long, entryID> prioritizedQ;
@@ -121,29 +139,9 @@ namespace sodium {
 
             bool to_regen;
             void check_regen();
+            void process_transactional();
+            void process_post();
         };
-    };
-
-    class transaction
-    {
-        friend class impl::transaction_impl;
-        private:
-            static impl::transaction_impl* current_transaction;
-            impl::transaction_impl* transaction_was;
-
-        public:
-            transaction();
-            ~transaction();
-
-            impl::transaction_impl* impl() const { return current_transaction; }
-    };
-
-    struct cleaner_upper
-    {
-        std::function<void()> f;
-
-        cleaner_upper(const std::function<void()>& f) : f(f) {}
-        ~cleaner_upper() { f(); }
     };
 
     class policy {
@@ -154,17 +152,59 @@ namespace sodium {
         static policy* get_global();
         static void set_global(policy* policy);
 
-        // Get the current thread's active transaction
-        virtual impl::transaction_impl* get_transaction() = 0;
-        virtual void initiate(impl::transaction_impl* trans) = 0;
-        virtual void dispatch(impl::transaction_impl* trans,
+        /*!
+         * Get the current thread's active transaction for this partition, or NULL
+         * if none is active.
+         */
+        virtual impl::transaction_impl* current_transaction(partition* part) = 0;
+
+        virtual void initiate(impl::transaction_impl* impl) = 0;
+
+        /*!
+         * Dispatch the processing for this transaction according to the policy.
+         * Note that post() will delete impl, so don't reference it after that.
+         */
+        virtual void dispatch(impl::transaction_impl* impl,
             const std::function<void()>& transactional,
             const std::function<void()>& post) = 0;
+    };
+
+    namespace impl {
+        class transaction_ {
+        private:
+            transaction_impl* impl_;
+        public:
+            transaction_(partition* part);
+            ~transaction_();
+            impl::transaction_impl* impl() const { return impl_; }
+        };
+    };
+
+    template <class P = def_part>
+    class transaction : public impl::transaction_
+    {
+        public:
+            transaction() : transaction_(P::part()) {}
+    };
+
+    struct cleaner_upper
+    {
+        std::function<void()> f;
+
+        cleaner_upper(const std::function<void()>& f) : f(f) {}
+        ~cleaner_upper() { f(); }
     };
 
     class simple_policy : public policy
     {
     public:
+        simple_policy();
+        virtual ~simple_policy();
+        virtual impl::transaction_impl* current_transaction(partition* part);
+        virtual void initiate(impl::transaction_impl* impl);
+        virtual void dispatch(impl::transaction_impl* impl,
+            const std::function<void()>& transactional,
+            const std::function<void()>& post);
     };
 };  // end namespace sodium
 

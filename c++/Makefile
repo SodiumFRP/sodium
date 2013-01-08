@@ -1,6 +1,6 @@
 all: test_sodium
 
-CPPFLAGS=-I. --std=c++11 -g
+CPPFLAGS=-I. --std=c++0x -g
 OBJECT_FILES=sodium/light_ptr.o sodium/sodium.o sodium/test_sodium.o sodium/transaction.o
 sodium/light_ptr.o: sodium/light_ptr.h
 sodium/sodium.o: sodium/sodium.h sodium/transaction.h sodium/light_ptr.h

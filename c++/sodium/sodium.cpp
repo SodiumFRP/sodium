@@ -150,17 +150,15 @@ namespace sodium {
                     );
         }
 
-        behavior_ event_::hold_(const light_ptr& initA) const
+        behavior_ event_::hold_(transaction_impl* trans, const light_ptr& initA) const
         {
-            transaction trans;
             return behavior_(
-                std::shared_ptr<impl::behavior_impl>(impl::hold(trans.impl(), initA, *this))
+                std::shared_ptr<impl::behavior_impl>(impl::hold(trans, initA, *this))
             );
         }
 
-        event_ event_::once_() const
+        event_ event_::once_(transaction_impl* trans) const
         {
-            transaction trans0;
             std::shared_ptr<function<void()>*> ppKill(new function<void()>*(NULL));
             auto killOnce = [ppKill] () {
                 function<void()>*& pKill = *ppKill;
@@ -183,7 +181,7 @@ namespace sodium {
             });
             auto push = std::get<1>(p);
             auto target = std::get<2>(p);
-            auto kill = listen_raw_(trans0.impl(), target,
+            auto kill = listen_raw_(trans, target,
                         [push, killOnce] (impl::transaction_impl* trans, const light_ptr& ptr) {
                 push(trans, ptr);
                 killOnce();
@@ -192,8 +190,7 @@ namespace sodium {
             return std::get<0>(p).add_cleanup_(killOnce);
         }
 
-        event_ event_::merge_(const event_& other) const {
-            transaction trans;
+        event_ event_::merge_(transaction_impl* trans, const event_& other) const {
             auto sample_me = sample_now_;
             auto sample_other = other.sample_now_;
             auto p = impl::unsafe_new_event([sample_me, sample_other] (std::vector<light_ptr>& items) {
@@ -202,8 +199,8 @@ namespace sodium {
             });
             auto push = std::get<1>(p);
             auto target = std::get<2>(p);
-            auto kill_one = this->listen_raw_(trans.impl(), target, push, false);
-            auto kill_two = other.listen_raw_(trans.impl(), target, push, false);
+            auto kill_one = this->listen_raw_(trans, target, push, false);
+            auto kill_two = other.listen_raw_(trans, target, push, false);
             return std::get<0>(p).add_cleanup_([kill_one, kill_two] () {
                 kill_one();
                 kill_two();
@@ -273,9 +270,8 @@ namespace sodium {
          * current one, i.e. no changes from the current transaction are
          * taken.
          */
-        event_ event_::snapshot_(const behavior_& beh, const std::function<light_ptr(const light_ptr&, const light_ptr&)>& combine) const
+        event_ event_::snapshot_(transaction_impl* trans, const behavior_& beh, const std::function<light_ptr(const light_ptr&, const light_ptr&)>& combine) const
         {
-            transaction trans;
             auto sample_now = this->sample_now_;
             auto p = impl::unsafe_new_event([sample_now, combine, beh] (vector<light_ptr>& items) {
                 size_t start = items.size();
@@ -285,7 +281,7 @@ namespace sodium {
             });
             auto push = std::get<1>(p);
             auto target = std::get<2>(p);
-            auto kill = listen_raw_(trans.impl(), target,
+            auto kill = listen_raw_(trans, target,
                     [beh, push, combine] (impl::transaction_impl* trans, const light_ptr& a) {
                 push(trans, combine(a, beh.impl->sample()));
             }, false);
@@ -296,9 +292,8 @@ namespace sodium {
          * Filter this event based on the specified predicate, passing through values
          * where the predicate returns true.
          */
-        event_ event_::filter_(const std::function<bool(const light_ptr&)>& pred) const
+        event_ event_::filter_(transaction_impl* trans, const std::function<bool(const light_ptr&)>& pred) const
         {
-            transaction trans;
             auto sample_now = this->sample_now_;
             auto p = impl::unsafe_new_event([sample_now, pred] (vector<light_ptr>& output) {
                 vector<light_ptr> input;
@@ -309,7 +304,7 @@ namespace sodium {
             });
             auto push = std::get<1>(p);
             auto target = std::get<2>(p);
-            auto kill = listen_raw_(trans.impl(), target,
+            auto kill = listen_raw_(trans, target,
                     [pred, push] (impl::transaction_impl* trans, const light_ptr& ptr) {
                 if (pred(ptr)) push(trans, ptr);
             }, false);
@@ -355,24 +350,23 @@ namespace sodium {
                         std::list<light_ptr> firings;
                         void* h = new holder(handle, cleanerUpper);
                         {
-                            auto part = partition_state::instance();
-                            pthread_mutex_lock(&part->listeners_lock);
-                            n->link(h, target);     
-                            pthread_mutex_unlock(&part->listeners_lock);
+                            trans->part->mx.lock();
+                            n->link(h, target);
+                            trans->part->mx.unlock();
                             firings = n->firings;
                         }
                         if (!suppressEarlierFirings && firings.begin() != firings.end())
                             for (auto it = firings.begin(); it != firings.end(); it++)
                                 handle(trans, *it);
-                        return [n, h] () {  // Unregister listener
-                            auto part = partition_state::instance();
-                            pthread_mutex_lock(&part->listeners_lock);
+                        partition* part = trans->part;
+                        return [part, n, h] () {  // Unregister listener
+                            part->mx.lock();
                             if (n->unlink(h)) {
-                                pthread_mutex_unlock(&part->listeners_lock);
+                                part->mx.unlock();
                                 delete (holder*)h;
                             }
                             else
-                                pthread_mutex_unlock(&part->listeners_lock);
+                                part->mx.unlock();
                         };
                     },
                     sample_now,
@@ -426,11 +420,10 @@ namespace sodium {
             return std::get<0>(p);
         }
 
-        void event_sink_impl::send(const light_ptr& ptr) const
+        void event_sink_impl::send(transaction_impl* trans, const light_ptr& ptr) const
         {
-            transaction trans;
             auto push(this->push);
-            trans.impl()->prioritized(target, [push, ptr] (transaction_impl* trans_impl) {
+            trans->prioritized(target, [push, ptr] (transaction_impl* trans_impl) {
                 push(trans_impl, ptr);
             });
         }
@@ -653,14 +646,13 @@ namespace sodium {
                 );
         }
 
-        event_ switch_e(const behavior_& bea)
+        event_ switch_e(transaction_impl* trans0, const behavior_& bea)
         {
-            transaction trans0;
             auto p = unsafe_new_event();
             auto push = std::get<1>(p);
             auto target = std::get<2>(p);
             std::shared_ptr<optional<function<void()>>> pKillInner(new optional<function<void()>>(
-                bea.impl->sample().cast_ptr<event_>(NULL)->listen_raw_(trans0.impl(), target, push, false)
+                bea.impl->sample().cast_ptr<event_>(NULL)->listen_raw_(trans0, target, push, false)
             ));
             auto killInner = [pKillInner] () {
                 if (*pKillInner) {
@@ -668,7 +660,7 @@ namespace sodium {
                     *pKillInner = optional<function<void()>>();
                 }
             };
-            auto killOuter = bea.changes_().listen_raw_(trans0.impl(), target,
+            auto killOuter = bea.changes_().listen_raw_(trans0, target,
                 [killInner, pKillInner, target, push] (impl::transaction_impl* trans1, const light_ptr& pea) {
                     const event_& ea = *pea.cast_ptr<event_>(NULL);
                     trans1->last([killInner, pKillInner, ea, trans1, target, push] () {
@@ -681,9 +673,8 @@ namespace sodium {
             return std::get<0>(p).add_cleanup_(killInner).add_cleanup_(killOuter);
         }
 
-        behavior_ switch_b(const behavior_& bba)
+        behavior_ switch_b(transaction_impl* trans0, const behavior_& bba)
         {
-            transaction trans0;
             light_ptr za = bba.impl->sample().cast_ptr<behavior_>(NULL)->impl->sample();
             std::shared_ptr<optional<function<void()>>> pKillInner(new optional<function<void()>>);
             auto killInner = [pKillInner] () {
@@ -695,7 +686,7 @@ namespace sodium {
             auto p = unsafe_new_event();
             auto push = std::get<1>(p);
             auto target = std::get<2>(p);
-            auto killOuter = bba.values_().listen_raw_(trans0.impl(), target,
+            auto killOuter = bba.values_().listen_raw_(trans0, target,
                 [killInner, pKillInner, target, push] (transaction_impl* trans, const light_ptr& pa) {
                 // Note: If any switch takes place during a transaction, then the
                 // values().listen will always cause a sample to be fetched from the
@@ -709,7 +700,7 @@ namespace sodium {
                     ba.values_().listen_raw_(trans, target, push, false)
                 );
             }, false);
-            return std::get<0>(p).add_cleanup_(killInner).add_cleanup_(killOuter).hold_(za);
+            return std::get<0>(p).add_cleanup_(killInner).add_cleanup_(killOuter).hold_(trans0, za);
         }
 
     };  // end namespace impl

@@ -25,7 +25,7 @@ void test_sodium::event1()
     ev.send('?');
     function<void()> unlisten;
     {
-        transaction trans;
+        transaction<> trans;
         ev.send('h');
         unlisten = ev.listen([out] (int ch) {
             *out = *out + (char)ch;
@@ -33,7 +33,7 @@ void test_sodium::event1()
         ev.send('e');
     };
     {
-        transaction trans;
+        transaction<> trans;
         ev.send('l');
         ev.send('l');
         ev.send('o');
