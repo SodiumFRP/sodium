@@ -131,7 +131,7 @@ namespace sodium {
          * The specified cleanup is performed whenever nobody is referencing this event
          * any more.
          */
-        event_ event_::add_cleanup(const std::function<void()>& newCleanup) const {
+        event_ event_::add_cleanup_(const std::function<void()>& newCleanup) const {
             const std::shared_ptr<cleaner_upper>& cleanerUpper = this->cleanerUpper;
             if (cleanerUpper)
                 return event_(listen_impl_, sample_now_, [newCleanup, cleanerUpper] () {
@@ -189,7 +189,7 @@ namespace sodium {
                 killOnce();
             }, false);
             (*ppKill) = new std::function<void()>(kill);
-            return std::get<0>(p).add_cleanup(killOnce);
+            return std::get<0>(p).add_cleanup_(killOnce);
         }
 
         event_ event_::merge_(const event_& other) const {
@@ -204,7 +204,7 @@ namespace sodium {
             auto target = std::get<2>(p);
             auto kill_one = this->listen_raw_(trans.impl(), target, push, false);
             auto kill_two = other.listen_raw_(trans.impl(), target, push, false);
-            return std::get<0>(p).add_cleanup([kill_one, kill_two] () {
+            return std::get<0>(p).add_cleanup_([kill_one, kill_two] () {
                 kill_one();
                 kill_two();
             });
@@ -289,7 +289,7 @@ namespace sodium {
                     [beh, push, combine] (impl::transaction_impl* trans, const light_ptr& a) {
                 push(trans, combine(a, beh.impl->sample()));
             }, false);
-            return std::get<0>(p).add_cleanup(kill);
+            return std::get<0>(p).add_cleanup_(kill);
         }
 
         /*!
@@ -313,7 +313,7 @@ namespace sodium {
                     [pred, push] (impl::transaction_impl* trans, const light_ptr& ptr) {
                 if (pred(ptr)) push(trans, ptr);
             }, false);
-            return std::get<0>(p).add_cleanup(kill);
+            return std::get<0>(p).add_cleanup_(kill);
         }
 
         struct holder {
@@ -455,7 +455,7 @@ namespace sodium {
                         });
                     push(trans, ptr);
                 }, false);
-                auto changes = out.add_cleanup(unlisten);
+                auto changes = out.add_cleanup_(unlisten);
                 auto sample = [state] () {
                     return state->current;
                 };
@@ -573,8 +573,8 @@ namespace sodium {
                     return behavior_(impl::hold(
                         trans0,
                         f(ba.impl->sample()),
-                        std::get<0>(p).add_cleanup(kill1)
-                                      .add_cleanup(kill2)
+                        std::get<0>(p).add_cleanup_(kill1)
+                                      .add_cleanup_(kill2)
                     ));
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
                 }
@@ -657,7 +657,7 @@ namespace sodium {
                 },
                 false
             );
-            return std::get<0>(p).add_cleanup(killInner).add_cleanup(killOuter);
+            return std::get<0>(p).add_cleanup_(killInner).add_cleanup_(killOuter);
         }
 
         behavior_ switch_b(const behavior_& bba)
@@ -688,7 +688,7 @@ namespace sodium {
                     ba.values_().listen_raw_(trans, target, push, false)
                 );
             }, false);
-            return std::get<0>(p).add_cleanup(killInner).add_cleanup(killOuter).hold_(za);
+            return std::get<0>(p).add_cleanup_(killInner).add_cleanup_(killOuter).hold_(za);
         }
 
     };  // end namespace impl

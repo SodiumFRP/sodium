@@ -19,16 +19,34 @@
 #define SODIUM_CONSTANT_OPTIMIZATION
 
 namespace sodium {
-    
+
     struct def_part {};
+    template <class A, class P> class event;
+    template <class A, class P> class event_loop;
+    template <class A, class P> class behavior;
+    template <class A, class B, class P = def_part>
+    behavior<B, P> apply(const behavior<std::function<B(const A&)>, P>& bf, const behavior<A, P>& ba);
+    template <class A, class P = def_part>
+    event<A, P> filter_optional(const event<boost::optional<A>, P>& input);
 
     namespace impl {
 
         class behavior_;
+        class behavior_impl;
 
         class event_ {
         friend class behavior_;
+        template <class A, class P> friend class sodium::event;
+        template <class A, class P> friend class sodium::event_loop;
         friend behavior_ switch_b(const behavior_& bba);
+        friend behavior_impl* hold(transaction_impl* trans0, const light_ptr& initValue, const event_& input);
+        template <class A, class B, class P>
+        friend behavior<B, P> sodium::apply(const behavior<std::function<B(const A&)>, P>& bf, const behavior<A, P>& ba);
+        template <class A, class P>
+        friend event<A, P> sodium::filter_optional(const event<boost::optional<A>, P>& input);
+        friend behavior_ apply(transaction_impl* trans0, const behavior_& bf, const behavior_& ba);
+        friend event_ map_(const std::function<light_ptr(const light_ptr&)>& f, const event_& ev);
+        friend event_ switch_e(const behavior_& bea);
         public:
             typedef std::function<std::function<void()>(
                 transaction_impl* trans,
@@ -67,6 +85,8 @@ namespace sodium {
             bool is_never() const { return is_never_; }
 #endif
 
+        protected:
+
             /*!
              * listen to events.
              */
@@ -76,17 +96,12 @@ namespace sodium {
                         const std::function<void(transaction_impl*, const light_ptr&)>& handle,
                         bool suppressEarlierFirings) const;
 
-            /*!
-             * The specified cleanup is performed whenever nobody is referencing this event
-             * any more.
-             */
-            event_ add_cleanup(const std::function<void()>& newCleanup) const;
+            event_ add_cleanup_(const std::function<void()>& newCleanup) const;
 
             const std::shared_ptr<cleaner_upper>& get_cleaner_upper() const {
                 return cleanerUpper;
             }
 
-        protected:
             behavior_ hold_(const light_ptr& initA) const;
             event_ once_() const;
             event_ merge_(const event_& other) const;
@@ -95,13 +110,12 @@ namespace sodium {
             event_ snapshot_(const behavior_& beh, const std::function<light_ptr(const light_ptr&, const light_ptr&)>& combine) const;
             event_ filter_(const std::function<bool(const light_ptr&)>& pred) const;
         };
-        #define FRP_DETYPE_FUNCTION1(A,B,f) \
+        #define SODIUM_DETYPE_FUNCTION1(A,B,f) \
                    [f] (const light_ptr& a) -> light_ptr { \
                         return light_ptr::create<B>(f(*a.cast_ptr<A>(NULL))); \
                    }
 
-        event_ map_(const std::function<light_ptr(const light_ptr&)>& f,
-            const event_& ca);
+        event_ map_(const std::function<light_ptr(const light_ptr&)>& f, const event_& ca);
 
         /*!
          * Creates an event, and a function to push a value into it.
@@ -240,9 +254,9 @@ namespace sodium {
                 return impl->changes.listen_raw_(trans, target, handle, false);
             }
 
-            behavior<A, P> add_cleanup(const std::function<void()>& newCleanup) const {
+            behavior<A, P> add_cleanup_(const std::function<void()>& newCleanup) const {
                 return behavior<A, P>(std::shared_ptr<impl::behavior_impl>(
-                        new impl::behavior_impl(impl->changes.add_cleanup(newCleanup), impl->sample)));
+                        new impl::behavior_impl(impl->changes.add_cleanup_(newCleanup), impl->sample)));
             }
 
             /*!
@@ -250,7 +264,7 @@ namespace sodium {
              */
             template <class B>
             behavior<B, P> map(const std::function<B(const A&)>& f) const {
-                return behavior<B, P>(impl::map_(FRP_DETYPE_FUNCTION1(A,B,f), *this));
+                return behavior<B, P>(impl::map_(SODIUM_DETYPE_FUNCTION1(A,B,f), *this));
             }
 
             /*!
@@ -262,7 +276,7 @@ namespace sodium {
              */
             template <class B>
             behavior<B, P> map_(const std::function<B(const A&)>& f) const {
-                return behavior<B, P>(impl::map_(FRP_DETYPE_FUNCTION1(A,B,f), *this));
+                return behavior<B, P>(impl::map_(SODIUM_DETYPE_FUNCTION1(A,B,f), *this));
             }
 
             /*!
@@ -288,9 +302,6 @@ namespace sodium {
             S s;
         };
     }
-
-    template <class A, class P = def_part>
-    event<A, P> filter_optional(const event<boost::optional<A>, P>& input);
 
     template <class A, class P = def_part>
     class event : public impl::event_ {
@@ -323,7 +334,7 @@ namespace sodium {
              */
             template <class B>
             event<B, P> map(const std::function<B(const A&)>& f) const {
-                return event<B, P>(impl::map_(FRP_DETYPE_FUNCTION1(A,B,f), *this));
+                return event<B, P>(impl::map_(SODIUM_DETYPE_FUNCTION1(A,B,f), *this));
             }
     
             /*!
@@ -335,7 +346,7 @@ namespace sodium {
              */
             template <class B>
             event<B, P> map_(const std::function<B(const A&)>& f) const {
-                return event<B, P>(impl::map_(FRP_DETYPE_FUNCTION1(A,B,f), *this));
+                return event<B, P>(impl::map_(SODIUM_DETYPE_FUNCTION1(A,B,f), *this));
             }
 
             event<A, P> merge(const event<A, P>& other) const {
@@ -446,7 +457,7 @@ namespace sodium {
                     pState->s = std::get<1>(outsSt);
                     push(trans, light_ptr::create<B>(std::get<0>(outsSt)));
                 }, false);
-                return std::get<0>(p).add_cleanup(kill);
+                return std::get<0>(p).add_cleanup_(kill);
             }
             
             template <class B>
@@ -465,7 +476,7 @@ namespace sodium {
                     pState->s = f(*ptr.cast_ptr<A>(NULL), pState->s);
                     push(trans, light_ptr::create<B>(pState->s));
                 }, false);
-                return std::get<0>(p).add_cleanup(kill);
+                return std::get<0>(p).add_cleanup_(kill);
             }
 
             event<int, P> count_e() const
@@ -483,6 +494,15 @@ namespace sodium {
             event<A, P> once() const
             {
                 return event<A, P>(once_());
+            }
+
+            /*!
+             * Add a clean-up operation to be performed when this event is no longer
+             * referenced.
+             */
+            event<A> add_cleanup(const std::function<void()>& newCleanup) const
+            {
+                return event<A>(add_cleanup_(newCleanup));
             }
 
     };  // end class event
@@ -512,7 +532,7 @@ namespace sodium {
     /*!
      * Filter an event of optionals, keeping only the defined values.
      */
-    template <class A, class P = def_part>
+    template <class A, class P>
     event<A, P> filter_optional(const event<boost::optional<A>, P>& input)
     {
         transaction trans;
@@ -524,7 +544,7 @@ namespace sodium {
             const boost::optional<A>& oa = *poa.cast_ptr<boost::optional<A>>(NULL);
             if (oa) push(trans, light_ptr::create<A>(oa.get()));
         }, false);
-        return std::get<0>(p).add_cleanup(kill);
+        return std::get<0>(p).add_cleanup_(kill);
     }
 
     template <class A, class P = def_part>
@@ -558,7 +578,7 @@ namespace sodium {
         behavior_ apply(transaction_impl* trans, const behavior_& bf, const behavior_& ba);
     };
 
-    template <class A, class B, class P = def_part>
+    template <class A, class B, class P>
     behavior<B, P> apply(const behavior<std::function<B(const A&)>, P>& bf, const behavior<A, P>& ba)
     {
         transaction trans;
@@ -567,7 +587,7 @@ namespace sodium {
             impl::map_([] (const light_ptr& pf) -> light_ptr {
                 const std::function<B(const A&)>& f = *pf.cast_ptr<std::function<B(const A&)>>(NULL);
                 return light_ptr::create<std::function<light_ptr(const light_ptr&)>>(
-                        FRP_DETYPE_FUNCTION1(A, B, f)
+                        SODIUM_DETYPE_FUNCTION1(A, B, f)
                     );
             }, bf),
             ba
@@ -618,7 +638,7 @@ namespace sodium {
                 );
                 auto p = impl::unsafe_new_event();
                 *this = event_loop<A>(
-                    std::get<0>(p).add_cleanup([pKill] () {
+                    std::get<0>(p).add_cleanup_([pKill] () {
                         std::function<void()> kill = *pKill;
                         kill();
                     }),
@@ -752,7 +772,7 @@ namespace sodium {
                         out.send(*it);
                 });
             }, false);
-        return out.add_cleanup(kill);
+        return out.add_cleanup_(kill);
     }
 
 }  // end namespace sodium

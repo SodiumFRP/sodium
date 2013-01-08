@@ -457,7 +457,7 @@ void test_sodium::apply1()
     });
     behavior_sink<int> ba(5);
     std::shared_ptr<vector<string>> out(new vector<string>);
-    auto unlisten = apply<int,string>(bf, ba).values().listen([out] (const string& x) {
+    auto unlisten = apply<int, string>(bf, ba).values().listen([out] (const string& x) {
         out->push_back(x);
     });
     bf.send([] (const int& b) { return string("12 ")+fmtInt(b); });
