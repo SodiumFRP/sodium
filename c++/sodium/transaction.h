@@ -21,6 +21,9 @@ namespace sodium {
     {
     private:
         pthread_mutex_t mx;
+        // ensure we don't copy or assign a mutex by value
+        mutex(const mutex& other) {}
+        mutex& operator = (const mutex& other) { return *this; }
     public:
         mutex();
         ~mutex();
@@ -40,6 +43,10 @@ namespace sodium {
         mutex mx;
         int depth;
         pthread_key_t key;
+        bool processing_post;
+        std::list<std::function<void()>> postQ;
+        void post(const std::function<void()>& action);
+        void process_post();
     };
 
     /*!
@@ -50,26 +57,11 @@ namespace sodium {
     };
 
     namespace impl {
-        struct nodeID {
-            nodeID() : id(0) {}
-            nodeID(unsigned long long id) : id(id) {}
-            unsigned long long id;
-            nodeID succ() const { return nodeID(id+1); }
-            inline bool operator < (const nodeID& other) const { return id < other.id; }
-        };
         template <class A>
         struct ordered_value {
             ordered_value() : tid(-1) {}
             long long tid;
             boost::optional<A> oa;
-        };
-
-        struct ID {
-            ID() : id(0) {}
-            ID(unsigned id) : id(id) {}
-            unsigned id;
-            ID succ() const { return ID(id+1); }
-            inline bool operator < (const ID& other) const { return id < other.id; }
         };
 
         struct entryID {
@@ -109,8 +101,6 @@ namespace sodium {
 
         unsigned long long rankOf(const std::shared_ptr<node>& target);
 
-        nodeID allocNodeID();
-
         struct transaction_impl;
         struct prioritized_entry {
             prioritized_entry(const std::shared_ptr<node>& target,
@@ -130,17 +120,14 @@ namespace sodium {
             std::map<entryID, prioritized_entry> entries;
             std::multimap<unsigned long long, entryID> prioritizedQ;
             std::list<std::function<void()>> lastQ;
-            std::list<std::function<void()>> postQ;
 
             void prioritized(const std::shared_ptr<impl::node>& target,
                              const std::function<void(impl::transaction_impl*)>& action);
             void last(const std::function<void()>& action);
-            void post(const std::function<void()>& action);
 
             bool to_regen;
             void check_regen();
             void process_transactional();
-            void process_post();
         };
     };
 
@@ -173,6 +160,8 @@ namespace sodium {
         class transaction_ {
         private:
             transaction_impl* impl_;
+            transaction_(const transaction_& other) {}
+            transaction_& operator = (const transaction_& other) { return *this; };
         public:
             transaction_(partition* part);
             ~transaction_();
@@ -183,6 +172,9 @@ namespace sodium {
     template <class P = def_part>
     class transaction : public impl::transaction_
     {
+        private:
+            transaction(const transaction<P>& other) {}
+            transaction<P>& operator = (const transaction<P>& other) { return *this; };
         public:
             transaction() : transaction_(P::part()) {}
     };

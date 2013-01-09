@@ -19,14 +19,15 @@ namespace sodium {
         pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
         pthread_mutex_init(&mx, &attr);
     }
-    
+
     mutex::~mutex()
     {
         pthread_mutex_destroy(&mx);
     }
 
     partition::partition()
-        : depth(0)
+        : depth(0),
+          processing_post(false)
     {
         pthread_key_create(&key, NULL);
     }
@@ -34,6 +35,38 @@ namespace sodium {
     partition::~partition()
     {
         pthread_key_delete(key);
+    }
+
+    void partition::post(const std::function<void()>& action)
+    {
+        mx.lock();
+        postQ.push_back(action);
+        mx.unlock();
+    }
+
+    void partition::process_post()
+    {
+        mx.lock();
+        // Prevent it running on multiple threads at the same time, so posts
+        // will be handled in order for the partition.
+        if (!processing_post) {
+            processing_post = true;
+            try {
+                while (postQ.begin() != postQ.end()) {
+                    std::function<void()> action = *postQ.begin();
+                    postQ.erase(postQ.begin());
+                    mx.unlock();
+                    action();
+                    mx.lock();
+                }
+                processing_post = false;
+            }
+            catch (...) {
+                processing_post = false;
+                throw;
+            }
+        }
+        mx.unlock();
     }
 
     partition* def_part::part()
@@ -82,15 +115,6 @@ namespace sodium {
                 return ULLONG_MAX;
         }
 
-        nodeID allocNodeID()
-        {
-            static nodeID nextnodeID;
-
-            nodeID id = nextnodeID;
-            nextnodeID = nextnodeID.succ();
-            return id;
-        }
-
         transaction_impl::transaction_impl(partition* part)
             : part(part),
               to_regen(false)
@@ -129,14 +153,6 @@ namespace sodium {
             }
         }
 
-        void transaction_impl::process_post()
-        {
-            while (postQ.begin() != postQ.end()) {
-                (*postQ.begin())();
-                postQ.erase(postQ.begin());
-            }
-        }
-
         void transaction_impl::prioritized(const std::shared_ptr<node>& target,
                                            const std::function<void(transaction_impl*)>& f)
         {
@@ -149,11 +165,6 @@ namespace sodium {
         void transaction_impl::last(const std::function<void()>& action)
         {
             lastQ.push_back(action);
-        }
-
-        void transaction_impl::post(const std::function<void()>& action)
-        {
-            postQ.push_back(action);
         }
 
         transaction_::transaction_(partition* part)
@@ -178,8 +189,9 @@ namespace sodium {
                         impl_->process_transactional();
                     },
                     [impl_] () {
-                        impl_->process_post();
+                        partition* part = impl_->part;
                         delete impl_;
+                        part->process_post();
                     }
                 );
             }
@@ -222,11 +234,10 @@ namespace sodium {
         const std::function<void()>& transactional,
         const std::function<void()>& post)
     {
-        partition* part = impl->part;
         transactional();
-        pthread_setspecific(part->key, NULL);
+        pthread_setspecific(impl->part->key, NULL);
+        impl->part->mx.unlock();
         post();  // note: deletes 'impl'
-        part->mx.unlock();
     }
 
 };  // end namespace sodium

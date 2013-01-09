@@ -549,7 +549,12 @@ namespace sodium {
     {
         transaction<P> trans;
         event_sink<A, Q> s;
-        auto kill = e.listen([s] (const A& a) { s.send(a); });
+        auto kill = e.listen([s] (const A& a) {
+            transaction<P> trans;
+            trans.impl()->part->post([s, a] () {
+                s.send(a);
+            });
+        });
         return s.add_cleanup(kill);
     }
 
@@ -803,7 +808,7 @@ namespace sodium {
         auto kill = e.listen_raw_(trans.impl(), std::shared_ptr<impl::node>(),
             [out] (impl::transaction_impl* trans, const light_ptr& ptr) {
                 const std::list<A>& la = *ptr.cast_ptr<std::list<A>>(NULL);
-                trans->post([la, out] () {
+                trans->part->post([la, out] () {
                     for (auto it = la.begin(); it != la.end(); ++it)
                         out.send(*it);
                 });
