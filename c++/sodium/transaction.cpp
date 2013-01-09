@@ -174,19 +174,19 @@ namespace sodium {
                 impl_ = new transaction_impl(part);
                 policy::get_global()->initiate(impl_);
             }
-            part->depth++;  // note: transaction is locked here, giving us exclusive access to part
+            part->depth++;
         }
 
         transaction_::~transaction_()
         {
             partition* part = impl_->part;
-            part->depth--;  // note: transaction is locked here, giving us exclusive access to part
-            if (part->depth == 0) {
+            if (part->depth == 1) {
                 impl::transaction_impl* impl_(this->impl_);
                 policy::get_global()->dispatch(
                     impl_,
                     [impl_] () {
                         impl_->process_transactional();
+                        impl_->part->depth--;
                     },
                     [impl_] () {
                         partition* part = impl_->part;
@@ -195,6 +195,8 @@ namespace sodium {
                     }
                 );
             }
+            else
+                part->depth--;
         }
     };  // end namespace impl
 
