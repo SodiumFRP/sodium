@@ -13,7 +13,7 @@ public class takahemail
         String user = args[3];
         String password = args[4];
         IMAPSettings settings = new IMAPSettings(host, port, tls, user, password);
-        IMAPConversation conv = new  IMAPConversation(settings);
+        IMAPConversation conv = new IMAPConversation(settings);
         IMAPFolders folders = new IMAPFolders(conv);
         AccountView view = new AccountView("Takahe Mail", folders);
         view.addWindowListener(new WindowAdapter() {
