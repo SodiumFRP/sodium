@@ -9,13 +9,13 @@ import java.awt.Point;
 import sodium.*;
 
 
-public class example2a extends JFrame
+public class example2b extends JFrame
 {
     private Event<MouseEvent> eMouse;
     private Listener l = new Listener();
     private Behavior<Point> pos;
 
-    public example2a(String title)
+    public example2b(String title)
     {
         super(title);
         this.eMouse = MouseEvent.mouseEventOf(this);
@@ -49,7 +49,7 @@ public class example2a extends JFrame
 
     public static void main(String[] args)
     {
-        example2a view = new example2a("Example2a");
+        example2b view = new example2b("example2b");
         view.addWindowListener(new WindowAdapter() {
             public void windowClosing(WindowEvent e) {
                 System.exit(0);
