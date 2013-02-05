@@ -357,17 +357,11 @@ public class BehaviorTester extends TestCase {
     public void testLoopBehavior()
     {
         final EventSink<Integer> ea = new EventSink();
-        Behavior<Integer> sum = Behavior.loop(
-            // Lambda syntax doesn't seem to work here - compiler bug?
-            new Lambda1<Behavior<Integer>,Tuple2<Behavior<Integer>,Behavior<Integer>>>() {
-                public Tuple2<Behavior<Integer>,Behavior<Integer>> apply(Behavior<Integer> sum_last) {
-                    Behavior<Integer> sum = ea.snapshot(sum_last, (x, y) -> x+y).hold(0);
-                    return new Tuple2(sum, sum);
-                }
-            }
-        );
+        BehaviorLoop<Integer> sum = new BehaviorLoop<Integer>();
+        Behavior<Integer> sum_out = ea.snapshot(sum, (x, y) -> x+y).hold(0);
+        sum.loop(sum_out);
         List<Integer> out = new ArrayList();
-        Listener l = sum.values().listen(x -> { out.add(x); });
+        Listener l = sum_out.values().listen(x -> { out.add(x); });
         ea.send(2);
         ea.send(3);
         ea.send(1);

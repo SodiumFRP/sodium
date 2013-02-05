@@ -593,7 +593,7 @@ void test_sodium::collect1()
 {
     event_sink<int> ea;
     std::shared_ptr<vector<int>> out(new vector<int>);
-    event<int> sum = ea.collect_e<int, int>(100, [] (const int& a, const int& s) {
+    event<int> sum = ea.collect<int, int>(100, [] (const int& a, const int& s) {
         return tuple<int, int>(a+s, a+s);
     });
     auto unlisten = sum.listen([out] (const int& x) { out->push_back(x); });
@@ -604,6 +604,23 @@ void test_sodium::collect1()
     ea.send(3);
     unlisten();
     CPPUNIT_ASSERT(vector<int>({ 105, 112, 113, 115, 118 }) == *out);
+}
+
+void test_sodium::collect2()
+{
+    event_sink<int> ea;
+    std::shared_ptr<vector<int>> out(new vector<int>);
+    behavior<int> sum = ea.hold(100).collect<int, int>(0, [] (const int& a, const int& s) {
+        return tuple<int, int>(a+s, a+s);
+    });
+    auto unlisten = sum.values().listen([out] (const int& x) { out->push_back(x); });
+    ea.send(5);
+    ea.send(7);
+    ea.send(1);
+    ea.send(2);
+    ea.send(3);
+    unlisten();
+    CPPUNIT_ASSERT(vector<int>({ 100, 105, 112, 113, 115, 118 }) == *out);
 }
 
 void test_sodium::accum1()

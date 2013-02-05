@@ -287,20 +287,31 @@ public class Behavior<A> {
         return out.addCleanup(l1);
 	}
 
-	/**
-	 * Loop a behavior round so it can effectively be forward referenced.
-	 * This adds a cycle to your graph of relationships between events and behaviors.
-	 */
-    public static <A,B> B loop(final Lambda1<Behavior<A>,Tuple2<B,Behavior<A>>> f)
+    /**
+     * Transform a behavior with a generalized state loop (a mealy machine). The function
+     * is passed the input and the old state and returns the new state and output value.
+     */
+    public final <B,S> Behavior<B> collect(final S initState, final Lambda2<A, S, Tuple2<B, S>> f)
     {
-        return Event.loop(
-            new Lambda1<Event<A>,Tuple2<B,Event<A>>>() {
-                public Tuple2<B,Event<A>> apply(Event<A> ea) {
-                    Tuple2<B,Behavior<A>> b_ba = f.apply(ea.hold(null));
-                    return new Tuple2<B, Event<A>>(b_ba.a, b_ba.b.values());
-                }
+        final Event<A> ea = changes().coalesce(new Lambda2<A,A,A>() {
+        	public A apply(A fst, A snd) { return snd; }
+        });
+        final A za = sample();
+        final Tuple2<B, S> zbs = f.apply(za, initState);
+        EventLoop<Tuple2<B,S>> ebs = new EventLoop<Tuple2<B,S>>();
+        Behavior<Tuple2<B,S>> bbs = ebs.hold(zbs);
+        Behavior<S> bs = bbs.map(new Lambda1<Tuple2<B,S>,S>() {
+            public S apply(Tuple2<B,S> x) {
+                return x.b;
             }
-        );
+        });
+        Event<Tuple2<B,S>> ebs_out = ea.snapshot(bs, f);
+        ebs.loop(ebs_out);
+        return bbs.map(new Lambda1<Tuple2<B,S>,B>() {
+            public B apply(Tuple2<B,S> x) {
+                return x.a;
+            }
+        });
     }
 
 	@Override

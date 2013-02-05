@@ -5,11 +5,6 @@ import java.util.List;
 public class EventSink<A> extends Event<A> {
     public EventSink() {}
 
-	protected Object[] sampleNow()
-	{
-	    return null;
-	}
-
 	public void send(final A a) {
 		Transaction.run(new Handler<Transaction>() {
 			public void run(Transaction trans) { send(trans, a); }

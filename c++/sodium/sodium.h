@@ -196,6 +196,12 @@ namespace sodium {
 
         behavior_ map_(const std::function<light_ptr(const light_ptr&)>& f,
             const behavior_& beh);
+
+        template <class S>
+        struct collect_state {
+            collect_state(const S& s) : s(s) {}
+            S s;
+        };
     }  // end namespace impl
 
     template <class A, class P>
@@ -293,15 +299,35 @@ namespace sodium {
             event<A, P> values() const {
                 return event<A, P>(values_());
             }
-    };  // end class behavior
+        
+            /**
+             * Transform a behavior with a generalized state loop (a mealy machine). The function
+             * is passed the input and the old state and returns the new state and output value.
+             */
+            template <class S, class B>
+            behavior<B, P> collect(
+                const S& initS,
+                const std::function<std::tuple<B, S>(const A&, const S&)>& f
+            ) const
+            {
+                transaction<P> trans;
+                auto ea = changes().coalesce([] (const A&, const A& snd) -> A { return snd; });
+                auto za = sample();
+                auto zbs = f(za, initS);
+                std::shared_ptr<impl::collect_state<S>> pState(new impl::collect_state<S>(std::get<1>(zbs)));
+                auto p = impl::unsafe_new_event();
+                auto push = std::get<1>(p);
+                auto target = std::get<2>(p);
+                auto kill = changes().listen_raw_(trans.impl(), target,
+                         [pState, push, f] (impl::transaction_impl* trans, const light_ptr& ptr) {
+                    auto outsSt = f(*ptr.cast_ptr<A>(NULL), pState->s);
+                    pState->s = std::get<1>(outsSt);
+                    push(trans, light_ptr::create<B>(std::get<0>(outsSt)));
+                }, false);
+                return event<B, P>(std::get<0>(p).add_cleanup_(kill)).hold(std::get<0>(zbs));
+            }
 
-    namespace impl {
-        template <class S>
-        struct collect_state {
-            collect_state(const S& s) : s(s) {}
-            S s;
-        };
-    }
+    };  // end class behavior
 
     template <class A, class P = def_part>
     class event : public impl::event_ {
@@ -446,7 +472,7 @@ namespace sodium {
              * input.
              */
             template <class S, class B>
-            event<B, P> collect_e(
+            event<B, P> collect(
                 const S& initS,
                 const std::function<std::tuple<B, S>(const A&, const S&)>& f
             ) const
@@ -463,18 +489,6 @@ namespace sodium {
                     push(trans, light_ptr::create<B>(std::get<0>(outsSt)));
                 }, false);
                 return std::get<0>(p).add_cleanup_(kill);
-            }
-
-            /*!
-             * Collect input events statefully into a behavior.
-             */
-            template <class S, class B>
-            behavior<B, P> collect(
-                const S& initS,
-                const std::function<std::tuple<B, S>(const A&, const S&)>& f
-            ) const
-            {
-                return collect_e(initS, f).hold(initS);
             }
 
             template <class B>

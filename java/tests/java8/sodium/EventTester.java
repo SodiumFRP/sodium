@@ -103,23 +103,12 @@ public class EventTester extends TestCase {
     public void testLoopEvent()
     {
         final EventSink<Integer> ea = new EventSink();
-        Event<Integer> ec_out = Event.loop(
-            // Lambda syntax doesn't work here - compiler bug?
-            //     [javac] /home/blackh/src/sodium/java/src/sodium/EventTester.java:106: error: incompatible types
-            // [javac]         Event<Integer> ec_out = Event.loop((Event<Integer> eb) -> {
-            // [javac]                                           ^
-            // [javac]   required: Event<Integer>
-            // [javac]   found: Object
-            new Lambda1<Event<Integer>,Tuple2<Event<Integer>,Event<Integer>>>() {
-                public Tuple2<Event<Integer>,Event<Integer>> apply(Event<Integer> eb) {
-                    Event<Integer> ec = Event.mergeWith((x, y) -> x+y, ea.map(x -> x % 10), eb);
-                    Event<Integer> eb_out = ea.map(x -> x / 10).filter(x -> x != 0);
-                    return new Tuple2(ec, eb_out);
-                }
-            }
-        );
+        EventLoop<Integer> eb = new EventLoop<Integer>();
+        Event<Integer> ec = Event.mergeWith((x, y) -> x+y, ea.map(x -> x % 10), eb);
+        Event<Integer> eb_out = ea.map(x -> x / 10).filter(x -> x != 0);
+        eb.loop(eb_out);
         List<Integer> out = new ArrayList();
-        Listener l = ec_out.listen(x -> { out.add(x); });
+        Listener l = ec.listen(x -> { out.add(x); });
         ea.send(2);
         ea.send(52);
         l.unlisten();
