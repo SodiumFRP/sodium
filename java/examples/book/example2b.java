@@ -27,7 +27,7 @@ public class example2b extends JFrame
             }
         });
 
-        // Accumulate each clicked point into a list.
+        // The path is the accumulation of the clicked points
         path = eClick.accum(List.<Point>nil(), (pt, pth) -> pth.cons(pt));
 
         // When the path is changed, we repaint the window.
