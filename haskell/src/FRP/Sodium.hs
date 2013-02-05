@@ -62,9 +62,7 @@ module FRP.Sodium (
         gate,
         collectE,
         collect,
-        accumE,
         accum,
-        countE,
         count,
         once
     ) where

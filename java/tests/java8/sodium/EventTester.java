@@ -167,8 +167,8 @@ public class EventTester extends TestCase {
     {
         EventSink<Integer> ea = new EventSink();
         List<Integer> out = new ArrayList();
-        Event<Integer> sum = ea.accum(100, (a,s)->a+s);
-        Listener l = sum.listen((x) -> { out.add(x); });
+        Behavior<Integer> sum = ea.accum(100, (a,s)->a+s);
+        Listener l = sum.changes().listen((x) -> { out.add(x); });
         ea.send(5);
         ea.send(7);
         ea.send(1);
@@ -176,18 +176,6 @@ public class EventTester extends TestCase {
         ea.send(3);
         l.unlisten();
         assertEquals(Arrays.asList(105,112,113,115,118), out);
-    }
-
-    public void testCountE()
-    {
-        EventSink<Unit> e = new EventSink();
-        List<Integer> out = new ArrayList();
-        Listener l = e.countE().listen((x) -> { out.add(x); });
-        e.send(Unit.unit);
-        e.send(Unit.unit);
-        e.send(Unit.unit);
-        l.unlisten();
-        assertEquals(Arrays.asList(1,2,3), out);
     }
 
     public void testCount()

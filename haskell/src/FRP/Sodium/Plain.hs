@@ -414,17 +414,9 @@ collectE = R.collectE
 collect :: (a -> s -> (b, s)) -> s -> Behavior a -> Reactive (Behavior b)
 collect = R.collect
 
--- | Accumulate on input event, outputting the new state each time.
-accumE :: (a -> s -> s) -> s -> Event a -> Reactive (Event s) 
-accumE = R.accumE
-
 -- | Accumulate on input event, holding state.
 accum :: (a -> s -> s) -> s -> Event a -> Reactive (Behavior s)
 accum = R.accum
-
--- | Count event occurrences, starting with 1 for the first occurrence.
-countE :: Event a -> Reactive (Event Int)
-countE = R.countE
 
 -- | Count event occurrences, giving a behavior that starts with 0 before the first occurrence.
 count :: Event a -> Reactive (Behavior Int)

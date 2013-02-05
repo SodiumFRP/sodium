@@ -326,8 +326,8 @@ count1 = TestCase $ do
     (ea, push) <- sync newEvent
     outRef <- newIORef []
     unlisten <- sync $ do
-        eCount <- countE ea
-        listen eCount $ \c -> modifyIORef outRef (++ [c])
+        count <- count ea
+        listen (changes count) $ \c -> modifyIORef outRef (++ [c])
     sync $ push ()
     sync $ push ()
     sync $ push ()

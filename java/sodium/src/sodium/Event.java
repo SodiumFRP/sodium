@@ -389,7 +389,7 @@ public class Event<A> {
      * Transform an event with a generalized state loop (a mealy machine). The function
      * is passed the input and the old state and returns the new state and output value.
      */
-    public final <B,S> Event<B> collect(final S initState, final Lambda2<A, S, Tuple2<B, S>> f)
+    public final <B,S> Event<B> collectE(final S initState, final Lambda2<A, S, Tuple2<B, S>> f)
     {
         final Event<A> ea = this;
         return Event.loop(
@@ -410,9 +410,18 @@ public class Event<A> {
     }
 
     /**
+     * Transform an event with a generalized state loop (a mealy machine). The function
+     * is passed the input and the old state and returns the new state and output value.
+     */
+    public final <B,S> Behavior<B> collect(final S initState, final Lambda2<A, S, Tuple2<B, S>> f)
+    {
+        return collectE(initState, f).hold(initState);
+    }
+
+    /**
      * Accumulate on input event, outputting the new state each time.
      */
-    public final <S> Event<S> accum(final S initState, final Lambda2<A, S, S> f)
+    public final <S> Behavior<S> accum(final S initState, final Lambda2<A, S, S> f)
     {
         final Event<A> ea = this;
         return Event.loop(
@@ -423,19 +432,7 @@ public class Event<A> {
                     return new Tuple2<Event<S>,Event<S>>(es_out, es_out);
                 }
             }
-        );
-    }
-
-    /**
-     * Count event occurrences, starting with 1 for the first occurrence.
-     */
-    public final Event<Integer> countE()
-    {
-        return map(new Lambda1<A,Integer>() {
-        	public Integer apply(A a) { return 1; }
-        }).accum(0, new Lambda2<Integer,Integer,Integer>() {
-        	public Integer apply(Integer a, Integer b) { return a+b; }
-        });
+        ).hold(initState);
     }
 
     /**
@@ -443,7 +440,11 @@ public class Event<A> {
      */
     public final Behavior<Integer> count()
     {
-        return countE().hold(0);
+        return map(new Lambda1<A,Integer>() {
+        	public Integer apply(A a) { return 1; }
+        }).accum(0, new Lambda2<Integer,Integer,Integer>() {
+        	public Integer apply(Integer a, Integer b) { return a+b; }
+        });
     }
 
     /**

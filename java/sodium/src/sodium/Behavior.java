@@ -303,58 +303,6 @@ public class Behavior<A> {
         );
     }
 
-    /**
-     * Transform a behavior with a generalized state loop (a mealy machine). The function
-     * is passed the input and the old state and returns the new state and output value.
-     */
-    public final <B,S> Behavior<B> collect(final S initState, final Lambda2<A, S, Tuple2<B, S>> f)
-    {
-        final Event<A> ea = changes().coalesce(new Lambda2<A,A,A>() {
-        	public A apply(A fst, A snd) { return snd; }
-        });
-        final A za = sample();
-        final Tuple2<B, S> zbs = f.apply(za, initState);
-        return Event.loop(
-            new Lambda1<Event<Tuple2<B,S>>, Tuple2<Behavior<B>,Event<Tuple2<B,S>>>>() {
-                public Tuple2<Behavior<B>,Event<Tuple2<B,S>>> apply(Event<Tuple2<B,S>> ebs) {
-                    Behavior<Tuple2<B,S>> bbs = ebs.hold(zbs);
-                    Behavior<S> bs = bbs.map(new Lambda1<Tuple2<B,S>,S>() {
-                    	public S apply(Tuple2<B,S> x) {
-                    	    return x.b;
-                    	}
-                    });
-                    Event<Tuple2<B,S>> ebs_out = ea.snapshot(bs, f);
-                    return new Tuple2<Behavior<B>,Event<Tuple2<B,S>>>(bbs.map(new Lambda1<Tuple2<B,S>,B>() {
-                    	public B apply(Tuple2<B,S> x) {
-                    	    return x.a;
-                    	}
-                    }), ebs_out);
-                }
-            }
-        );
-    }
-
-    /**
-     * Accumulate on input event, holding state.
-     */
-    public final <S> Behavior<S> accum(final S initState, final Lambda2<A, S, S> f)
-    {
-        final Event<A> ea = changes().coalesce(new Lambda2<A,A,A>() {
-        	public A apply(A fst, A snd) { return snd; }
-        });
-        final A za = sample();
-        final S zs = f.apply(za, initState);
-        return Event.loop(
-            new Lambda1<Event<S>, Tuple2<Behavior<S>,Event<S>>>() {
-                public Tuple2<Behavior<S>,Event<S>> apply(Event<S> es) {
-                    Behavior<S> bs = es.hold(zs);
-                    Event<S> es_out = ea.snapshot(bs, f);
-                    return new Tuple2<Behavior<S>,Event<S>>(bs, es_out);
-                }
-            }
-        );
-    }
-
 	@Override
 	protected void finalize() throws Throwable {
 	    if (cleanup != null)

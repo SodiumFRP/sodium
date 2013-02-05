@@ -446,7 +446,7 @@ namespace sodium {
              * input.
              */
             template <class S, class B>
-            event<B, P> collect(
+            event<B, P> collect_e(
                 const S& initS,
                 const std::function<std::tuple<B, S>(const A&, const S&)>& f
             ) const
@@ -464,9 +464,21 @@ namespace sodium {
                 }, false);
                 return std::get<0>(p).add_cleanup_(kill);
             }
-            
+
+            /*!
+             * Collect input events statefully into a behavior.
+             */
+            template <class S, class B>
+            behavior<B, P> collect(
+                const S& initS,
+                const std::function<std::tuple<B, S>(const A&, const S&)>& f
+            ) const
+            {
+                return collect_e(initS, f).hold(initS);
+            }
+
             template <class B>
-            event<B, P> accum(
+            behavior<B, P> accum(
                 const B& initB,
                 const std::function<B(const A&, const B&)>& f
             ) const
@@ -481,19 +493,14 @@ namespace sodium {
                     pState->s = f(*ptr.cast_ptr<A>(NULL), pState->s);
                     push(trans, light_ptr::create<B>(pState->s));
                 }, false);
-                return std::get<0>(p).add_cleanup_(kill);
-            }
-
-            event<int, P> count_e() const
-            {
-                return accum<int>(0, [] (const A&, const int& total) -> int {
-                    return total+1;
-                });
+                return event<B, P>(std::get<0>(p).add_cleanup_(kill)).hold(initB);
             }
 
             behavior<int, P> count() const
             {
-                return count_e().hold(0);
+                return accum<int>(0, [] (const A&, const int& total) -> int {
+                    return total+1;
+                });
             }
 
             event<A, P> once() const

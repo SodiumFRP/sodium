@@ -402,7 +402,7 @@ public class BehaviorTester extends TestCase {
     {
         EventSink<Integer> ea = new EventSink();
         List<Integer> out = new ArrayList();
-        Behavior<Integer> sum = ea.hold(100).accum(0, (a,s)->a+s);
+        Behavior<Integer> sum = ea.accum(100, (a,s)->a+s);
         Listener l = sum.values().listen((x) -> { out.add(x); });
         ea.send(5);
         ea.send(7);

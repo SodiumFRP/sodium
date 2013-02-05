@@ -149,14 +149,6 @@ collect f zs bea = do
         let ebs = snapshotWith f ea (snd <$> bs)
     return (fst <$> bs)
 
--- | Accumulate on input event, outputting the new state each time.
-accumE :: Context r => (a -> s -> s) -> s -> Event r a -> Reactive r (Event r s) 
-accumE f z ea = do
-    rec
-        let es = snapshotWith f ea s
-        s <- hold z es
-    return es
-
 -- | Accumulate on input event, holding state.
 accum :: Context r => (a -> s -> s) -> s -> Event r a -> Reactive r (Behavior r s)
 accum f z ea = do
@@ -164,11 +156,7 @@ accum f z ea = do
         s <- hold z (snapshotWith f ea s)
     return s
 
--- | Count event occurrences, starting with 1 for the first occurrence.
-countE :: Context r => Event r a -> Reactive r (Event r Int)
-countE = accumE (+) 0 . (const 1 <$>)
-
 -- | Count event occurrences, giving a behavior that starts with 0 before the first occurrence.
 count :: Context r => Event r a -> Reactive r (Behavior r Int)
-count = hold 0 <=< countE
+count = accum (+) 0 . (const 1 <$>)
 

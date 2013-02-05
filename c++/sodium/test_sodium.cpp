@@ -167,8 +167,8 @@ void test_sodium::count_e1()
 {
     event_sink<unit> ea;
     std::shared_ptr<vector<int>> out(new vector<int>);
-    event<int> sum = ea.count_e();
-    auto unlisten = sum.listen([out] (const int& x) { out->push_back(x); });
+    behavior<int> sum = ea.count();
+    auto unlisten = sum.changes().listen([out] (const int& x) { out->push_back(x); });
     ea.send(unit());
     ea.send(unit());
     ea.send(unit());
@@ -593,7 +593,7 @@ void test_sodium::collect1()
 {
     event_sink<int> ea;
     std::shared_ptr<vector<int>> out(new vector<int>);
-    event<int> sum = ea.collect<int, int>(100, [] (const int& a, const int& s) {
+    event<int> sum = ea.collect_e<int, int>(100, [] (const int& a, const int& s) {
         return tuple<int, int>(a+s, a+s);
     });
     auto unlisten = sum.listen([out] (const int& x) { out->push_back(x); });
@@ -610,10 +610,10 @@ void test_sodium::accum1()
 {
     event_sink<int> ea;
     std::shared_ptr<vector<int>> out(new vector<int>);
-    event<int> sum = ea.accum<int>(100, [] (const int& a, const int& s) -> int {
+    behavior<int> sum = ea.accum<int>(100, [] (const int& a, const int& s) -> int {
         return a+s;
     });
-    auto unlisten = sum.listen([out] (const int& x) { out->push_back(x); });
+    auto unlisten = sum.changes().listen([out] (const int& x) { out->push_back(x); });
     ea.send(5);
     ea.send(7);
     ea.send(1);

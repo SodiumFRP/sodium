@@ -18,7 +18,7 @@ public class example2a extends JFrame
     {
         super(title);
 
-        // An event containing mouse clicks.
+        // An event of mouse presses
         EventSink<Point> eClick = new EventSink<Point>();
         addMouseListener(new MouseAdapter() {
             public void mousePressed(java.awt.event.MouseEvent ev) {
@@ -30,9 +30,9 @@ public class example2a extends JFrame
         pos = eClick.hold(new Point(100, 100));
 
         // When the cross position is changed, we repaint the window.
-        l = l.append(pos.changes().listen(pt -> {
+        l = pos.changes().listen(pt -> {
             this.repaint();
-        }));
+        });
     }
 
     public void removeNotify() {

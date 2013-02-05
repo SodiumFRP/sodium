@@ -1,1 +1,1 @@
-export CLASSPATH=libs/mail.jar:libs/functionaljava-3.1-java8.jar:.
+export CLASSPATH=libs/mail.jar:../libs/functionaljava-3.1-java8.jar:.
