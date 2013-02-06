@@ -23,13 +23,12 @@
 -- all 'hold's are delayed, so 'attachWith' will capture the /old/ value of the state /s/.
 --
 -- > {-# LANGUAGE DoRec #-}
--- > -- | Accumulate on input event, outputting the new state each time.
--- > accumE :: (a -> s -> s) -> s -> Event a -> Reactive (Event s) 
--- > accumE f z ea = do
+-- > -- | Accumulate state changes given in the input event.
+-- > accum :: Context r => a -> Event r (a -> a) -> Reactive r (Behavior r a)
+-- > accum z efa = do
 -- >     rec
--- >         let es = attachWith f ea s
--- >         s <- hold z es
--- >     return es
+-- >         s <- hold z $ snapshotWith ($) efa s
+-- >     return s
 module FRP.Sodium (
         Plain,
         -- * Running FRP code
