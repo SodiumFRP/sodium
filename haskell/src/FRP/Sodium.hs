@@ -54,6 +54,7 @@ module FRP.Sodium (
         execute,
         sample,
         coalesce,
+        once,
         -- * Derived FRP functions
         mergeWith,
         filterE,
@@ -62,8 +63,7 @@ module FRP.Sodium (
         collectE,
         collect,
         accum,
-        count,
-        once
+        count
     ) where
 
 import FRP.Sodium.Plain
