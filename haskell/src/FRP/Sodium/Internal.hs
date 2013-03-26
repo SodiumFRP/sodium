@@ -3,7 +3,6 @@
 module FRP.Sodium.Internal (
         C.Event(..),
         listenTrans,
-        listenValueTrans,
         schedulePrioritized,
         scheduleLast,
         Listen(..),

@@ -172,7 +172,14 @@ newEvent = do
 -- | Listen for firings of this event. The returned @IO ()@ is an IO action
 -- that unregisters the listener. This is the observer pattern.
 --
--- To listen to a 'Behavior' use @listen (values b) handler@
+-- To listen to a 'Behavior' use @listen (values b) handler@ or
+-- @listen (changes b) handler@
+--
+-- NOTE: The callback is called with the transaction held, so you cannot
+-- use 'sync' inside a listener. You can delegate to another thread and have
+-- that start the new transaction. If you want to do more processing in
+-- the same transction, then you can use 'FRP.Sodium.Internal.listenTrans'
+-- but this is discouraged unless you really need to write a new primitive.
 listen        :: Event a -> (a -> IO ()) -> Reactive (IO ())
 listen ev handle = listenTrans ev (ioReactive . handle)
 
@@ -781,11 +788,6 @@ lastFiringOnly listen mNodeRef suppressEarlierFirings handle = do
             Just a <- ioReactive $ readIORef aRef
             ioReactive $ writeIORef aRef Nothing
             handle a
-
--- | Variant of 'listenValue' that allows you to initiate more activity in the current
--- transaction. Useful for implementing new primitives.
-listenValueTrans :: Behavior a -> (a -> Reactive ()) -> Reactive (IO ())
-listenValueTrans ba = listenValueRaw ba Nothing False
 
 eventify :: (Maybe (MVar Node) -> Bool -> (a -> Reactive ()) -> Reactive (IO ())) -> Event a
 eventify listen = Event gl cacheRef
