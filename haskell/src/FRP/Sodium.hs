@@ -15,12 +15,12 @@
 --
 --   * Applicative on 'behaviour', e.g. @let bsum = (+) \<$\> ba \<*\> bb@
 --
---   * Applicative 'pure' is used to give a constant 'Behavior'.
+--   * Applicative 'Control.Applicative.pure' is used to give a constant 'Behavior'.
 --
 --   * Recursive do (using the DoRec language extension) to make state loops with the @rec@ keyword.
 --
 -- Here's an example of recursive do to write state-keeping loops. Note that
--- all 'hold's are delayed, so 'attachWith' will capture the /old/ value of the state /s/.
+-- all 'hold's are delayed, so 'snapshotWith' will capture the /old/ value of the state /s/.
 --
 -- > {-# LANGUAGE DoRec #-}
 -- > -- | Accumulate state changes given in the input event.
