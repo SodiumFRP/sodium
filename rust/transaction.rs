@@ -6,19 +6,39 @@
 // Turn on a warning
 #[warn(non_camel_case_types)]
 
-use task::local_data::*;
+use core::task::local_data::*;
 use core::dlist::*;
 
-struct Transaction {
-}
+struct Transaction {}
 
 fn currentTransaction(_: @Transaction) {}
 
-const key : LocalDataKey<Transaction> = currentTransaction;
+//static key : LocalDataKey<'self, Transaction> = currentTransaction;
 
-struct Partition {
+struct PartitionState {
     depth           : int,
     processing_post : bool,
-    postQ           : DList<fn()>,
+    postQ           : @mut DList<@fn()>
 }
+
+struct Partition<'self, P> {
+    state : @mut PartitionState,
+    key   : LocalDataKey<'self, Transaction>
+}
+
+impl<P> Partition<'self, P> {
+    pub fn new(k : LocalDataKey<'self, Transaction>) -> Partition<'self, P> {
+        Partition {
+            state : @mut PartitionState {
+                depth : 0,
+                processing_post : false,
+                postQ : DList()
+            },
+            key : k
+        }
+    }
+}
+
+pub fn def_part_key(_: @Transaction) {}
+pub struct DefPart { }
 

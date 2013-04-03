@@ -3,14 +3,16 @@ mod transaction;
 
 use std::list::*;
 use core::cmp::Eq;
+use transaction::*;
 
 type Listen<A> = @fn(@fn(@A)) -> @fn();
 
-struct Event<A> {
+struct Event<P,A> {
+    part: Partition<'self, P>,
     listen: Listen<A>
 }
 
-fn delete<A: Eq Copy,B: Copy>(l : &List<(A,B)>, key : &A) -> @List<(A,B)>
+fn delete<A: Eq + Copy,B: Copy>(l : &List<(A,B)>, key : &A) -> @List<(A,B)>
 {
     match l {
         &Nil             => @Nil,
@@ -26,10 +28,11 @@ struct EventState<A> {
     nextIx   : int
 }
 
-fn newEvent<A>() -> (Event<A>, @fn(@A)) {
+fn newEvent<P,A>(part : Partition<'static, P>) -> (Event<P,A>, @fn(@A)) {
     let state = @mut EventState{ handlers : @Nil, nextIx : 0 };
     (
         Event {
+            part : part,
             listen : |handler| {
                     let ix = state.nextIx;
                     state.handlers = @Cons((ix, handler), state.handlers);
@@ -44,7 +47,8 @@ fn newEvent<A>() -> (Event<A>, @fn(@A)) {
 }
 
 fn main() {
-    let (e, send) = newEvent();
+    let def_part : Partition<'static, DefPart> = Partition::new(def_part_key);
+    let (e, send) = newEvent(def_part);
     let unlisten1 = (e.listen)(|x : @int| { io::println(fmt!("listener#1 %d", *x)) });
     let unlisten2 = (e.listen)(|x : @int| { io::println(fmt!("listener#2 %d", *x)) });
     send(@5);
