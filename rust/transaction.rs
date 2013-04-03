@@ -6,10 +6,11 @@
 // Turn on a warning
 #[warn(non_camel_case_types)]
 
+extern mod std;
 use core::task::local_data::*;
-use core::dlist::*;
+use std::dlist::DList;
 
-struct Transaction {}
+struct Transaction;
 
 fn currentTransaction(_: @Transaction) {}
 
@@ -21,13 +22,13 @@ struct PartitionState {
     postQ           : @mut DList<@fn()>
 }
 
-struct Partition<'self, P> {
+pub struct Partition<P> {
     state : @mut PartitionState,
-    key   : LocalDataKey<'self, Transaction>
+    key   : LocalDataKey<'static, Transaction>
 }
 
-impl<P> Partition<'self, P> {
-    pub fn new(k : LocalDataKey<'self, Transaction>) -> Partition<'self, P> {
+impl<P> Partition<P> {
+    pub fn new(k : LocalDataKey<'static, Transaction>) -> Partition<P> {
         Partition {
             state : @mut PartitionState {
                 depth : 0,
@@ -40,5 +41,5 @@ impl<P> Partition<'self, P> {
 }
 
 pub fn def_part_key(_: @Transaction) {}
-pub struct DefPart { }
+pub struct DefPart;
 

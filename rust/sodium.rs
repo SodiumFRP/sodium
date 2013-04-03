@@ -1,14 +1,14 @@
 extern mod std;
-mod transaction;
 
 use std::list::*;
 use core::cmp::Eq;
 use transaction::*;
+mod transaction;
 
 type Listen<A> = @fn(@fn(@A)) -> @fn();
 
 struct Event<P,A> {
-    part: Partition<'self, P>,
+    part: Partition<P>,
     listen: Listen<A>
 }
 
@@ -28,7 +28,7 @@ struct EventState<A> {
     nextIx   : int
 }
 
-fn newEvent<P,A>(part : Partition<'static, P>) -> (Event<P,A>, @fn(@A)) {
+fn newEvent<P,A>(part : Partition<P>) -> (Event<P,A>, @fn(@A)) {
     let state = @mut EventState{ handlers : @Nil, nextIx : 0 };
     (
         Event {
@@ -47,7 +47,7 @@ fn newEvent<P,A>(part : Partition<'static, P>) -> (Event<P,A>, @fn(@A)) {
 }
 
 fn main() {
-    let def_part : Partition<'static, DefPart> = Partition::new(def_part_key);
+    let def_part : Partition<DefPart> = Partition::new(def_part_key);
     let (e, send) = newEvent(def_part);
     let unlisten1 = (e.listen)(|x : @int| { io::println(fmt!("listener#1 %d", *x)) });
     let unlisten2 = (e.listen)(|x : @int| { io::println(fmt!("listener#2 %d", *x)) });
