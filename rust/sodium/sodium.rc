@@ -1,0 +1,12 @@
+#[link(name = "sodium", vers = "0.1")];
+
+#[comment = "Sodium reactive programming library"];
+#[license = "BSD3"];
+#[crate_type = "lib"];
+
+extern mod std;
+
+pub use event::*;
+pub use transaction::*;
+pub mod event;
+pub mod transaction;

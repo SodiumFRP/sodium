@@ -1,1 +1,2 @@
-sodium
+test_sodium
+sodium/*.so

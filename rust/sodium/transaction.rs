@@ -1,20 +1,7 @@
-#[link(name = "transaction", vers = "0.1", author = "Stephen Blackheath")];
-
-// Make a library ("bin" is the default)
-#[crate_type = "lib"];
-
-// Turn on a warning
-#[warn(non_camel_case_types)]
-
-extern mod std;
 use core::task::local_data::*;
 use std::dlist::DList;
 
 struct Transaction;
-
-fn currentTransaction(_: @Transaction) {}
-
-//static key : LocalDataKey<'self, Transaction> = currentTransaction;
 
 struct PartitionState {
     depth           : int,
@@ -27,7 +14,7 @@ pub struct Partition<P> {
     key   : LocalDataKey<'static, Transaction>
 }
 
-impl<P> Partition<P> {
+pub impl<P> Partition<P> {
     pub fn new(k : LocalDataKey<'static, Transaction>) -> Partition<P> {
         Partition {
             state : @mut PartitionState {

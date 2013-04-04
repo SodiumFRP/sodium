@@ -1,15 +1,18 @@
-extern mod std;
-
 use std::list::*;
 use core::cmp::Eq;
 use transaction::*;
-mod transaction;
 
 type Listen<A> = @fn(@fn(@A)) -> @fn();
 
-struct Event<P,A> {
+pub struct Event<P,A> {
     part: Partition<P>,
-    listen: Listen<A>
+    listener: Listen<A>
+}
+
+pub impl<P,A> Event<P,A> {
+    fn listen(&self, handler : @fn(@A)) -> @fn() {
+        return (self.listener)(handler);
+    }
 }
 
 fn delete<A: Eq + Copy,B: Copy>(l : &List<(A,B)>, key : &A) -> @List<(A,B)>
@@ -28,12 +31,12 @@ struct EventState<A> {
     nextIx   : int
 }
 
-fn newEvent<P,A>(part : Partition<P>) -> (Event<P,A>, @fn(@A)) {
+pub fn newEvent<P,A>(part : Partition<P>) -> (Event<P,A>, @fn(@A)) {
     let state = @mut EventState{ handlers : @Nil, nextIx : 0 };
     (
         Event {
             part : part,
-            listen : |handler| {
+            listener : |handler| {
                     let ix = state.nextIx;
                     state.handlers = @Cons((ix, handler), state.handlers);
                     state.nextIx = state.nextIx + 1;
@@ -44,17 +47,5 @@ fn newEvent<P,A>(part : Partition<P>) -> (Event<P,A>, @fn(@A)) {
             for each(state.handlers) |&(_,h)| { h(a) };
         }
     )
-}
-
-fn main() {
-    let def_part : Partition<DefPart> = Partition::new(def_part_key);
-    let (e, send) = newEvent(def_part);
-    let unlisten1 = (e.listen)(|x : @int| { io::println(fmt!("listener#1 %d", *x)) });
-    let unlisten2 = (e.listen)(|x : @int| { io::println(fmt!("listener#2 %d", *x)) });
-    send(@5);
-    send(@6);
-    unlisten1();
-    send(@7);
-    unlisten2();
 }
 
