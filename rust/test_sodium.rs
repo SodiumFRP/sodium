@@ -29,18 +29,19 @@ use sodium::transaction::*;
 
 fn event1(def_part : Partition<DefPart>) {
     let out = @mut ~[];
-    let (e, send_e) = newEvent(def_part);
+    let (e, send_e) = Event::new(def_part);
     let unlisten = e.listen(|x| { out.push(x); });
-    send_e(@'h');
-    send_e(@'e');
-    send_e(@'l');
-    send_e(@'l');
-    send_e(@'o');
+    send_e('h');
+    send_e('e');
+    send_e('l');
+    send_e('l');
+    send_e('o');
     unlisten();
-    assert!(*out == ~[@'h',@'e',@'l',@'l',@'o']);
+    assert!(*out == ~['h','e','l','l','o']);
 }
 
 fn main() {
     let def_part : Partition<DefPart> = Partition::new(def_part_key);
     event1(def_part);
+    io::println("pass");
 }
