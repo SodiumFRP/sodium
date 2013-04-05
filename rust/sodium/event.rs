@@ -1,24 +1,28 @@
 use std::list::*;
 use core::cmp::Eq;
+use core::option::*;
 use transaction::*;
 
 type Listen<A> = @fn(@fn(A)) -> @fn();
 
 struct Event<P,A> {
-    part: Partition<P>,
-    listener: Listen<A>
+    part     : Option<Partition<P>>,
+    listener : Listen<A>
 }
 
 pub impl<P,A : Copy> Event<P,A> {
-    pub fn listen(&self, handler : @fn(A)) -> @fn() {
-        return (self.listener)(handler);
+    pub fn never() -> Event<P,A> {
+        Event {
+            part     : None,
+            listener : |_| { || {} } 
+        }
     }
 
     pub fn new(part : Partition<P>) -> (Event<P,A>, @fn(A)) {
         let state = @mut EventState{ handlers : @Nil, nextIx : 0 };
         (
             Event {
-                part : part,
+                part     : Some(part),
                 listener : |handler| {
                         let ix = state.nextIx;
                         state.handlers = @Cons((ix, handler), state.handlers);
@@ -30,6 +34,10 @@ pub impl<P,A : Copy> Event<P,A> {
                 for each(state.handlers) |&(_,h)| { h(a) };
             }
         )
+    }
+
+    pub fn listen(&self, handler : @fn(A)) -> @fn() {
+        return (self.listener)(handler);
     }
 }
 

@@ -31,8 +31,10 @@ fn event1(def_part : Partition<DefPart>) {
     let out = @mut ~[];
     let (e, send_e) = Event::new(def_part);
     let unlisten = e.listen(|x| { out.push(x); });
-    send_e('h');
-    send_e('e');
+    do sync(&def_part) || {
+        send_e('h');
+        send_e('e');
+    };
     send_e('l');
     send_e('l');
     send_e('o');
