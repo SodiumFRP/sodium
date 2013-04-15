@@ -30,15 +30,17 @@ use sodium::transaction::*;
 fn event1(def_part : Partition<DefPart>) {
     let out = @mut ~[];
     let (e, send_e) = Event::new(def_part);
-    let unlisten = e.listen(|x| { out.push(x); });
-    do sync(&def_part) || {
+    let unlisten = do sync(&def_part) || {
         send_e('h');
+        let unlisten = e.listen(|x| { out.push(x); });
         send_e('e');
+        unlisten
     };
     send_e('l');
     send_e('l');
     send_e('o');
     unlisten();
+    //io::println((copy *out).len().to_str());
     assert!(*out == ~['h','e','l','l','o']);
 }
 
