@@ -118,17 +118,19 @@ namespace sodium {
         event_ map_(const std::function<light_ptr(const light_ptr&)>& f, const event_& ca);
 
         /*!
-         * Creates an event, and a function to push a value into it.
-         * Unsafe variant: Assumes 'push' is called on the partition's sequence.
+         * Function to push a value into an event
+         */
+        void send(const std::shared_ptr<node>& n, transaction_impl* trans, const light_ptr& ptr);
+
+        /*!
+         * Creates an event, that values can be pushed into using impl::send(). 
          */
         std::tuple<
                 event_,
-                std::function<void(transaction_impl*, const light_ptr&)>,
                 std::shared_ptr<node>
             > unsafe_new_event(const event_::sample_now& sample_now);
         std::tuple<
                 event_,
-                std::function<void(transaction_impl*, const light_ptr&)>,
                 std::shared_ptr<node>
             > unsafe_new_event();
 
@@ -316,13 +318,12 @@ namespace sodium {
                 auto zbs = f(za, initS);
                 std::shared_ptr<impl::collect_state<S>> pState(new impl::collect_state<S>(std::get<1>(zbs)));
                 auto p = impl::unsafe_new_event();
-                auto push = std::get<1>(p);
-                auto target = std::get<2>(p);
+                auto target = std::get<1>(p);
                 auto kill = changes().listen_raw_(trans.impl(), target,
-                         [pState, push, f] (impl::transaction_impl* trans, const light_ptr& ptr) {
+                         [pState, target, f] (impl::transaction_impl* trans, const light_ptr& ptr) {
                     auto outsSt = f(*ptr.cast_ptr<A>(NULL), pState->s);
                     pState->s = std::get<1>(outsSt);
-                    push(trans, light_ptr::create<B>(std::get<0>(outsSt)));
+                    send(target, trans, light_ptr::create<B>(std::get<0>(outsSt)));
                 }, false);
                 return event<B, P>(std::get<0>(p).add_cleanup_(kill)).hold(std::get<0>(zbs));
             }
@@ -480,13 +481,12 @@ namespace sodium {
                 transaction<P> trans;
                 std::shared_ptr<impl::collect_state<S>> pState(new impl::collect_state<S>(initS));
                 auto p = impl::unsafe_new_event();
-                auto push = std::get<1>(p);
-                auto target = std::get<2>(p);
+                auto target = std::get<1>(p);
                 auto kill = listen_raw_(trans.impl(), target,
-                         [pState, push, f] (impl::transaction_impl* trans, const light_ptr& ptr) {
+                         [pState, target, f] (impl::transaction_impl* trans, const light_ptr& ptr) {
                     auto outsSt = f(*ptr.cast_ptr<A>(NULL), pState->s);
                     pState->s = std::get<1>(outsSt);
-                    push(trans, light_ptr::create<B>(std::get<0>(outsSt)));
+                    send(target, trans, light_ptr::create<B>(std::get<0>(outsSt)));
                 }, false);
                 return std::get<0>(p).add_cleanup_(kill);
             }
@@ -500,12 +500,11 @@ namespace sodium {
                 transaction<P> trans;
                 std::shared_ptr<impl::collect_state<B>> pState(new impl::collect_state<B>(initB));
                 auto p = impl::unsafe_new_event();
-                auto push = std::get<1>(p);
-                auto target = std::get<2>(p);
+                auto target = std::get<1>(p);
                 auto kill = listen_raw_(trans.impl(), target,
-                         [pState, push, f] (impl::transaction_impl* trans, const light_ptr& ptr) {
+                         [pState, target, f] (impl::transaction_impl* trans, const light_ptr& ptr) {
                     pState->s = f(*ptr.cast_ptr<A>(NULL), pState->s);
-                    push(trans, light_ptr::create<B>(pState->s));
+                    send(target, trans, light_ptr::create<B>(pState->s));
                 }, false);
                 return event<B, P>(std::get<0>(p).add_cleanup_(kill)).hold(initB);
             }
@@ -539,7 +538,6 @@ namespace sodium {
             event_ construct();
             void send(transaction_impl* trans, const light_ptr& ptr) const;
             std::shared_ptr<impl::node> target;
-            std::function<void(impl::transaction_impl*, const light_ptr&)> push;
         };
     }
 
@@ -597,12 +595,11 @@ namespace sodium {
     {
         transaction<P> trans;
         auto p = impl::unsafe_new_event();
-        auto push = std::get<1>(p);
-        auto target = std::get<2>(p);
+        auto target = std::get<1>(p);
         auto kill = input.listen_raw_(trans.impl(), target,
-                           [push] (impl::transaction_impl* trans, const light_ptr& poa) {
+                           [target] (impl::transaction_impl* trans, const light_ptr& poa) {
             const boost::optional<A>& oa = *poa.cast_ptr<boost::optional<A>>(NULL);
-            if (oa) push(trans, light_ptr::create<A>(oa.get()));
+            if (oa) impl::send(target, trans, light_ptr::create<A>(oa.get()));
         }, false);
         return std::get<0>(p).add_cleanup_(kill);
     }
@@ -668,14 +665,12 @@ namespace sodium {
         private:
             struct info {
                 info(
-                    const std::function<void(impl::transaction_impl*, const light_ptr&)>& pushIn,
                     const std::shared_ptr<impl::node>& target,
                     const std::shared_ptr<std::function<void()>>& pKill
                 )
-                : pushIn(pushIn), target(target), pKill(pKill)
+                : target(target), pKill(pKill)
                 {
                 }
-                std::function<void(impl::transaction_impl*, const light_ptr&)> pushIn;
                 std::shared_ptr<impl::node> target;
                 std::shared_ptr<std::function<void()>> pKill;
             };
@@ -702,7 +697,7 @@ namespace sodium {
                         std::function<void()> kill = *pKill;
                         kill();
                     }),
-                    std::shared_ptr<info>(new info(std::get<1>(p), std::get<2>(p), pKill))
+                    std::shared_ptr<info>(new info(std::get<1>(p), pKill))
                 );
             }
 
@@ -710,7 +705,10 @@ namespace sodium {
             {
                 if (i) {
                     transaction<P> trans;
-                    *i->pKill = e.listen_raw_(trans.impl(), i->target, i->pushIn, false);
+                    auto target(i->target);
+                    *i->pKill = e.listen_raw_(trans.impl(), target, [target] (impl::transaction_impl* trans, const light_ptr& ptr) {
+                        send(target, trans, ptr);  // to do: make this more efficient
+                    }, false);
                     i = std::shared_ptr<info>();
                 }
                 else
