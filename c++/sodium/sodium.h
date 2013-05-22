@@ -51,7 +51,7 @@ namespace sodium {
             typedef std::function<std::function<void()>(
                 transaction_impl*,
                 const std::shared_ptr<impl::node>&,
-                const std::function<void(transaction_impl*, const light_ptr&)>&,
+                std::function<void(transaction_impl*, const light_ptr&)>*,
                 bool suppressEarlierFirings,
                 const std::shared_ptr<cleaner_upper>&)> listen;
             typedef std::function<void(std::vector<light_ptr>&)> sample_now;
@@ -93,7 +93,7 @@ namespace sodium {
             std::function<void()> listen_raw_(
                         transaction_impl* trans0,
                         const std::shared_ptr<impl::node>& target,
-                        const std::function<void(transaction_impl*, const light_ptr&)>& handle,
+                        std::function<void(transaction_impl*, const light_ptr&)>* handle,
                         bool suppressEarlierFirings) const;
 
             event_ add_cleanup_(const std::function<void()>& newCleanup) const;
@@ -133,10 +133,6 @@ namespace sodium {
                 event_,
                 std::shared_ptr<node>
             > unsafe_new_event();
-
-        struct coalesce_state {
-            boost::optional<light_ptr> oValue;
-        };
 
         struct behavior_impl {
             behavior_impl(const light_ptr& constant);
@@ -258,7 +254,7 @@ namespace sodium {
              * listen to the underlying event, i.e. to updates.
              */
             std::function<void()> listen_raw(impl::transaction_impl* trans, const std::shared_ptr<impl::node>& target,
-                                const std::function<void(impl::transaction_impl*, const light_ptr&)>& handle) const {
+                                std::function<void(impl::transaction_impl*, const light_ptr&)>* handle) const {
                 return impl->changes.listen_raw_(trans, target, handle, false);
             }
 
@@ -320,11 +316,12 @@ namespace sodium {
                 auto p = impl::unsafe_new_event();
                 auto target = std::get<1>(p);
                 auto kill = changes().listen_raw_(trans.impl(), target,
-                         [pState, target, f] (impl::transaction_impl* trans, const light_ptr& ptr) {
-                    auto outsSt = f(*ptr.cast_ptr<A>(NULL), pState->s);
-                    pState->s = std::get<1>(outsSt);
-                    send(target, trans, light_ptr::create<B>(std::get<0>(outsSt)));
-                }, false);
+                    new std::function<void(impl::transaction_impl*, const light_ptr&)>(
+                        [pState, target, f] (impl::transaction_impl* trans, const light_ptr& ptr) {
+                            auto outsSt = f(*ptr.cast_ptr<A>(NULL), pState->s);
+                            pState->s = std::get<1>(outsSt);
+                            send(target, trans, light_ptr::create<B>(std::get<0>(outsSt)));
+                        }), false);
                 return event<B, P>(std::get<0>(p).add_cleanup_(kill)).hold(std::get<0>(zbs));
             }
 
@@ -352,9 +349,11 @@ namespace sodium {
              */
             std::function<void()> listen(std::function<void(const A&)> handle) const {
                 transaction<P> trans;
-                return listen_raw_(trans.impl(), std::shared_ptr<impl::node>(), [handle] (impl::transaction_impl* trans, const light_ptr& ptr) {
-                    handle(*ptr.cast_ptr<A>(NULL));
-                }, false);
+                return listen_raw_(trans.impl(), std::shared_ptr<impl::node>(),
+                    new std::function<void(impl::transaction_impl*, const light_ptr&)>(
+                        [handle] (impl::transaction_impl* trans, const light_ptr& ptr) {
+                            handle(*ptr.cast_ptr<A>(NULL));
+                        }), false);
             };
     
             /*!
@@ -483,11 +482,12 @@ namespace sodium {
                 auto p = impl::unsafe_new_event();
                 auto target = std::get<1>(p);
                 auto kill = listen_raw_(trans.impl(), target,
-                         [pState, target, f] (impl::transaction_impl* trans, const light_ptr& ptr) {
-                    auto outsSt = f(*ptr.cast_ptr<A>(NULL), pState->s);
-                    pState->s = std::get<1>(outsSt);
-                    send(target, trans, light_ptr::create<B>(std::get<0>(outsSt)));
-                }, false);
+                    new std::function<void(impl::transaction_impl*, const light_ptr&)>(
+                        [pState, target, f] (impl::transaction_impl* trans, const light_ptr& ptr) {
+                            auto outsSt = f(*ptr.cast_ptr<A>(NULL), pState->s);
+                            pState->s = std::get<1>(outsSt);
+                            send(target, trans, light_ptr::create<B>(std::get<0>(outsSt)));
+                        }), false);
                 return std::get<0>(p).add_cleanup_(kill);
             }
 
@@ -502,10 +502,11 @@ namespace sodium {
                 auto p = impl::unsafe_new_event();
                 auto target = std::get<1>(p);
                 auto kill = listen_raw_(trans.impl(), target,
-                         [pState, target, f] (impl::transaction_impl* trans, const light_ptr& ptr) {
-                    pState->s = f(*ptr.cast_ptr<A>(NULL), pState->s);
-                    send(target, trans, light_ptr::create<B>(pState->s));
-                }, false);
+                    new std::function<void(impl::transaction_impl*, const light_ptr&)>(
+                        [pState, target, f] (impl::transaction_impl* trans, const light_ptr& ptr) {
+                            pState->s = f(*ptr.cast_ptr<A>(NULL), pState->s);
+                            send(target, trans, light_ptr::create<B>(pState->s));
+                        }), false);
                 return event<B, P>(std::get<0>(p).add_cleanup_(kill)).hold(initB);
             }
 
@@ -597,10 +598,11 @@ namespace sodium {
         auto p = impl::unsafe_new_event();
         auto target = std::get<1>(p);
         auto kill = input.listen_raw_(trans.impl(), target,
-                           [target] (impl::transaction_impl* trans, const light_ptr& poa) {
-            const boost::optional<A>& oa = *poa.cast_ptr<boost::optional<A>>(NULL);
-            if (oa) impl::send(target, trans, light_ptr::create<A>(oa.get()));
-        }, false);
+            new std::function<void(impl::transaction_impl*, const light_ptr&)>(
+                [target] (impl::transaction_impl* trans, const light_ptr& poa) {
+                    const boost::optional<A>& oa = *poa.cast_ptr<boost::optional<A>>(NULL);
+                    if (oa) impl::send(target, trans, light_ptr::create<A>(oa.get()));
+                }), false);
         return std::get<0>(p).add_cleanup_(kill);
     }
 
@@ -706,9 +708,7 @@ namespace sodium {
                 if (i) {
                     transaction<P> trans;
                     auto target(i->target);
-                    *i->pKill = e.listen_raw_(trans.impl(), target, [target] (impl::transaction_impl* trans, const light_ptr& ptr) {
-                        send(target, trans, ptr);  // to do: make this more efficient
-                    }, false);
+                    *i->pKill = e.listen_raw_(trans.impl(), target, NULL, false);
                     i = std::shared_ptr<info>();
                 }
                 else
@@ -825,13 +825,14 @@ namespace sodium {
         event_sink<A, P> out;
         transaction<P> trans;
         auto kill = e.listen_raw_(trans.impl(), std::shared_ptr<impl::node>(),
-            [out] (impl::transaction_impl* trans, const light_ptr& ptr) {
-                const std::list<A>& la = *ptr.cast_ptr<std::list<A>>(NULL);
-                trans->part->post([la, out] () {
-                    for (auto it = la.begin(); it != la.end(); ++it)
-                        out.send(*it);
-                });
-            }, false);
+            new std::function<void(impl::transaction_impl*, const light_ptr&)>(
+                [out] (impl::transaction_impl* trans, const light_ptr& ptr) {
+                    const std::list<A>& la = *ptr.cast_ptr<std::list<A>>(NULL);
+                    trans->part->post([la, out] () {
+                        for (auto it = la.begin(); it != la.end(); ++it)
+                            out.send(*it);
+                    });
+                }), false);
         return out.add_cleanup_(kill);
     }
 
