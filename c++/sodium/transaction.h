@@ -14,6 +14,7 @@
 #include <map>
 #include <set>
 #include <list>
+#include <forward_list>
 
 namespace sodium {
 
@@ -81,12 +82,6 @@ namespace sodium {
                         const std::shared_ptr<impl::node>&,
                         std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>*,
                         bool)> closure;
-                    listen_impl_func(const closure& func, std::function<void()>* cleanup1)
-                        : func(func)
-                    {
-                        if (cleanup1 != NULL)
-                            cleanups.push_back(cleanup1);
-                    }
                     listen_impl_func(const closure& func)
                         : func(func) {}
                     ~listen_impl_func()
@@ -97,20 +92,20 @@ namespace sodium {
                         }
                     }
                     closure func;
-                    std::list<std::function<void()>*> cleanups;
-                    std::list<std::shared_ptr<listen_impl_func>> children;
+                    std::forward_list<std::function<void()>*> cleanups;
+                    std::forward_list<std::shared_ptr<listen_impl_func>> children;
                 };
 
             public:
                 node() : rank(0) {}
 
                 rank_t rank;
-                std::list<node::target> targets;
-                std::list<light_ptr> firings;
+                std::forward_list<node::target> targets;
+                std::forward_list<light_ptr> firings;
                 std::shared_ptr<listen_impl_func> listen_impl;
 
                 void link(void* holder, const std::shared_ptr<node>& target);
-                bool unlink(void* holder);
+                void unlink(void* holder);
 
             private:
                 void ensure_bigger_than(std::set<node*>& visited, rank_t limit);

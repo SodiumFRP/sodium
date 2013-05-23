@@ -145,7 +145,7 @@ namespace sodium {
                         }
                     })
                 );
-                li->children.push_back(new_li);
+                li->children.push_front(new_li);
             }
             auto p_sample_now(this->p_sample_now);
             return event_(
@@ -272,7 +272,7 @@ namespace sodium {
                     trans->last([n] () {
                         n->firings.clear();
                     });
-                n->firings.push_back(ptr);
+                n->firings.push_front(ptr);
                 auto it = n->targets.begin();
                 while (it != n->targets.end()) {
                     fs[ifs++] = &*it;
@@ -307,7 +307,7 @@ namespace sodium {
                         bool suppressEarlierFirings) -> std::function<void()>* {  // Register listener
                     std::shared_ptr<node> n = n_weak.lock();
                     if (n) {
-                        std::list<light_ptr> firings;
+                        std::forward_list<light_ptr> firings;
                         holder* h = new holder(handler);
                         {
                             trans->part->mx.lock();
@@ -323,18 +323,11 @@ namespace sodium {
                             std::shared_ptr<node> n = n_weak.lock();
                             if (n) {
                                 part->mx.lock();
-                                if (n->unlink(h)) {
-                                    part->mx.unlock();
-                                    delete h;
-                                }
-                                else {
-                                    part->mx.unlock();
-                                    throw std::runtime_error("attempted double unregister of listener");
-                                }
+                                n->unlink(h);
+                                part->mx.unlock();
                             }
-                            else
-                                delete h;  // Note: In this case we can't detect double delete.
-                                           // Fixing this would require wasting memory.
+                            delete h;  // Note: There is no protection against kill function
+                                       // being executed twice
                         });
                     }
                     else {
@@ -549,7 +542,7 @@ namespace sodium {
                         }
                     }
                 ));
-                li->children.push_back(new_li);
+                li->children.push_front(new_li);
             }
             auto p_sample_now(ev.p_sample_now);
             return event_(

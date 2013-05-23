@@ -92,7 +92,7 @@ namespace sodium {
                 std::shared_ptr<node::listen_impl_func> li = p_listen_impl.lock();
                 if (cleanup != NULL) {
                     if (li)
-                        li->cleanups.push_back(cleanup);
+                        li->cleanups.push_front(cleanup);
                     else {
                         (*cleanup)();
                         delete cleanup;
@@ -110,7 +110,7 @@ namespace sodium {
                 std::shared_ptr<node::listen_impl_func> li = p_listen_impl.lock();
                 if (cleanup1 != NULL) {
                     if (li)
-                        li->cleanups.push_back(cleanup1);
+                        li->cleanups.push_front(cleanup1);
                     else {
                         (*cleanup1)();
                         delete cleanup1;
@@ -118,7 +118,7 @@ namespace sodium {
                 }
                 if (cleanup2 != NULL) {
                     if (li)
-                        li->cleanups.push_back(cleanup2);
+                        li->cleanups.push_front(cleanup2);
                     else {
                         (*cleanup2)();
                         delete cleanup2;
