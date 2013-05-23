@@ -284,7 +284,9 @@ namespace sodium {
         behavior_impl::behavior_impl(
             const event_& changes,
             const std::function<light_ptr()>& sample)
-        : changes(changes), sample(sample) {}
+        : changes(changes), sample(sample)
+        {
+        }
 
         /*!
          * Function to push a value into an event
@@ -394,13 +396,20 @@ namespace sodium {
                                     part->mx.unlock();
                                     delete h;
                                 }
-                                else
+                                else {
                                     part->mx.unlock();
+                                    throw std::runtime_error("attempted double unregister of listener");
+                                }
                             }
+                            else
+                                delete h;  // Note: In this case we can't detect double delete.
+                                           // Fixing this would require wasting memory.
                         });
                     }
-                    else
+                    else {
+                        delete handler;
                         return NULL;
+                    }
                 })
 #endif
             );

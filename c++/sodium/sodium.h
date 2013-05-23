@@ -654,7 +654,8 @@ namespace sodium {
         public:
             behavior_sink(const A& initA)
             {
-                *dynamic_cast<behavior<A, P>*>(this) = e.hold(initA);
+                transaction<P> trans;
+                this->impl = std::shared_ptr<impl::behavior_impl>(hold(trans.impl(), light_ptr::create<A>(initA), e));
             }
 
             void send(const A& a) const
