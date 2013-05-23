@@ -47,7 +47,7 @@ namespace sodium {
         std::function<void()>* event_::listen_raw(
                     transaction_impl* trans0,
                     const std::shared_ptr<impl::node>& target,
-                    std::function<void(transaction_impl*, const light_ptr&)>* handle,
+                    std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handle,
                     bool suppressEarlierFirings) const
         {
             {
@@ -55,7 +55,7 @@ namespace sodium {
                 sample_now(items);
                 for (auto it = items.begin(); it != items.end(); ++it)
                     if (handle)
-                        (*handle)(trans0, *it);
+                        (*handle)(target, trans0, *it);
                     else
                         send(target, trans0, *it);
             }
@@ -69,12 +69,13 @@ namespace sodium {
             );
         }
 
-        #define KILL_ONCE(pKillInner) \
+        #define KILL_ONCE(ppKill) \
             do { \
-                if (*pKillInner != NULL) { \
-                    (**pKillInner)(); \
-                    delete *pKillInner; \
-                    *pKillInner = NULL; \
+                function<void()>* pKill = *ppKill; \
+                if (pKill != NULL) { \
+                    *ppKill = NULL; \
+                    (*pKill)(); \
+                    delete pKill; \
                 } \
             } while (0)
 
@@ -94,13 +95,12 @@ namespace sodium {
                     KILL_ONCE(ppKill);
                 }
             }));
-            auto target = std::get<1>(p);
-            *ppKill = listen_raw(trans, target,
-                new std::function<void(transaction_impl*, const light_ptr&)>(
-                    [target, ppKill] (impl::transaction_impl* trans, const light_ptr& ptr) {
-                    send(target, trans, ptr);
-                    KILL_ONCE(ppKill);
-                }), false);
+            *ppKill = listen_raw(trans, std::get<1>(p),
+                new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(
+                    [ppKill] (const std::shared_ptr<impl::node>& target, impl::transaction_impl* trans, const light_ptr& ptr) {
+                        send(target, trans, ptr);
+                        KILL_ONCE(ppKill);
+                    }), false);
             return std::get<0>(p).unsafe_add_cleanup(new std::function<void()>([ppKill] () {
                 KILL_ONCE(ppKill);
             }));
@@ -120,13 +120,11 @@ namespace sodium {
 
         struct coalesce_state {
             coalesce_state(
-                const std::shared_ptr<node>& target,
-                std::function<void(transaction_impl*, const light_ptr&)>* handle)
-            : target(target), handle(handle) {}
+                std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handle)
+            : handle(handle) {}
             ~coalesce_state() { delete handle; }
             boost::optional<light_ptr> oValue;
-            std::shared_ptr<node> target;
-            std::function<void(transaction_impl*, const light_ptr&)>* handle;
+            std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handle;
         };
 
         event_ event_::coalesce_(const std::function<light_ptr(const light_ptr&, const light_ptr&)>& combine) const
@@ -137,25 +135,25 @@ namespace sodium {
             if (li) {
                 new_li = std::shared_ptr<node::listen_impl_func>(new node::listen_impl_func(
                     [combine, li_weak] (transaction_impl* trans, const std::shared_ptr<node>& target,
-                                    std::function<void(transaction_impl*, const light_ptr&)>* handle,
+                                    std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handle,
                                     bool suppressEarlierFirings,
                                     const boost::intrusive_ptr<event_impl>& impl)
                                                                                 -> std::function<void()>* {
-                        std::shared_ptr<coalesce_state> pState(new coalesce_state(target, handle));
+                        std::shared_ptr<coalesce_state> pState(new coalesce_state(handle));
                         std::shared_ptr<node::listen_impl_func> li = li_weak.lock();
                         if (li) {
                             return li->func(
                                 trans, target,
-                                new std::function<void(transaction_impl*, const light_ptr&)>(
-                                    [combine, pState] (transaction_impl* trans, const light_ptr& ptr) {
+                                new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(
+                                    [combine, pState] (const std::shared_ptr<impl::node>& target, transaction_impl* trans, const light_ptr& ptr) {
                                         if (!pState->oValue) {
                                             pState->oValue = boost::optional<light_ptr>(ptr);
-                                            trans->prioritized(pState->target, [pState] (transaction_impl* trans) {
+                                            trans->prioritized(target, [target, pState] (transaction_impl* trans) {
                                                 if (pState->oValue) {
                                                     if (pState->handle)
-                                                        (*pState->handle)(trans, pState->oValue.get());
+                                                        (*pState->handle)(target, trans, pState->oValue.get());
                                                     else
-                                                        send(pState->target, trans, pState->oValue.get());
+                                                        send(target, trans, pState->oValue.get());
                                                     pState->oValue = boost::optional<light_ptr>();
                                                 }
                                             });
@@ -221,10 +219,9 @@ namespace sodium {
                 for (auto it = items.begin() + start; it != items.end(); ++it)
                     *it = combine(*it, beh.impl->sample());
             }));
-            auto target = std::get<1>(p);
-            auto kill = listen_raw(trans, target,
-                    new std::function<void(transaction_impl*, const light_ptr&)>(
-                        [beh, target, combine] (impl::transaction_impl* trans, const light_ptr& a) {
+            auto kill = listen_raw(trans, std::get<1>(p),
+                    new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(
+                        [beh, combine] (const std::shared_ptr<impl::node>& target, impl::transaction_impl* trans, const light_ptr& a) {
                         send(target, trans, combine(a, beh.impl->sample()));
                     }), false);
             return std::get<0>(p).unsafe_add_cleanup(kill);
@@ -247,10 +244,9 @@ namespace sodium {
                             output.push_back(*it);
                 })
                 : NULL);
-            auto target = std::get<1>(p);
-            auto kill = listen_raw(trans, target,
-                    new std::function<void(transaction_impl*, const light_ptr&)>(
-                        [pred, target] (impl::transaction_impl* trans, const light_ptr& ptr) {
+            auto kill = listen_raw(trans, std::get<1>(p),
+                    new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(
+                        [pred] (const std::shared_ptr<impl::node>& target, impl::transaction_impl* trans, const light_ptr& ptr) {
                             if (pred(ptr)) send(target, trans, ptr);
                         }), false);
             return std::get<0>(p).unsafe_add_cleanup(kill);
@@ -260,7 +256,7 @@ namespace sodium {
             public:
                 holder(
                     const std::shared_ptr<impl::node>& target,
-                    std::function<void(transaction_impl*, const light_ptr&)>* handler,
+                    std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handler,
                     const boost::intrusive_ptr<event_impl>& impl
                 ) : target(target), handler(handler), impl(impl) {}
                 ~holder() {
@@ -269,13 +265,14 @@ namespace sodium {
                 inline void handle(transaction_impl* trans, const light_ptr& value) const
                 {
                     if (handler)
-                        (*handler)(trans, value);
+                        (*handler)(target, trans, value);
                     else
                         send(target, trans, value);
                 }
+
             private:
                 std::shared_ptr<impl::node> target;
-                std::function<void(transaction_impl*, const light_ptr&)>* handler;
+                std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handler;
                 boost::intrusive_ptr<event_impl> impl;  // keeps the event we're listening to alive
         };
 
@@ -373,7 +370,7 @@ namespace sodium {
 #else
                 new node::listen_impl_func([n_weak] (transaction_impl* trans,
                         const std::shared_ptr<node>& target,
-                        std::function<void(transaction_impl*, const light_ptr&)>* handler,
+                        std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handler,
                         bool suppressEarlierFirings,
                         const boost::intrusive_ptr<event_impl>& impl) -> std::function<void()>* {  // Register listener
                     std::shared_ptr<node> n = n_weak.lock();
@@ -445,16 +442,15 @@ namespace sodium {
         behavior_impl* hold(transaction_impl* trans0, const light_ptr& initValue, const event_& input)
         {
             auto p = unsafe_new_event();
-            auto target = std::get<1>(p);
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
             if (input.is_never())
                 return new behavior_impl(input, [initValue] () { return initValue; });
             else {
 #endif
                 std::shared_ptr<behavior_state> state(new behavior_state(initValue));
-                auto kill = input.listen_raw(trans0, target,
-                    new std::function<void(transaction_impl*, const light_ptr&)>(
-                        [target, state] (transaction_impl* trans, const light_ptr& ptr) {
+                auto kill = input.listen_raw(trans0, std::get<1>(p),
+                    new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(
+                        [state] (const std::shared_ptr<impl::node>& target, transaction_impl* trans, const light_ptr& ptr) {
                             bool first = !state->update;
                             state->update = boost::optional<light_ptr>(ptr);
                             if (first)
@@ -560,22 +556,21 @@ namespace sodium {
 
                     auto p = impl::unsafe_new_event();
                     auto target = std::get<1>(p);
-                    auto update = [state, target] (transaction_impl* trans) {
-                        auto oo = state->calcB();
-                        if (oo)
-                            send(target, trans, oo.get());
-                    };
                     auto kill1 = bf.values_().listen_raw(trans0, target,
-                            new std::function<void(transaction_impl*, const light_ptr&)>(
-                                [state, update] (transaction_impl* trans, const light_ptr& pf) {
+                            new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(
+                                [state] (const std::shared_ptr<impl::node>& target, transaction_impl* trans, const light_ptr& pf) {
                                     state->oF = boost::make_optional(*pf.cast_ptr<std::function<light_ptr(const light_ptr&)>>(NULL));
-                                    update(trans);
+                                    auto oo = state->calcB();
+                                    if (oo)
+                                        send(target, trans, oo.get());
                                 }), false);
                     auto kill2 = ba.values_().listen_raw(trans0, target,
-                            new std::function<void(transaction_impl*, const light_ptr&)>(
-                                [state, update] (transaction_impl* trans, const light_ptr& pa) {
+                            new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(
+                                [state] (const std::shared_ptr<impl::node>& target, transaction_impl* trans, const light_ptr& pa) {
                                     state->oA = boost::make_optional(pa);
-                                    update(trans);
+                                    auto oo = state->calcB();
+                                    if (oo)
+                                        send(target, trans, oo.get());
                                 }), false);
                     auto f = *bf.impl->sample().cast_ptr<std::function<light_ptr(const light_ptr&)>>(NULL);
                     return behavior_(impl::hold(
@@ -601,17 +596,17 @@ namespace sodium {
                 new_li = std::shared_ptr<node::listen_impl_func>(new node::listen_impl_func(
                     [f,li_weak] (transaction_impl* trans0,
                             std::shared_ptr<node> target,
-                            std::function<void(transaction_impl*, const light_ptr&)>* handle,
+                            std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handle,
                             bool suppressEarlierFirings,
                             const boost::intrusive_ptr<event_impl>& cu) -> std::function<void()>* {
-                        std::shared_ptr<std::function<void(transaction_impl*, const light_ptr&)>> pHandle(handle);
+                        std::shared_ptr<std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>> pHandle(handle);
                         std::shared_ptr<node::listen_impl_func> li = li_weak.lock();
                         if (li) {
                             return li->func(trans0, target,
-                                new std::function<void(transaction_impl*, const light_ptr&)>(
-                                    [pHandle, target, f] (transaction_impl* trans, const light_ptr& ptr) {
+                                new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(
+                                    [pHandle, f] (const std::shared_ptr<impl::node>& target, transaction_impl* trans, const light_ptr& ptr) {
                                         if (pHandle.get())
-                                            (*pHandle)(trans, f(ptr));
+                                            (*pHandle)(target, trans, f(ptr));
                                         else
                                             send(target, trans, f(ptr));
                                     }), suppressEarlierFirings, cu);
@@ -664,8 +659,8 @@ namespace sodium {
             ));
 
             auto killOuter = bea.changes_().listen_raw(trans0, target,
-                new std::function<void(transaction_impl*, const light_ptr&)>(
-                    [pKillInner, target] (impl::transaction_impl* trans1, const light_ptr& pea) {
+                new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(
+                    [pKillInner] (const std::shared_ptr<impl::node>& target, impl::transaction_impl* trans1, const light_ptr& pea) {
                         const event_& ea = *pea.cast_ptr<event_>(NULL);
                         trans1->last([pKillInner, ea, trans1, target] () {
                             KILL_ONCE(pKillInner);
@@ -684,10 +679,9 @@ namespace sodium {
             light_ptr za = bba.impl->sample().cast_ptr<behavior_>(NULL)->impl->sample();
             std::shared_ptr<function<void()>*> pKillInner(new function<void()>*(NULL));
             auto p = unsafe_new_event();
-            auto target = std::get<1>(p);
-            auto killOuter = bba.values_().listen_raw(trans0, target,
-                new std::function<void(transaction_impl*, const light_ptr&)>(
-                    [pKillInner, target] (transaction_impl* trans, const light_ptr& pa) {
+            auto killOuter = bba.values_().listen_raw(trans0, std::get<1>(p),
+                new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(
+                    [pKillInner] (const std::shared_ptr<impl::node>& target, transaction_impl* trans, const light_ptr& pa) {
                         // Note: If any switch takes place during a transaction, then the
                         // values().listen will always cause a sample to be fetched from the
                         // one we just switched to. The caller will be fetching our output

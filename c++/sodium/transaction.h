@@ -110,7 +110,7 @@ namespace sodium {
                     typedef std::function<std::function<void()>*(
                         transaction_impl*,
                         const std::shared_ptr<impl::node>&,
-                        std::function<void(transaction_impl*, const light_ptr&)>*,
+                        std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>*,
                         bool,
                         const boost::intrusive_ptr<event_impl>&)> closure;
                     listen_impl_func(const closure& func, std::function<void()>* cleanup1)
@@ -123,13 +123,10 @@ namespace sodium {
                         : func(func) {}
                     ~listen_impl_func()
                     {
-                        printf("clean %d\n", (int)cleanups.size());  // ###
                         for (auto it = cleanups.begin(); it != cleanups.end(); ++it) {
                             (**it)();
                             delete *it;
                         }
-                        for (auto it = children.begin(); it != children.end(); ++it)
-                            printf("  child count %ld\n", (*it).use_count());  // ###
                     }
                     closure func;
                     std::list<std::function<void()>*> cleanups;
@@ -138,12 +135,6 @@ namespace sodium {
 
             public:
                 node() : rank(0) {}
-                ~node() {
-                    printf("~node() targets=%u:", targets.size());  // ###
-                    for (auto it = targets.begin(); it != targets.end(); ++it)
-                        printf(" %ld", it->n.use_count());
-                    printf("\n");
-                }
 
                 unsigned long long rank;
                 std::list<node::target> targets;
