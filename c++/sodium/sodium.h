@@ -21,14 +21,17 @@
 namespace sodium {
     template <class A, class P> class event;
     template <class A, class P> class behavior;
+    template <class A, class P> class behavior_sink;
+    template <class A, class P> class behavior_loop;
     template <class A, class P> class event_loop;
-    template <class A, class P> class behavior;
     template <class A, class B, class P = def_part>
     behavior<B, P> apply(const behavior<std::function<B(const A&)>, P>& bf, const behavior<A, P>& ba);
     template <class A, class P = def_part>
     event<A, P> filter_optional(const event<boost::optional<A>, P>& input);
     template <class A, class P = def_part>
     event<A, P> split(const event<std::list<A>, P>& e);
+    template <class A, class P = def_part>
+    event<A, P> switch_e(const behavior<event<A, P>, P>& bea);
 
     namespace impl {
 
@@ -38,8 +41,8 @@ namespace sodium {
         class event_ {
         friend class behavior_;
         template <class A, class P> friend class sodium::event;
-        template <class A, class P> friend class sodium::behavior;
         template <class A, class P> friend class sodium::event_loop;
+        template <class A, class P> friend class sodium::behavior;
         friend behavior_ switch_b(transaction_impl* trans, const behavior_& bba);
         friend behavior_impl* hold(transaction_impl* trans0, const light_ptr& initValue, const event_& input);
         template <class A, class B, class P>
@@ -252,13 +255,16 @@ namespace sodium {
      * always to be output once at the beginning for each listener.
      */
     template <class A, class P = def_part>
-    class behavior : public impl::behavior_ {
+    class behavior : protected impl::behavior_ {
         template <class AA, class PP> friend class event;
         template <class AA, class PP> friend class behavior;
+        template <class AA, class PP> friend class behavior_loop;
         template <class AA, class BB, class PP>
         friend behavior<BB, PP> apply(const behavior<std::function<BB(const AA&)>, PP>& bf, const behavior<AA, PP>& ba);
         template <class AA, class PP>
         friend behavior<AA, PP> switch_b(const behavior<behavior<AA, PP>, PP>& bba);
+        template <class AA, class PP>
+        friend event<AA, PP> switch_e(const behavior<event<AA, PP>, PP>& bea);
         private:
             behavior(const std::shared_ptr<impl::behavior_impl>& impl)
                 : impl::behavior_(impl)
@@ -369,13 +375,17 @@ namespace sodium {
     };  // end class behavior
 
     template <class A, class P = def_part>
-    class event : public impl::event_ {
+    class event : protected impl::event_ {
         template <class AA, class PP> friend class event;
+        template <class AA, class PP> friend class event_sink;
         template <class AA, class PP> friend class behavior;
+        template <class AA, class PP> friend class behavior_sink;
+        template <class AA, class PP> friend class behavior_loop;
         template <class AA, class PP> friend class event_sink;
         template <class AA, class PP> friend event<AA, PP> filter_optional(const event<boost::optional<AA>, PP>& input);
         template <class AA, class PP> friend event<AA, PP> switch_e(const behavior<event<AA, PP>, PP>& bea);
         template <class AA, class PP> friend event<AA, PP> split(const event<std::list<AA>, PP>& e);
+        template <class AA, class PP> friend class sodium::event_loop;
         public:
             /*!
              * The 'never' event (that never fires).
@@ -574,9 +584,9 @@ namespace sodium {
              * Add a clean-up operation to be performed when this event is no longer
              * referenced.
              */
-            event<A, P> add_cleanup(const std::function<void()>& newCleanup) const
+            event<A, P> add_cleanup(const std::function<void()>& cleanup) const
             {
-                return event<A, P>(add_cleanup_(newCleanup));
+                return event<A, P>(add_cleanup_(new std::function<void()>(cleanup)));
             }
     };  // end class event
 

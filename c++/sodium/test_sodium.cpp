@@ -668,6 +668,51 @@ void test_sodium::split1()
                                     string("or"), string("shag") }) == *out);
 }
 
+void test_sodium::add_cleanup1()
+{
+    std::shared_ptr<vector<string>> out(new vector<string>);
+    {
+        event_sink<string> ea;
+        std::function<void()> unlisten;
+        {
+            event<string> eb = ea.map<string>([] (const string& x) { return x + "!"; })
+                                 .add_cleanup([out] {out->push_back("<cleanup>");});
+            unlisten = eb.listen([out] (const string& x) { out->push_back(x); });
+            ea.send("custard apple");
+        }
+        ea.send("persimmon");
+        unlisten();
+        out->push_back("date");
+    }
+    for (auto it = out->begin(); it != out->end(); ++it)
+        printf("%s\n", (*it).c_str());
+    CPPUNIT_ASSERT(vector<string>({ string("custard apple!"), string("persimmon!"), string("<cleanup>"),
+                                    string("date") }) == *out);
+}
+
+void test_sodium::add_cleanup2()
+{
+    std::shared_ptr<vector<string>> out(new vector<string>);
+    {
+        event_sink<string> ea;
+        std::function<void()> unlisten;
+        {
+            event<string> eb = ea.filter([] (const string& x) { return x != "ignore"; })
+                                 .add_cleanup([out] {out->push_back("<cleanup>");});
+            unlisten = eb.listen([out] (const string& x) { out->push_back(x); });
+            ea.send("custard apple");
+            ea.send("ignore");
+        }
+        ea.send("persimmon");
+        unlisten();
+        out->push_back("date");
+    }
+    for (auto it = out->begin(); it != out->end(); ++it)
+        printf("%s\n", (*it).c_str());
+    CPPUNIT_ASSERT(vector<string>({ string("custard apple"), string("persimmon"), string("<cleanup>"),
+                                    string("date") }) == *out);
+}
+
 int main(int argc, char* argv[])
 {
     for (int i = 0; i < 100; i++) {
