@@ -16,16 +16,6 @@
 #include <list>
 
 namespace sodium {
-    namespace impl {
-        class event_impl;
-    }
-}
-
-void intrusive_ptr_add_ref(sodium::impl::event_impl* p);
-void intrusive_ptr_release(sodium::impl::event_impl* p);
-#include <boost/intrusive_ptr.hpp>
-
-namespace sodium {
 
     class mutex
     {
@@ -68,7 +58,9 @@ namespace sodium {
 
     namespace impl {
         struct transaction_impl;
-        class node;
+
+        typedef unsigned long rank_t;
+        #define SODIUM_IMPL_RANK_T_MAX ULONG_MAX
 
         class node
         {
@@ -112,7 +104,7 @@ namespace sodium {
             public:
                 node() : rank(0) {}
 
-                unsigned long long rank;
+                rank_t rank;
                 std::list<node::target> targets;
                 std::list<light_ptr> firings;
                 std::shared_ptr<listen_impl_func> listen_impl;
@@ -121,7 +113,7 @@ namespace sodium {
                 bool unlink(void* holder);
 
             private:
-                void ensure_bigger_than(std::set<node*>& visited, unsigned long long limit);
+                void ensure_bigger_than(std::set<node*>& visited, rank_t limit);
         };
 
         template <class A>
@@ -133,13 +125,13 @@ namespace sodium {
 
         struct entryID {
             entryID() : id(0) {}
-            entryID(unsigned long long id) : id(id) {}
-            unsigned long long id;
+            entryID(rank_t id) : id(id) {}
+            rank_t id;
             entryID succ() const { return entryID(id+1); }
             inline bool operator < (const entryID& other) const { return id < other.id; }
         };
 
-        unsigned long long rankOf(const std::shared_ptr<node>& target);
+        rank_t rankOf(const std::shared_ptr<node>& target);
 
         struct prioritized_entry {
             prioritized_entry(const std::shared_ptr<node>& target,
@@ -157,7 +149,7 @@ namespace sodium {
             partition* part;
             entryID next_entry_id;
             std::map<entryID, prioritized_entry> entries;
-            std::multimap<unsigned long long, entryID> prioritizedQ;
+            std::multimap<rank_t, entryID> prioritizedQ;
             std::list<std::function<void()>> lastQ;
 
             void prioritized(const std::shared_ptr<impl::node>& target,

@@ -94,7 +94,7 @@ namespace sodium {
             return false;
         }
 
-        void node::ensure_bigger_than(std::set<node*>& visited, unsigned long long limit)
+        void node::ensure_bigger_than(std::set<node*>& visited, rank_t limit)
         {
             if (rank > limit || visited.find(this) != visited.end())
                 ;
@@ -107,12 +107,12 @@ namespace sodium {
             }
         }
 
-        unsigned long long rankOf(const std::shared_ptr<node>& target)
+        rank_t rankOf(const std::shared_ptr<node>& target)
         {
             if (target.get() != NULL)
                 return target->rank;
             else
-                return ULLONG_MAX;
+                return SODIUM_IMPL_RANK_T_MAX;
         }
 
         transaction_impl::transaction_impl(partition* part)
@@ -126,7 +126,7 @@ namespace sodium {
                 to_regen = false;
                 prioritizedQ.clear();
                 for (auto it = entries.begin(); it != entries.end(); ++it)
-                    prioritizedQ.insert(pair<unsigned long long, entryID>(rankOf(it->second.target), it->first));
+                    prioritizedQ.insert(pair<rank_t, entryID>(rankOf(it->second.target), it->first));
             }
         }
 
@@ -159,7 +159,7 @@ namespace sodium {
             entryID id = next_entry_id;
             next_entry_id = next_entry_id.succ();
             entries.insert(pair<entryID, prioritized_entry>(id, prioritized_entry(target, f)));
-            prioritizedQ.insert(pair<unsigned long long, entryID>(rankOf(target), id));
+            prioritizedQ.insert(pair<rank_t, entryID>(rankOf(target), id));
         }
     
         void transaction_impl::last(const std::function<void()>& action)
