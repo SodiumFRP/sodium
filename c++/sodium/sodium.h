@@ -47,16 +47,19 @@ namespace sodium {
         friend behavior_ apply(transaction_impl* trans0, const behavior_& bf, const behavior_& ba);
         friend event_ map_(const std::function<light_ptr(const light_ptr&)>& f, const event_& ev);
         friend event_ switch_e(transaction_impl* trans, const behavior_& bea);
+
         protected:
+            std::weak_ptr<node::listen_impl_func> listen_func;
             boost::intrusive_ptr<event_impl> impl;
 
         public:
             event_();
-            event_(event_impl* impl) : impl(impl) {}
+            event_(const std::weak_ptr<node::listen_impl_func>& listen_func, event_impl* impl)
+                : listen_func(listen_func), impl(impl) {}
             event_(const boost::intrusive_ptr<event_impl>& impl, bool) : impl(impl) {}
 
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
-            bool is_never() const { return impl->listen_impl == NULL; }
+            bool is_never() const { return listen_func.expired(); }
 #endif
 
         protected:
@@ -99,7 +102,10 @@ namespace sodium {
              */
             event_ add_cleanup_(std::function<void()>* cleanup) const
             {
-                return event_(new event_impl(impl, cleanup));
+                return event_(
+                    listen_func,
+                    new event_impl(impl, cleanup)
+                );
             }
 
             behavior_ hold_(transaction_impl* trans, const light_ptr& initA) const;
@@ -116,14 +122,15 @@ namespace sodium {
             }
 
             std::function<void()>* listen_impl(
-                    transaction_impl* trans,
-                    const std::shared_ptr<impl::node>& target,
-                    std::function<void(transaction_impl*, const light_ptr&)>* handler,
-                    bool suppressEarlierFirings,
-                    const boost::intrusive_ptr<event_impl>& child_impl) const
+                transaction_impl* trans,
+                const std::shared_ptr<impl::node>& target,
+                std::function<void(transaction_impl*, const light_ptr&)>* handler,
+                bool suppressEarlierFirings,
+                const boost::intrusive_ptr<event_impl>& child_impl) const
             {
-                if (impl->listen_impl)
-                    return (*impl->listen_impl)(trans, target, handler, suppressEarlierFirings, child_impl);
+                std::shared_ptr<node::listen_impl_func> l = listen_func.lock();
+                if (l)
+                    return l->func(trans, target, handler, suppressEarlierFirings, child_impl);
                 else {
                     delete handler;
                     return NULL;
@@ -350,8 +357,8 @@ namespace sodium {
              */
             event() {}
         protected:
-            event(const impl::event_impl::listen_impl_func& listen)
-                : impl::event_(new impl::event_impl(new impl::event_impl::listen_impl_func(listen), NULL)) {}
+            event(const impl::node::listen_impl_func& listen)
+                : impl::event_(impl::node::listen_impl_func(listen), new impl::event_impl(NULL)) {}
             event(const impl::event_& ev) : impl::event_(ev) {}
         public:
             /*!

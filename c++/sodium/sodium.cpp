@@ -130,18 +130,20 @@ namespace sodium {
 
         event_ event_::coalesce_(const std::function<light_ptr(const light_ptr&, const light_ptr&)>& combine) const
         {
-            const event_& me(*this);
-            return event_(
-                new event_impl(
-                    me.impl->listen_impl != NULL
-                    ? new event_impl::listen_impl_func(
-                        [combine, me] (transaction_impl* trans, const std::shared_ptr<node>& target,
-                                        std::function<void(transaction_impl*, const light_ptr&)>* handle,
-                                        bool suppressEarlierFirings,
-                                        const boost::intrusive_ptr<event_impl>& impl)
-                                                                                    -> std::function<void()>* {
-                            std::shared_ptr<coalesce_state> pState(new coalesce_state(target, handle));
-                            return me.listen_impl(
+            const std::weak_ptr<node::listen_impl_func>& li_weak = listen_func;
+            std::shared_ptr<node::listen_impl_func> li = li_weak.lock();
+            std::shared_ptr<node::listen_impl_func> new_li;
+            if (li) {
+                new_li = std::shared_ptr<node::listen_impl_func>(new node::listen_impl_func(
+                    [combine, li_weak] (transaction_impl* trans, const std::shared_ptr<node>& target,
+                                    std::function<void(transaction_impl*, const light_ptr&)>* handle,
+                                    bool suppressEarlierFirings,
+                                    const boost::intrusive_ptr<event_impl>& impl)
+                                                                                -> std::function<void()>* {
+                        std::shared_ptr<coalesce_state> pState(new coalesce_state(target, handle));
+                        std::shared_ptr<node::listen_impl_func> li = li_weak.lock();
+                        if (li) {
+                            return li->func(
                                 trans, target,
                                 new std::function<void(transaction_impl*, const light_ptr&)>(
                                     [combine, pState] (transaction_impl* trans, const light_ptr& ptr) {
@@ -162,13 +164,24 @@ namespace sodium {
                                     }),
                                 suppressEarlierFirings,
                                 impl);
-                        })
-                    : NULL,
+                        }
+                        else {
+                            delete handle;
+                            return NULL;
+                        }
+                    })
+                );
+                li->children.push_back(new_li);
+            }
+            auto impl(this->impl);
+            return event_(
+                new_li,
+                new event_impl(
                     impl->sample_now != NULL
                     ? new event_impl::sample_now_func(
-                        [me, combine] (vector<light_ptr>& items) {
+                        [impl, combine] (vector<light_ptr>& items) {
                             size_t start = items.size();
-                            me.sample_now(items);
+                            (*impl->sample_now)(items);
                             auto first = items.begin() + start;
                             if (first != items.end()) {
                                 auto it = first + 1;
@@ -277,6 +290,39 @@ namespace sodium {
             const std::function<light_ptr()>& sample)
         : changes(changes), sample(sample) {}
 
+        /*!
+         * Function to push a value into an event
+         */
+        void send(const std::shared_ptr<node>& n, transaction_impl* trans, const light_ptr& ptr)
+        {
+            int ifs = 0;
+            holder* fs[16];
+            std::list<holder*> fsOverflow;
+            {
+                if (n->firings.begin() == n->firings.end())
+                    trans->last([n] () {
+                        n->firings.clear();
+                    });
+                n->firings.push_back(ptr);
+                auto it = n->targets.begin();
+                while (it != n->targets.end()) {
+                    fs[ifs++] = (holder*)it->handler;
+                    it++;
+                    if (ifs == 16) {
+                        while (it != n->targets.end()) {
+                            fsOverflow.push_back((holder*)it->handler);
+                            it++;
+                        }
+                        break;
+                    }
+                }
+            }
+            for (int i = 0; i < ifs; i++)
+                fs[i]->handle(trans, ptr);
+            for (auto it = fsOverflow.begin(); it != fsOverflow.end(); ++it)
+                (*it)->handle(trans, ptr);
+        }
+
 #if defined(WORKAROUND_GCC_46_BUG)
         struct new_event_listener {
             new_event_listener(const std::shared_ptr<node>& n) : n(n) {}
@@ -314,55 +360,24 @@ namespace sodium {
 #endif
 
         /*!
-         * Function to push a value into an event
-         */
-        void send(const std::shared_ptr<node>& n, transaction_impl* trans, const light_ptr& ptr)
-        {
-            int ifs = 0;
-            holder* fs[16];
-            std::list<holder*> fsOverflow;
-            {
-                if (n->firings.begin() == n->firings.end())
-                    trans->last([n] () {
-                        n->firings.clear();
-                    });
-                n->firings.push_back(ptr);
-                auto it = n->targets.begin();
-                while (it != n->targets.end()) {
-                    fs[ifs++] = (holder*)it->handler;
-                    it++;
-                    if (ifs == 16) {
-                        while (it != n->targets.end()) {
-                            fsOverflow.push_back((holder*)it->handler);
-                            it++;
-                        }
-                        break;
-                    }
-                }
-            }
-            for (int i = 0; i < ifs; i++)
-                fs[i]->handle(trans, ptr);
-            for (auto it = fsOverflow.begin(); it != fsOverflow.end(); ++it)
-                (*it)->handle(trans, ptr);
-        }
-
-        /*!
          * Creates an event, that values can be pushed into using impl::send(). 
          */
         std::tuple<event_, std::shared_ptr<node>> unsafe_new_event(
             event_impl::sample_now_func* sample_now)
         {
             std::shared_ptr<node> n(new node);
-            boost::intrusive_ptr<event_impl> impl(
-                new event_impl(
+            std::weak_ptr<node> n_weak(n);
+            n->listen_impl = std::shared_ptr<node::listen_impl_func>(
 #if defined(WORKAROUND_GCC_46_BUG)
-                    new event_impl::listen_impl_func(new_event_listener(n)),
+                new node::listen_impl_func(new_event_listener(nptr)),
 #else
-                    new event_impl::listen_impl_func([n] (transaction_impl* trans,
-                            const std::shared_ptr<node>& target,
-                            std::function<void(transaction_impl*, const light_ptr&)>* handler,
-                            bool suppressEarlierFirings,
-                            const boost::intrusive_ptr<event_impl>& impl) {  // Register listener
+                new node::listen_impl_func([n_weak] (transaction_impl* trans,
+                        const std::shared_ptr<node>& target,
+                        std::function<void(transaction_impl*, const light_ptr&)>* handler,
+                        bool suppressEarlierFirings,
+                        const boost::intrusive_ptr<event_impl>& impl) -> std::function<void()>* {  // Register listener
+                    std::shared_ptr<node> n = n_weak.lock();
+                    if (n) {
                         std::list<light_ptr> firings;
                         holder* h = new holder(target, handler, impl);
                         {
@@ -375,24 +390,26 @@ namespace sodium {
                             for (auto it = firings.begin(); it != firings.end(); it++)
                                 h->handle(trans, *it);
                         partition* part = trans->part;
-                        return new std::function<void()>([part, n, h] () {  // Unregister listener
-                            part->mx.lock();
-                            if (n->unlink(h)) {
-                                part->mx.unlock();
-                                delete h;
+                        return new std::function<void()>([part, n_weak, h] () {  // Unregister listener
+                            std::shared_ptr<node> n = n_weak.lock();
+                            if (n) {
+                                part->mx.lock();
+                                if (n->unlink(h)) {
+                                    part->mx.unlock();
+                                    delete h;
+                                }
+                                else
+                                    part->mx.unlock();
                             }
-                            else
-                                part->mx.unlock();
                         });
-                    }),
+                    }
+                    else
+                        return NULL;
+                })
 #endif
-                    sample_now
-                )
             );
-            //n->impl = impl;
             return std::make_tuple(
-                // The event
-                event_(impl, false),
+                event_(n->listen_impl, new event_impl(sample_now)),
                 n
             );
         }
@@ -488,10 +505,8 @@ namespace sodium {
         {
             auto sample = impl->sample;
             return event_(
+                changes_().listen_func,
                 new event_impl(
-                    changes_().impl->listen_impl != NULL
-                    ? new event_impl::listen_impl_func(*changes_().impl->listen_impl)
-                    : NULL,
                     new event_impl::sample_now_func([sample] (vector<light_ptr>& items) { items.push_back(sample()); }),
                     changes_().impl
                 )
@@ -580,17 +595,20 @@ namespace sodium {
          */
         event_ map_(const std::function<light_ptr(const light_ptr&)>& f, const event_& ev)
         {
-            return event_(
-                new event_impl(
-                    ev.impl->listen_impl != NULL
-                    ? new event_impl::listen_impl_func(
-                        [f,ev] (transaction_impl* trans0,
-                                std::shared_ptr<node> target,
-                                std::function<void(transaction_impl*, const light_ptr&)>* handle,
-                                bool suppressEarlierFirings,
-                                const boost::intrusive_ptr<event_impl>& cu) {
-                            std::shared_ptr<std::function<void(transaction_impl*, const light_ptr&)>> pHandle(handle);
-                            return ev.listen_impl(trans0, target,
+            const std::weak_ptr<node::listen_impl_func>& li_weak = ev.listen_func;
+            std::shared_ptr<node::listen_impl_func> li = li_weak.lock();
+            std::shared_ptr<node::listen_impl_func> new_li;
+            if (li) {
+                new_li = std::shared_ptr<node::listen_impl_func>(new node::listen_impl_func(
+                    [f,li_weak] (transaction_impl* trans0,
+                            std::shared_ptr<node> target,
+                            std::function<void(transaction_impl*, const light_ptr&)>* handle,
+                            bool suppressEarlierFirings,
+                            const boost::intrusive_ptr<event_impl>& cu) -> std::function<void()>* {
+                        std::shared_ptr<std::function<void(transaction_impl*, const light_ptr&)>> pHandle(handle);
+                        std::shared_ptr<node::listen_impl_func> li = li_weak.lock();
+                        if (li) {
+                            return li->func(trans0, target,
                                 new std::function<void(transaction_impl*, const light_ptr&)>(
                                     [pHandle, target, f] (transaction_impl* trans, const light_ptr& ptr) {
                                         if (pHandle.get())
@@ -599,12 +617,22 @@ namespace sodium {
                                             send(target, trans, f(ptr));
                                     }), suppressEarlierFirings, cu);
                         }
-                    )
-                    : NULL,
-                    ev.impl->sample_now != NULL
-                    ? new event_impl::sample_now_func([ev, f] (vector<light_ptr>& items) {
+                        else {
+                            delete handle;
+                            return NULL;
+                        }
+                    }
+                ));
+                li->children.push_back(new_li);
+            }
+            auto impl(ev.impl);
+            return event_(
+                new_li,
+                new event_impl(
+                    impl->sample_now != NULL
+                    ? new event_impl::sample_now_func([impl, f] (vector<light_ptr>& items) {
                         size_t start = items.size();
-                        ev.sample_now(items);
+                        (*impl->sample_now)(items);
                         for (auto it = items.begin() + start; it != items.end(); ++it)
                             *it = f(*it);
                     })

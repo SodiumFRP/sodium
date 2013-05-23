@@ -73,12 +73,6 @@ namespace sodium {
         class event_impl
         {
             public:
-                typedef std::function<std::function<void()>*(
-                    transaction_impl*,
-                    const std::shared_ptr<impl::node>&,
-                    std::function<void(transaction_impl*, const light_ptr&)>*,
-                    bool,
-                    const boost::intrusive_ptr<event_impl>&)> listen_impl_func;
                 typedef std::function<void(std::vector<light_ptr>&)> sample_now_func;
             private:
                 event_impl(const event_impl& other) {}
@@ -86,40 +80,34 @@ namespace sodium {
 
             public:
                 unsigned ref_count;
-                listen_impl_func* listen_impl;
                 sample_now_func* sample_now;
                 std::list<std::function<void()>*> cleanups;
                 boost::intrusive_ptr<event_impl> parent;
 
                 event_impl(
-                        listen_impl_func* listen_impl,
                         sample_now_func* sample_now
-                    ) : ref_count(0), listen_impl(listen_impl), sample_now(sample_now)
+                    ) : ref_count(0), sample_now(sample_now)
                 {
                 }
-
                 event_impl(
-                        listen_impl_func* listen_impl,
                         sample_now_func* sample_now,
                         const boost::intrusive_ptr<event_impl>& parent
-                    ) : ref_count(0), listen_impl(listen_impl), sample_now(sample_now), parent(parent)
+                    ) : ref_count(0), sample_now(sample_now), parent(parent)
                 {
                 }
                 event_impl(
-                        listen_impl_func* listen_impl,
                         sample_now_func* sample_now,
                         std::function<void()>* cleanup1
-                    ) : ref_count(0), listen_impl(listen_impl), sample_now(sample_now)
+                    ) : ref_count(0), sample_now(sample_now)
                 {
                     if (cleanup1 != NULL)
                         cleanups.push_back(cleanup1);
                 }
                 event_impl(
-                        listen_impl_func* listen_impl,
                         sample_now_func* sample_now,
                         std::function<void()>* cleanup1,
                         std::function<void()>* cleanup2
-                    ) : ref_count(0), listen_impl(listen_impl), sample_now(sample_now)
+                    ) : ref_count(0), sample_now(sample_now)
                 {
                     if (cleanup1 != NULL)
                         cleanups.push_back(cleanup1);
@@ -131,14 +119,12 @@ namespace sodium {
                         const boost::intrusive_ptr<event_impl>& other,
                         std::function<void()>* cleanup
                     ) : ref_count(0),
-                        listen_impl(other->listen_impl != NULL ? new listen_impl_func(*other->listen_impl) : NULL),
                         sample_now(other->sample_now != NULL ? new sample_now_func(*other->sample_now) : NULL)
                 {
                     cleanups.push_back(cleanup);
                     parent = other;
                 }
                 ~event_impl() {
-                    delete listen_impl;
                     delete sample_now;
                     for (auto it = cleanups.begin(); it != cleanups.end(); ++it) {
                         (**it)();
@@ -161,21 +147,28 @@ namespace sodium {
                     std::shared_ptr<node> n;
                 };
 
+                struct listen_impl_func {
+                    typedef std::function<std::function<void()>*(
+                        transaction_impl*,
+                        const std::shared_ptr<impl::node>&,
+                        std::function<void(transaction_impl*, const light_ptr&)>*,
+                        bool,
+                        const boost::intrusive_ptr<event_impl>&)> closure;
+                    listen_impl_func(const closure& func)
+                        : func(func) {}
+                    closure func;
+                    std::list<std::shared_ptr<listen_impl_func>> children;
+                };
+
             public:
                 node() : rank(0) {}
                 ~node() {
-                    /*
-                    if (impl) {
-                        delete impl->listen_impl;
-                        impl->listen_impl = NULL;
-                    }
-                    */
                 }
 
                 unsigned long long rank;
                 std::list<node::target> targets;
                 std::list<light_ptr> firings;
-                //boost::intrusive_ptr<event_impl> impl;
+                std::shared_ptr<listen_impl_func> listen_impl;
 
                 void link(void* handler, const std::shared_ptr<node>& target);
                 bool unlink(void* handler);
