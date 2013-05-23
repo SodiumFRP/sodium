@@ -440,12 +440,12 @@ namespace sodium {
 
         behavior_impl* hold(transaction_impl* trans0, const light_ptr& initValue, const event_& input)
         {
-            auto p = unsafe_new_event();
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
             if (input.is_never())
                 return new behavior_impl(input, [initValue] () { return initValue; });
             else {
 #endif
+                auto p = unsafe_new_event();
                 std::shared_ptr<behavior_state> state(new behavior_state(initValue));
                 auto kill = input.listen_raw(trans0, std::get<1>(p),
                     new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(
