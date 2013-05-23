@@ -16,6 +16,16 @@
 #include <list>
 
 namespace sodium {
+    namespace impl {
+        class event_impl;
+    }
+}
+
+void intrusive_ptr_add_ref(sodium::impl::event_impl* p);
+void intrusive_ptr_release(sodium::impl::event_impl* p);
+#include <boost/intrusive_ptr.hpp>
+
+namespace sodium {
 
     class mutex
     {
@@ -57,19 +67,85 @@ namespace sodium {
     };
 
     namespace impl {
-        template <class A>
-        struct ordered_value {
-            ordered_value() : tid(-1) {}
-            long long tid;
-            boost::optional<A> oa;
-        };
+        struct transaction_impl;
+        class node;
 
-        struct entryID {
-            entryID() : id(0) {}
-            entryID(unsigned long long id) : id(id) {}
-            unsigned long long id;
-            entryID succ() const { return entryID(id+1); }
-            inline bool operator < (const entryID& other) const { return id < other.id; }
+        class event_impl
+        {
+            public:
+                typedef std::function<std::function<void()>*(
+                    transaction_impl*,
+                    const std::shared_ptr<impl::node>&,
+                    std::function<void(transaction_impl*, const light_ptr&)>*,
+                    bool,
+                    const boost::intrusive_ptr<event_impl>&)> listen_impl_func;
+                typedef std::function<void(std::vector<light_ptr>&)> sample_now_func;
+            private:
+                event_impl(const event_impl& other) {}
+                event_impl& operator = (const event_impl& other) {return *this;}
+
+            public:
+                unsigned ref_count;
+                listen_impl_func* listen_impl;
+                sample_now_func* sample_now;
+                std::list<std::function<void()>*> cleanups;
+                boost::intrusive_ptr<event_impl> parent;
+
+                event_impl(
+                        listen_impl_func* listen_impl,
+                        sample_now_func* sample_now
+                    ) : ref_count(0), listen_impl(listen_impl), sample_now(sample_now)
+                {
+                }
+
+                event_impl(
+                        listen_impl_func* listen_impl,
+                        sample_now_func* sample_now,
+                        const boost::intrusive_ptr<event_impl>& parent
+                    ) : ref_count(0), listen_impl(listen_impl), sample_now(sample_now), parent(parent)
+                {
+                }
+                event_impl(
+                        listen_impl_func* listen_impl,
+                        sample_now_func* sample_now,
+                        std::function<void()>* cleanup1
+                    ) : ref_count(0), listen_impl(listen_impl), sample_now(sample_now)
+                {
+                    if (cleanup1 != NULL)
+                        cleanups.push_back(cleanup1);
+                }
+                event_impl(
+                        listen_impl_func* listen_impl,
+                        sample_now_func* sample_now,
+                        std::function<void()>* cleanup1,
+                        std::function<void()>* cleanup2
+                    ) : ref_count(0), listen_impl(listen_impl), sample_now(sample_now)
+                {
+                    if (cleanup1 != NULL)
+                        cleanups.push_back(cleanup1);
+                    if (cleanup2 != NULL)
+                        cleanups.push_back(cleanup2);
+                }
+                // implementation for the safe version of 'add_cleanup'
+                event_impl(
+                        const boost::intrusive_ptr<event_impl>& other,
+                        std::function<void()>* cleanup
+                    ) : ref_count(0),
+                        listen_impl(other->listen_impl != NULL ? new listen_impl_func(*other->listen_impl) : NULL),
+                        sample_now(other->sample_now != NULL ? new sample_now_func(*other->sample_now) : NULL)
+                {
+                    cleanups.push_back(cleanup);
+                    parent = other;
+                }
+                ~event_impl() {
+                    delete listen_impl;
+                    delete sample_now;
+                    for (auto it = cleanups.begin(); it != cleanups.end(); ++it) {
+                        (**it)();
+                        delete *it;
+                    }
+                }
+                void touch() const;
         };
 
         class node
@@ -87,10 +163,19 @@ namespace sodium {
 
             public:
                 node() : rank(0) {}
+                ~node() {
+                    /*
+                    if (impl) {
+                        delete impl->listen_impl;
+                        impl->listen_impl = NULL;
+                    }
+                    */
+                }
 
                 unsigned long long rank;
                 std::list<node::target> targets;
                 std::list<light_ptr> firings;
+                //boost::intrusive_ptr<event_impl> impl;
 
                 void link(void* handler, const std::shared_ptr<node>& target);
                 bool unlink(void* handler);
@@ -99,9 +184,23 @@ namespace sodium {
                 void ensure_bigger_than(std::set<node*>& visited, unsigned long long limit);
         };
 
+        template <class A>
+        struct ordered_value {
+            ordered_value() : tid(-1) {}
+            long long tid;
+            boost::optional<A> oa;
+        };
+
+        struct entryID {
+            entryID() : id(0) {}
+            entryID(unsigned long long id) : id(id) {}
+            unsigned long long id;
+            entryID succ() const { return entryID(id+1); }
+            inline bool operator < (const entryID& other) const { return id < other.id; }
+        };
+
         unsigned long long rankOf(const std::shared_ptr<node>& target);
 
-        struct transaction_impl;
         struct prioritized_entry {
             prioritized_entry(const std::shared_ptr<node>& target,
                               const std::function<void(transaction_impl*)>& action)
@@ -177,14 +276,6 @@ namespace sodium {
             transaction<P>& operator = (const transaction<P>& other) { return *this; };
         public:
             transaction() : transaction_(P::part()) {}
-    };
-
-    struct cleaner_upper
-    {
-        std::function<void()> f;
-
-        cleaner_upper(const std::function<void()>& f) : f(f) {}
-        ~cleaner_upper() { f(); }
     };
 
     class simple_policy : public policy
