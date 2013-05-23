@@ -128,6 +128,7 @@ void test_sodium::filter_optional1()
     CPPUNIT_ASSERT(vector<string>({ string("tomato"), string("peach") }) == *out);
 }
 
+// NOTE! Currently this leaks memory.
 void test_sodium::loop_event()
 {
     event_sink<int> ea;
@@ -574,6 +575,7 @@ void test_sodium::switch_e1()
     CPPUNIT_ASSERT_EQUAL(string("ABCdeFGhI"), *out);
 }
 
+// NOTE! Currently this leaks memory.
 void test_sodium::loop_behavior()
 {
     event_sink<int> ea;
@@ -668,9 +670,11 @@ void test_sodium::split1()
 
 int main(int argc, char* argv[])
 {
-    CppUnit::TextUi::TestRunner runner;
-    runner.addTest( test_sodium::suite() );
-    runner.run();
+    for (int i = 0; i < 100; i++) {
+        CppUnit::TextUi::TestRunner runner;
+        runner.addTest( test_sodium::suite() );
+        runner.run();
+    }
     return 0;
 }
 

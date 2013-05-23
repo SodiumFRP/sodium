@@ -27,6 +27,8 @@ namespace sodium {
     behavior<B, P> apply(const behavior<std::function<B(const A&)>, P>& bf, const behavior<A, P>& ba);
     template <class A, class P = def_part>
     event<A, P> filter_optional(const event<boost::optional<A>, P>& input);
+    template <class A, class P = def_part>
+    event<A, P> split(const event<std::list<A>, P>& e);
 
     namespace impl {
 
@@ -47,6 +49,8 @@ namespace sodium {
         friend behavior_ apply(transaction_impl* trans0, const behavior_& bf, const behavior_& ba);
         friend event_ map_(const std::function<light_ptr(const light_ptr&)>& f, const event_& ev);
         friend event_ switch_e(transaction_impl* trans, const behavior_& bea);
+        template <class A, class P>
+        friend event<A, P> sodium::split(const event<std::list<A>, P>& e);
 
         protected:
             std::weak_ptr<node::listen_impl_func> listen_func;
@@ -856,21 +860,23 @@ namespace sodium {
      * a block of input data into frames. We obviously want each frame to have
      * its own transaction so that state is correctly updated after each frame.
      */
-    template <class A, class P = def_part>
+    template <class A, class P>
     event<A, P> split(const event<std::list<A>, P>& e)
     {
-        event_sink<A, P> out;
+        auto p = impl::unsafe_new_event();
         transaction<P> trans;
-        auto kill = e.listen_raw(trans.impl(), std::shared_ptr<impl::node>(),
+        auto kill = e.listen_raw(trans.impl(), std::get<1>(p),
             new std::function<void(const std::shared_ptr<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
-                [out] (const std::shared_ptr<impl::node>&, impl::transaction_impl* trans, const light_ptr& ptr) {
+                [] (const std::shared_ptr<impl::node>& target, impl::transaction_impl* trans, const light_ptr& ptr) {
                     const std::list<A>& la = *ptr.cast_ptr<std::list<A>>(NULL);
-                    trans->part->post([la, out] () {
-                        for (auto it = la.begin(); it != la.end(); ++it)
-                            out.send(*it);
+                    trans->part->post([la, target, ptr] () {
+                        for (auto it = la.begin(); it != la.end(); ++it) {
+                            transaction<P> trans;
+                            send(target, trans.impl(), light_ptr::create<A>(*it));
+                        }
                     });
                 }), false);
-        return out.add_cleanup_(kill);
+        return std::get<0>(p).unsafe_add_cleanup(kill);
     }
 
 }  // end namespace sodium
