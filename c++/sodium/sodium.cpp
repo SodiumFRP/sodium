@@ -181,7 +181,8 @@ namespace sodium {
                                 }
                             }
                         })
-                    : NULL
+                    : NULL,
+                    impl
                 )
             );
         }
@@ -607,7 +608,8 @@ namespace sodium {
                         for (auto it = items.begin() + start; it != items.end(); ++it)
                             *it = f(*it);
                     })
-                    : NULL
+                    : NULL,
+                    ev.impl
                 )
             );
         }
