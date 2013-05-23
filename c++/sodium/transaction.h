@@ -70,29 +70,6 @@ namespace sodium {
         struct transaction_impl;
         class node;
 
-        class event_impl
-        {
-            public:
-                typedef std::function<void(std::vector<light_ptr>&)> sample_now_func;
-            private:
-                event_impl(const event_impl& other) {}
-                event_impl& operator = (const event_impl& other) {return *this;}
-
-            public:
-                unsigned ref_count;
-                sample_now_func* sample_now;
-
-                event_impl(
-                        sample_now_func* sample_now
-                    ) : ref_count(0), sample_now(sample_now)
-                {
-                }
-                ~event_impl() {
-                    delete sample_now;
-                }
-                void touch() const;
-        };
-
         class node
         {
             public:
@@ -111,8 +88,7 @@ namespace sodium {
                         transaction_impl*,
                         const std::shared_ptr<impl::node>&,
                         std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>*,
-                        bool,
-                        const boost::intrusive_ptr<event_impl>&)> closure;
+                        bool)> closure;
                     listen_impl_func(const closure& func, std::function<void()>* cleanup1)
                         : func(func)
                     {

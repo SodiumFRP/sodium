@@ -10,34 +10,11 @@ using namespace std;
 using namespace boost;
 
 
-void intrusive_ptr_add_ref(sodium::impl::event_impl* p)
-{
-    ++p->ref_count;
-}
-
-void intrusive_ptr_release(sodium::impl::event_impl* p)
-{
-    if (--p->ref_count == 0)
-        delete p;
-}
-
 namespace sodium {
-#define GCC_VERSION (__GNUC__ * 10000 \
-                   + __GNUC_MINOR__ * 100 \
-                   + __GNUC_PATCHLEVEL__)
-
-#if GCC_VERSION < 40700
-#define WORKAROUND_GCC_46_BUG
-#endif
 
     namespace impl {
 
-        void event_impl::touch() const
-        {
-        }
-
         event_::event_()
-            : impl(new event_impl(NULL))
         {
         }
 
@@ -59,7 +36,7 @@ namespace sodium {
                     else
                         send(target, trans0, *it);
             }
-            return listen_impl(trans0, target, handle, suppressEarlierFirings, impl);
+            return listen_impl(trans0, target, handle, suppressEarlierFirings);
         }
 
         behavior_ event_::hold_(transaction_impl* trans, const light_ptr& initA) const
@@ -83,11 +60,11 @@ namespace sodium {
         {
             std::shared_ptr<function<void()>*> ppKill(new function<void()>*(NULL));
 
-            auto impl(this->impl);
-            auto p = impl::unsafe_new_event(new event_impl::sample_now_func([ppKill, impl] (vector<light_ptr>& items) {
+            auto p_sample_now(this->p_sample_now);
+            auto p = impl::unsafe_new_event(new event_::sample_now_func([ppKill, p_sample_now] (vector<light_ptr>& items) {
                 size_t start = items.size();
-                if (impl->sample_now)
-                    (*impl->sample_now)(items);
+                if (p_sample_now)
+                    (*p_sample_now)(items);
                 if (items.begin() + start != items.end()) {
                     auto it = items.begin();
                     ++it;
@@ -108,7 +85,7 @@ namespace sodium {
 
         event_ event_::merge_(transaction_impl* trans, const event_& other) const {
             const event_& me(*this);
-            auto p = impl::unsafe_new_event(new event_impl::sample_now_func([me, other] (std::vector<light_ptr>& items) {
+            auto p = impl::unsafe_new_event(new event_::sample_now_func([me, other] (std::vector<light_ptr>& items) {
                 me.sample_now(items);
                 other.sample_now(items);
             }));
@@ -129,15 +106,14 @@ namespace sodium {
 
         event_ event_::coalesce_(const std::function<light_ptr(const light_ptr&, const light_ptr&)>& combine) const
         {
-            const std::weak_ptr<node::listen_impl_func>& li_weak = listen_func;
+            const std::weak_ptr<node::listen_impl_func>& li_weak = p_listen_impl;
             std::shared_ptr<node::listen_impl_func> li = li_weak.lock();
             std::shared_ptr<node::listen_impl_func> new_li;
             if (li) {
                 new_li = std::shared_ptr<node::listen_impl_func>(new node::listen_impl_func(
                     [combine, li_weak] (transaction_impl* trans, const std::shared_ptr<node>& target,
                                     std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handle,
-                                    bool suppressEarlierFirings,
-                                    const boost::intrusive_ptr<event_impl>& impl)
+                                    bool suppressEarlierFirings)
                                                                                 -> std::function<void()>* {
                         std::shared_ptr<coalesce_state> pState(new coalesce_state(handle));
                         std::shared_ptr<node::listen_impl_func> li = li_weak.lock();
@@ -161,8 +137,7 @@ namespace sodium {
                                         else
                                             pState->oValue = make_optional(combine(pState->oValue.get(), ptr));
                                     }),
-                                suppressEarlierFirings,
-                                impl);
+                                suppressEarlierFirings);
                         }
                         else {
                             delete handle;
@@ -172,29 +147,27 @@ namespace sodium {
                 );
                 li->children.push_back(new_li);
             }
-            auto impl(this->impl);
+            auto p_sample_now(this->p_sample_now);
             return event_(
                 new_li,
-                new event_impl(
-                    impl->sample_now != NULL
-                    ? new event_impl::sample_now_func(
-                        [impl, combine] (vector<light_ptr>& items) {
-                            size_t start = items.size();
-                            (*impl->sample_now)(items);
-                            auto first = items.begin() + start;
-                            if (first != items.end()) {
-                                auto it = first + 1;
-                                if (it != items.end()) {
-                                    light_ptr sum = *first;
-                                    while (it != items.end())
-                                        sum = combine(sum, *it++);
-                                    items.erase(first, items.end());
-                                    items.push_back(sum);
-                                }
+                p_sample_now != NULL
+                ? new event_::sample_now_func(
+                    [p_sample_now, combine] (vector<light_ptr>& items) {
+                        size_t start = items.size();
+                        (*p_sample_now)(items);
+                        auto first = items.begin() + start;
+                        if (first != items.end()) {
+                            auto it = first + 1;
+                            if (it != items.end()) {
+                                light_ptr sum = *first;
+                                while (it != items.end())
+                                    sum = combine(sum, *it++);
+                                items.erase(first, items.end());
+                                items.push_back(sum);
                             }
-                        })
-                    : NULL
-                )
+                        }
+                    })
+                : NULL
             );
         }
 
@@ -213,7 +186,7 @@ namespace sodium {
         event_ event_::snapshot_(transaction_impl* trans, const behavior_& beh, const std::function<light_ptr(const light_ptr&, const light_ptr&)>& combine) const
         {
             const event_& me(*this);
-            auto p = impl::unsafe_new_event(new event_impl::sample_now_func([me, combine, beh] (vector<light_ptr>& items) {
+            auto p = impl::unsafe_new_event(new event_::sample_now_func([me, combine, beh] (vector<light_ptr>& items) {
                 size_t start = items.size();
                 me.sample_now(items);
                 for (auto it = items.begin() + start; it != items.end(); ++it)
@@ -233,12 +206,12 @@ namespace sodium {
          */
         event_ event_::filter_(transaction_impl* trans, const std::function<bool(const light_ptr&)>& pred) const
         {
-            const event_& me(*this);
+            auto p_sample_now(this->p_sample_now);
             auto p = impl::unsafe_new_event(
-                impl->sample_now != NULL
-                ? new event_impl::sample_now_func([me, pred] (vector<light_ptr>& output) {
+                p_sample_now != NULL
+                ? new event_::sample_now_func([p_sample_now, pred] (vector<light_ptr>& output) {
                     vector<light_ptr> input;
-                    me.sample_now(input);
+                    (*p_sample_now)(input);
                     for (auto it = input.begin(); it != input.end(); ++it)
                         if (pred(*it))
                             output.push_back(*it);
@@ -255,9 +228,8 @@ namespace sodium {
         class holder {
             public:
                 holder(
-                    std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handler,
-                    const boost::intrusive_ptr<event_impl>& impl
-                ) : handler(handler), impl(impl) {}
+                    std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handler
+                ) : handler(handler) {}
                 ~holder() {
                     delete handler;
                 }
@@ -272,7 +244,6 @@ namespace sodium {
             private:
                 std::weak_ptr<impl::node> target;
                 std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handler;
-                boost::intrusive_ptr<event_impl> impl;  // keeps the event we're listening to alive
         };
 
         behavior_impl::behavior_impl(const light_ptr& constant)
@@ -321,63 +292,23 @@ namespace sodium {
                 ((holder*)(*it)->holder)->handle((*it)->n, trans, ptr);
         }
 
-#if defined(WORKAROUND_GCC_46_BUG)
-        struct new_event_listener {
-            new_event_listener(const std::shared_ptr<node>& n) : n(n) {}
-            std::shared_ptr<node> n;
-            std::function<void()> operator () (
-                transaction_impl* trans,
-                const std::shared_ptr<impl::node>& target,
-                std::function<void(transaction_impl*, const light_ptr&)>* handle,
-                bool suppressEarlierFirings,
-                const boost::intrusive_ptr<event_impl>& cleanerUpper
-            ) {
-                std::list<light_ptr> firings;
-                holder* h = new holder(target, handle, cleanerUpper);
-                {
-                    trans->part->mx.lock();
-                    n->link(h, target);
-                    trans->part->mx.unlock();
-                    firings = n->firings;
-                }
-                if (!suppressEarlierFirings && firings.begin() != firings.end())
-                    for (auto it = firings.begin(); it != firings.end(); it++)
-                        h->handle(trans, *it);
-                partition* part = trans->part;
-                return [part, n, h] () {  // Unregister listener
-                    part->mx.lock();
-                    if (n->unlink(h)) {
-                        part->mx.unlock();
-                        delete h;
-                    }
-                    else
-                        part->mx.unlock();
-                };
-            }
-        };
-#endif
-
         /*!
          * Creates an event, that values can be pushed into using impl::send(). 
          */
         std::tuple<event_, std::shared_ptr<node>> unsafe_new_event(
-            event_impl::sample_now_func* sample_now)
+            event_::sample_now_func* sample_now)
         {
             std::shared_ptr<node> n(new node);
             std::weak_ptr<node> n_weak(n);
             n->listen_impl = std::shared_ptr<node::listen_impl_func>(
-#if defined(WORKAROUND_GCC_46_BUG)
-                new node::listen_impl_func(new_event_listener(nptr)),
-#else
                 new node::listen_impl_func([n_weak] (transaction_impl* trans,
                         const std::shared_ptr<node>& target,
                         std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handler,
-                        bool suppressEarlierFirings,
-                        const boost::intrusive_ptr<event_impl>& impl) -> std::function<void()>* {  // Register listener
+                        bool suppressEarlierFirings) -> std::function<void()>* {  // Register listener
                     std::shared_ptr<node> n = n_weak.lock();
                     if (n) {
                         std::list<light_ptr> firings;
-                        holder* h = new holder(handler, impl);
+                        holder* h = new holder(handler);
                         {
                             trans->part->mx.lock();
                             n->link(h, target);
@@ -411,12 +342,8 @@ namespace sodium {
                         return NULL;
                     }
                 })
-#endif
             );
-            return std::make_tuple(
-                event_(n->listen_impl, new event_impl(sample_now)),
-                n
-            );
+            return std::make_tuple(event_(n->listen_impl, sample_now), n);
         }
 
         event_sink_impl::event_sink_impl()
@@ -509,10 +436,8 @@ namespace sodium {
         {
             auto sample = impl->sample;
             return event_(
-                changes_().listen_func,
-                new event_impl(
-                    new event_impl::sample_now_func([sample] (vector<light_ptr>& items) { items.push_back(sample()); })
-                )
+                changes_().p_listen_impl,
+                new event_::sample_now_func([sample] (vector<light_ptr>& items) { items.push_back(sample()); })
             ).last_firing_only_();
         }
 
@@ -597,7 +522,7 @@ namespace sodium {
          */
         event_ map_(const std::function<light_ptr(const light_ptr&)>& f, const event_& ev)
         {
-            const std::weak_ptr<node::listen_impl_func>& li_weak = ev.listen_func;
+            const std::weak_ptr<node::listen_impl_func>& li_weak = ev.p_listen_impl;
             std::shared_ptr<node::listen_impl_func> li = li_weak.lock();
             std::shared_ptr<node::listen_impl_func> new_li;
             if (li) {
@@ -605,8 +530,7 @@ namespace sodium {
                     [f,li_weak] (transaction_impl* trans0,
                             std::shared_ptr<node> target,
                             std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handle,
-                            bool suppressEarlierFirings,
-                            const boost::intrusive_ptr<event_impl>& cu) -> std::function<void()>* {
+                            bool suppressEarlierFirings) -> std::function<void()>* {
                         std::shared_ptr<std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>> pHandle(handle);
                         std::shared_ptr<node::listen_impl_func> li = li_weak.lock();
                         if (li) {
@@ -617,7 +541,7 @@ namespace sodium {
                                             (*pHandle)(target, trans, f(ptr));
                                         else
                                             send(target, trans, f(ptr));
-                                    }), suppressEarlierFirings, cu);
+                                    }), suppressEarlierFirings);
                         }
                         else {
                             delete handle;
@@ -627,19 +551,17 @@ namespace sodium {
                 ));
                 li->children.push_back(new_li);
             }
-            auto impl(ev.impl);
+            auto p_sample_now(ev.p_sample_now);
             return event_(
                 new_li,
-                new event_impl(
-                    impl->sample_now != NULL
-                    ? new event_impl::sample_now_func([impl, f] (vector<light_ptr>& items) {
-                        size_t start = items.size();
-                        (*impl->sample_now)(items);
-                        for (auto it = items.begin() + start; it != items.end(); ++it)
-                            *it = f(*it);
-                    })
-                    : NULL
-                )
+                p_sample_now
+                ? new event_::sample_now_func([p_sample_now, f] (vector<light_ptr>& items) {
+                    size_t start = items.size();
+                    (*p_sample_now)(items);
+                    for (auto it = items.begin() + start; it != items.end(); ++it)
+                        *it = f(*it);
+                })
+                : NULL
             );
         }
 

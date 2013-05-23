@@ -52,18 +52,24 @@ namespace sodium {
         template <class A, class P>
         friend event<A, P> sodium::split(const event<std::list<A>, P>& e);
 
+        public:
+            typedef std::function<void(std::vector<light_ptr>&)> sample_now_func;
+
         protected:
-            std::weak_ptr<node::listen_impl_func> listen_func;
-            boost::intrusive_ptr<event_impl> impl;
+            std::weak_ptr<node::listen_impl_func> p_listen_impl;
+            std::shared_ptr<sample_now_func> p_sample_now;
 
         public:
             event_();
-            event_(const std::weak_ptr<node::listen_impl_func>& listen_func, event_impl* impl)
-                : listen_func(listen_func), impl(impl) {}
-            event_(const boost::intrusive_ptr<event_impl>& impl, bool) : impl(impl) {}
+            event_(const std::weak_ptr<node::listen_impl_func>& p_listen_impl,
+                   const std::shared_ptr<sample_now_func>& p_sample_now)
+                : p_listen_impl(p_listen_impl), p_sample_now(p_sample_now) {}
+            event_(const std::weak_ptr<node::listen_impl_func>& p_listen_impl,
+                   sample_now_func* p_sample_now)
+                : p_listen_impl(p_listen_impl), p_sample_now(p_sample_now) {}
 
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
-            bool is_never() const { return listen_func.expired(); }
+            bool is_never() const { return p_listen_impl.expired(); }
 #endif
 
         protected:
@@ -83,7 +89,7 @@ namespace sodium {
              */
             event_ unsafe_add_cleanup(std::function<void()>* cleanup)
             {
-                std::shared_ptr<node::listen_impl_func> li = listen_func.lock();
+                std::shared_ptr<node::listen_impl_func> li = p_listen_impl.lock();
                 if (cleanup != NULL) {
                     if (li)
                         li->cleanups.push_back(cleanup);
@@ -101,7 +107,7 @@ namespace sodium {
              */
             event_ unsafe_add_cleanup(std::function<void()>* cleanup1, std::function<void()>* cleanup2)
             {
-                std::shared_ptr<node::listen_impl_func> li = listen_func.lock();
+                std::shared_ptr<node::listen_impl_func> li = p_listen_impl.lock();
                 if (cleanup1 != NULL) {
                     if (li)
                         li->cleanups.push_back(cleanup1);
@@ -138,20 +144,19 @@ namespace sodium {
             event_ filter_(transaction_impl* trans, const std::function<bool(const light_ptr&)>& pred) const;
 
             void sample_now(std::vector<light_ptr>& values) const {
-                if (impl->sample_now != NULL)
-                    (*impl->sample_now)(values);
+                if (p_sample_now != NULL)
+                    (*p_sample_now)(values);
             }
 
             std::function<void()>* listen_impl(
                 transaction_impl* trans,
                 const std::shared_ptr<impl::node>& target,
                 std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handler,
-                bool suppressEarlierFirings,
-                const boost::intrusive_ptr<event_impl>& child_impl) const
+                bool suppressEarlierFirings) const
             {
-                std::shared_ptr<node::listen_impl_func> l = listen_func.lock();
+                std::shared_ptr<node::listen_impl_func> l = p_listen_impl.lock();
                 if (l)
-                    return l->func(trans, target, handler, suppressEarlierFirings, child_impl);
+                    return l->func(trans, target, handler, suppressEarlierFirings);
                 else {
                     delete handler;
                     return NULL;
@@ -176,7 +181,7 @@ namespace sodium {
         std::tuple<
                 event_,
                 std::shared_ptr<node>
-            > unsafe_new_event(event_impl::sample_now_func* sample_now_func = NULL);
+            > unsafe_new_event(event_::sample_now_func* sample_now_func = NULL);
 
         struct behavior_impl {
             behavior_impl(const light_ptr& constant);
@@ -378,7 +383,7 @@ namespace sodium {
             event() {}
         protected:
             event(const impl::node::listen_impl_func& listen)
-                : impl::event_(impl::node::listen_impl_func(listen), new impl::event_impl(NULL)) {}
+                : impl::event_(impl::node::listen_impl_func(listen), new impl::event_::sample_now_func(NULL)) {}
             event(const impl::event_& ev) : impl::event_(ev) {}
         public:
             /*!
