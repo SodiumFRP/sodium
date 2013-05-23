@@ -255,14 +255,13 @@ namespace sodium {
         class holder {
             public:
                 holder(
-                    const std::shared_ptr<impl::node>& target,
                     std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handler,
                     const boost::intrusive_ptr<event_impl>& impl
-                ) : target(target), handler(handler), impl(impl) {}
+                ) : handler(handler), impl(impl) {}
                 ~holder() {
                     delete handler;
                 }
-                inline void handle(transaction_impl* trans, const light_ptr& value) const
+                inline void handle(const std::shared_ptr<node>& target, transaction_impl* trans, const light_ptr& value) const
                 {
                     if (handler)
                         (*handler)(target, trans, value);
@@ -271,7 +270,7 @@ namespace sodium {
                 }
 
             private:
-                std::shared_ptr<impl::node> target;
+                std::weak_ptr<impl::node> target;
                 std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handler;
                 boost::intrusive_ptr<event_impl> impl;  // keeps the event we're listening to alive
         };
@@ -293,8 +292,8 @@ namespace sodium {
         void send(const std::shared_ptr<node>& n, transaction_impl* trans, const light_ptr& ptr)
         {
             int ifs = 0;
-            holder* fs[16];
-            std::list<holder*> fsOverflow;
+            node::target* fs[16];
+            std::list<node::target*> fsOverflow;
             {
                 if (n->firings.begin() == n->firings.end())
                     trans->last([n] () {
@@ -303,11 +302,11 @@ namespace sodium {
                 n->firings.push_back(ptr);
                 auto it = n->targets.begin();
                 while (it != n->targets.end()) {
-                    fs[ifs++] = (holder*)it->handler;
+                    fs[ifs++] = &*it;
                     it++;
                     if (ifs == 16) {
                         while (it != n->targets.end()) {
-                            fsOverflow.push_back((holder*)it->handler);
+                            fsOverflow.push_back(&*it);
                             it++;
                         }
                         break;
@@ -315,9 +314,9 @@ namespace sodium {
                 }
             }
             for (int i = 0; i < ifs; i++)
-                fs[i]->handle(trans, ptr);
+                ((holder*)fs[i]->holder)->handle(fs[i]->n, trans, ptr);
             for (auto it = fsOverflow.begin(); it != fsOverflow.end(); ++it)
-                (*it)->handle(trans, ptr);
+                ((holder*)(*it)->holder)->handle((*it)->n, trans, ptr);
         }
 
 #if defined(WORKAROUND_GCC_46_BUG)
@@ -376,7 +375,7 @@ namespace sodium {
                     std::shared_ptr<node> n = n_weak.lock();
                     if (n) {
                         std::list<light_ptr> firings;
-                        holder* h = new holder(target, handler, impl);
+                        holder* h = new holder(handler, impl);
                         {
                             trans->part->mx.lock();
                             n->link(h, target);
@@ -385,7 +384,7 @@ namespace sodium {
                         }
                         if (!suppressEarlierFirings && firings.begin() != firings.end())
                             for (auto it = firings.begin(); it != firings.end(); it++)
-                                h->handle(trans, *it);
+                                h->handle(target, trans, *it);
                         partition* part = trans->part;
                         return new std::function<void()>([part, n_weak, h] () {  // Unregister listener
                             std::shared_ptr<node> n = n_weak.lock();

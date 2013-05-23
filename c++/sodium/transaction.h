@@ -98,11 +98,11 @@ namespace sodium {
             public:
                 struct target {
                     target(
-                        void* handler,
+                        void* holder,
                         const std::shared_ptr<node>& n
-                    ) : handler(handler),
+                    ) : holder(holder),
                         n(n) {}
-                    void* handler;
+                    void* holder;
                     std::shared_ptr<node> n;
                 };
 
@@ -141,8 +141,8 @@ namespace sodium {
                 std::list<light_ptr> firings;
                 std::shared_ptr<listen_impl_func> listen_impl;
 
-                void link(void* handler, const std::shared_ptr<node>& target);
-                bool unlink(void* handler);
+                void link(void* holder, const std::shared_ptr<node>& target);
+                bool unlink(void* holder);
 
             private:
                 void ensure_bigger_than(std::set<node*>& visited, unsigned long long limit);

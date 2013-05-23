@@ -77,17 +77,17 @@ namespace sodium {
 
     namespace impl {
 
-        void node::link(void* handler, const std::shared_ptr<node>& targ) {
+        void node::link(void* holder, const std::shared_ptr<node>& targ) {
             if (targ) {
                 std::set<node*> visited;
                 targ->ensure_bigger_than(visited, rank);
             }
-            targets.push_back(target(handler, targ));
+            targets.push_back(target(holder, targ));
         }
 
-        bool node::unlink(void* handler) {
+        bool node::unlink(void* holder) {
             for (auto it = targets.begin(); it != targets.end(); ++it)
-                if (it->handler == handler) {
+                if (it->holder == holder) {
                     targets.erase(it);
                     return true;
                 }
