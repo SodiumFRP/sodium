@@ -37,7 +37,7 @@ namespace sodium {
         }
 
         event_::event_()
-            : impl(new event_impl(NULL, NULL))
+            : impl(new event_impl(NULL))
         {
         }
 
@@ -82,10 +82,11 @@ namespace sodium {
         {
             std::shared_ptr<function<void()>*> ppKill(new function<void()>*(NULL));
 
-            event_ me(*this);
-            auto p = impl::unsafe_new_event(new event_impl::sample_now_func([ppKill, me] (vector<light_ptr>& items) {
+            auto impl(this->impl);
+            auto p = impl::unsafe_new_event(new event_impl::sample_now_func([ppKill, impl] (vector<light_ptr>& items) {
                 size_t start = items.size();
-                me.sample_now(items);
+                if (impl->sample_now)
+                    (*impl->sample_now)(items);
                 if (items.begin() + start != items.end()) {
                     auto it = items.begin();
                     ++it;
@@ -194,8 +195,7 @@ namespace sodium {
                                 }
                             }
                         })
-                    : NULL,
-                    impl
+                    : NULL
                 )
             );
         }
@@ -452,7 +452,7 @@ namespace sodium {
             else {
 #endif
                 std::shared_ptr<behavior_state> state(new behavior_state(initValue));
-                auto unlisten = input.listen_raw(trans0, target,
+                auto kill = input.listen_raw(trans0, target,
                     new std::function<void(transaction_impl*, const light_ptr&)>(
                         [target, state] (transaction_impl* trans, const light_ptr& ptr) {
                             bool first = !state->update;
@@ -464,7 +464,7 @@ namespace sodium {
                                 });
                             send(target, trans, ptr);
                         }), false);
-                auto changes = std::get<0>(p).unsafe_add_cleanup(unlisten);
+                auto changes = std::get<0>(p).unsafe_add_cleanup(kill);
                 auto sample = [state] () {
                     return state->current;
                 };
@@ -507,8 +507,7 @@ namespace sodium {
             return event_(
                 changes_().listen_func,
                 new event_impl(
-                    new event_impl::sample_now_func([sample] (vector<light_ptr>& items) { items.push_back(sample()); }),
-                    changes_().impl
+                    new event_impl::sample_now_func([sample] (vector<light_ptr>& items) { items.push_back(sample()); })
                 )
             ).last_firing_only_();
         }
@@ -636,8 +635,7 @@ namespace sodium {
                         for (auto it = items.begin() + start; it != items.end(); ++it)
                             *it = f(*it);
                     })
-                    : NULL,
-                    ev.impl
+                    : NULL
                 )
             );
         }

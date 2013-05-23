@@ -81,55 +81,14 @@ namespace sodium {
             public:
                 unsigned ref_count;
                 sample_now_func* sample_now;
-                std::list<std::function<void()>*> cleanups;
-                boost::intrusive_ptr<event_impl> parent;
 
                 event_impl(
                         sample_now_func* sample_now
                     ) : ref_count(0), sample_now(sample_now)
                 {
                 }
-                event_impl(
-                        sample_now_func* sample_now,
-                        const boost::intrusive_ptr<event_impl>& parent
-                    ) : ref_count(0), sample_now(sample_now), parent(parent)
-                {
-                }
-                event_impl(
-                        sample_now_func* sample_now,
-                        std::function<void()>* cleanup1
-                    ) : ref_count(0), sample_now(sample_now)
-                {
-                    if (cleanup1 != NULL)
-                        cleanups.push_back(cleanup1);
-                }
-                event_impl(
-                        sample_now_func* sample_now,
-                        std::function<void()>* cleanup1,
-                        std::function<void()>* cleanup2
-                    ) : ref_count(0), sample_now(sample_now)
-                {
-                    if (cleanup1 != NULL)
-                        cleanups.push_back(cleanup1);
-                    if (cleanup2 != NULL)
-                        cleanups.push_back(cleanup2);
-                }
-                // implementation for the safe version of 'add_cleanup'
-                event_impl(
-                        const boost::intrusive_ptr<event_impl>& other,
-                        std::function<void()>* cleanup
-                    ) : ref_count(0),
-                        sample_now(other->sample_now != NULL ? new sample_now_func(*other->sample_now) : NULL)
-                {
-                    cleanups.push_back(cleanup);
-                    parent = other;
-                }
                 ~event_impl() {
                     delete sample_now;
-                    for (auto it = cleanups.begin(); it != cleanups.end(); ++it) {
-                        (**it)();
-                        delete *it;
-                    }
                 }
                 void touch() const;
         };
@@ -154,15 +113,36 @@ namespace sodium {
                         std::function<void(transaction_impl*, const light_ptr&)>*,
                         bool,
                         const boost::intrusive_ptr<event_impl>&)> closure;
+                    listen_impl_func(const closure& func, std::function<void()>* cleanup1)
+                        : func(func)
+                    {
+                        if (cleanup1 != NULL)
+                            cleanups.push_back(cleanup1);
+                    }
                     listen_impl_func(const closure& func)
                         : func(func) {}
+                    ~listen_impl_func()
+                    {
+                        printf("clean %d\n", (int)cleanups.size());  // ###
+                        for (auto it = cleanups.begin(); it != cleanups.end(); ++it) {
+                            (**it)();
+                            delete *it;
+                        }
+                        for (auto it = children.begin(); it != children.end(); ++it)
+                            printf("  child count %ld\n", (*it).use_count());  // ###
+                    }
                     closure func;
+                    std::list<std::function<void()>*> cleanups;
                     std::list<std::shared_ptr<listen_impl_func>> children;
                 };
 
             public:
                 node() : rank(0) {}
                 ~node() {
+                    printf("~node() targets=%u:", targets.size());  // ###
+                    for (auto it = targets.begin(); it != targets.end(); ++it)
+                        printf(" %ld", it->n.use_count());
+                    printf("\n");
                 }
 
                 unsigned long long rank;

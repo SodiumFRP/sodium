@@ -79,8 +79,16 @@ namespace sodium {
              */
             event_ unsafe_add_cleanup(std::function<void()>* cleanup)
             {
-                if (cleanup != NULL)
-                    impl->cleanups.push_back(cleanup);
+                std::shared_ptr<node::listen_impl_func> li = listen_func.lock();
+                if (cleanup != NULL) {
+                    if (li)
+                        li->cleanups.push_back(cleanup);
+                    else {
+                        printf("wah!\n");
+                        (*cleanup)();
+                        delete cleanup;
+                    }
+                }
                 return *this;
             }
 
@@ -90,10 +98,25 @@ namespace sodium {
              */
             event_ unsafe_add_cleanup(std::function<void()>* cleanup1, std::function<void()>* cleanup2)
             {
-                if (cleanup1 != NULL)
-                    impl->cleanups.push_back(cleanup1);
-                if (cleanup2 != NULL)
-                    impl->cleanups.push_back(cleanup2);
+                std::shared_ptr<node::listen_impl_func> li = listen_func.lock();
+                if (cleanup1 != NULL) {
+                    if (li)
+                        li->cleanups.push_back(cleanup1);
+                    else {
+                        printf("wah!\n");
+                        (*cleanup1)();
+                        delete cleanup1;
+                    }
+                }
+                if (cleanup2 != NULL) {
+                    if (li)
+                        li->cleanups.push_back(cleanup2);
+                    else {
+                        printf("wah!\n");
+                        (*cleanup2)();
+                        delete cleanup2;
+                    }
+                }
                 return *this;
             }
 
@@ -102,10 +125,7 @@ namespace sodium {
              */
             event_ add_cleanup_(std::function<void()>* cleanup) const
             {
-                return event_(
-                    listen_func,
-                    new event_impl(impl, cleanup)
-                );
+                return event_(*this).unsafe_add_cleanup(cleanup);
             }
 
             behavior_ hold_(transaction_impl* trans, const light_ptr& initA) const;
@@ -560,6 +580,9 @@ namespace sodium {
     namespace impl {
         struct event_sink_impl {
             event_sink_impl();
+            ~event_sink_impl() {
+                printf("target use count=%d\n", (int)target.use_count());
+            }
             event_ construct();
             void send(transaction_impl* trans, const light_ptr& ptr) const;
             std::shared_ptr<impl::node> target;
