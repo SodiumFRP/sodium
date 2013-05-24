@@ -72,7 +72,7 @@ namespace sodium {
                 : p_listen_impl(p_listen_impl), p_sample_now(p_sample_now) {}
 
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
-            bool is_never() const { return !p_listen_impl || p_listen_impl->strong_count == 0; }
+            bool is_never() const { return !impl::alive(p_listen_impl); }
 #endif
 
         protected:
@@ -193,13 +193,18 @@ namespace sodium {
             behavior_impl(const light_ptr& constant);
             behavior_impl(
                 const event_& changes,
-                const std::function<light_ptr()>& sample);
+                const std::function<light_ptr()>& sample,
+                std::function<void()>* kill,
+                const std::shared_ptr<behavior_impl>& parent);
+            ~behavior_impl();
 
             event_ changes;  // Having this here allows references to behavior to keep the
                              // underlying event's cleanups alive, and provides access to the
                              // underlying event, for certain primitives.
 
             std::function<light_ptr()> sample;
+            std::function<void()>* kill;
+            std::shared_ptr<behavior_impl> parent;
 
             std::function<std::function<void()>(transaction_impl*, const std::shared_ptr<node>&,
                              const std::function<void(transaction_impl*, const light_ptr&)>&)> listen_value_raw() const;
@@ -223,10 +228,6 @@ namespace sodium {
                 behavior_(behavior_impl* impl);
                 behavior_(const std::shared_ptr<behavior_impl>& impl);
                 behavior_(const light_ptr& a);
-                behavior_(
-                    const event_& changes,
-                    const std::function<light_ptr()>& sample
-                );
                 std::shared_ptr<impl::behavior_impl> impl;
 
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
@@ -275,13 +276,6 @@ namespace sodium {
             }
 
         protected:
-            behavior(
-                const impl::event_& changes,
-                const std::function<light_ptr()>& sample
-            )
-                : impl::behavior_(changes, sample)
-            {
-            }
             behavior() {}
             behavior(const impl::behavior_& beh) : impl::behavior_(beh) {}
 
@@ -309,9 +303,13 @@ namespace sodium {
                 return impl->changes.listen_raw(trans, target, handle, false);
             }
 
-            behavior<A, P> add_cleanup(const std::function<void()>& newCleanup) const {
-                return behavior<A, P>(std::shared_ptr<impl::behavior_impl>(
-                        new impl::behavior_impl(impl->changes.add_cleanup_(new std::function<void()>(newCleanup)), impl->sample)));
+            behavior<A, P> add_cleanup(const std::function<void()>& cleanup) const {
+                return behavior<A, P>(new impl::behavior_impl(
+                    impl->changes,
+                    impl->sample,
+                    new std::function<void()>(cleanup),
+                    impl
+                ));
             }
 
             /*!
@@ -404,7 +402,8 @@ namespace sodium {
              */
             std::function<void()> listen(std::function<void(const A&)> handle) const {
                 transaction<P> trans;
-                std::function<void()>* pKill = listen_raw(trans.impl(), std::shared_ptr<impl::node>(),
+                std::function<void()>* pKill = listen_raw(trans.impl(),
+                    std::shared_ptr<impl::node>(new impl::node(SODIUM_IMPL_RANK_T_MAX)),
                     new std::function<void(const std::shared_ptr<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
                         [handle] (const std::shared_ptr<impl::node>&, impl::transaction_impl* trans, const light_ptr& ptr) {
                             handle(*ptr.cast_ptr<A>(NULL));
@@ -800,13 +799,18 @@ namespace sodium {
                 auto pSample = this->pSample;
                 this->impl = std::shared_ptr<impl::behavior_impl>(new impl::behavior_impl(
                     elp,
-                    [pSample] () { return (*pSample)(); }));
+                    [pSample] () { return (*pSample)(); },
+                    NULL,
+                    std::shared_ptr<impl::behavior_impl>()));
             }
 
             void loop(const behavior<A, P>& b)
             {
                 elp.loop(b.changes());
                 *pSample = b.impl->sample;
+                // TO DO: This keeps the memory allocated in a loop. Figure out how to
+                // break the loop.
+                this->impl->parent = b.impl;
             }
     };
 

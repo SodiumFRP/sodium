@@ -12,12 +12,12 @@ using namespace boost;
 
 void intrusive_ptr_add_ref(sodium::impl::listen_impl_func<sodium::impl::H_EVENT>* p)
 {
-    p->weak_count++;
+    p->event_count++;
 }
 
 void intrusive_ptr_release(sodium::impl::listen_impl_func<sodium::impl::H_EVENT>* p)
 {
-    p->weak_count--;
+    p->event_count--;
     p->update();
 }
 
@@ -29,6 +29,17 @@ void intrusive_ptr_add_ref(sodium::impl::listen_impl_func<sodium::impl::H_STRONG
 void intrusive_ptr_release(sodium::impl::listen_impl_func<sodium::impl::H_STRONG>* p)
 {
     p->strong_count--;
+    p->update();
+}
+
+void intrusive_ptr_add_ref(sodium::impl::listen_impl_func<sodium::impl::H_NODE>* p)
+{
+    p->node_count++;
+}
+
+void intrusive_ptr_release(sodium::impl::listen_impl_func<sodium::impl::H_NODE>* p)
+{
+    p->node_count--;
     p->update();
 }
 
@@ -99,18 +110,41 @@ namespace sodium {
 
     namespace impl {
 
+        node::node() : rank(0) {}
+        node::node(rank_t rank) : rank(rank) {}
+        node::~node() {}
+
         void node::link(void* holder, const std::shared_ptr<node>& targ)
         {
             if (targ) {
                 std::set<node*> visited;
                 targ->ensure_bigger_than(visited, rank);
+                boost::intrusive_ptr<listen_impl_func<H_EVENT>> li(
+                    reinterpret_cast<listen_impl_func<H_EVENT>*>(listen_impl.get()));
+                targ->sources.push_front(li);
             }
             targets.push_front(target(holder, targ));
         }
 
         void node::unlink(void* holder)
         {
-            targets.remove_if([holder] (const target& t) {return t.holder == holder;});
+            std::forward_list<node::target>::iterator this_it;
+            for (auto last_it = targets.before_begin(); true; last_it = this_it) {
+                this_it = last_it;
+                ++this_it;
+                if (this_it == targets.end())
+                    break;
+                if (this_it->holder == holder) {
+                    auto targ = this_it->n;
+                    targets.erase_after(last_it);
+                    if (targ) {
+                        boost::intrusive_ptr<listen_impl_func<H_EVENT>> li(
+                            reinterpret_cast<listen_impl_func<H_EVENT>*>(listen_impl.get()));
+                        targ->sources.remove(li);
+                    }
+                    break;
+                }
+            }
         }
 
         void node::ensure_bigger_than(std::set<node*>& visited, rank_t limit)

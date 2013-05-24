@@ -684,8 +684,10 @@ void test_sodium::add_cleanup1()
         unlisten();
         out->push_back("date");
     }
+    /*
     for (auto it = out->begin(); it != out->end(); ++it)
         printf("%s\n", (*it).c_str());
+        */
     CPPUNIT_ASSERT(vector<string>({ string("custard apple!"), string("persimmon!"), string("<cleanup>"),
                                     string("date") }) == *out);
 }
@@ -707,19 +709,21 @@ void test_sodium::add_cleanup2()
         unlisten();
         out->push_back("date");
     }
+    /*
     for (auto it = out->begin(); it != out->end(); ++it)
         printf("%s\n", (*it).c_str());
+        */
     CPPUNIT_ASSERT(vector<string>({ string("custard apple"), string("persimmon"), string("<cleanup>"),
                                     string("date") }) == *out);
 }
 
 int main(int argc, char* argv[])
 {
-    for (int i = 0; i < 100; i++) {
+    //for (int i = 0; i < 100; i++) {
         CppUnit::TextUi::TestRunner runner;
         runner.addTest( test_sodium::suite() );
         runner.run();
-    }
+    //}
     return 0;
 }
 

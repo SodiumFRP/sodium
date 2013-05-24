@@ -109,19 +109,19 @@ namespace sodium {
 
         event_ event_::coalesce_(const std::function<light_ptr(const light_ptr&, const light_ptr&)>& combine) const
         {
-            const boost::intrusive_ptr<listen_impl_func<H_EVENT>> li_weak(this->p_listen_impl);
+            const boost::intrusive_ptr<listen_impl_func<H_EVENT>> li_event(this->p_listen_impl);
             boost::intrusive_ptr<listen_impl_func<H_STRONG>> li(
-                reinterpret_cast<listen_impl_func<H_STRONG>*>(li_weak.get()));
+                reinterpret_cast<listen_impl_func<H_STRONG>*>(li_event.get()));
             boost::intrusive_ptr<listen_impl_func<H_STRONG>> new_li;
             if (alive(li)) {
                 new_li = boost::intrusive_ptr<listen_impl_func<H_STRONG>>(new listen_impl_func<H_STRONG>(
-                    [combine, li_weak] (transaction_impl* trans, const std::shared_ptr<node>& target,
+                    [combine, li_event] (transaction_impl* trans, const std::shared_ptr<node>& target,
                                     std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handle,
                                     bool suppressEarlierFirings)
                                                                                 -> std::function<void()>* {
                         std::shared_ptr<coalesce_state> pState(new coalesce_state(handle));
                         boost::intrusive_ptr<listen_impl_func<H_STRONG>> li(
-                            reinterpret_cast<listen_impl_func<H_STRONG>*>(li_weak.get()));
+                            reinterpret_cast<listen_impl_func<H_STRONG>*>(li_event.get()));
                         if (alive(li)) {
                             return li->func(
                                 trans, target,
@@ -153,10 +153,10 @@ namespace sodium {
                 li->children.push_front(new_li);
             }
             auto p_sample_now(this->p_sample_now);
-            boost::intrusive_ptr<listen_impl_func<H_EVENT>> new_li_weak(
+            boost::intrusive_ptr<listen_impl_func<H_EVENT>> new_li_event(
                 reinterpret_cast<listen_impl_func<H_EVENT>*>(new_li.get()));
             return event_(
-                new_li_weak,
+                new_li_event,
                 p_sample_now != NULL
                 ? new event_::sample_now_func(
                     [p_sample_now, combine] (vector<light_ptr>& items) {
@@ -249,21 +249,31 @@ namespace sodium {
                 }
 
             private:
-                std::weak_ptr<impl::node> target;
                 std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handler;
         };
 
         behavior_impl::behavior_impl(const light_ptr& constant)
             : changes(event_()),
-              sample([constant] () { return constant; })
+              sample([constant] () { return constant; }),
+              kill(NULL)
         {
         }
 
         behavior_impl::behavior_impl(
             const event_& changes,
-            const std::function<light_ptr()>& sample)
-        : changes(changes), sample(sample)
+            const std::function<light_ptr()>& sample,
+            std::function<void()>* kill,
+            const std::shared_ptr<behavior_impl>& parent)
+            : changes(changes), sample(sample), kill(kill), parent(parent)
         {
+        }
+
+        behavior_impl::~behavior_impl()
+        {
+            if (kill) {
+                (*kill)();
+                delete kill;
+            }
         }
 
         /*!
@@ -307,8 +317,8 @@ namespace sodium {
         {
             std::shared_ptr<node> n(new node);
             std::weak_ptr<node> n_weak(n);
-            n->listen_impl = boost::intrusive_ptr<listen_impl_func<H_STRONG>>(
-                new listen_impl_func<H_STRONG>([n_weak] (transaction_impl* trans,
+            n->listen_impl = boost::intrusive_ptr<listen_impl_func<H_NODE>>(
+                new listen_impl_func<H_NODE>([n_weak] (transaction_impl* trans,
                         const std::shared_ptr<node>& target,
                         std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handler,
                         bool suppressEarlierFirings) -> std::function<void()>* {  // Register listener
@@ -343,9 +353,9 @@ namespace sodium {
                     }
                 })
             );
-            boost::intrusive_ptr<listen_impl_func<H_EVENT>> li_weak(
+            boost::intrusive_ptr<listen_impl_func<H_EVENT>> li_event(
                 reinterpret_cast<listen_impl_func<H_EVENT>*>(n->listen_impl.get()));
-            return std::make_tuple(event_(li_weak, sample_now), n);
+            return std::make_tuple(event_(li_event, sample_now), n);
         }
 
         event_sink_impl::event_sink_impl()
@@ -380,12 +390,11 @@ namespace sodium {
         {
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
             if (input.is_never())
-                return new behavior_impl(input, [initValue] () { return initValue; });
+                return new behavior_impl(initValue);
             else {
 #endif
-                auto p = unsafe_new_event();
                 std::shared_ptr<behavior_state> state(new behavior_state(initValue));
-                auto kill = input.listen_raw(trans0, std::get<1>(p),
+                auto kill = input.listen_raw(trans0, std::shared_ptr<node>(new node(SODIUM_IMPL_RANK_T_MAX)),
                     new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(
                         [state] (const std::shared_ptr<impl::node>& target, transaction_impl* trans, const light_ptr& ptr) {
                             bool first = !state->update;
@@ -397,11 +406,10 @@ namespace sodium {
                                 });
                             send(target, trans, ptr);
                         }), false);
-                auto changes = std::get<0>(p).unsafe_add_cleanup(kill);
                 auto sample = [state] () {
                     return state->current;
                 };
-                return new behavior_impl(changes, sample);
+                return new behavior_impl(input, sample, kill, std::shared_ptr<behavior_impl>());
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
             }
 #endif
@@ -423,14 +431,6 @@ namespace sodium {
 
         behavior_::behavior_(const light_ptr& a)
             : impl(new behavior_impl(a))
-        {
-        }
-
-        behavior_::behavior_(
-            const event_& changes,
-            const std::function<light_ptr()>& sample
-        )
-            : impl(new behavior_impl(changes, sample))
         {
         }
 
@@ -524,19 +524,19 @@ namespace sodium {
          */
         event_ map_(const std::function<light_ptr(const light_ptr&)>& f, const event_& ev)
         {
-            const boost::intrusive_ptr<listen_impl_func<H_EVENT>> li_weak(ev.p_listen_impl);
+            const boost::intrusive_ptr<listen_impl_func<H_EVENT>> li_event(ev.p_listen_impl);
             boost::intrusive_ptr<listen_impl_func<H_STRONG>> li(
-                reinterpret_cast<listen_impl_func<H_STRONG>*>(li_weak.get()));
+                reinterpret_cast<listen_impl_func<H_STRONG>*>(li_event.get()));
             boost::intrusive_ptr<listen_impl_func<H_STRONG>> new_li;
             if (alive(li)) {
                 new_li = boost::intrusive_ptr<listen_impl_func<H_STRONG>>(new listen_impl_func<H_STRONG>(
-                    [f,li_weak] (transaction_impl* trans0,
+                    [f,li_event] (transaction_impl* trans0,
                             std::shared_ptr<node> target,
                             std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handle,
                             bool suppressEarlierFirings) -> std::function<void()>* {
                         std::shared_ptr<std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>> pHandle(handle);
                         boost::intrusive_ptr<listen_impl_func<H_STRONG>> li(
-                            reinterpret_cast<listen_impl_func<H_STRONG>*>(li_weak.get()));
+                            reinterpret_cast<listen_impl_func<H_STRONG>*>(li_event.get()));
                         if (alive(li)) {
                             return li->func(trans0, target,
                                 new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(
@@ -556,10 +556,10 @@ namespace sodium {
                 li->children.push_front(new_li);
             }
             auto p_sample_now(ev.p_sample_now);
-            boost::intrusive_ptr<listen_impl_func<H_EVENT>> new_li_weak(
+            boost::intrusive_ptr<listen_impl_func<H_EVENT>> new_li_event(
                 reinterpret_cast<listen_impl_func<H_EVENT>*>(new_li.get()));
             return event_(
-                new_li_weak,
+                new_li_event,
                 p_sample_now
                 ? new event_::sample_now_func([p_sample_now, f] (vector<light_ptr>& items) {
                     size_t start = items.size();
@@ -579,10 +579,14 @@ namespace sodium {
             else
 #endif
                 return behavior_(
-                    map_(f, underlying_event(beh)),
-                    [f, beh] () -> light_ptr {
-                        return f(beh.impl->sample());
-                    }
+                    new behavior_impl(
+                        map_(f, underlying_event(beh)),
+                        [f, beh] () -> light_ptr {
+                            return f(beh.impl->sample());
+                        },
+                        NULL,
+                        beh.impl
+                    )
                 );
         }
 
