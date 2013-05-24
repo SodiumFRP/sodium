@@ -109,18 +109,20 @@ namespace sodium {
 
         event_ event_::coalesce_(const std::function<light_ptr(const light_ptr&, const light_ptr&)>& combine) const
         {
-            const std::weak_ptr<node::listen_impl_func>& li_weak = p_listen_impl;
-            std::shared_ptr<node::listen_impl_func> li = li_weak.lock();
-            std::shared_ptr<node::listen_impl_func> new_li;
-            if (li) {
-                new_li = std::shared_ptr<node::listen_impl_func>(new node::listen_impl_func(
+            const boost::intrusive_ptr<listen_impl_func<H_EVENT>> li_weak(this->p_listen_impl);
+            boost::intrusive_ptr<listen_impl_func<H_STRONG>> li(
+                reinterpret_cast<listen_impl_func<H_STRONG>*>(li_weak.get()));
+            boost::intrusive_ptr<listen_impl_func<H_STRONG>> new_li;
+            if (alive(li)) {
+                new_li = boost::intrusive_ptr<listen_impl_func<H_STRONG>>(new listen_impl_func<H_STRONG>(
                     [combine, li_weak] (transaction_impl* trans, const std::shared_ptr<node>& target,
                                     std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handle,
                                     bool suppressEarlierFirings)
                                                                                 -> std::function<void()>* {
                         std::shared_ptr<coalesce_state> pState(new coalesce_state(handle));
-                        std::shared_ptr<node::listen_impl_func> li = li_weak.lock();
-                        if (li) {
+                        boost::intrusive_ptr<listen_impl_func<H_STRONG>> li(
+                            reinterpret_cast<listen_impl_func<H_STRONG>*>(li_weak.get()));
+                        if (alive(li)) {
                             return li->func(
                                 trans, target,
                                 new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(
@@ -151,8 +153,10 @@ namespace sodium {
                 li->children.push_front(new_li);
             }
             auto p_sample_now(this->p_sample_now);
+            boost::intrusive_ptr<listen_impl_func<H_EVENT>> new_li_weak(
+                reinterpret_cast<listen_impl_func<H_EVENT>*>(new_li.get()));
             return event_(
-                new_li,
+                new_li_weak,
                 p_sample_now != NULL
                 ? new event_::sample_now_func(
                     [p_sample_now, combine] (vector<light_ptr>& items) {
@@ -303,8 +307,8 @@ namespace sodium {
         {
             std::shared_ptr<node> n(new node);
             std::weak_ptr<node> n_weak(n);
-            n->listen_impl = std::shared_ptr<node::listen_impl_func>(
-                new node::listen_impl_func([n_weak] (transaction_impl* trans,
+            n->listen_impl = boost::intrusive_ptr<listen_impl_func<H_STRONG>>(
+                new listen_impl_func<H_STRONG>([n_weak] (transaction_impl* trans,
                         const std::shared_ptr<node>& target,
                         std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handler,
                         bool suppressEarlierFirings) -> std::function<void()>* {  // Register listener
@@ -339,7 +343,9 @@ namespace sodium {
                     }
                 })
             );
-            return std::make_tuple(event_(n->listen_impl, sample_now), n);
+            boost::intrusive_ptr<listen_impl_func<H_EVENT>> li_weak(
+                reinterpret_cast<listen_impl_func<H_EVENT>*>(n->listen_impl.get()));
+            return std::make_tuple(event_(li_weak, sample_now), n);
         }
 
         event_sink_impl::event_sink_impl()
@@ -518,18 +524,20 @@ namespace sodium {
          */
         event_ map_(const std::function<light_ptr(const light_ptr&)>& f, const event_& ev)
         {
-            const std::weak_ptr<node::listen_impl_func>& li_weak = ev.p_listen_impl;
-            std::shared_ptr<node::listen_impl_func> li = li_weak.lock();
-            std::shared_ptr<node::listen_impl_func> new_li;
-            if (li) {
-                new_li = std::shared_ptr<node::listen_impl_func>(new node::listen_impl_func(
+            const boost::intrusive_ptr<listen_impl_func<H_EVENT>> li_weak(ev.p_listen_impl);
+            boost::intrusive_ptr<listen_impl_func<H_STRONG>> li(
+                reinterpret_cast<listen_impl_func<H_STRONG>*>(li_weak.get()));
+            boost::intrusive_ptr<listen_impl_func<H_STRONG>> new_li;
+            if (alive(li)) {
+                new_li = boost::intrusive_ptr<listen_impl_func<H_STRONG>>(new listen_impl_func<H_STRONG>(
                     [f,li_weak] (transaction_impl* trans0,
                             std::shared_ptr<node> target,
                             std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handle,
                             bool suppressEarlierFirings) -> std::function<void()>* {
                         std::shared_ptr<std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>> pHandle(handle);
-                        std::shared_ptr<node::listen_impl_func> li = li_weak.lock();
-                        if (li) {
+                        boost::intrusive_ptr<listen_impl_func<H_STRONG>> li(
+                            reinterpret_cast<listen_impl_func<H_STRONG>*>(li_weak.get()));
+                        if (alive(li)) {
                             return li->func(trans0, target,
                                 new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(
                                     [pHandle, f] (const std::shared_ptr<impl::node>& target, transaction_impl* trans, const light_ptr& ptr) {
@@ -548,8 +556,10 @@ namespace sodium {
                 li->children.push_front(new_li);
             }
             auto p_sample_now(ev.p_sample_now);
+            boost::intrusive_ptr<listen_impl_func<H_EVENT>> new_li_weak(
+                reinterpret_cast<listen_impl_func<H_EVENT>*>(new_li.get()));
             return event_(
-                new_li,
+                new_li_weak,
                 p_sample_now
                 ? new event_::sample_now_func([p_sample_now, f] (vector<light_ptr>& items) {
                     size_t start = items.size();

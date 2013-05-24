@@ -16,6 +16,20 @@
 #include <list>
 #include <forward_list>
 
+namespace sodium {
+    namespace impl {
+        struct H_EVENT {};
+        struct H_STRONG {};
+
+        template <class Allocator>
+        struct listen_impl_func;
+    }
+}
+
+void intrusive_ptr_add_ref(sodium::impl::listen_impl_func<sodium::impl::H_EVENT>* p);
+void intrusive_ptr_release(sodium::impl::listen_impl_func<sodium::impl::H_EVENT>* p);
+void intrusive_ptr_add_ref(sodium::impl::listen_impl_func<sodium::impl::H_STRONG>* p);
+void intrusive_ptr_release(sodium::impl::listen_impl_func<sodium::impl::H_STRONG>* p);
 
 #include <boost/intrusive_ptr.hpp>
 
@@ -66,6 +80,52 @@ namespace sodium {
         typedef unsigned long rank_t;
         #define SODIUM_IMPL_RANK_T_MAX ULONG_MAX
 
+        class node;
+
+        template <class Allocator>
+        struct listen_impl_func {
+            typedef std::function<std::function<void()>*(
+                transaction_impl*,
+                const std::shared_ptr<impl::node>&,
+                std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>*,
+                bool)> closure;
+            listen_impl_func(const closure& func)
+                : strong_count(0), weak_count(0), alive_(true), func(func) {}
+            ~listen_impl_func()
+            {
+                for (auto it = cleanups.begin(); it != cleanups.end(); ++it) {
+                    (**it)();
+                    delete *it;
+                }
+            }
+            int strong_count;
+            int weak_count;
+            bool alive_;
+            closure func;
+            std::forward_list<std::function<void()>*> cleanups;
+            std::forward_list<boost::intrusive_ptr<listen_impl_func<H_STRONG>>> children;
+            void update() {
+                if (strong_count == 0) {
+                    strong_count += 1000;
+                    std::forward_list<std::function<void()>*> cleanups(this->cleanups);
+                    this->cleanups.clear();
+                    for (auto it = cleanups.begin(); it != cleanups.end(); ++it) {
+                        (**it)();
+                        delete *it;
+                    }
+                    children.clear();  // can call us back recursively
+                    strong_count -= 1000;
+                    alive_ = false;
+                }
+                if (strong_count == 0 && weak_count == 0)
+                    delete this;
+            }
+        };
+
+        inline bool alive(const boost::intrusive_ptr<listen_impl_func<H_STRONG>>& li) {
+            return li && li->alive_;
+        }
+
         class node
         {
             public:
@@ -79,34 +139,13 @@ namespace sodium {
                     std::shared_ptr<node> n;
                 };
 
-                template <class Allocator>
-                struct listen_impl_func {
-                    typedef std::function<std::function<void()>*(
-                        transaction_impl*,
-                        const std::shared_ptr<impl::node>&,
-                        std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>*,
-                        bool)> closure;
-                    listen_impl_func(const closure& func)
-                        : func(func) {}
-                    ~listen_impl_func()
-                    {
-                        for (auto it = cleanups.begin(); it != cleanups.end(); ++it) {
-                            (**it)();
-                            delete *it;
-                        }
-                    }
-                    closure func;
-                    std::forward_list<std::function<void()>*> cleanups;
-                    std::forward_list<std::shared_ptr<listen_impl_func>> children;
-                };
-
             public:
                 node() : rank(0) {}
 
                 rank_t rank;
                 std::forward_list<node::target> targets;
                 std::forward_list<light_ptr> firings;
-                std::shared_ptr<listen_impl_func> listen_impl;
+                boost::intrusive_ptr<listen_impl_func<H_STRONG>> listen_impl;
 
                 void link(void* holder, const std::shared_ptr<node>& target);
                 void unlink(void* holder);
@@ -114,6 +153,11 @@ namespace sodium {
             private:
                 void ensure_bigger_than(std::set<node*>& visited, rank_t limit);
         };
+    }
+}
+
+namespace sodium {
+    namespace impl {
 
         template <class A>
         struct ordered_value {

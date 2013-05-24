@@ -59,20 +59,20 @@ namespace sodium {
             typedef std::function<void(std::vector<light_ptr>&)> sample_now_func;
 
         protected:
-            std::intrusive_ptr<node::listen_impl_func<H_EVENT>> p_listen_impl;
+            boost::intrusive_ptr<listen_impl_func<H_EVENT>> p_listen_impl;
             std::shared_ptr<sample_now_func> p_sample_now;
 
         public:
             event_();
-            event_(const std::weak_ptr<node::listen_impl_func<H_EVENT>>& p_listen_impl,
+            event_(const boost::intrusive_ptr<listen_impl_func<H_EVENT>>& p_listen_impl,
                    const std::shared_ptr<sample_now_func>& p_sample_now)
                 : p_listen_impl(p_listen_impl), p_sample_now(p_sample_now) {}
-            event_(const std::weak_ptr<node::listen_impl_func>& p_listen_impl,
+            event_(const boost::intrusive_ptr<listen_impl_func<H_EVENT>>& p_listen_impl,
                    sample_now_func* p_sample_now)
                 : p_listen_impl(p_listen_impl), p_sample_now(p_sample_now) {}
 
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
-            bool is_never() const { return p_listen_impl.expired(); }
+            bool is_never() const { return !p_listen_impl || p_listen_impl->strong_count == 0; }
 #endif
 
         protected:
@@ -92,9 +92,10 @@ namespace sodium {
              */
             event_ unsafe_add_cleanup(std::function<void()>* cleanup)
             {
-                std::shared_ptr<node::listen_impl_func> li = p_listen_impl.lock();
+                boost::intrusive_ptr<listen_impl_func<H_STRONG>> li(
+                    reinterpret_cast<listen_impl_func<H_STRONG>*>(p_listen_impl.get()));
                 if (cleanup != NULL) {
-                    if (li)
+                    if (alive(li))
                         li->cleanups.push_front(cleanup);
                     else {
                         (*cleanup)();
@@ -110,9 +111,10 @@ namespace sodium {
              */
             event_ unsafe_add_cleanup(std::function<void()>* cleanup1, std::function<void()>* cleanup2)
             {
-                std::shared_ptr<node::listen_impl_func> li = p_listen_impl.lock();
+                boost::intrusive_ptr<listen_impl_func<H_STRONG>> li(
+                    reinterpret_cast<listen_impl_func<H_STRONG>*>(p_listen_impl.get()));
                 if (cleanup1 != NULL) {
-                    if (li)
+                    if (alive(li))
                         li->cleanups.push_front(cleanup1);
                     else {
                         (*cleanup1)();
@@ -120,7 +122,7 @@ namespace sodium {
                     }
                 }
                 if (cleanup2 != NULL) {
-                    if (li)
+                    if (alive(li))
                         li->cleanups.push_front(cleanup2);
                     else {
                         (*cleanup2)();
@@ -157,9 +159,10 @@ namespace sodium {
                 std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handler,
                 bool suppressEarlierFirings) const
             {
-                std::shared_ptr<node::listen_impl_func> l = p_listen_impl.lock();
-                if (l)
-                    return l->func(trans, target, handler, suppressEarlierFirings);
+                boost::intrusive_ptr<listen_impl_func<H_STRONG>> li(
+                    reinterpret_cast<listen_impl_func<H_STRONG>*>(p_listen_impl.get()));
+                if (alive(li))
+                    return li->func(trans, target, handler, suppressEarlierFirings);
                 else {
                     delete handler;
                     return NULL;
@@ -392,8 +395,8 @@ namespace sodium {
              */
             event() {}
         protected:
-            event(const impl::node::listen_impl_func& listen)
-                : impl::event_(impl::node::listen_impl_func(listen), new impl::event_::sample_now_func(NULL)) {}
+            event(const impl::listen_impl_func<impl::H_EVENT>& listen)
+                : impl::event_(listen, new impl::event_::sample_now_func(NULL)) {}
             event(const impl::event_& ev) : impl::event_(ev) {}
         public:
             /*!
@@ -609,7 +612,7 @@ namespace sodium {
         public:
             event_sink()
             {
-                *static_cast<event<A,P>*>(this) = impl.construct();
+                *reinterpret_cast<event<A,P>*>(this) = impl.construct();
             }
 
             void send(const A& a) const {

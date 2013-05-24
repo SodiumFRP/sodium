@@ -10,6 +10,28 @@
 using namespace std;
 using namespace boost;
 
+void intrusive_ptr_add_ref(sodium::impl::listen_impl_func<sodium::impl::H_EVENT>* p)
+{
+    p->weak_count++;
+}
+
+void intrusive_ptr_release(sodium::impl::listen_impl_func<sodium::impl::H_EVENT>* p)
+{
+    p->weak_count--;
+    p->update();
+}
+
+void intrusive_ptr_add_ref(sodium::impl::listen_impl_func<sodium::impl::H_STRONG>* p)
+{
+    p->strong_count++;
+}
+
+void intrusive_ptr_release(sodium::impl::listen_impl_func<sodium::impl::H_STRONG>* p)
+{
+    p->strong_count--;
+    p->update();
+}
+
 namespace sodium {
 
     mutex::mutex()
@@ -220,7 +242,7 @@ namespace sodium {
 
     impl::transaction_impl* simple_policy::current_transaction(partition* part)
     {
-        return static_cast<impl::transaction_impl*>(pthread_getspecific(part->key));
+        return reinterpret_cast<impl::transaction_impl*>(pthread_getspecific(part->key));
     }
 
     void simple_policy::initiate(impl::transaction_impl* impl)
