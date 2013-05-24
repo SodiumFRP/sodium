@@ -135,11 +135,7 @@ namespace sodium {
             /*!
              * Create a new event that is like this event but has an extra cleanup.
              */
-            event_ add_cleanup_(std::function<void()>* cleanup) const
-            {
-                return event_(*this).unsafe_add_cleanup(cleanup);
-            }
-
+            event_ add_cleanup_(transaction_impl* trans, std::function<void()>* cleanup) const;
             behavior_ hold_(transaction_impl* trans, const light_ptr& initA) const;
             event_ once_(transaction_impl* trans) const;
             event_ merge_(transaction_impl* trans, const event_& other) const;
@@ -593,7 +589,8 @@ namespace sodium {
              */
             event<A, P> add_cleanup(const std::function<void()>& cleanup) const
             {
-                return event<A, P>(add_cleanup_(new std::function<void()>(cleanup)));
+                transaction<P> trans;
+                return event<A, P>(add_cleanup_(trans.impl(), new std::function<void()>(cleanup)));
             }
     };  // end class event
 

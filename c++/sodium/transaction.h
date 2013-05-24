@@ -97,10 +97,7 @@ namespace sodium {
                 : strong_count(0), event_count(0), node_count(0), alive_(true), func(func) {}
             ~listen_impl_func()
             {
-                for (auto it = cleanups.begin(); it != cleanups.end(); ++it) {
-                    (**it)();
-                    delete *it;
-                }
+                assert(cleanups.begin() == cleanups.end());
             }
             int strong_count;
             int event_count;
@@ -108,18 +105,16 @@ namespace sodium {
             bool alive_;
             closure func;
             std::forward_list<std::function<void()>*> cleanups;
-            std::forward_list<boost::intrusive_ptr<listen_impl_func<H_EVENT>>> children;
             void update() {
                 if (strong_count || (node_count && event_count))
                     ;
                 else {
-                    strong_count += 1000000;
+                    strong_count += 1000000;  // protect against cleanups calling us recursively
                     for (auto it = cleanups.begin(); it != cleanups.end(); ++it) {
                         (**it)();
                         delete *it;
                     }
                     cleanups.clear();
-                    children.clear();  // can call us back recursively
                     strong_count -= 1000000;
                     alive_ = false;
                 }

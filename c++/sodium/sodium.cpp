@@ -106,71 +106,6 @@ namespace sodium {
 
         event_ event_::coalesce_(transaction_impl* trans, const std::function<light_ptr(const light_ptr&, const light_ptr&)>& combine) const
         {
-#if 0
-            const boost::intrusive_ptr<listen_impl_func<H_EVENT>> li_event(this->p_listen_impl);
-            boost::intrusive_ptr<listen_impl_func<H_EVENT>> new_li_event;
-            if (alive(li_event)) {
-                new_li_event = boost::intrusive_ptr<listen_impl_func<H_EVENT>>(new listen_impl_func<H_EVENT>(
-                    [combine, li_event] (transaction_impl* trans, const std::shared_ptr<node>& target,
-                                    std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handle,
-                                    bool suppressEarlierFirings)
-                                                                                -> std::function<void()>* {
-                        std::shared_ptr<coalesce_state> pState(new coalesce_state(handle));
-                        boost::intrusive_ptr<listen_impl_func<H_STRONG>> li(
-                            reinterpret_cast<listen_impl_func<H_STRONG>*>(li_event.get()));
-                        if (alive(li_event)) {
-                            return li_event->func(
-                                trans, target,
-                                new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(
-                                    [combine, pState] (const std::shared_ptr<impl::node>& target, transaction_impl* trans, const light_ptr& ptr) {
-                                        if (!pState->oValue) {
-                                            pState->oValue = boost::optional<light_ptr>(ptr);
-                                            trans->prioritized(target, [target, pState] (transaction_impl* trans) {
-                                                if (pState->oValue) {
-                                                    if (pState->handle)
-                                                        (*pState->handle)(target, trans, pState->oValue.get());
-                                                    else
-                                                        send(target, trans, pState->oValue.get());
-                                                    pState->oValue = boost::optional<light_ptr>();
-                                                }
-                                            });
-                                        }
-                                        else
-                                            pState->oValue = make_optional(combine(pState->oValue.get(), ptr));
-                                    }),
-                                suppressEarlierFirings);
-                        }
-                        else {
-                            delete handle;
-                            return NULL;
-                        }
-                    })
-                );
-                li_event->children.push_front(new_li_event);
-            }
-            auto p_sample_now(this->p_sample_now);
-            return event_(
-                new_li_event,
-                p_sample_now != NULL
-                ? new event_::sample_now_func(
-                    [p_sample_now, combine] (vector<light_ptr>& items) {
-                        size_t start = items.size();
-                        (*p_sample_now)(items);
-                        auto first = items.begin() + start;
-                        if (first != items.end()) {
-                            auto it = first + 1;
-                            if (it != items.end()) {
-                                light_ptr sum = *first;
-                                while (it != items.end())
-                                    sum = combine(sum, *it++);
-                                items.erase(first, items.end());
-                                items.push_back(sum);
-                            }
-                        }
-                    })
-                : NULL
-            );
-#else
             std::shared_ptr<coalesce_state> pState(new coalesce_state);
             auto p_sample_now(this->p_sample_now);
             auto p = impl::unsafe_new_event(new event_::sample_now_func([p_sample_now, combine] (vector<light_ptr>& items) {
@@ -205,7 +140,6 @@ namespace sodium {
                             pState->oValue = make_optional(combine(pState->oValue.get(), ptr));
                     }), false);
             return std::get<0>(p).unsafe_add_cleanup(kill);
-#endif
         }
 
         event_ event_::last_firing_only_(transaction_impl* trans) const
@@ -549,54 +483,23 @@ namespace sodium {
 #endif
         }
 
+        event_ event_::add_cleanup_(transaction_impl* trans, std::function<void()>* cleanup) const
+        {
+            auto p = impl::unsafe_new_event(
+                p_sample_now != NULL
+                ? new event_::sample_now_func(*p_sample_now)
+                : NULL);
+            auto kill = listen_raw(trans, std::get<1>(p),
+                    new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(send),
+                    false);
+            return std::get<0>(p).unsafe_add_cleanup(kill, cleanup);
+        }
+
         /*!
          * Map a function over this event to modify the output value.
          */
         event_ map_(transaction_impl* trans, const std::function<light_ptr(const light_ptr&)>& f, const event_& ev)
         {
-#if 0
-            const boost::intrusive_ptr<listen_impl_func<H_EVENT>> li_event(ev.p_listen_impl);
-            boost::intrusive_ptr<listen_impl_func<H_EVENT>> new_li_event;
-            if (alive(li_event)) {
-                new_li_event = boost::intrusive_ptr<listen_impl_func<H_EVENT>>(new listen_impl_func<H_EVENT>(
-                    [f,li_event] (transaction_impl* trans0,
-                            std::shared_ptr<node> target,
-                            std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handle,
-                            bool suppressEarlierFirings) -> std::function<void()>* {
-                        std::shared_ptr<std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>> pHandle(handle);
-                        boost::intrusive_ptr<listen_impl_func<H_STRONG>> li(
-                            reinterpret_cast<listen_impl_func<H_STRONG>*>(li_event.get()));
-                        if (alive(li)) {
-                            return li->func(trans0, target,
-                                new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(
-                                    [pHandle, f] (const std::shared_ptr<impl::node>& target, transaction_impl* trans, const light_ptr& ptr) {
-                                        if (pHandle.get())
-                                            (*pHandle)(target, trans, f(ptr));
-                                        else
-                                            send(target, trans, f(ptr));
-                                    }), suppressEarlierFirings);
-                        }
-                        else {
-                            delete handle;
-                            return NULL;
-                        }
-                    }
-                ));
-                li_event->children.push_front(new_li_event);
-            }
-            auto p_sample_now(ev.p_sample_now);
-            return event_(
-                new_li_event,
-                p_sample_now
-                ? new event_::sample_now_func([p_sample_now, f] (vector<light_ptr>& items) {
-                    size_t start = items.size();
-                    (*p_sample_now)(items);
-                    for (auto it = items.begin() + start; it != items.end(); ++it)
-                        *it = f(*it);
-                })
-                : NULL
-            );
-#else
             auto p_sample_now(ev.p_sample_now);
             auto p = impl::unsafe_new_event(
                 p_sample_now != NULL
@@ -613,7 +516,6 @@ namespace sodium {
                             send(target, trans, f(ptr));
                         }), false);
             return std::get<0>(p).unsafe_add_cleanup(kill);
-#endif
         }
 
         behavior_ map_(transaction_impl* trans, const std::function<light_ptr(const light_ptr&)>& f, const behavior_& beh) {
