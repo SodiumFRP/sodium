@@ -5,8 +5,8 @@
  * C++ implementation courtesy of International Telematics Ltd.
  */
 
-#include "sodium/test_sodium.h"
-#include "sodium/sodium.h"
+#include "test_sodium.h"
+#include <sodium/sodium.h>
 
 #include <cppunit/ui/text/TestRunner.h>
 #include <stdio.h>

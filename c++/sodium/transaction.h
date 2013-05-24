@@ -16,6 +16,9 @@
 #include <list>
 #include <forward_list>
 
+
+#include <boost/intrusive_ptr.hpp>
+
 namespace sodium {
 
     class mutex
@@ -76,6 +79,7 @@ namespace sodium {
                     std::shared_ptr<node> n;
                 };
 
+                template <class Allocator>
                 struct listen_impl_func {
                     typedef std::function<std::function<void()>*(
                         transaction_impl*,

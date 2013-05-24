@@ -59,12 +59,12 @@ namespace sodium {
             typedef std::function<void(std::vector<light_ptr>&)> sample_now_func;
 
         protected:
-            std::weak_ptr<node::listen_impl_func> p_listen_impl;
+            std::intrusive_ptr<node::listen_impl_func<H_EVENT>> p_listen_impl;
             std::shared_ptr<sample_now_func> p_sample_now;
 
         public:
             event_();
-            event_(const std::weak_ptr<node::listen_impl_func>& p_listen_impl,
+            event_(const std::weak_ptr<node::listen_impl_func<H_EVENT>>& p_listen_impl,
                    const std::shared_ptr<sample_now_func>& p_sample_now)
                 : p_listen_impl(p_listen_impl), p_sample_now(p_sample_now) {}
             event_(const std::weak_ptr<node::listen_impl_func>& p_listen_impl,
