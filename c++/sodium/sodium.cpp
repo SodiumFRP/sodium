@@ -84,11 +84,14 @@ namespace sodium {
         }
 
         event_ event_::merge_(transaction_impl* trans, const event_& other) const {
-            const event_& me(*this);
-            auto p = impl::unsafe_new_event(new event_::sample_now_func([me, other] (std::vector<light_ptr>& items) {
-                me.sample_now(items);
-                other.sample_now(items);
-            }));
+            auto sample_now_1(this->p_sample_now);
+            auto sample_now_2(other.p_sample_now);
+            auto p = impl::unsafe_new_event(sample_now_1 || sample_now_2 ? new event_::sample_now_func([sample_now_1, sample_now_2] (std::vector<light_ptr>& items) {
+                if (sample_now_1)
+                    (*sample_now_1)(items);
+                if (sample_now_2)
+                    (*sample_now_2)(items);
+            }) : NULL);
             auto target = std::get<1>(p);
             auto kill_one = this->listen_raw(trans, target, NULL, false);
             auto kill_two = other.listen_raw(trans, target, NULL, false);
