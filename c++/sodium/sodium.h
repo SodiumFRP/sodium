@@ -87,8 +87,8 @@ namespace sodium {
                         bool suppressEarlierFirings) const;
 
             /*!
-             * This is far more efficient than add_cleanup, but it modifies the event
-             * and returns a copy of itself, so it should only be used where you are
+             * This is far more efficient than add_cleanup because it modifies the event
+             * in place.
              */
             event_ unsafe_add_cleanup(std::function<void()>* cleanup)
             {
@@ -106,8 +106,8 @@ namespace sodium {
             }
 
             /*!
-             * This is far more efficient than add_cleanup, but it modifies the event
-             * and returns a copy of itself, so it should only be used where you are
+             * This is far more efficient than add_cleanup because it modifies the event
+             * in place.
              */
             event_ unsafe_add_cleanup(std::function<void()>* cleanup1, std::function<void()>* cleanup2)
             {
@@ -292,13 +292,9 @@ namespace sodium {
             }
 
             /*!
-             * listen to the underlying event, i.e. to updates.
+             * Returns a new behavior with the specified cleanup added to it, such that
+             * it will be executed when no copies of the new behavior are referenced.
              */
-            std::function<void()> listen_raw(impl::transaction_impl* trans, const std::shared_ptr<impl::node>& target,
-                                std::function<void(const std::shared_ptr<impl::node>&, impl::transaction_impl*, const light_ptr&)>* handle) const {
-                return impl->changes.listen_raw(trans, target, handle, false);
-            }
-
             behavior<A, P> add_cleanup(const std::function<void()>& cleanup) const {
                 return behavior<A, P>(new impl::behavior_impl(
                     impl->changes,
@@ -437,6 +433,11 @@ namespace sodium {
                 return event<B, P>(impl::map_(SODIUM_DETYPE_FUNCTION1(A,B,f), *this));
             }
 
+            /*!
+             * Merge two events. If both events fire in the same transaction, then the
+             * output event will just give two firings within the same transaction.
+             * This is allowed, but it is usually best avoided.
+             */
             event<A, P> merge(const event<A, P>& other) const {
                 transaction<P> trans;
                 return event<A, P>(merge_(trans.impl(), other));
@@ -484,6 +485,12 @@ namespace sodium {
                 }));
             }
 
+            /*!
+             * Create a behavior that holds at any given time the most recent value
+             * that has arrived from this event. Since behaviors must always have a current
+             * value, you must supply an initial value that it has until the first event
+             * occurrence updates it.
+             */
             behavior<A, P> hold(const A& initA) const
             {
                 transaction<P> trans;
@@ -603,6 +610,10 @@ namespace sodium {
         };
     }
 
+    /*!
+     * An event with a send() method to allow values to be pushed into it
+     * from the imperative world.
+     */
     template <class A, class P = def_part>
     class event_sink : public event<A, P>
     {
@@ -666,6 +677,10 @@ namespace sodium {
         return std::get<0>(p).unsafe_add_cleanup(kill);
     }
 
+    /*!
+     * A behavior with a send() method to allow its value to be changed
+     * from the imperative world.
+     */
     template <class A, class P = def_part>
     class behavior_sink : public behavior<A, P>
     {
@@ -698,6 +713,10 @@ namespace sodium {
         behavior_ apply(transaction_impl* trans, const behavior_& bf, const behavior_& ba);
     };
 
+    /*!
+     * Apply a function contained in a behavior to a behavior value. This is the primitive
+     * for all lifting of functions into behaviors.
+     */
     template <class A, class B, class P>
     behavior<B, P> apply(const behavior<std::function<B(const A&)>, P>& bf, const behavior<A, P>& ba)
     {
@@ -719,8 +738,10 @@ namespace sodium {
      * forward reference an event.
      *
      *   event_loop<A> ea;
-     *   auto ea_out = doSomething(ea);
+     *   auto ea_out = do_something(ea);
      *   ea.loop(ea_out);  // ea is now the same as ea_out
+     *
+     * TO DO: Loops do not yet get deallocated properly.
      */
     template <class A, class P = def_part>
     class event_loop : public event<A, P>
@@ -781,9 +802,11 @@ namespace sodium {
      * Enable the construction of behavior loops, like this. This gives the ability to
      * forward reference a behavior.
      *
-     *   behavior_loop<A> ea;
-     *   auto ea_out = doSomething(ea);
-     *   ea.loop(ea_out);  // ea is now the same as ea_out
+     *   behavior_loop<A> ba;
+     *   auto ba_out = do_something(ea);
+     *   ea.loop(ba_out);  // ba is now the same as ba_out
+     *
+     * TO DO: Loops do not yet get deallocated properly.
      */
     template <class A, class P = def_part>
     class behavior_loop : public behavior<A, P>
@@ -839,7 +862,7 @@ namespace sodium {
     }
 
     /*!
-     * behavior variant of switch.
+     * Behavior variant of switch.
      */
     template <class A, class P = def_part>
     behavior<A, P> switch_b(const behavior<behavior<A, P>, P>& bba)
@@ -848,6 +871,9 @@ namespace sodium {
         return behavior<A, P>(impl::switch_b(trans.impl(), bba));
     }
 
+    /*!
+     * Lift a binary function into behaviors.
+     */
     template <class A, class B, class C, class P = def_part>
     behavior<C, P> lift(const std::function<C(const A&, const B&)>& f, const behavior<A, P>& ba, const behavior<B, P>& bb)
     {
@@ -860,6 +886,9 @@ namespace sodium {
         return apply<B, C>(ba.map_(fa), bb);
     }
 
+    /*!
+     * Lift a ternary function into behaviors.
+     */
     template <class A, class B, class C, class D, class P = def_part>
     behavior<D, P> lift(const std::function<D(const A&, const B&, const C&)>& f,
         const behavior<A, P>& ba,
