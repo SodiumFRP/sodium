@@ -55,7 +55,7 @@ class test_sodium : public CppUnit::TestFixture {
     CPPUNIT_TEST(switch_e1);
     CPPUNIT_TEST(loop_behavior);
     CPPUNIT_TEST(split1);
-    //CPPUNIT_TEST(add_cleanup1);
+    CPPUNIT_TEST(add_cleanup1);
     CPPUNIT_TEST(add_cleanup2);
     CPPUNIT_TEST_SUITE_END();
 

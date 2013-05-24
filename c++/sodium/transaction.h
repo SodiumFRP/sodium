@@ -108,7 +108,7 @@ namespace sodium {
             bool alive_;
             closure func;
             std::forward_list<std::function<void()>*> cleanups;
-            std::forward_list<boost::intrusive_ptr<listen_impl_func<H_STRONG>>> children;
+            std::forward_list<boost::intrusive_ptr<listen_impl_func<H_EVENT>>> children;
             void update() {
                 if (strong_count || (node_count && event_count))
                     ;
