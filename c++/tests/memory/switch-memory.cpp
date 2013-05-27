@@ -16,7 +16,7 @@ using namespace std;
 int main(int argc, char* argv[])
 {
     #define N 100
-    behavior_sink<string>* as[N];
+    behavior<string>* as[N];
     behavior_sink<string>* bs[N];
     behavior_sink<behavior<string>>* ss[N];
     behavior<string>* os[N];
@@ -24,7 +24,7 @@ int main(int argc, char* argv[])
     {
         transaction<def_part> t;
         for (int i = 0; i < N; i++) {
-            as[i] = new behavior_sink<string>("hello");
+            as[i] = new behavior<string>("hello");
             bs[i] = new behavior_sink<string>("world");
             ss[i] = new behavior_sink<behavior<string>>(*as[i]);
             os[i] = new behavior<string>(switch_b(*ss[i]));

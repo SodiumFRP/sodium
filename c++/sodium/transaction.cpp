@@ -112,7 +112,17 @@ namespace sodium {
 
         node::node() : rank(0) {}
         node::node(rank_t rank) : rank(rank) {}
-        node::~node() {}
+        node::~node()
+        {
+            for (auto it = targets.begin(); it != targets.end(); it++) {
+                auto targ = it->n;
+                if (targ) {
+                    boost::intrusive_ptr<listen_impl_func<H_EVENT>> li(
+                        reinterpret_cast<listen_impl_func<H_EVENT>*>(listen_impl.get()));
+                    targ->sources.remove(li);
+                }
+            }
+        }
 
         void node::link(void* holder, const std::shared_ptr<node>& targ)
         {
@@ -134,7 +144,7 @@ namespace sodium {
                 ++this_it;
                 if (this_it == targets.end())
                     break;
-                if (this_it->holder == holder) {
+                if (this_it->h == holder) {
                     auto targ = this_it->n;
                     targets.erase_after(last_it);
                     if (targ) {

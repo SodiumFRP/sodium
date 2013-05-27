@@ -719,11 +719,11 @@ void test_sodium::add_cleanup2()
 
 int main(int argc, char* argv[])
 {
-    //for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 100; i++) {
         CppUnit::TextUi::TestRunner runner;
         runner.addTest( test_sodium::suite() );
         runner.run();
-    //}
+    }
     return 0;
 }
 

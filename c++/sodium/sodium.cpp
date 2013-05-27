@@ -268,9 +268,9 @@ namespace sodium {
                 }
             }
             for (int i = 0; i < ifs; i++)
-                ((holder*)fs[i]->holder)->handle(fs[i]->n, trans, ptr);
+                ((holder*)fs[i]->h)->handle(fs[i]->n, trans, ptr);
             for (auto it = fsOverflow.begin(); it != fsOverflow.end(); ++it)
-                ((holder*)(*it)->holder)->handle((*it)->n, trans, ptr);
+                ((holder*)(*it)->h)->handle((*it)->n, trans, ptr);
         }
 
         /*!
@@ -307,8 +307,7 @@ namespace sodium {
                                 n->unlink(h);
                                 part->mx.unlock();
                             }
-                            delete h;  // Note: There is no protection against kill function
-                                       // being executed twice
+                            delete h;
                         });
                     }
                     else {

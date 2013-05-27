@@ -136,11 +136,12 @@ namespace sodium {
             public:
                 struct target {
                     target(
-                        void* holder,
+                        void* h,
                         const std::shared_ptr<node>& n
-                    ) : holder(holder),
+                    ) : h(h),
                         n(n) {}
-                    void* holder;
+
+                    void* h;
                     std::shared_ptr<node> n;
                 };
 
