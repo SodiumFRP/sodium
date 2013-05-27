@@ -282,7 +282,7 @@ namespace sodium {
             std::shared_ptr<node> n(new node);
             std::weak_ptr<node> n_weak(n);
             n->listen_impl = boost::intrusive_ptr<listen_impl_func<H_NODE>>(
-                new listen_impl_func<H_NODE>([n_weak] (transaction_impl* trans,
+                new listen_impl_func<H_NODE>(new listen_impl_func<H_NODE>::closure([n_weak] (transaction_impl* trans,
                         const std::shared_ptr<node>& target,
                         std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handler,
                         bool suppressEarlierFirings) -> std::function<void()>* {  // Register listener
@@ -314,7 +314,7 @@ namespace sodium {
                         delete handler;
                         return NULL;
                     }
-                })
+                }))
             );
             boost::intrusive_ptr<listen_impl_func<H_EVENT>> li_event(
                 reinterpret_cast<listen_impl_func<H_EVENT>*>(n->listen_impl.get()));

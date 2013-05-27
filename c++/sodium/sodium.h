@@ -158,7 +158,7 @@ namespace sodium {
                 boost::intrusive_ptr<listen_impl_func<H_STRONG>> li(
                     reinterpret_cast<listen_impl_func<H_STRONG>*>(p_listen_impl.get()));
                 if (alive(li))
-                    return li->func(trans, target, handler, suppressEarlierFirings);
+                    return (*li->func)(trans, target, handler, suppressEarlierFirings);
                 else {
                     delete handler;
                     return NULL;

@@ -12,34 +12,34 @@ using namespace boost;
 
 void intrusive_ptr_add_ref(sodium::impl::listen_impl_func<sodium::impl::H_EVENT>* p)
 {
-    p->event_count++;
+    p->counts.inc_event();
 }
 
 void intrusive_ptr_release(sodium::impl::listen_impl_func<sodium::impl::H_EVENT>* p)
 {
-    p->event_count--;
+    p->counts.dec_event();
     p->update();
 }
 
 void intrusive_ptr_add_ref(sodium::impl::listen_impl_func<sodium::impl::H_STRONG>* p)
 {
-    p->strong_count++;
+    p->counts.inc_strong();
 }
 
 void intrusive_ptr_release(sodium::impl::listen_impl_func<sodium::impl::H_STRONG>* p)
 {
-    p->strong_count--;
+    p->counts.dec_strong();
     p->update();
 }
 
 void intrusive_ptr_add_ref(sodium::impl::listen_impl_func<sodium::impl::H_NODE>* p)
 {
-    p->node_count++;
+    p->counts.inc_node();
 }
 
 void intrusive_ptr_release(sodium::impl::listen_impl_func<sodium::impl::H_NODE>* p)
 {
-    p->node_count--;
+    p->counts.dec_node();
     p->update();
 }
 

@@ -7,6 +7,7 @@
 #ifndef _SODIUM_TRANSACTION_H_
 #define _SODIUM_TRANSACTION_H_
 
+#include <sodium/count_set.h>
 #include <boost/shared_ptr.hpp>
 #include <boost/optional.hpp>
 #include <sodium/unit.h>
@@ -85,7 +86,7 @@ namespace sodium {
         #define SODIUM_IMPL_RANK_T_MAX ULONG_MAX
 
         class node;
-
+        
         template <class Allocator>
         struct listen_impl_func {
             typedef std::function<std::function<void()>*(
@@ -93,42 +94,38 @@ namespace sodium {
                 const std::shared_ptr<impl::node>&,
                 std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>*,
                 bool)> closure;
-            listen_impl_func(const closure& func)
-                : strong_count(0), event_count(0), node_count(0), alive_(true), func(func) {}
+            listen_impl_func(closure* func)
+                : func(func) {}
             ~listen_impl_func()
             {
-                assert(cleanups.begin() == cleanups.end());
+                assert(cleanups.begin() == cleanups.end() && func == NULL);
             }
-            int strong_count;
-            int event_count;
-            int node_count;
-            bool alive_;
-            closure func;
+            count_set counts;
+            closure* func;
             std::forward_list<std::function<void()>*> cleanups;
             void update() {
-                if (strong_count || (node_count && event_count))
-                    ;
-                else {
-                    strong_count += 1000000;  // protect against cleanups calling us recursively
+                if (func && !counts.active()) {
+                    counts.inc_strong();
                     for (auto it = cleanups.begin(); it != cleanups.end(); ++it) {
                         (**it)();
                         delete *it;
                     }
                     cleanups.clear();
-                    strong_count -= 1000000;
-                    alive_ = false;
+                    delete func;
+                    func = NULL;
+                    counts.dec_strong();
                 }
-                if (strong_count == 0 && node_count == 0 && event_count == 0)
+                if (!counts.alive())
                     delete this;
             }
         };
 
         inline bool alive(const boost::intrusive_ptr<listen_impl_func<H_STRONG>>& li) {
-            return li && li->alive_;
+            return li && li->func != NULL;
         }
 
         inline bool alive(const boost::intrusive_ptr<listen_impl_func<H_EVENT>>& li) {
-            return li && li->alive_;
+            return li && li->func != NULL;
         }
 
         class node
