@@ -10,6 +10,7 @@
 #include <sodium/count_set.h>
 #include <boost/shared_ptr.hpp>
 #include <boost/optional.hpp>
+#include <boost/intrusive_ptr.hpp>
 #include <sodium/unit.h>
 #include <pthread.h>
 #include <map>
@@ -17,26 +18,6 @@
 #include <list>
 #include <forward_list>
 #include <limits.h>
-
-namespace sodium {
-    namespace impl {
-        struct H_EVENT {};
-        struct H_STRONG {};
-        struct H_NODE {};
-
-        template <class Allocator>
-        struct listen_impl_func;
-    }
-}
-
-void intrusive_ptr_add_ref(sodium::impl::listen_impl_func<sodium::impl::H_EVENT>* p);
-void intrusive_ptr_release(sodium::impl::listen_impl_func<sodium::impl::H_EVENT>* p);
-void intrusive_ptr_add_ref(sodium::impl::listen_impl_func<sodium::impl::H_STRONG>* p);
-void intrusive_ptr_release(sodium::impl::listen_impl_func<sodium::impl::H_STRONG>* p);
-void intrusive_ptr_add_ref(sodium::impl::listen_impl_func<sodium::impl::H_NODE>* p);
-void intrusive_ptr_release(sodium::impl::listen_impl_func<sodium::impl::H_NODE>* p);
-
-#include <boost/intrusive_ptr.hpp>
 
 namespace sodium {
 
@@ -86,7 +67,6 @@ namespace sodium {
         #define SODIUM_IMPL_RANK_T_MAX ULONG_MAX
 
         class node;
-        
         template <class Allocator>
         struct listen_impl_func {
             typedef std::function<std::function<void()>*(
@@ -119,6 +99,17 @@ namespace sodium {
                     delete this;
             }
         };
+
+        struct H_EVENT {};
+        struct H_STRONG {};
+        struct H_NODE {};
+
+        void intrusive_ptr_add_ref(sodium::impl::listen_impl_func<sodium::impl::H_EVENT>* p);
+        void intrusive_ptr_release(sodium::impl::listen_impl_func<sodium::impl::H_EVENT>* p);
+        void intrusive_ptr_add_ref(sodium::impl::listen_impl_func<sodium::impl::H_STRONG>* p);
+        void intrusive_ptr_release(sodium::impl::listen_impl_func<sodium::impl::H_STRONG>* p);
+        void intrusive_ptr_add_ref(sodium::impl::listen_impl_func<sodium::impl::H_NODE>* p);
+        void intrusive_ptr_release(sodium::impl::listen_impl_func<sodium::impl::H_NODE>* p);
 
         inline bool alive(const boost::intrusive_ptr<listen_impl_func<H_STRONG>>& li) {
             return li && li->func != NULL;

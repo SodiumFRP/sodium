@@ -10,40 +10,43 @@
 using namespace std;
 using namespace boost;
 
-void intrusive_ptr_add_ref(sodium::impl::listen_impl_func<sodium::impl::H_EVENT>* p)
-{
-    p->counts.inc_event();
-}
-
-void intrusive_ptr_release(sodium::impl::listen_impl_func<sodium::impl::H_EVENT>* p)
-{
-    p->counts.dec_event();
-    p->update();
-}
-
-void intrusive_ptr_add_ref(sodium::impl::listen_impl_func<sodium::impl::H_STRONG>* p)
-{
-    p->counts.inc_strong();
-}
-
-void intrusive_ptr_release(sodium::impl::listen_impl_func<sodium::impl::H_STRONG>* p)
-{
-    p->counts.dec_strong();
-    p->update();
-}
-
-void intrusive_ptr_add_ref(sodium::impl::listen_impl_func<sodium::impl::H_NODE>* p)
-{
-    p->counts.inc_node();
-}
-
-void intrusive_ptr_release(sodium::impl::listen_impl_func<sodium::impl::H_NODE>* p)
-{
-    p->counts.dec_node();
-    p->update();
-}
-
 namespace sodium {
+
+    namespace impl {
+        
+        void intrusive_ptr_add_ref(sodium::impl::listen_impl_func<sodium::impl::H_EVENT>* p)
+        {
+            p->counts.inc_event();
+        }
+        
+        void intrusive_ptr_release(sodium::impl::listen_impl_func<sodium::impl::H_EVENT>* p)
+        {
+            p->counts.dec_event();
+            p->update();
+        }
+        
+        void intrusive_ptr_add_ref(sodium::impl::listen_impl_func<sodium::impl::H_STRONG>* p)
+        {
+            p->counts.inc_strong();
+        }
+        
+        void intrusive_ptr_release(sodium::impl::listen_impl_func<sodium::impl::H_STRONG>* p)
+        {
+            p->counts.dec_strong();
+            p->update();
+        }
+        
+        void intrusive_ptr_add_ref(sodium::impl::listen_impl_func<sodium::impl::H_NODE>* p)
+        {
+            p->counts.inc_node();
+        }
+        
+        void intrusive_ptr_release(sodium::impl::listen_impl_func<sodium::impl::H_NODE>* p)
+        {
+            p->counts.dec_node();
+            p->update();
+        }
+    }
 
     mutex::mutex()
     {
