@@ -1,12 +1,16 @@
 all: test_sodium memory/release-sink-machinery memory/switch-memory
 
 CPPFLAGS=-I.. --std=c++0x -g
-OBJECT_FILES=../sodium/light_ptr.o ../sodium/sodium.o ../sodium/transaction.o
+OBJECT_FILES= \
+    ../sodium/lock_pool.o \
+    ../sodium/light_ptr.o \
+    ../sodium/transaction.o \
+    ../sodium/sodium.o
 
-SODIUM_HEADERS=../sodium/sodium.h ../sodium/transaction.h ../sodium/light_ptr.h ../sodium/count_set.h
+SODIUM_HEADERS=../sodium/sodium.h ../sodium/transaction.h ../sodium/light_ptr.h ../sodium/count_set.h ../sodium/lock_pool.h
 
-../sodium/light_ptr.o:           ../sodium/light_ptr.h
-../sodium/transaction.o:         ../sodium/transaction.h ../sodium/light_ptr.h ../sodium/count_set.h
+../sodium/light_ptr.o:           ../sodium/light_ptr.h ../sodium/lock_pool.h
+../sodium/transaction.o:         ../sodium/transaction.h ../sodium/lock_pool.h ../sodium/light_ptr.h ../sodium/count_set.h
 ../sodium/sodium.o:              $(SODIUM_HEADERS)
 test_sodium.o:                   $(SODIUM_HEADERS) test_sodium.h
 memory/release-sink-machinery.o: $(SODIUM_HEADERS)

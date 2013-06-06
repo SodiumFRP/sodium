@@ -1,24 +1,15 @@
 /**
- * Copyright (c) 2012, Stephen Blackheath and Anthony Jones
+ * Copyright (c) 2012-2013, Stephen Blackheath and Anthony Jones
  * Released under a BSD3 licence.
  *
  * C++ implementation courtesy of International Telematics Ltd.
  */
 #include <sodium/light_ptr.h>
+#include <sodium/lock_pool.h>
 #include <pthread.h>
 
 namespace sodium {
-    static pthread_spinlock_t* get_spinlock()
-    {
-        static pthread_spinlock_t* gs;
-        if (gs == NULL) {
-            gs = new pthread_spinlock_t;
-            pthread_spin_init(gs, PTHREAD_PROCESS_PRIVATE);
-        }
-        return gs;
-    }
-
-#define SODIUM_DEFINE_LIGHTPTR(Name, GET_LOCK, LOCK, UNLOCK) \
+#define SODIUM_DEFINE_LIGHTPTR(Name, GET_AND_LOCK, UNLOCK) \
     Name::Name() \
         : value(NULL), count(NULL) \
     { \
@@ -34,15 +25,13 @@ namespace sodium {
     Name::Name(const Name& other) \
         : value(other.value), count(other.count) \
     { \
-        GET_LOCK; \
-        LOCK; \
+        GET_AND_LOCK; \
         count->c++; \
         UNLOCK; \
     } \
      \
     Name::~Name() { \
-        GET_LOCK; \
-        LOCK; \
+        GET_AND_LOCK; \
         if (count != NULL && --count->c == 0) { \
             UNLOCK; \
             count->del(value); delete count; \
@@ -53,28 +42,30 @@ namespace sodium {
     } \
      \
     Name& Name::operator = (const Name& other) { \
-        GET_LOCK; \
-        LOCK; \
-        if (--count->c == 0) { \
-            UNLOCK; \
-            count->del(value); delete count; \
-        } \
-        else { \
-            UNLOCK; \
+        { \
+            GET_AND_LOCK; \
+            if (--count->c == 0) { \
+                UNLOCK; \
+                count->del(value); delete count; \
+            } \
+            else { \
+                UNLOCK; \
+            } \
         } \
         value = other.value; \
         count = other.count; \
-        LOCK; \
-        count->c++; \
-        UNLOCK; \
+        { \
+            GET_AND_LOCK; \
+            count->c++; \
+            UNLOCK; \
+        } \
         return *this; \
     }
 
-SODIUM_DEFINE_LIGHTPTR(light_ptr, pthread_spinlock_t* s = get_spinlock(),
-                          pthread_spin_lock(s),
-                          pthread_spin_unlock(s))
+SODIUM_DEFINE_LIGHTPTR(light_ptr, impl::spin_lock* l = impl::spin_get_and_lock(this->value),
+                          l->unlock())
 
-SODIUM_DEFINE_LIGHTPTR(unsafe_light_ptr,,,)
+SODIUM_DEFINE_LIGHTPTR(unsafe_light_ptr,,)
 
 };
 

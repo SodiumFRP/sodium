@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2012, Stephen Blackheath and Anthony Jones
+ * Copyright (c) 2012-2013, Stephen Blackheath and Anthony Jones
  * Released under a BSD3 licence.
  *
  * C++ implementation courtesy of International Telematics Ltd.
@@ -32,7 +32,7 @@ namespace sodium {
     #define SODIUM_DECLARE_LIGHTPTR(name) \
         struct name { \
             static name DUMMY;  /* A null value that does not work, but can be used to */ \
-                                    /* satisfy the compiler for unusable private constructors */ \
+                                /* satisfy the compiler for unusable private constructors */ \
             name(); \
             name(const name& other); \
             template <class A> static inline name create(const A& a) { \

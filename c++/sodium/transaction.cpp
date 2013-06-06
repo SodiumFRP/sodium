@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2012, Stephen Blackheath and Anthony Jones
+ * Copyright (c) 2012-2013, Stephen Blackheath and Anthony Jones
  * Released under a BSD3 licence.
  *
  * C++ implementation courtesy of International Telematics Ltd.
@@ -16,35 +16,44 @@ namespace sodium {
         
         void intrusive_ptr_add_ref(sodium::impl::listen_impl_func<sodium::impl::H_EVENT>* p)
         {
+            spin_lock* l = spin_get_and_lock(p);
             p->counts.inc_event();
+            l->unlock();
         }
-        
+
         void intrusive_ptr_release(sodium::impl::listen_impl_func<sodium::impl::H_EVENT>* p)
         {
+            spin_lock* l = spin_get_and_lock(p);
             p->counts.dec_event();
-            p->update();
+            p->update_and_unlock(l);
         }
-        
+
         void intrusive_ptr_add_ref(sodium::impl::listen_impl_func<sodium::impl::H_STRONG>* p)
         {
+            spin_lock* l = spin_get_and_lock(p);
             p->counts.inc_strong();
+            l->unlock();
         }
         
         void intrusive_ptr_release(sodium::impl::listen_impl_func<sodium::impl::H_STRONG>* p)
         {
+            spin_lock* l = spin_get_and_lock(p);
             p->counts.dec_strong();
-            p->update();
+            p->update_and_unlock(l);
         }
-        
+
         void intrusive_ptr_add_ref(sodium::impl::listen_impl_func<sodium::impl::H_NODE>* p)
         {
+            spin_lock* l = spin_get_and_lock(p);
             p->counts.inc_node();
+            l->unlock();
         }
-        
+
         void intrusive_ptr_release(sodium::impl::listen_impl_func<sodium::impl::H_NODE>* p)
         {
+            spin_lock* l = spin_get_and_lock(p);
             p->counts.dec_node();
-            p->update();
+            p->update_and_unlock(l);
         }
     }
 

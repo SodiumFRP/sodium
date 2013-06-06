@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2012, Stephen Blackheath and Anthony Jones
+ * Copyright (c) 2012-2013, Stephen Blackheath and Anthony Jones
  * Released under a BSD3 licence.
  *
  * C++ implementation courtesy of International Telematics Ltd.
@@ -8,6 +8,7 @@
 #define _SODIUM_TRANSACTION_H_
 
 #include <sodium/count_set.h>
+#include <sodium/lock_pool.h>
 #include <boost/shared_ptr.hpp>
 #include <boost/optional.hpp>
 #include <boost/intrusive_ptr.hpp>
@@ -83,9 +84,10 @@ namespace sodium {
             count_set counts;
             closure* func;
             std::forward_list<std::function<void()>*> cleanups;
-            void update() {
+            inline void update_and_unlock(spin_lock* l) {
                 if (func && !counts.active()) {
                     counts.inc_strong();
+                    l->unlock();
                     for (auto it = cleanups.begin(); it != cleanups.end(); ++it) {
                         (**it)();
                         delete *it;
@@ -93,10 +95,15 @@ namespace sodium {
                     cleanups.clear();
                     delete func;
                     func = NULL;
+                    l->lock();
                     counts.dec_strong();
                 }
-                if (!counts.alive())
+                if (!counts.alive()) {
+                    l->unlock();
                     delete this;
+                }
+                else
+                    l->unlock();
             }
         };
 

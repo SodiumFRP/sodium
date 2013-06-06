@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2012, Stephen Blackheath and Anthony Jones
+ * Copyright (c) 2012-2013, Stephen Blackheath and Anthony Jones
  * Released under a BSD3 licence.
  *
  * C++ implementation courtesy of International Telematics Ltd.
@@ -28,11 +28,11 @@ namespace sodium {
             unsigned node_count;
         };
 
-        #if UINTPTR_MAX <= 0xffffffffu
+        #if __WORDSIZE == 32
         #define SODIUM_STRONG_BITS 1
         #define SODIUM_EVENT_BITS  14
         #define SODIUM_NODE_BITS   14
-        #elif UINTPTR_MAX <= 0xffffffffffffffffu
+        #elif __WORDSIZE == 64
         #define SODIUM_STRONG_BITS 1
         #define SODIUM_EVENT_BITS  31
         #define SODIUM_NODE_BITS   31
