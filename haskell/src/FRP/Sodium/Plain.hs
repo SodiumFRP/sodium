@@ -47,6 +47,14 @@ putMVar mv a = do
     evaluate a
     MV.putMVar mv a
 
+-- Note: the second parameter is a dummy, make it depend
+-- on the last function parameter of the caller to make
+-- sure that the IORef is freshly created every time
+
+{-# NOINLINE unsafeNewIORef #-}
+unsafeNewIORef :: a -> b -> IORef a
+unsafeNewIORef v dummy = unsafePerformIO (newIORef v)
+
 -- | Phantom type for use with 'R.Context' type class.
 data Plain
 
@@ -187,7 +195,7 @@ listen ev handle = listenTrans ev (ioReactive . handle)
 never         :: Event a
 never = Event {
         getListenRaw = return $ Listen $ \_ _ _ -> return (return ()), 
-        evCacheRef   = unsafePerformIO $ newIORef Nothing
+        evCacheRef   = unsafeNewIORef Nothing undefined
     }
 
 -- | Merge two streams of events of the same type.
@@ -200,7 +208,7 @@ never = Event {
 merge         :: Event a -> Event a -> Event a
 merge ea eb = Event gl cacheRef
   where
-    cacheRef = unsafePerformIO $ newIORef Nothing
+    cacheRef = unsafeNewIORef Nothing eb
     gl = do
         l1 <- getListen ea
         l2 <- getListen eb                                
@@ -215,7 +223,7 @@ merge ea eb = Event gl cacheRef
 filterJust    :: Event (Maybe a) -> Event a
 filterJust ema = Event gl cacheRef
   where
-    cacheRef = unsafePerformIO $ newIORef Nothing
+    cacheRef = unsafeNewIORef Nothing ema
     gl = do
         (l', push, nodeRef) <- ioReactive newEventImpl
         l <- getListen ema
@@ -263,7 +271,7 @@ values = eventify . listenValueRaw
 snapshotWith  :: (a -> b -> c) -> Event a -> Behavior b -> Event c
 snapshotWith f ea bb = Event gl cacheRef
   where
-    cacheRef = unsafePerformIO $ newIORef Nothing
+    cacheRef = unsafeNewIORef Nothing bb
     gl = do
         (l, push, nodeRef) <- ioReactive newEventImpl
         sample' <- ioReactive $ unSample_ $ behSample $ bb
@@ -280,7 +288,7 @@ snapshotWith f ea bb = Event gl cacheRef
 switchE       :: Behavior (Event a) -> Event a
 switchE bea = Event gl cacheRef
   where
-    cacheRef = unsafePerformIO $ newIORef Nothing
+    cacheRef = unsafeNewIORef Nothing bea
     gl = do
         (l, push, nodeRef) <- ioReactive newEventImpl
         unlisten2Ref <- ioReactive $ newIORef Nothing
@@ -315,7 +323,7 @@ switch bba = do
 execute       :: Event (Reactive a) -> Event a
 execute ev = Event gl cacheRef
   where
-    cacheRef = unsafePerformIO $ newIORef Nothing
+    cacheRef = unsafeNewIORef Nothing ev
     gl = do
         (l', push, nodeRef) <- ioReactive newEventImpl
         l <- getListen ev
@@ -336,7 +344,7 @@ sample b = ioReactive . unSample . behSample $ b
 coalesce      :: (a -> a -> a) -> Event a -> Event a
 coalesce combine e = Event gl cacheRef
   where
-    cacheRef = unsafePerformIO $ newIORef Nothing
+    cacheRef = unsafeNewIORef Nothing e
     gl = do
         l1 <- getListen e
         (l, push, nodeRef) <- ioReactive newEventImpl
@@ -356,7 +364,7 @@ coalesce combine e = Event gl cacheRef
 once :: Event a -> Event a
 once e = Event gl cacheRef
   where
-    cacheRef = unsafePerformIO $ newIORef Nothing
+    cacheRef = unsafeNewIORef Nothing e
     gl = do
         l1 <- getListen e
         (l, push, nodeRef) <- ioReactive newEventImpl
@@ -672,7 +680,7 @@ newEventLinked = do
 instance Functor (R.Event Plain) where
     f `fmap` e = Event getListen' cacheRef
       where
-        cacheRef = unsafePerformIO $ newIORef Nothing
+        cacheRef = unsafeNewIORef Nothing e
         getListen' = do
             return $ Listen $ \mNodeRef suppressEarlierFirings handle -> do
                 l <- getListen e
@@ -792,7 +800,7 @@ lastFiringOnly listen mNodeRef suppressEarlierFirings handle = do
 eventify :: (Maybe (MVar Node) -> Bool -> (a -> Reactive ()) -> Reactive (IO ())) -> Event a
 eventify listen = Event gl cacheRef
   where
-    cacheRef = unsafePerformIO $ newIORef Nothing
+    cacheRef = unsafeNewIORef Nothing listen
     gl = do
         (l, push, nodeRef) <- ioReactive newEventImpl
         unlistener <- unlistenize $ listen (Just nodeRef) False push
@@ -802,7 +810,7 @@ instance Applicative (R.Behavior Plain) where
     pure = constant
     Behavior u1 s1 <*> Behavior u2 s2 = Behavior u s
       where
-        cacheRef = unsafePerformIO $ newIORef Nothing
+        cacheRef = unsafeNewIORef Nothing s2
         u = Event gl cacheRef
         gl = do
             fRef <- ioReactive $ newIORef =<< unSample s1
