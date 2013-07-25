@@ -140,11 +140,13 @@ data EventImpl where
     To :: CTypeSpec -> Int -> EventImpl
     MapE :: CTypeSpec -> (Value -> Value) -> Int -> EventImpl
     Code :: CTypeSpec -> String -> CStat -> EventImpl
-    
+    SnapshotWith :: CTypeSpec -> (Value -> Value -> Value) -> CExpr -> Int -> EventImpl
+
 typeOf :: EventImpl -> CTypeSpec
 typeOf (To t _) = t
 typeOf (MapE t _ _) = t
 typeOf (Code t _ _) = t
+typeOf (SnapshotWith t _ _ _) = t
 
 data Header = AngleHeader ByteString | QuoteHeader ByteString deriving (Eq, Ord)
 
@@ -215,18 +217,23 @@ toC rs = prototypes ++ funcs
             ivar <- allocIdent
             let itype = implsType impls
                 call to expr = CBlockStmt $ CExpr (Just $ CCall (CVar (mkLabel to) undefNode) [expr] undefNode) undefNode
-                stmts = flip concatMap impls $ \impl ->
-                    case impl of
-                        To ty to -> [call to (CVar ivar undefNode)]
-                        MapE ty f to -> formatValue (call to) (f (variable ivar))
-                        Code ty var stmt -> [
-                                CBlockDecl (
-                                    let declr = CDeclr (Just (Ident var 0 undefNode)) [] Nothing [] undefNode
-                                        ass = CInitExpr (CVar ivar undefNode) undefNode 
-                                    in  CDecl [CTypeSpec ty] [(Just declr, Just ass, Nothing)] undefNode 
-                                ),
-                                CBlockStmt (fmap (const undefNode) stmt)
-                            ]
+                blocks = flip map impls $ \impl ->
+                    let items =
+                            case impl of
+                                To ty to -> [call to (CVar ivar undefNode)]
+                                MapE ty f to -> formatValue (call to) (f (variable ivar))
+                                Code ty var stmt -> [
+                                        CBlockDecl (
+                                            let declr = CDeclr (Just (Ident var 0 undefNode)) [] Nothing [] undefNode
+                                                ass = CInitExpr (CVar ivar undefNode) undefNode 
+                                            in  CDecl [CTypeSpec ty] [(Just declr, Just ass, Nothing)] undefNode 
+                                        ),
+                                        CBlockStmt (fmap (const undefNode) stmt)
+                                    ]
+                                SnapshotWith ty f bvar to -> formatValue (call to) (f (variable ivar) (Value [] [] bvar))
+                    in  case items of
+                            [stat@(CBlockStmt _)] -> stat
+                            _                     -> CBlockStmt $ CCompound [] items undefNode
             return $
                 CFDefExt $ CFunDef [
                         CTypeSpec (CVoidType undefNode)
@@ -240,7 +247,9 @@ toC rs = prototypes ++ funcs
                     )
                     []
                     (
-                        CCompound [] (stmts) undefNode
+                        case blocks of
+                            [CBlockStmt one@(CCompound _ _ _)] -> one
+                            _     -> CCompound [] blocks undefNode
                     )
                     undefNode
 
@@ -273,7 +282,7 @@ allocIdent :: Reactive Ident
 allocIdent = Reactive $ do
     i <- gets rsNextIdent
     modify $ \rs -> rs { rsNextIdent = succIdent (rsNextIdent rs) }
-    return i
+    return $ Ident i 0 undefNode
 
 merge :: forall a . RType a => Event a -> Event a -> Reactive (Event a)
 merge (Event ea) (Event eb) = do
@@ -298,13 +307,16 @@ data Behavior a = Behavior {
 hold :: forall a . RType a => a -> Event a -> Reactive (Behavior a)
 hold init ea = do
     i <- allocIdent
-    return (Behavior ea (CVar i))
+    return $ Behavior ea (CVar i undefNode)
 
 snapshotWith :: forall a b c . (RType a, RType b, RType c) => (a -> b -> c) -> Event a -> Behavior b -> Reactive (Event c)
-snapshotWith f ea bb = do
+snapshotWith f (Event ea) bb = do
     ec <- allocEvent
     let ty = ctype (undefined :: a)
-    connect ea (SnapshotWith ty (\va vb -> unr (f (r va) (r vb))) bb)
+    connect ea $ SnapshotWith ty
+        (\va vb -> unr (f (r va) (r vb)))
+        (behVar bb)
+        ec
     return $ Event ec
 
 addHeader :: Header -> Reactive ()
@@ -341,5 +353,7 @@ main =
     -}
     C.putStrLn $ react $ \ea -> do
         ba <- hold (constant (0 :: Int32)) ea
-        eb <- snapshotWith (\e b -> b) ea ba
+        --eb <- snapshotWith (\e b -> b) ea ba
+        eb <- snapshotWith (\e b -> e `plus` b) ea ba
         listen eb [AngleHeader "stdio.h"] "x" "printf(\"%d\\n\", (int)x);"
+
