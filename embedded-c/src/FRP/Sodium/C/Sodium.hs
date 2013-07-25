@@ -1,5 +1,6 @@
 {-# LANGUAGE GADTs, GeneralizedNewtypeDeriving, TypeOperators, TypeFamilies,
-        FlexibleContexts, FlexibleInstances, ScopedTypeVariables, OverloadedStrings #-}
+        FlexibleContexts, FlexibleInstances, ScopedTypeVariables, OverloadedStrings,
+        UndecidableInstances #-}
 
 module FRP.Sodium.C.Sodium where
 
@@ -34,11 +35,21 @@ class RType a where
     r :: Value -> a
     unr :: a -> Value
 
-konstant :: forall a . (RNum a, Integral a) => a -> R a
-konstant i = r $ Value {
+class RType (R a) => RConstant a where
+    formatConstant :: a -> CExpr
+
+instance (RType (R a), Integral a) => RConstant a where
+    formatConstant a = CCast
+            (CDecl [CTypeSpec typ] [] undefNode)
+            (CConst (CIntConst (CInteger (fromIntegral a) DecRepr noFlags) undefNode))
+            undefNode
+        where typ = ctype (undefined :: R a)
+
+constant :: RConstant a => a -> Value
+constant i = Value {
         vaDecls = [],
         vaStmts = [],
-        vaExpr  = castedNumeric (ctype (undefined :: R a)) i
+        vaExpr  = formatConstant i
     }
 
 variable :: Ident -> Value
@@ -52,9 +63,8 @@ formatValue processOutput va =
         processOutput (vaExpr va)
     ]
 
-class RType (R a) => RNum a where
+class RConstant a => RNum a where
     data R a :: *
-    constant :: a -> R a
     plus :: R a -> R a -> R a
     ra `plus` rb = r $ Value {
             vaDecls = vaDecls a ++ vaDecls b,
@@ -72,7 +82,6 @@ castedNumeric typ i = CCast
 
 instance RNum Int64 where
     newtype R Int64 = RInt64 Value
-    constant = konstant
 instance RType (R Int64) where
     ctype _ = CTypeDef (Ident "int64_t" 0 undefNode) undefNode
     r = RInt64
@@ -80,7 +89,6 @@ instance RType (R Int64) where
 
 instance RNum Int32 where
     newtype R Int32 = RInt32 Value
-    constant = konstant
 instance RType (R Int32) where
     ctype _ = CTypeDef (Ident "int32_t" 0 undefNode) undefNode
     r = RInt32
@@ -88,7 +96,6 @@ instance RType (R Int32) where
 
 instance RNum Int16 where
     newtype R Int16 = RInt16 Value
-    constant = konstant
 instance RType (R Int16) where
     ctype _ = CTypeDef (Ident "int16_t" 0 undefNode) undefNode
     r = RInt16
@@ -96,7 +103,6 @@ instance RType (R Int16) where
 
 instance RNum Int8 where
     newtype R Int8 = RInt8 Value
-    constant = konstant
 instance RType (R Int8) where
     ctype _ = CTypeDef (Ident "int8_t" 0 undefNode) undefNode
     r = RInt8
@@ -104,7 +110,6 @@ instance RType (R Int8) where
 
 instance RNum Word64 where
     newtype R Word64 = RWord64 Value
-    constant = konstant
 instance RType (R Word64) where
     ctype _ = CTypeDef (Ident "uint64_t" 0 undefNode) undefNode
     r = RWord64
@@ -112,7 +117,6 @@ instance RType (R Word64) where
 
 instance RNum Word32 where
     newtype R Word32 = RWord32 Value
-    constant = konstant
 instance RType (R Word32) where
     ctype _ = CTypeDef (Ident "uint32_t" 0 undefNode) undefNode
     r = RWord32
@@ -120,7 +124,6 @@ instance RType (R Word32) where
 
 instance RNum Word16 where
     newtype R Word16 = RWord16 Value
-    constant = konstant
 instance RType (R Word16) where
     ctype _ = CTypeDef (Ident "uint16_t" 0 undefNode) undefNode
     r = RWord16
@@ -128,7 +131,6 @@ instance RType (R Word16) where
 
 instance RNum Word8 where
     newtype R Word8 = RWord8 Value
-    constant = konstant
 instance RType (R Word8) where
     ctype _ = CTypeDef (Ident "uint8_t" 0 undefNode) undefNode
     r = RWord8
@@ -141,12 +143,14 @@ data EventImpl where
     MapE :: CTypeSpec -> (Value -> Value) -> Int -> EventImpl
     Code :: CTypeSpec -> String -> CStat -> EventImpl
     SnapshotWith :: CTypeSpec -> (Value -> Value -> Value) -> CExpr -> Int -> EventImpl
+    Store :: CTypeSpec -> Ident -> EventImpl
 
 typeOf :: EventImpl -> CTypeSpec
 typeOf (To t _) = t
 typeOf (MapE t _ _) = t
 typeOf (Code t _ _) = t
 typeOf (SnapshotWith t _ _ _) = t
+typeOf (Store t _) = t
 
 data Header = AngleHeader ByteString | QuoteHeader ByteString deriving (Eq, Ord)
 
@@ -160,7 +164,8 @@ data ReactiveState = ReactiveState {
         rsInputs    :: [Int],
         rsNextIdent :: String,
         rsNextEvent :: Int,
-        rsEvents    :: IntMap [EventImpl]
+        rsEvents    :: IntMap [EventImpl],
+        rsGlobalVars :: [(CTypeSpec, Ident, CExpr)]
     }
 
 newReactiveState :: CTypeSpec -> ReactiveState
@@ -170,11 +175,12 @@ newReactiveState typ = ReactiveState {
         rsInputs    = [],
         rsNextIdent = "__a",
         rsNextEvent = 2,
-        rsEvents    = IM.empty
+        rsEvents    = IM.empty,
+        rsGlobalVars = []
     }
 
 toC :: ReactiveState -> [CExtDecl]
-toC rs = prototypes ++ funcs
+toC rs = prototypes ++ globals ++ funcs
   where
     implsType :: [EventImpl] -> CTypeSpec
     implsType = fromMaybe (CVoidType undefNode) .
@@ -210,6 +216,13 @@ toC rs = prototypes ++ funcs
                     CTypeSpec (CVoidType undefNode)
                 ] [(Just declr, Nothing, Nothing)] undefNode
 
+    globals :: [CExtDecl]
+    globals = flip map (rsGlobalVars rs) $ \(ty, ident, expr) ->
+        CDeclExt $
+            let declr = CDeclr (Just ident) [] Nothing [] undefNode
+                ass = CInitExpr expr undefNode 
+            in  CDecl [CTypeSpec ty] [(Just declr, Just ass, Nothing)] undefNode 
+
     funcs :: [CExtDecl]
     funcs = flip evalState (rsNextIdent rs) $ do
         forM (IM.toList (rsEvents rs)) $ \(ix, impls0) -> do
@@ -231,6 +244,10 @@ toC rs = prototypes ++ funcs
                                         CBlockStmt (fmap (const undefNode) stmt)
                                     ]
                                 SnapshotWith ty f bvar to -> formatValue (call to) (f (variable ivar) (Value [] [] bvar))
+                                Store ty ident -> [
+                                        let expr = CAssign CAssignOp (CVar ident undefNode) (CVar ivar undefNode) undefNode
+                                        in  CBlockStmt $ CExpr (Just expr) undefNode
+                                    ]
                     in  case items of
                             [stat@(CBlockStmt _)] -> stat
                             _                     -> CBlockStmt $ CCompound [] items undefNode
@@ -304,15 +321,21 @@ data Behavior a = Behavior {
        behVar   :: CExpr
     }
 
-hold :: forall a . RType a => a -> Event a -> Reactive (Behavior a)
-hold init ea = do
+hold :: forall a . RConstant a => a -> Event (R a) -> Reactive (Behavior (R a))
+hold init ea@(Event ea_i) = do
     i <- allocIdent
-    return $ Behavior ea (CVar i undefNode)
+    let ty = ctype (undefined :: R a)
+        var = CVar i undefNode
+    Reactive $ modify $ \rs -> rs {
+            rsGlobalVars = (ty, i, formatConstant init):rsGlobalVars rs
+        }
+    connect ea_i $ Store ty i
+    return $ Behavior ea var
 
 snapshotWith :: forall a b c . (RType a, RType b, RType c) => (a -> b -> c) -> Event a -> Behavior b -> Reactive (Event c)
 snapshotWith f (Event ea) bb = do
     ec <- allocEvent
-    let ty = ctype (undefined :: a)
+    let ty = ctype (undefined :: c)
     connect ea $ SnapshotWith ty
         (\va vb -> unr (f (r va) (r vb)))
         (behVar bb)
@@ -352,8 +375,7 @@ main =
         listen ed [AngleHeader "stdio.h"] "x" "printf(\"ed=%d\\n\", x);"
     -}
     C.putStrLn $ react $ \ea -> do
-        ba <- hold (constant (0 :: Int32)) ea
-        --eb <- snapshotWith (\e b -> b) ea ba
+        ba <- hold (100 :: Int32) ea
         eb <- snapshotWith (\e b -> e `plus` b) ea ba
         listen eb [AngleHeader "stdio.h"] "x" "printf(\"%d\\n\", (int)x);"
 
