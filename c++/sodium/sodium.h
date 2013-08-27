@@ -909,6 +909,31 @@ namespace sodium {
     }
 
     /*!
+     * Lift a quaternary function into behaviors.
+     */
+    template <class A, class B, class C, class D, class E, class P = def_part>
+    behavior<E, P> lift(const std::function<E(const A&, const B&, const C&, const D&)>& f,
+        const behavior<A, P>& ba,
+        const behavior<B, P>& bb,
+        const behavior<C, P>& bc,
+        const behavior<D, P>& bd
+    )
+    {
+        std::function<std::function<std::function<std::function<E(const D&)>(const C&)>(const B&)>(const A&)> fa(
+            [f] (const A& a) -> std::function<std::function<std::function<E(const D&)>(const C&)>(const B&)> {
+                return [f, a] (const B& b) -> std::function<std::function<E(const D&)>(const C&)> {
+                    return [f, a, b] (const C& c) -> std::function<E(const D&)> {
+                        return [f, a, b, c] (const D& d) -> E {
+                            return f(a,b,c,d);
+                        };
+                    };
+                };
+            }
+        );
+        return apply(apply(apply(ba.map_(fa), bb), bc), bd);
+    }
+
+    /*!
      * Take each list item and put it into a new transaction of its own.
      *
      * An example use case of this might be a situation where we are splitting

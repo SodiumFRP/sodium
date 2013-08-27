@@ -8,6 +8,7 @@
 #define _SODIUM_TRANSACTION_H_
 
 #include <sodium/count_set.h>
+#include <sodium/light_ptr.h>
 #include <sodium/lock_pool.h>
 #include <boost/shared_ptr.hpp>
 #include <boost/optional.hpp>
