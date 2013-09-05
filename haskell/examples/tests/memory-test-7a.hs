@@ -10,22 +10,16 @@ import System.Timeout
 
 verbose = False
 
-flam :: Event () -> Behavior Int -> Reactive (Behavior Int)
-flam e time = do
-    let eStart = snapshot e time
-    -- Only allow eStart through when we're not already running
-    hold 0 eStart
-
 main = do
     (e, push) <- sync newEvent
     (eFlip, pushFlip) <- sync newEvent
-    (time, pushTime) <- sync $ newBehavior 0
+    (time, pushTime) <- sync $ newBehavior (0 :: Int)
     out <- sync $ do
-        eInit <- flam e time
-        eFlam <- hold eInit (execute ((const $ flam e time) <$> eFlip))
-        switch eFlam
-    kill <- sync $ listen (values out) $ \x ->
-        if verbose then print x else (evaluate (rnf x) >> return ())
+        let eInit = snapshot e time
+        eFlam <- hold eInit (const (snapshot e time) <$> eFlip)
+        return $ switchE eFlam
+    kill <- sync $ listen out $ \x ->
+        if verbose then print x else (evaluate x >> return ())
     timeout 4000000 $ forM [1..] $ \t -> do
         sync $ pushTime t
         sync $ push ()

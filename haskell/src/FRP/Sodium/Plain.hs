@@ -51,8 +51,8 @@ putMVar mv a = do
 -- on the last function parameter of the caller to make
 -- sure that the IORef is freshly created every time
 
-{-# NOINLINE unsafeNewIORef #-}
 unsafeNewIORef :: a -> b -> IORef a
+{-# NOINLINE unsafeNewIORef #-}
 unsafeNewIORef v dummy = unsafePerformIO (newIORef v)
 
 -- | Phantom type for use with 'R.Context' type class.
@@ -274,14 +274,14 @@ snapshotWith f ea bb = Event gl cacheRef
     cacheRef = unsafeNewIORef Nothing bb
     gl = do
         (l, push, nodeRef) <- ioReactive newEventImpl
-        sample' <- ioReactive $ unSample_ $ sampleImpl $ bb
+        let sample = sampleImpl bb
+        sample' <- ioReactive $ unSample_ sample
         _ <- ioReactive $ touch sample'
         unlistener <- later $ do
             unlisten <- linkedListen ea (Just nodeRef) False $ \a -> do
-                b <- ioReactive $ sample'
+                b <- ioReactive sample'
                 push (f a b)
-                return ()
-            return (unlisten >> touch bb)
+            return (unlisten >> touch sample)
         addCleanup_Listen unlistener l
 
 -- | Unwrap an event inside a behavior to give a time-varying event implementation.
@@ -548,6 +548,7 @@ getListen (Event getLRaw cacheRef) = do
 -- | Listen for firings of this event. The returned @IO ()@ is an IO action
 -- that unregisters the listener. This is the observer pattern.
 linkedListen :: Event a -> Maybe (MVar Node) -> Bool -> (a -> Reactive ()) -> Reactive (IO ())
+{-# NOINLINE linkedListen #-}
 linkedListen ev mv suppressEarlierFirings handle = do
     l <- getListen ev
     unlisten <- runListen_ l mv suppressEarlierFirings handle

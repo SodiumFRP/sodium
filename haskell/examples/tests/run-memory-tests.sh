@@ -8,7 +8,7 @@ done
 echo running...
 for ff in $FILES ; do
     f=${ff%.hs}
-    (./$f +RTS -hc ; hp2ps -c $f.hp ; convert -rotate -90 -flatten $f.ps $f.png ; touch $f.done) &
+    (./$f +RTS -hy ; hp2ps -c $f.hp ; convert -rotate -90 -flatten $f.ps $f.png ; touch $f.done) &
 done
 for ff in $FILES ; do
     f=${ff%.hs}

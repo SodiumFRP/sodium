@@ -23,6 +23,6 @@ main = do
         switch eFlam
     kill <- sync $ listen (values out) $ \x ->
         if verbose then print x else (evaluate x >> return ())
-    timeout 2000000 $ forever $ sync $ push ()
+    timeout 4000000 $ forever $ sync $ push ()
     kill
 

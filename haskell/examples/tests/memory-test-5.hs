@@ -13,7 +13,7 @@ main = do
     out <- sync $ hold 0 eChange
     kill <- sync $ listen (values out) $ \x ->
         if verbose then print (x :: Int) else (evaluate x >> return ())
-    timeout 2000000 $ forM_ [0..] $ \i -> do
+    timeout 4000000 $ forM_ [0..] $ \i -> do
         sync $ pushC i
     kill
 

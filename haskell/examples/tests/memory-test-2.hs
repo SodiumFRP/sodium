@@ -31,6 +31,6 @@ main = do
     out <- sync $ switch oout
     kill <- sync $ listen (values out) $ \x ->
         if verbose then print x else (evaluate x >> return ())
-    timeout 2000000 $ mapM_ (sync . pushT) [0..]
+    timeout 4000000 $ mapM_ (sync . pushT) [0..]
     kill
 

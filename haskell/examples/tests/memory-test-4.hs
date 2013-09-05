@@ -15,7 +15,7 @@ main = do
         return $ switchE oout
     kill <- sync $ listen out $ \x ->
         if verbose then print (x :: Int) else (evaluate x >> return ())
-    timeout 2000000 $ forM_ [0..] $ \i -> do
+    timeout 4000000 $ forM_ [0..] $ \i -> do
         sync $ pushC ()
     kill
 
