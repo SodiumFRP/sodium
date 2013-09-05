@@ -51,9 +51,11 @@ main = do
         switch eFlam
     kill <- sync $ listen (values out) $ \x ->
         if verbose then print x else (evaluate (rnf x) >> return ())
-    timeout 4000000 $ forM [1..] $ \t -> do
-        sync $ pushTime t
-        sync $ push ()
-        when (t `mod` 18 == 0) $ sync $ pushFlip ()
+    let loop t = do
+            sync $ pushTime t
+            sync $ push ()
+            when (t `mod` 18 == 0) $ sync $ pushFlip ()
+            loop (t+1)
+    timeout 4000000 $ loop 0
     kill
 

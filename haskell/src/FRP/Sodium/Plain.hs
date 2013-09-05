@@ -738,7 +738,7 @@ later doListen = do
     newUnlistener :: Reactive Unlistener
     newUnlistener = Unlistener <$> ioReactive (newMVar (Just $ return ()))
 
--- | Cause the things listened to with later to be unlistened when the
+-- | Cause the things listened to with 'later' to be unlistened when the
 -- specified listener is not referenced any more.
 addCleanup_Listen :: Unlistener -> Listen a -> Reactive (Listen a)
 addCleanup_Listen (Unlistener ref) l = ioReactive $ finalizeListen l $ do
@@ -746,6 +746,8 @@ addCleanup_Listen (Unlistener ref) l = ioReactive $ finalizeListen l $ do
     fromMaybe (return ()) mUnlisten
     putMVar ref Nothing
 
+-- | Cause the things listened to with 'later' to be unlistened when the
+-- specified sample is not referenced any more.
 addCleanup_Sample :: Unlistener -> Sample a -> IO (Sample a)
 addCleanup_Sample (Unlistener ref) r = finalizeSample r $ do
     mUnlisten <- takeMVar ref
