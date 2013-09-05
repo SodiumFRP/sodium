@@ -106,11 +106,12 @@ instance R.Context Plain where
         }
 
     data Behavior Plain a = Behavior {
-            -- | Internal: Extract the underlyingEvent event for this behavior.
-            underlyingEvent :: Event a,
+            changes_   :: Event a,  -- ^ An event that gives the updates for the behavior. It doesn't do any equality
+                                   -- comparison as the name might imply.
             -- | Obtain the current value of a behavior.
-            behSample       :: Sample a
+            sampleImpl :: Sample a
         }
+
     sync = sync
     ioReactive = ioReactive
     newEvent = newEvent
@@ -128,6 +129,13 @@ instance R.Context Plain where
     sample = sample
     coalesce = coalesce
     once = once
+
+-- | An event that gives the updates for the behavior. If the behavior was created
+-- with 'hold', then 'changes' gives you back the event that was passed to 'hold'.
+--
+-- (It doesn't do any equality comparison as the name might imply.)
+changes       :: Behavior a -> Event a
+changes = changes_
 
 -- | Execute the specified 'Reactive' within a new transaction, blocking the caller
 -- until all resulting processing is complete and all callbacks have been called.
@@ -210,12 +218,10 @@ merge ea eb = Event gl cacheRef
   where
     cacheRef = unsafeNewIORef Nothing eb
     gl = do
-        l1 <- getListen ea
-        l2 <- getListen eb                                
         (l, push, nodeRef) <- ioReactive newEventImpl
-        unlistener <- unlistenize $ do
-            u1 <- runListen l1 (Just nodeRef) False push
-            u2 <- runListen l2 (Just nodeRef) False push
+        unlistener <- later $ do
+            u1 <- linkedListen ea (Just nodeRef) False push
+            u2 <- linkedListen eb (Just nodeRef) False push
             return (u1 >> u2)
         addCleanup_Listen unlistener l
 
@@ -225,12 +231,11 @@ filterJust ema = Event gl cacheRef
   where
     cacheRef = unsafeNewIORef Nothing ema
     gl = do
-        (l', push, nodeRef) <- ioReactive newEventImpl
-        l <- getListen ema
-        unlistener <- unlistenize $ runListen l (Just nodeRef) False $ \ma -> case ma of
+        (l, push, nodeRef) <- ioReactive newEventImpl
+        unlistener <- later $ linkedListen ema (Just nodeRef) False $ \ma -> case ma of
             Just a -> push a
             Nothing -> return ()
-        addCleanup_Listen unlistener l'
+        addCleanup_Listen unlistener l
 
 -- | Create a behavior with the specified initial value, that gets updated
 -- by the values coming through the event. The \'current value\' of the behavior
@@ -240,7 +245,7 @@ filterJust ema = Event gl cacheRef
 hold          :: a -> Event a -> Reactive (Behavior a)
 hold initA ea = do
     bsRef <- ioReactive $ newIORef $ initA `seq` BehaviorState initA Nothing
-    unlistener <- unlistenize $ linkedListen ea Nothing False $ \a -> do
+    unlistener <- later $ linkedListen ea Nothing False $ \a -> do
         bs <- ioReactive $ readIORef bsRef
         ioReactive $ writeIORef bsRef $ a `seq` bs { bsUpdate = Just a }
         when (isNothing (bsUpdate bs)) $ scheduleLast $ ioReactive $ do
@@ -249,15 +254,10 @@ hold initA ea = do
             writeIORef bsRef $ newCurrent `seq` BehaviorState newCurrent Nothing
     sample <- ioReactive $ addCleanup_Sample unlistener (Sample $ return $ bsCurrent <$> readIORef bsRef)
     let beh = sample `seq` Behavior {
-                underlyingEvent = ea,
-                behSample = sample
+                changes_   = ea,
+                sampleImpl = sample
             }
     return beh
-
--- | An event that gives the updates for the behavior. It doesn't do any equality
--- comparison as the name might imply.
-changes       :: Behavior a -> Event a
-changes = underlyingEvent
 
 -- | An event that is guaranteed to fire once when you listen to it, giving
 -- the current value of the behavior, and thereafter behaves like 'changes',
@@ -274,9 +274,9 @@ snapshotWith f ea bb = Event gl cacheRef
     cacheRef = unsafeNewIORef Nothing bb
     gl = do
         (l, push, nodeRef) <- ioReactive newEventImpl
-        sample' <- ioReactive $ unSample_ $ behSample $ bb
+        sample' <- ioReactive $ unSample_ $ sampleImpl $ bb
         _ <- ioReactive $ touch sample'
-        unlistener <- unlistenize $ do
+        unlistener <- later $ do
             unlisten <- linkedListen ea (Just nodeRef) False $ \a -> do
                 b <- ioReactive $ sample'
                 push (f a b)
@@ -295,7 +295,7 @@ switchE bea = Event gl cacheRef
         let doUnlisten2 = do
                 mUnlisten2 <- readIORef unlisten2Ref
                 fromMaybe (return ()) mUnlisten2
-        unlistener1 <- unlistenize $ do
+        unlistener1 <- later $ do
             initEa <- sample bea
             (ioReactive . writeIORef unlisten2Ref) =<< (Just <$> linkedListen initEa (Just nodeRef) False push)
             unlisten1 <- linkedListen (changes bea) (Just nodeRef) False $ \ea -> scheduleLast $ do
@@ -325,14 +325,13 @@ execute ev = Event gl cacheRef
   where
     cacheRef = unsafeNewIORef Nothing ev
     gl = do
-        (l', push, nodeRef) <- ioReactive newEventImpl
-        l <- getListen ev
-        unlistener <- unlistenize $ runListen l (Just nodeRef) False $ \action -> action >>= push
-        addCleanup_Listen unlistener l'
+        (l, push, nodeRef) <- ioReactive newEventImpl
+        unlistener <- later $ linkedListen ev (Just nodeRef) False $ \action -> action >>= push
+        addCleanup_Listen unlistener l
 
 -- | Obtain the current value of a behavior.
 sample        :: Behavior a -> Reactive a
-sample b = ioReactive . unSample . behSample $ b
+sample b = ioReactive . unSample . sampleImpl $ b
 
 -- | If there's more than one firing in a single transaction, combine them into
 -- one using the specified combining function.
@@ -346,10 +345,9 @@ coalesce combine e = Event gl cacheRef
   where
     cacheRef = unsafeNewIORef Nothing e
     gl = do
-        l1 <- getListen e
         (l, push, nodeRef) <- ioReactive newEventImpl
         outRef <- ioReactive $ newIORef Nothing  
-        unlistener <- unlistenize $ runListen l1 (Just nodeRef) False $ \a -> do
+        unlistener <- later $ linkedListen e (Just nodeRef) False $ \a -> do
             first <- isNothing <$> ioReactive (readIORef outRef)
             ioReactive $ modifyIORef outRef $ \ma -> Just $ case ma of
                 Just a0 -> a0 `combine` a
@@ -366,12 +364,11 @@ once e = Event gl cacheRef
   where
     cacheRef = unsafeNewIORef Nothing e
     gl = do
-        l1 <- getListen e
         (l, push, nodeRef) <- ioReactive newEventImpl
         aliveRef <- ioReactive $ newIORef True
-        unlistener <- unlistenize $ do
+        unlistener <- later $ do
             rec
-                unlisten <- runListen l1 (Just nodeRef) False $ \a -> do
+                unlisten <- linkedListen e (Just nodeRef) False $ \a -> do
                     alive <- ioReactive $ readIORef aliveRef
                     when alive $ do
                         ioReactive $ writeIORef aliveRef False
@@ -537,14 +534,6 @@ scheduleLast task = Reactive $ modify $ \as -> as { asFinal = asFinal as |> task
 
 data Listen a = Listen { runListen_ :: Maybe (MVar Node) -> Bool -> (a -> Reactive ()) -> Reactive (IO ()) }
 
-runListen :: Listen a -> Maybe (MVar Node) -> Bool -> (a -> Reactive ()) -> Reactive (IO ())
-{-# NOINLINE runListen #-}
-runListen l mv suppressEarlierFirings handle = do
-    unlisten <- runListen_ l mv suppressEarlierFirings handle
-    -- ensure l doesn't get cleaned up while runListen_ is running
-    _ <- ioReactive $ touch l
-    return unlisten
-
 -- | Unwrap an event's listener machinery.
 getListen :: Event a -> Reactive (Listen a)
 getListen (Event getLRaw cacheRef) = do
@@ -559,9 +548,12 @@ getListen (Event getLRaw cacheRef) = do
 -- | Listen for firings of this event. The returned @IO ()@ is an IO action
 -- that unregisters the listener. This is the observer pattern.
 linkedListen :: Event a -> Maybe (MVar Node) -> Bool -> (a -> Reactive ()) -> Reactive (IO ())
-linkedListen ev mMvTarget suppressEarlierFirings handle = do
+linkedListen ev mv suppressEarlierFirings handle = do
     l <- getListen ev
-    runListen l mMvTarget suppressEarlierFirings handle
+    unlisten <- runListen_ l mv suppressEarlierFirings handle
+    -- ensure l doesn't get cleaned up while runListen_ is running
+    _ <- ioReactive $ touch l
+    return unlisten
 
 -- | Variant of 'listen' that allows you to initiate more activity in the current
 -- transaction. Useful for implementing new primitives.
@@ -683,18 +675,17 @@ instance Functor (R.Event Plain) where
         cacheRef = unsafeNewIORef Nothing e
         getListen' = do
             return $ Listen $ \mNodeRef suppressEarlierFirings handle -> do
-                l <- getListen e
-                runListen l mNodeRef suppressEarlierFirings (handle . f)
+                linkedListen e mNodeRef suppressEarlierFirings (handle . f)
 
 instance Functor (R.Behavior Plain) where
-    f `fmap` Behavior underlyingEvent sample =
-        sample' `seq` Behavior (f `fmap` underlyingEvent) sample'
+    f `fmap` Behavior changes sample =
+        sample' `seq` Behavior (f `fmap` changes) sample'
         where sample' = Sample $ return $ f `fmap` unSample sample
 
 constant :: a -> Behavior a
 constant a = Behavior {
-        underlyingEvent = never,
-        behSample = Sample $ return $ return a
+        changes_   = never,
+        sampleImpl = Sample $ return $ return a
     }
 
 data BehaviorState a = BehaviorState {
@@ -727,10 +718,10 @@ finalizeSample s unlisten = do
 
 newtype Unlistener = Unlistener (MVar (Maybe (IO ())))
 
--- | Listen to an input event/behavior and return an 'Unlistener' that can be
--- attached to an output event using 'addCleanup_Listen'.
-unlistenize :: Reactive (IO ()) -> Reactive Unlistener
-unlistenize doListen = do
+-- | Perform a listen later so we can tolerate lazy loops.
+-- Returns an 'Unlistener' that can be attached to an event with 'addCleanup_Listen'.
+later :: Reactive (IO ()) -> Reactive Unlistener
+later doListen = do
     unlistener@(Unlistener ref) <- newUnlistener
     -- We schedule the actual listen rather than doing it now, so event values get
     -- evaluated lazily. Otherwise we get deadlocks when events are used in value loops.
@@ -746,7 +737,7 @@ unlistenize doListen = do
     newUnlistener :: Reactive Unlistener
     newUnlistener = Unlistener <$> ioReactive (newMVar (Just $ return ()))
 
--- | Cause the things listened to with unlistenize to be unlistened when the
+-- | Cause the things listened to with later to be unlistened when the
 -- specified listener is not referenced any more.
 addCleanup_Listen :: Unlistener -> Listen a -> Reactive (Listen a)
 addCleanup_Listen (Unlistener ref) l = ioReactive $ finalizeListen l $ do
@@ -768,7 +759,7 @@ listenValueRaw :: Behavior a -> Maybe (MVar Node) -> Bool -> (a -> Reactive ()) 
 listenValueRaw ba = lastFiringOnly $ \mNodeRef suppressEarlierFirings handle -> do
     a <- sample ba
     handle a
-    linkedListen (underlyingEvent ba) mNodeRef suppressEarlierFirings handle
+    linkedListen (changes ba) mNodeRef suppressEarlierFirings handle
 
 -- | Queue the specified atomic to run at the end of the priority 2 queue
 schedulePrioritized :: Maybe (MVar Node)
@@ -803,7 +794,7 @@ eventify listen = Event gl cacheRef
     cacheRef = unsafeNewIORef Nothing listen
     gl = do
         (l, push, nodeRef) <- ioReactive newEventImpl
-        unlistener <- unlistenize $ listen (Just nodeRef) False push
+        unlistener <- later $ listen (Just nodeRef) False push
         addCleanup_Listen unlistener l
 
 instance Applicative (R.Behavior Plain) where
@@ -815,15 +806,13 @@ instance Applicative (R.Behavior Plain) where
         gl = do
             fRef <- ioReactive $ newIORef =<< unSample s1
             aRef <- ioReactive $ newIORef =<< unSample s2
-            l1 <- getListen u1
-            l2 <- getListen u2
             (l, push, nodeRef) <- ioReactive newEventImpl
-            unlistener <- unlistenize $ do
-                un1 <- runListen l1 (Just nodeRef) False $ \f -> do
+            unlistener <- later $ do
+                un1 <- linkedListen u1 (Just nodeRef) False $ \f -> do
                     ioReactive $ writeIORef fRef f
                     a <- ioReactive $ readIORef aRef
                     push (f a)
-                un2 <- runListen l2 (Just nodeRef) False $ \a -> do
+                un2 <- linkedListen u2 (Just nodeRef) False $ \a -> do
                     f <- ioReactive $ readIORef fRef
                     ioReactive $ writeIORef aRef a
                     push (f a)
@@ -843,7 +832,7 @@ crossE epa = do
 cross :: (Typeable p, Typeable q) => Behavior a -> Reactive (Behavior q a)
 cross bpa = do
     a <- sample bpa
-    ea <- crossE (underlyingEvent bpa)
+    ea <- crossE (changes bpa)
     ioReactive $ sync $ 3 a ea
 -}
 

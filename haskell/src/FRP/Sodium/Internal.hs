@@ -7,7 +7,6 @@ module FRP.Sodium.Internal (
         scheduleLast,
         Listen(..),
         getListen,
-        runListen,
         linkedListen,
         Node,
         newEventLinked,
@@ -21,7 +20,7 @@ module FRP.Sodium.Internal (
         Sample(..),
         unSample,
         addCleanup_Sample,
-        unlistenize
+        later
     ) where
 
 import qualified FRP.Sodium.Context as C

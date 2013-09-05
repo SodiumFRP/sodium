@@ -2,6 +2,7 @@
 import FRP.Sodium
 import Control.Applicative
 import Control.Exception
+import System.Timeout
 
 verbose = False
 
@@ -19,6 +20,6 @@ main = do
         switch oout
     kill <- sync $ listen (values out) $ \x ->
         if verbose then print x else (evaluate x >> return ())
-    mapM_ (sync . pushT) [0..]
+    timeout 2000000 $ mapM_ (sync . pushT) [0..]
     kill
 

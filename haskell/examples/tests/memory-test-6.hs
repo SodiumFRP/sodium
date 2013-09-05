@@ -4,6 +4,7 @@ import FRP.Sodium
 import Control.Applicative
 import Control.Exception
 import Control.Monad
+import System.Timeout
 
 verbose = False
 
@@ -22,6 +23,6 @@ main = do
         switch eFlam
     kill <- sync $ listen (values out) $ \x ->
         if verbose then print x else (evaluate x >> return ())
-    forever $ sync $ push ()
+    timeout 2000000 $ forever $ sync $ push ()
     kill
 
