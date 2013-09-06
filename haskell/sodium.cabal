@@ -20,19 +20,20 @@ description:
   .
   See the /examples/ directory for test cases and examples.
   .
-  Changes: 0.2.0.0 fix some value recursion deadlocks and improve docs;
-           0.3.0.0 add mergeWith, make cross asynchronous;
+  Changes: 0.2.0.0 Fix some value recursion deadlocks and improve docs;
+           0.3.0.0 Add mergeWith, make cross asynchronous;
            0.4.0.0 API revamp to remove an excess type variable. Parallelism stuff to be rethought;
            0.5.0.0 Improved tests cases + add Freecell example, API tweaks;
            0.5.0.1 Internal improvements;
            0.5.0.2 Fix multiple memory leaks;
            0.6     Minor API changes, particular with accum;
-           0.6.0.1 ghc-7.8 compatibility.
+           0.6.0.1 ghc-7.8 compatibility;
+           0.6.0.2 Fix memory leak - see memory-test-8 & memory-test-8a.
 license:             BSD3
 license-file:        LICENSE
 author:              Stephen Blackheath
 maintainer:          http://blacksapphire.com/antispam/
-copyright:           (c) Stephen Blackheath 2012
+copyright:           (c) Stephen Blackheath 2012-2013
 category:            FRP
 build-type:          Simple
 cabal-version:       >=1.8
@@ -44,6 +45,11 @@ extra-source-files:  examples/tests/README.txt
                      examples/tests/memory-test-4.hs
                      examples/tests/memory-test-5.hs
                      examples/tests/memory-test-6.hs
+                     examples/tests/memory-test-6a.hs
+                     examples/tests/memory-test-7.hs
+                     examples/tests/memory-test-8.hs
+                     examples/tests/memory-test-8a.hs
+                     examples/tests/run-memory-tests.sh
                      examples/games/poodle.hs
                      examples/games/freecell.hs
                      examples/games/Engine.hs

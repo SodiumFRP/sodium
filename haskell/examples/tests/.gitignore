@@ -3,12 +3,14 @@
 *.done
 *.aux
 *.png
+*.prof
 memory-test-1
 memory-test-2
 memory-test-3
 memory-test-4
 memory-test-5
 memory-test-6
+memory-test-6a
 memory-test-7
 memory-test-8
 memory-test-8a

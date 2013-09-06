@@ -534,5 +534,5 @@ tests = test [ event1, fmap1, merge1, filterJust1, filterE1, gate1, beh1, beh2, 
     switch1, once1, once2, cycle1{-, mergeWith1, mergeWith2, mergeWith3,
     coalesce1-} ]
 
-main = forever $ runTestTT tests
+main = {-forever $ -} runTestTT tests
 
