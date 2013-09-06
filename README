@@ -6,9 +6,21 @@ programming efforts, as well as a lot of personal experience. Enjoy.
 
 Status:
   Haskell - complete
-  Java - complete
-  C++ - complete (but some polishing needed)
+  Java - complete (but see below)
+  C++ - complete (but see below)
   Embedded-C - just an experiment
+  Rust - got nowhere with it yet
+ 
+A note on memory management:
+  Memory management in Sodium is a complex business.
+
+  The Haskell version's memory management has been perfected, which means that
+  you can write arbitrarily complex code memory usage will stay constant. This
+  proves that it can be done.
+
+  The Java and C++ versions however are functionally correct, but they haven't
+  been well tested for memory management yet. If you rip into using them, you
+  may end up helping us with testing.
 
 Drop by our blog at 
   http://reactiveprogramming.org/
