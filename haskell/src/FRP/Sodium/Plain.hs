@@ -626,7 +626,7 @@ unlinkNode nodeRef iD = do
         let listeners' = M.delete iD (noListeners no)
         return $ listeners' `seq` no { noListeners = listeners' }
 
-data Dep = Dep Any
+newtype Dep = Dep Any
 
 dep :: a -> Dep
 dep = Dep . unsafeCoerce
