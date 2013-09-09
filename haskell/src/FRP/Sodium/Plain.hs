@@ -399,7 +399,7 @@ once e = Event gl cacheRef (dep e)
 --
 -- An example use case of this might be a situation where we are splitting
 -- a block of input data into frames. We obviously want each frame to have
--- its own transaction so that state is correctly updated after each frame.
+-- its own transaction so that state is updated separately each frame.
 split :: Event [a] -> Event a
 split esa = Event gl cacheRef (dep esa)
   where
