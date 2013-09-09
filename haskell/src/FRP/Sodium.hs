@@ -55,6 +55,7 @@ module FRP.Sodium (
         sample,
         coalesce,
         once,
+        split,
         -- * Derived FRP functions
         mergeWith,
         filterE,

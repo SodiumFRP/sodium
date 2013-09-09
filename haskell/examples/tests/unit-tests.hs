@@ -526,12 +526,36 @@ coalesce1 = TestCase $ do
     unlisten
     assertEqual "coalesce1" [2, 11] =<< readIORef outRef
 
+split1 = TestCase $ do
+    outRef <- newIORef []
+    (ea, pushA) <- sync newEvent
+    let ewords = coalesce (++) $ split $ words <$> ea
+    unlisten <- sync $ listen ewords $ \o -> modifyIORef outRef (++ [o])
+    sync $ pushA "the common cormorant"
+    sync $ pushA "or shag"
+    unlisten
+    assertEqual "split1" ["the","common","cormorant","or","shag"] =<< readIORef outRef
+
+split2 = TestCase $ do
+    outRef <- newIORef []
+    (ea, pushA) <- sync newEvent
+    let halve []  = []
+        halve [_] = []
+        halve str = [take (length str `div` 2) str,
+                     drop (length str `div` 2) str]
+        ehalves = split $ (halve <$> ea) `merge` (halve <$> ehalves)
+    unlisten <- sync $ listen ehalves $ \o -> modifyIORef outRef (++ [o])
+    sync $ pushA "abcdefgh"
+    unlisten
+    assertEqual "split2" ["abcd","ab","a","b","cd","c","d",
+                          "efgh","ef","e","f","gh","g","h"] =<< readIORef outRef
+
 tests = test [ event1, fmap1, merge1, filterJust1, filterE1, gate1, beh1, beh2, beh3, beh4, beh5,
     behConstant, valuesThenMap, valuesTwiceThenMap, valuesThenCoalesce, valuesTwiceThenCoalesce,
     valuesThenSnapshot, valuesTwiceThenSnapshot, valuesThenMerge, valuesThenFilter,
     valuesTwiceThenFilter, valuesThenOnce, valuesTwiceThenOnce, valuesLateListen,
     holdIsDelayed, appl1, snapshot1, count1, collect1, collect2, collectE1, collectE2, switchE1,
-    switch1, once1, once2, cycle1{-, mergeWith1, mergeWith2, mergeWith3,
+    switch1, once1, once2, cycle1, split1, split2 {-, mergeWith1, mergeWith2, mergeWith3,
     coalesce1-} ]
 
 main = {-forever $ -} runTestTT tests

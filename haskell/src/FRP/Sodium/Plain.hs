@@ -24,7 +24,7 @@ import qualified Data.Map as M
 import Data.Maybe
 import Data.Set (Set)
 import qualified Data.Set as S
-import Data.Sequence (Seq, (|>))
+import Data.Sequence (Seq, (|>), (><))
 import qualified Data.Sequence as Seq
 import GHC.Exts
 import System.Mem.Weak
@@ -126,6 +126,7 @@ instance R.Context Plain where
     sample = sample
     coalesce = coalesce
     once = once
+    split = split
 
 -- | An event that gives the updates for the behavior. If the behavior was created
 -- with 'hold', then 'changes' gives you back the event that was passed to 'hold'.
@@ -164,6 +165,13 @@ sync task = do
                             loop
                           else
                             return ()
+            post <- gets asPost
+            unless (Seq.null post) $ do
+                let Reactive task = post `Seq.index` 0
+                modify $ \as -> as { asPost = Seq.drop 1 post }
+                task
+                loop
+
     outVar <- newIORef undefined
     let lock = paLock partition
     putMVar lock ()
@@ -171,7 +179,8 @@ sync task = do
     evalStateT loop $ ReactiveState {
             asQueue1 = Seq.singleton (task >>= ioReactive . writeIORef outVar),
             asQueue2 = q,
-            asFinal = Seq.empty
+            asFinal = Seq.empty,
+            asPost = Seq.empty
         }
     takeMVar lock
     readIORef outVar
@@ -386,6 +395,21 @@ once e = Event gl cacheRef (dep e)
             return unlisten
         addCleanup_Listen unlistener l
 
+-- | Take each list item and put it into a new transaction of its own.
+--
+-- An example use case of this might be a situation where we are splitting
+-- a block of input data into frames. We obviously want each frame to have
+-- its own transaction so that state is correctly updated after each frame.
+split :: Event [a] -> Event a
+split esa = Event gl cacheRef (dep esa)
+  where
+    cacheRef = unsafeNewIORef Nothing esa
+    gl = do
+        (l, push, nodeRef) <- ioReactive newEventImpl
+        unlistener <- later $ linkedListen esa (Just nodeRef) False $ \as ->
+            schedulePost $ map push as
+        addCleanup_Listen unlistener l
+
 -- | Create a new 'Behavior' along with an action to push changes into it.
 -- American spelling.
 newBehavior :: a  -- ^ Initial behavior value
@@ -502,7 +526,8 @@ instance PriorityQueueable (Maybe (MVar Node)) where
 data ReactiveState = ReactiveState {
         asQueue1 :: Seq (Reactive ()),
         asQueue2 :: PriorityQueue (Maybe (MVar Node)) (Reactive ()),
-        asFinal  :: Seq (Reactive ())
+        asFinal  :: Seq (Reactive ()),
+        asPost   :: Seq (Reactive ())
     }
 
 instance Functor (R.Reactive Plain) where
@@ -540,6 +565,9 @@ scheduleEarly task = Reactive $ modify $ \as -> as { asQueue1 = asQueue1 as |> t
 
 scheduleLast :: Reactive () -> Reactive ()
 scheduleLast task = Reactive $ modify $ \as -> as { asFinal = asFinal as |> task }
+
+schedulePost :: [Reactive ()] -> Reactive ()
+schedulePost tasks = Reactive $ modify $ \as -> as { asPost = Seq.fromList tasks >< asPost as }
 
 data Listen a = Listen { runListen_ :: Maybe (MVar Node) -> Bool -> (a -> Reactive ()) -> Reactive (IO ()) }
 

@@ -668,6 +668,8 @@ void test_sodium::split1()
                                     string("or"), string("shag") }) == *out);
 }
 
+// TO DO: split2 from Haskell implementation
+
 void test_sodium::add_cleanup1()
 {
     std::shared_ptr<vector<string>> out(new vector<string>);
