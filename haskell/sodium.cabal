@@ -22,25 +22,25 @@ description:
   .
   Changes:
   .
-   * 0.2.0.0 Fix some value recursion deadlocks and improve docs;
+   * 0.2.0.0 - Fix some value recursion deadlocks and improve docs;
   .
-   * 0.3.0.0 Add mergeWith, make cross asynchronous;
+   * 0.3.0.0 - Add mergeWith, make cross asynchronous;
   .
-   * 0.4.0.0 API revamp to remove an excess type variable. Parallelism stuff to be rethought;
+   * 0.4.0.0 - API revamp to remove an excess type variable. Parallelism stuff to be rethought;
   .
-   * 0.5.0.0 Improved tests cases + add Freecell example, API tweaks;
+   * 0.5.0.0 - Improved tests cases + add Freecell example, API tweaks;
   .
-   * 0.5.0.1 Internal improvements;
+   * 0.5.0.1 - Internal improvements;
   .
-   * 0.5.0.2 Fix multiple memory leaks;
+   * 0.5.0.2 - Fix multiple memory leaks;
   .
-   * 0.6     Minor API changes, particular with accum;
+   * 0.6     - Minor API changes, particular with accum;
   .
-   * 0.6.0.1 ghc-7.8 compatibility;
+   * 0.6.0.1 - ghc-7.8 compatibility;
   .
-   * 0.6.0.2 Fix memory leak - see memory-test-8 & memory-test-8a.
+   * 0.6.0.2 - Fix memory leak - see memory-test-8 & memory-test-8a;
   .
-   * 0.7.0.0 Add split primitive.
+   * 0.7.0.0 - Add split primitive.
 
 license:             BSD3
 license-file:        LICENSE
