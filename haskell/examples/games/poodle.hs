@@ -4,7 +4,7 @@
 --     stb-image
 --     OpenGL
 --     GLUT
-import FRP.Sodium
+import FRP.Sodium hiding (split)
 import Control.Applicative
 import Control.Monad.Trans
 import Data.Maybe
