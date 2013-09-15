@@ -19,7 +19,10 @@ module FRP.Sodium.Internal (
         addCleanup_Listen,
         Sample(..),
         addCleanup_Sample,
-        later
+        later,
+        dep,
+        unsafeNewIORef,
+        Plain
     ) where
 
 import qualified FRP.Sodium.Context as C

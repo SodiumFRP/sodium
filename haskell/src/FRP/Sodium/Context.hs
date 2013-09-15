@@ -26,8 +26,6 @@ class (
     --
     -- State changes to 'hold' values occur after processing of the transaction is complete.
     sync          :: Reactive r a -> IO a
-    -- Lift an arbitrary IO action into a 'Reactive'.
-    ioReactive    :: IO a -> Reactive r a
     -- | Returns an event, and a push action for pushing a value into the event.
     newEvent      :: Reactive r (Event r a, a -> Reactive r ())
     -- | Listen for firings of this event. The returned @IO ()@ is an IO action
@@ -88,6 +86,14 @@ class (
     -- a block of input data into frames. We obviously want each frame to have
     -- its own transaction so that state is updated separately each frame.
     split         :: Event r [a] -> Event r a
+
+class Context r => ContextIO r where
+    -- | Execute the specified IO operation asynchronously on a separate thread, and
+    -- signal the output event in a new transaction upon its completion.
+    executeAsyncIO :: Event r (IO a) -> Event r a
+    -- | Execute the specified IO operation synchronously and fire the output event
+    -- in the same transaction.
+    executeSyncIO  :: Event r (IO a) -> Event r a
 
 -- | A time-varying value, British spelling.
 type Behaviour r a = Behavior r a

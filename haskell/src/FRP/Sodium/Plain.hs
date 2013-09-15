@@ -110,7 +110,6 @@ instance R.Context Plain where
         }
 
     sync = sync
-    ioReactive = ioReactive
     newEvent = newEvent
     listen = listen
     never = never
