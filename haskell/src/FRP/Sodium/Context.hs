@@ -26,8 +26,6 @@ class (
     --
     -- State changes to 'hold' values occur after processing of the transaction is complete.
     sync          :: Reactive r a -> IO a
-    -- Lift an arbitrary IO action into a 'Reactive'.
-    ioReactive    :: IO a -> Reactive r a
     -- | Returns an event, and a push action for pushing a value into the event.
     newEvent      :: Reactive r (Event r a, a -> Reactive r ())
     -- | Listen for firings of this event. The returned @IO ()@ is an IO action
@@ -88,6 +86,28 @@ class (
     -- a block of input data into frames. We obviously want each frame to have
     -- its own transaction so that state is updated separately each frame.
     split         :: Event r [a] -> Event r a
+
+class Context r => ContextIO r where
+    -- | Execute the specified IO operation asynchronously on a separate thread, and
+    -- signal the output event in a new transaction upon its completion.
+    --
+    -- Caveat: Where 'switch' or 'switchE' is used, when some reactive logic has been
+    -- switched away, we rely on garbage collection to actually disconnect this logic
+    -- from any input it may be listening to. With normal Sodium code, everything is
+    -- pure, so before garbage collection happens, the worst we will get is some wasted
+    -- CPU cycles. If you are using 'executeAsyncIO'/'executeSyncIO' inside a 'switch'
+    -- or 'switchE', however, it is possible that logic that has been switched away
+    -- hasn't been garbage collected yet. This logic /could/ still run, and if it has
+    -- observable effects, you could see it running after it is supposed to have been
+    -- switched out. One way to avoid this is to pipe the source event for IO out of the
+    -- switch, run the 'executeAsyncIO'/'executeSyncIO' outside the switch, and pipe its
+    -- output back into the switch contents.
+    executeAsyncIO :: Event r (IO a) -> Event r a
+    -- | Execute the specified IO operation synchronously and fire the output event
+    -- in the same transaction.
+    --
+    -- Caveat: See 'executeAsyncIO'.
+    executeSyncIO  :: Event r (IO a) -> Event r a
 
 -- | A time-varying value, British spelling.
 type Behaviour r a = Behavior r a

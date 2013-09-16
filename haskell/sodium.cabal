@@ -1,5 +1,5 @@
 name:                sodium
-version:             0.7.0.0
+version:             0.8.0.0
 synopsis:            Sodium Reactive Programming (FRP) System
 description:         
   A general purpose Reactive Programming (FRP) system. This is part of a project to
@@ -41,6 +41,8 @@ description:
    * 0.6.0.2 - Fix memory leak - see memory-test-8 & memory-test-8a;
   .
    * 0.7.0.0 - Add split primitive.
+  .
+   * 0.8.0.0 - Add executeIO primitive.
 
 license:             BSD3
 license-file:        LICENSE
@@ -145,7 +147,10 @@ source-repository head
 
 library
   hs-source-dirs:      src
-  exposed-modules:     FRP.Sodium, FRP.Sodium.Internal, FRP.Sodium.Context
+  exposed-modules:     FRP.Sodium,
+                       FRP.Sodium.Internal,
+                       FRP.Sodium.Context,
+                       FRP.Sodium.IO
   other-modules:       FRP.Sodium.Plain
   build-depends:       base >= 4.3.0.0 && < 4.8.0.0,
                        containers >= 0.4.0.0 && < 0.6.0.0,
