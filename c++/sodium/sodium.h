@@ -388,8 +388,6 @@ namespace sodium {
              */
             event() {}
         protected:
-            event(const impl::listen_impl_func<impl::H_EVENT>& listen)
-                : impl::event_(listen, new impl::event_::sample_now_func(NULL)) {}
             event(const impl::event_& ev) : impl::event_(ev) {}
         public:
             /*!
