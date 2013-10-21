@@ -73,16 +73,16 @@ partition = unsafePerformIO createPartition
             }
 
 -- | A monad for transactional reactive operations. Execute it from 'IO' using 'sync'.
-type Reactive a = R.Reactive Plain a
+type Reactive = R.Reactive Plain
 
 -- | A stream of events. The individual firings of events are called \'event occurrences\'.
-type Event a = R.Event Plain a
+type Event = R.Event Plain
 
 -- | A time-varying value, American spelling.
-type Behavior a = R.Behavior Plain a
+type Behavior = R.Behavior Plain
 
 -- | A time-varying value, British spelling.
-type Behaviour a = R.Behavior Plain a
+type Behaviour = R.Behavior Plain
 
 -- Must be data not newtype, because we need to attach finalizers to it
 data Sample a = Sample {
