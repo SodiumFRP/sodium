@@ -80,7 +80,7 @@ runGame title game = do
     unlisten <- sync $ do
         time <- hold 0 eTime
         sprites <- game eMouse time
-        listen (values sprites) (writeIORef spritesRef)
+        listen (value sprites) (writeIORef spritesRef)
 
     _ <- GLUT.getArgsAndInitialize
     GLUT.initialDisplayMode $= [GLUT.DoubleBuffered]

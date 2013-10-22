@@ -43,7 +43,7 @@ randomTimes rng time = do
     rec
         tLast <- hold 0 eAppear
         interval <- peelList eAppear intervals
-        let eTime = values time
+        let eTime = value time
             eAppear = filterJust $ snapshotWith (\t (tLast, interval) ->
                     if t >= tLast + interval then Just t else Nothing
                 ) eTime ((,) <$> tLast <*> interval)
