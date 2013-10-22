@@ -28,7 +28,7 @@ int main(int argc, char* argv[])
             bs[i] = new behavior_sink<string>("world");
             ss[i] = new behavior_sink<behavior<string>>(*as[i]);
             os[i] = new behavior<string>(switch_b(*ss[i]));
-            os[i]->changes().listen([] (const string& s) {
+            os[i]->updates().listen([] (const string& s) {
                 //printf("%s\n", s.c_str());
             });
         }

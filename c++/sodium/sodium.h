@@ -188,13 +188,13 @@ namespace sodium {
         struct behavior_impl {
             behavior_impl(const light_ptr& constant);
             behavior_impl(
-                const event_& changes,
+                const event_& updates,
                 const std::function<light_ptr()>& sample,
                 std::function<void()>* kill,
                 const std::shared_ptr<behavior_impl>& parent);
             ~behavior_impl();
 
-            event_ changes;  // Having this here allows references to behavior to keep the
+            event_ updates;  // Having this here allows references to behavior to keep the
                              // underlying event's cleanups alive, and provides access to the
                              // underlying event, for certain primitives.
 
@@ -233,8 +233,8 @@ namespace sodium {
                 boost::optional<light_ptr> get_constant_value() const;
 #endif
 
-                event_ values_(transaction_impl* trans) const;
-                const event_& changes_() const { return impl->changes; }
+                event_ value_(transaction_impl* trans) const;
+                const event_& updates_() const { return impl->updates; }
         };
 
         behavior_ map_(transaction_impl* trans, const std::function<light_ptr(const light_ptr&)>& f,
@@ -297,7 +297,7 @@ namespace sodium {
              */
             behavior<A, P> add_cleanup(const std::function<void()>& cleanup) const {
                 return behavior<A, P>(new impl::behavior_impl(
-                    impl->changes,
+                    impl->updates,
                     impl->sample,
                     new std::function<void()>(cleanup),
                     impl
@@ -327,21 +327,22 @@ namespace sodium {
             }
 
             /*!
-             * Returns an event describing the changes in a behavior.
+             * Returns an event giving the updates to a behavior. If this behavior was created
+             * by a hold, then this gives you back an event equivalent to the one that was held.
              */
-            event<A, P> changes() const {
-                return event<A, P>(impl->changes);
+            event<A, P> updates() const {
+                return event<A, P>(impl->updates);
             }
 
             /*!
              * Returns an event describing the value of a behavior, where there's an initial event
              * giving the current value.
              */
-            event<A, P> values() const {
+            event<A, P> value() const {
                 transaction<P> trans;
-                return event<A, P>(values_(trans.impl()));
+                return event<A, P>(value_(trans.impl()));
             }
-        
+
             /**
              * Transform a behavior with a generalized state loop (a mealy machine). The function
              * is passed the input and the old state and returns the new state and output value.
@@ -353,12 +354,12 @@ namespace sodium {
             ) const
             {
                 transaction<P> trans;
-                auto ea = changes().coalesce([] (const A&, const A& snd) -> A { return snd; });
+                auto ea = updates().coalesce([] (const A&, const A& snd) -> A { return snd; });
                 auto za = sample();
                 auto zbs = f(za, initS);
                 std::shared_ptr<impl::collect_state<S>> pState(new impl::collect_state<S>(std::get<1>(zbs)));
                 auto p = impl::unsafe_new_event();
-                auto kill = changes().listen_raw(trans.impl(), std::get<1>(p),
+                auto kill = updates().listen_raw(trans.impl(), std::get<1>(p),
                     new std::function<void(const std::shared_ptr<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
                         [pState, f] (const std::shared_ptr<impl::node>& target, impl::transaction_impl* trans, const light_ptr& ptr) {
                             auto outsSt = f(*ptr.cast_ptr<A>(NULL), pState->s);
@@ -411,14 +412,23 @@ namespace sodium {
             };
 
             /*!
-             * Map a function over this event to modify the output value.
+             * Map a function over this event to modify the output value. The function must be
+             * pure (referentially transparent), that is, it must not have effects.
              */
             template <class B>
             event<B, P> map(const std::function<B(const A&)>& f) const {
                 transaction<P> trans;
                 return event<B, P>(impl::map_(trans.impl(), SODIUM_DETYPE_FUNCTION1(A,B,f), *this));
             }
-    
+
+            /*!
+             * Map a function over this event to modify the output value. Effects are allowed.
+             */
+            template <class B>
+            event<B, P> map_effectful(const std::function<B(const A&)>& f) const {
+                return map(f);  // Same as map() for now but this may change!
+            }
+
             /*!
              * Map a function over this event to modify the output value.
              *
@@ -655,7 +665,7 @@ namespace sodium {
     behavior<A, Q> cross(const behavior<A, P>& b)
     {
         transaction<P> trans;
-        return cross<A, P, Q>(b.changes()).hold(b.sample());
+        return cross<A, P, Q>(b.updates()).hold(b.sample());
     }
 
     /*!
@@ -704,7 +714,7 @@ namespace sodium {
         /*!
          * Returns an event describing the changes in a behavior.
          */
-        inline impl::event_ underlying_event(const impl::behavior_& beh) {return beh.impl->changes;}
+        inline impl::event_ underlying_event(const impl::behavior_& beh) {return beh.impl->updates;}
     };
 
     namespace impl {
@@ -830,7 +840,7 @@ namespace sodium {
 
             void loop(const behavior<A, P>& b)
             {
-                elp.loop(b.changes());
+                elp.loop(b.updates());
                 *pSample = b.impl->sample;
                 // TO DO: This keeps the memory allocated in a loop. Figure out how to
                 // break the loop.
