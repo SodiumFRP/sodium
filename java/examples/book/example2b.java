@@ -31,7 +31,7 @@ public class example2b extends JFrame
         path = eClick.accum(List.<Point>nil(), (pt, pth) -> pth.cons(pt));
 
         // When the path is changed, we repaint the window.
-        l = path.changes().listen(pt -> {
+        l = path.updates().listen(pt -> {
             this.repaint();
         });
     }

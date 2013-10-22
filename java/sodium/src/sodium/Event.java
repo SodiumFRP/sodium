@@ -72,7 +72,7 @@ public class Event<A> {
             listeners.add(action);
         }
 		Object[] aNow = sampleNow();
-		if (aNow != null) {    // In cases like values(), we start with an initial value.
+		if (aNow != null) {    // In cases like value(), we start with an initial value.
 		    for (int i = 0; i < aNow.length; i++)
                 action.run(trans, (A)aNow[i]);  // <-- unchecked warning is here
         }

@@ -44,7 +44,7 @@ public class example2c extends JFrame
         path.loop(eAdded.hold(new Path()));
 
         // When the path is changed, we repaint the window.
-        l = path.changes().listen(pt -> {
+        l = path.updates().listen(pt -> {
             this.repaint();
         });
     }

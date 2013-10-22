@@ -49,12 +49,12 @@ public class Behavior<A> {
     /**
      * Sample the behavior's current value.
      *
-     * This should generally be avoided in favour of values().listen(..) so you don't
+     * This should generally be avoided in favour of value().listen(..) so you don't
      * miss any updates, but in many circumstances it makes sense.
      *
      * It can be best to use it inside an explicit transaction (using Transaction.run()).
      * For example, a b.sample() inside an explicit transaction along with a
-     * b.changes().listen(..) will capture the current value and any updates without risk
+     * b.updates().listen(..) will capture the current value and any updates without risk
      * of missing any in between.
      */
     public final A sample()
@@ -65,29 +65,29 @@ public class Behavior<A> {
     }
 
     /**
-     * An event that gives the updates for the behavior. It doesn't do any equality
-     * comparison as the name might imply.
+     * An event that gives the updates for the behavior. If this behavior was created
+     * with a hold, then updates() gives you an event equivalent to the one that was held.
      */
-    public final Event<A> changes()
+    public final Event<A> updates()
     {
     	return event;
     }
 
     /**
      * An event that is guaranteed to fire once when you listen to it, giving
-     * the current value of the behavior, and thereafter behaves like 'changes',
+     * the current value of the behavior, and thereafter behaves like updates(),
      * firing for each update to the behavior's value.
      */
-    public final Event<A> values()
+    public final Event<A> value()
     {
         return Transaction.apply(new Lambda1<Transaction, Event<A>>() {
         	public Event<A> apply(Transaction trans) {
-        		return values(trans);
+        		return value(trans);
         	}
         });
     }
 
-    final Event<A> values(Transaction trans1)
+    final Event<A> value(Transaction trans1)
     {
     	final EventSink<A> out = new EventSink<A>() {
     		@Override
@@ -110,7 +110,7 @@ public class Behavior<A> {
      */
 	public final <B> Behavior<B> map(Lambda1<A,B> f)
 	{
-		return changes().map(f).hold(f.apply(sample()));
+		return updates().map(f).hold(f.apply(sample()));
 	}
 
 	/**
@@ -194,12 +194,12 @@ public class Behavior<A> {
             }
         };
 
-        Listener l1 = bf.changes().listen_(out.node, new TransactionHandler<Lambda1<A,B>>() {
+        Listener l1 = bf.updates().listen_(out.node, new TransactionHandler<Lambda1<A,B>>() {
         	public void run(Transaction trans1, Lambda1<A,B> f) {
                 h.run(trans1);
             }
         });
-        Listener l2 = ba.changes().listen_(out.node, new TransactionHandler<A>() {
+        Listener l2 = ba.updates().listen_(out.node, new TransactionHandler<A>() {
         	public void run(Transaction trans1, A a) {
 	            h.run(trans1);
 	        }
@@ -219,14 +219,14 @@ public class Behavior<A> {
             @Override
             public void run(Transaction trans2, Behavior<A> ba) {
                 // Note: If any switch takes place during a transaction, then the
-                // values().listen will always cause a sample to be fetched from the
+                // value().listen will always cause a sample to be fetched from the
                 // one we just switched to. The caller will be fetching our output
-                // using values().listen, and values() throws away all firings except
+                // using value().listen, and value() throws away all firings except
                 // for the last one. Therefore, anything from the old input behaviour
                 // that might have happened during this transaction will be suppressed.
                 if (currentListener != null)
                     currentListener.unlisten();
-                currentListener = ba.values(trans2).listen(out.node, trans2, new TransactionHandler<A>() {
+                currentListener = ba.value(trans2).listen(out.node, trans2, new TransactionHandler<A>() {
                 	public void run(Transaction trans3, A a) {
 	                    out.send(trans3, a);
 	                }
@@ -239,7 +239,7 @@ public class Behavior<A> {
                     currentListener.unlisten();
             }
         };
-        Listener l1 = bba.values().listen_(out.node, h);
+        Listener l1 = bba.value().listen_(out.node, h);
         return out.addCleanup(l1).hold(za);
 	}
 	
@@ -283,7 +283,7 @@ public class Behavior<A> {
                     currentListener.unlisten();
             }
         };
-        Listener l1 = bea.changes().listen(out.node, trans1, h1, false);
+        Listener l1 = bea.updates().listen(out.node, trans1, h1, false);
         return out.addCleanup(l1);
 	}
 
@@ -293,7 +293,7 @@ public class Behavior<A> {
      */
     public final <B,S> Behavior<B> collect(final S initState, final Lambda2<A, S, Tuple2<B, S>> f)
     {
-        final Event<A> ea = changes().coalesce(new Lambda2<A,A,A>() {
+        final Event<A> ea = updates().coalesce(new Lambda2<A,A,A>() {
         	public A apply(A fst, A snd) { return snd; }
         });
         final A za = sample();

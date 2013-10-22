@@ -30,7 +30,7 @@ public class MemoryTest1
             changeTens.map(tens -> t.map(tt -> new Tuple2<Integer,Integer>(tens, tt))).
             hold(t.map(tt -> new Tuple2<Integer,Integer>(0, tt)));
         Behavior<Tuple2<Integer,Integer>> out = Behavior.switchB(oout);
-        Listener l = out.values().listen(tu -> {
+        Listener l = out.value().listen(tu -> {
             //System.out.println(tu.a+","+tu.b);
         });
         int i = 0;

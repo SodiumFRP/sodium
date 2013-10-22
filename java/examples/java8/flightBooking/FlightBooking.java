@@ -112,7 +112,7 @@ class Button extends JButton
     public Button(Behavior<Boolean> enabled, String text)
     {
         super(text);
-        l = enabled.values().listen(e -> {
+        l = enabled.value().listen(e -> {
             setEnabled(e);
         });
         clicked = SwingHelpers.buttonClicked(this);
@@ -162,7 +162,7 @@ class DateField extends Container
 
         date = Behavior.lift((y,m,d) -> new Date(y,m,d), year, month, day);
 
-        l = enabled.values().listen(e -> {
+        l = enabled.value().listen(e -> {
             yearBox.setEnabled(e);
             monthBox.setEnabled(e);
             dayBox.setEnabled(e);

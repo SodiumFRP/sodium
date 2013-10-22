@@ -23,7 +23,7 @@ public class MemoryTest5
 
         EventSink<Integer> eChange = new EventSink<Integer>();
         Behavior<Integer> out = eChange.hold(0);
-        Listener l = out.values().listen(tt -> {
+        Listener l = out.value().listen(tt -> {
             //System.out.println(tt)
         });
         int i = 0;

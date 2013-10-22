@@ -30,7 +30,7 @@ public class example2a extends JFrame
         pos = eClick.hold(new Point(100, 100));
 
         // When the cross position is changed, we repaint the window.
-        l = pos.changes().listen(pt -> {
+        l = pos.updates().listen(pt -> {
             this.repaint();
         });
     }
