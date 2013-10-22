@@ -886,7 +886,7 @@ cross bpa = do
 -}
 
 -- | An event that gives the updates for the behavior. If the behavior was created
--- with 'hold', then 'updates' gives you an event equivalent to the one that was held.
+-- with 'hold', then 'changes' gives you an event equivalent to the one that was held.
 changes :: Behavior a -> Event a
 {-# DEPRECATED changes "renamed to 'updates'" #-}
 changes = updates
