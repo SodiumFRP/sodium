@@ -24,7 +24,7 @@ main = do
         eInit <- flam e time
         eFlam <- hold eInit (execute ((const $ flam e time) <$> eFlip))
         switch eFlam
-    kill <- sync $ listen (values out) $ \x ->
+    kill <- sync $ listen (value out) $ \x ->
         if verbose then print x else (evaluate (rnf x) >> return ())
     let loop t = do
             sync $ pushTime t

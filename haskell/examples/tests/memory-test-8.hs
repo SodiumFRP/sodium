@@ -14,7 +14,7 @@ flam :: Event () -> Behavior Int -> Reactive (Behavior (Maybe Int))
 flam e time = do
     -- Test that this arrangement...
     --
-    --                                           changes time
+    --                                           updates time
     --                                                |
     --                                                v
     --                                   eStop <-- SNAPSHOT (timer)
@@ -38,7 +38,7 @@ flam e time = do
                     case mRunning of
                         Just t0 | (t - t0) >= 5 -> Just Nothing
                         _                       -> Nothing
-                ) (changes time) mRunning
+                ) (updates time) mRunning
     return mRunning
 
 main = do
@@ -49,7 +49,7 @@ main = do
         eInit <- flam e time
         eFlam <- hold eInit (execute ((const $ flam e time) <$> eFlip))
         switch eFlam
-    kill <- sync $ listen (values out) $ \x ->
+    kill <- sync $ listen (value out) $ \x ->
         if verbose then print x else (evaluate (rnf x) >> return ())
     let loop t = do
             sync $ pushTime t

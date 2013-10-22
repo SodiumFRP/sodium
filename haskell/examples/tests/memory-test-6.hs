@@ -21,7 +21,7 @@ main = do
         eInit <- flam e
         eFlam <- hold eInit (execute ((const $ flam e) <$> e))
         switch eFlam
-    kill <- sync $ listen (values out) $ \x ->
+    kill <- sync $ listen (value out) $ \x ->
         if verbose then print x else (evaluate x >> return ())
     timeout 4000000 $ forever $ sync $ push ()
     kill

@@ -103,8 +103,8 @@ instance R.Context Plain where
         }
 
     data Behavior Plain a = Behavior {
-            changes_   :: Event a,  -- ^ An event that gives the updates for the behavior. It doesn't do any equality
-                                   -- comparison as the name might imply.
+            updates_   :: Event a,  -- ^ An event that gives the updates for the behavior. It doesn't do any equality
+                                    -- comparison as the name might imply.
             -- | Obtain the current value of a behavior.
             sampleImpl :: Sample a
         }
@@ -116,8 +116,8 @@ instance R.Context Plain where
     merge = merge
     filterJust = filterJust
     hold = hold
-    changes = changes
-    values = values
+    updates = updates 
+    value = value
     snapshotWith = snapshotWith
     switchE = switchE
     switch = switch
@@ -128,11 +128,9 @@ instance R.Context Plain where
     split = split
 
 -- | An event that gives the updates for the behavior. If the behavior was created
--- with 'hold', then 'changes' gives you back the event that was passed to 'hold'.
---
--- (It doesn't do any equality comparison as the name might imply.)
-changes :: Behavior a -> Event a
-changes = changes_
+-- with 'hold', then 'updates' gives you an event equivalent to the one that was held.
+updates :: Behavior a -> Event a
+updates = updates_
 
 -- | Execute the specified 'Reactive' within a new transaction, blocking the caller
 -- until all resulting processing is complete and all callbacks have been called.
@@ -193,8 +191,8 @@ newEvent = do
 -- | Listen for firings of this event. The returned @IO ()@ is an IO action
 -- that unregisters the listener. This is the observer pattern.
 --
--- To listen to a 'Behavior' use @listen (values b) handler@ or
--- @listen (changes b) handler@
+-- To listen to a 'Behavior' use @listen (value b) handler@ or
+-- @listen (updates b) handler@
 --
 -- NOTE: The callback is called with the transaction held, so you cannot
 -- use 'sync' inside a listener. You can delegate to another thread and have
@@ -261,19 +259,19 @@ hold initA ea = do
     sample <- ioReactive $ addCleanup_Sample unlistener
         (Sample (bsCurrent <$> readIORef bsRef) (dep ea))
     let beh = sample `seq` Behavior {
-                changes_   = ea,
+                updates_   = ea,
                 sampleImpl = sample
             }
     return beh
 
 -- | An event that is guaranteed to fire once when you listen to it, giving
--- the current value of the behavior, and thereafter behaves like 'changes',
+-- the current value of the behavior, and thereafter behaves like 'updates',
 -- firing for each update to the behavior's value.
-values :: Behavior a -> Event a
-values ba = sa `seq` ea `seq` eventify (listenValueRaw ba) (dep (sa, ea))
+value :: Behavior a -> Event a
+value ba = sa `seq` ea `seq` eventify (listenValueRaw ba) (dep (sa, ea))
   where
     sa = sampleImpl ba
-    ea = changes ba
+    ea = updates ba
 
 -- | Sample the behavior at the time of the event firing. Note that the 'current value'
 -- of the behavior that's sampled is the value as at the start of the transaction
@@ -295,7 +293,7 @@ snapshotWith f ea bb = sample' `seq` Event gl cacheRef (dep (ea, sample))
 switchE :: Behavior (Event a) -> Event a
 switchE bea = eea `seq` Event gl cacheRef (dep (eea, depRef))
   where
-    eea      = changes bea
+    eea      = updates bea
     cacheRef = unsafeNewIORef Nothing bea
     depRef   = unsafeNewIORef undefined bea
     gl = do
@@ -321,7 +319,7 @@ switch bba = do
     ba <- sample bba
     depRef <- ioReactive $ newIORef ba
     za <- sample ba
-    let eba = changes bba
+    let eba = updates bba
     ioReactive $ evaluate eba
     (ev, push, nodeRef) <- ioReactive $ newEventLinked (dep (bba, depRef))
     unlisten2Ref <- ioReactive $ newIORef Nothing
@@ -731,7 +729,7 @@ instance Functor (R.Behavior Plain) where
 
 constant :: a -> Behavior a
 constant a = Behavior {
-        changes_   = never,
+        updates_   = never,
         sampleImpl = Sample (return a) undefined
     }
 
@@ -808,7 +806,7 @@ listenValueRaw :: Behavior a -> Maybe (MVar Node) -> Bool -> (a -> Reactive ()) 
 listenValueRaw ba = lastFiringOnly $ \mNodeRef suppressEarlierFirings handle -> do
     a <- sample ba
     handle a
-    linkedListen (changes ba) mNodeRef suppressEarlierFirings handle
+    linkedListen (updates ba) mNodeRef suppressEarlierFirings handle
 
 -- | Queue the specified atomic to run at the end of the priority 2 queue
 schedulePrioritized :: Maybe (MVar Node)
@@ -883,7 +881,19 @@ crossE epa = do
 cross :: (Typeable p, Typeable q) => Behavior a -> Reactive (Behavior q a)
 cross bpa = do
     a <- sample bpa
-    ea <- crossE (changes bpa)
+    ea <- crossE (updates bpa)
     ioReactive $ sync $ 3 a ea
 -}
 
+-- | An event that gives the updates for the behavior. If the behavior was created
+-- with 'hold', then 'updates' gives you an event equivalent to the one that was held.
+changes :: Behavior a -> Event a
+{-# DEPRECATED changes "renamed to 'updates'" #-}
+changes = updates
+
+-- | An event that is guaranteed to fire once when you listen to it, giving
+-- the current value of the behavior, and thereafter behaves like 'changes',
+-- firing for each update to the behavior's value.
+values :: Behavior a -> Event a
+{-# DEPRECATED values "renamed to 'value'" #-}
+values = value

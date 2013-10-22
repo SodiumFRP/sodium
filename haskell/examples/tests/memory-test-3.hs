@@ -14,7 +14,7 @@ main = do
     out <- sync $ do
         oout <- hold t $ (\_ -> t) <$> eChange
         switch oout
-    kill <- sync $ listen (values out) $ \x ->
+    kill <- sync $ listen (value out) $ \x ->
         if verbose then print x else (evaluate x >> return ())
     timeout 4000000 $ forM_ [0..] $ \i -> do
         sync $ pushC ()

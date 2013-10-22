@@ -18,7 +18,7 @@ main = do
     out <- sync $ do
         oout <- hold (((,) 0) <$> t) $ (\tens -> ((,) tens) <$> t) <$> changeTens
         switch oout
-    kill <- sync $ listen (values out) $ \x ->
+    kill <- sync $ listen (value out) $ \x ->
         if verbose then print x else (evaluate x >> return ())
     timeout 4000000 $ mapM_ (sync . pushT) [0..]
     kill

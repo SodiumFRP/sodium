@@ -31,7 +31,7 @@ class (
     -- | Listen for firings of this event. The returned @IO ()@ is an IO action
     -- that unregisters the listener. This is the observer pattern.
     --
-    -- To listen to a 'Behavior' use @listen (values b) handler@
+    -- To listen to a 'Behavior' use @listen (value b) handler@
     listen        :: Event r a -> (a -> IO ()) -> Reactive r (IO ())
     -- | An event that never fires.
     never         :: Event r a
@@ -51,13 +51,13 @@ class (
     -- That is, state updates caused by event firings get processed at the end of
     -- the transaction.
     hold          :: a -> Event r a -> Reactive r (Behavior r a)
-    -- | An event that gives the updates for the behavior. It doesn't do any equality
-    -- comparison as the name might imply.
-    changes       :: Behavior r a -> Event r a
+    -- | An event that gives the updates for the behavior. If the behavior was created
+    -- with 'hold', then 'updates' gives you an event equivalent to the one that was held.
+    updates       :: Behavior r a -> Event r a
     -- | An event that is guaranteed to fire once when you listen to it, giving
     -- the current value of the behavior, and thereafter behaves like 'changes',
     -- firing for each update to the behavior's value.
-    values        :: Behavior r a -> Event r a
+    value         :: Behavior r a -> Event r a
     -- | Sample the behavior at the time of the event firing. Note that the 'current value'
     -- of the behavior that's sampled is the value as at the start of the transaction
     -- before any state changes of the current transaction are applied through 'hold's.
@@ -167,7 +167,7 @@ collectE f z ea = do
 -- is passed the input and the old state and returns the new state and output value.
 collect :: Context r => (a -> s -> (b, s)) -> s -> Behavior r a -> Reactive r (Behavior r b)
 collect f zs bea = do
-    let ea = coalesce (flip const) (changes bea)
+    let ea = coalesce (flip const) (updates bea)
     za <- sample bea
     let (zb, zs') = f za zs
     rec
@@ -185,4 +185,3 @@ accum z efa = do
 -- | Count event occurrences, giving a behavior that starts with 0 before the first occurrence.
 count :: Context r => Event r a -> Reactive r (Behavior r Int)
 count = accum 0 . (const (1+) <$>)
-

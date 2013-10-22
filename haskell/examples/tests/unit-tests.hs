@@ -93,7 +93,7 @@ beh1 = TestCase $ do
     outRef <- newIORef []
     (push, unlisten) <- sync $ do
         (beh, push) <- newBehavior "init"
-        unlisten <- listen (values beh) $ \a -> modifyIORef outRef (++ [a])
+        unlisten <- listen (value beh) $ \a -> modifyIORef outRef (++ [a])
         return (push, unlisten)
     sync $ do
         push "next"
@@ -104,7 +104,7 @@ beh2 = TestCase $ do
     outRef <- newIORef []
     (push, unlisten) <- sync $ do
         (beh, push) <- newBehavior "init"
-        unlisten <- listen (values beh) $ \a -> modifyIORef outRef (++ [a])
+        unlisten <- listen (value beh) $ \a -> modifyIORef outRef (++ [a])
         return (push, unlisten)
     unlisten
     sync $ do
@@ -115,7 +115,7 @@ beh3 = TestCase $ do
     outRef <- newIORef []
     (push, unlisten) <- sync $ do
         (beh, push) <- newBehavior "init"
-        unlisten <- listen (values beh) $ \a -> modifyIORef outRef (++ [a])
+        unlisten <- listen (value beh) $ \a -> modifyIORef outRef (++ [a])
         return (push, unlisten)
     sync $ do
         push "first"
@@ -129,7 +129,7 @@ beh4 = TestCase $ do
     outRef <- newIORef []
     (push, unlisten) <- sync $ do
         (beh, push) <- newBehavior "init"
-        unlisten <- listen (values beh) $ \a -> modifyIORef outRef (++ [a])
+        unlisten <- listen (value beh) $ \a -> modifyIORef outRef (++ [a])
         push "other"
         return (push, unlisten)
     sync $ do
@@ -143,7 +143,7 @@ beh5 = TestCase $ do
     outRef <- newIORef []
     unlisten <- sync $ do
         beh <- hold "init" ea
-        unlisten <- listen (map toUpper <$> values beh) $ \a -> modifyIORef outRef (++ [a])
+        unlisten <- listen (map toUpper <$> value beh) $ \a -> modifyIORef outRef (++ [a])
         push "other"
         return unlisten
     sync $ do
@@ -154,133 +154,133 @@ beh5 = TestCase $ do
 
 behConstant = TestCase $ do
     outRef <- newIORef []
-    unlisten <- sync $ listen (values $ pure 'X') $ \a -> modifyIORef outRef (++ [a])
+    unlisten <- sync $ listen (value $ pure 'X') $ \a -> modifyIORef outRef (++ [a])
     unlisten
     assertEqual "behConstant" ['X'] =<< readIORef outRef
 
-valuesThenMap = TestCase $ do
+valueThenMap = TestCase $ do
     (b, push) <- sync $ newBehavior 9
     outRef <- newIORef []
-    unlisten <- sync $ listen (values . fmap (+100) $ b) $ \a -> modifyIORef outRef (++ [a])
+    unlisten <- sync $ listen (value . fmap (+100) $ b) $ \a -> modifyIORef outRef (++ [a])
     sync $ push (2 :: Int)
     sync $ push 7
     unlisten
-    assertEqual "valuesThenMap" [109,102,107] =<< readIORef outRef 
+    assertEqual "valueThenMap" [109,102,107] =<< readIORef outRef 
 
--- | This is used for tests where values() produces a single initial value on listen,
+-- | This is used for tests where value() produces a single initial value on listen,
 -- and then we double that up by causing that single initial event to be repeated.
 -- This needs testing separately, because the code must be done carefully to achieve
 doubleUp :: Event a -> Event a
 doubleUp e = merge e e
 
-valuesTwiceThenMap = TestCase $ do
+valueTwiceThenMap = TestCase $ do
     (b, push) <- sync $ newBehavior 9
     outRef <- newIORef []
-    unlisten <- sync $ listen (doubleUp . values . fmap (+100) $ b) $ \a -> modifyIORef outRef (++ [a])
+    unlisten <- sync $ listen (doubleUp . value . fmap (+100) $ b) $ \a -> modifyIORef outRef (++ [a])
     sync $ push (2 :: Int)
     sync $ push 7
     unlisten
-    assertEqual "valuesThenMap" [109,109,102,102,107,107] =<< readIORef outRef 
+    assertEqual "valueThenMap" [109,109,102,102,107,107] =<< readIORef outRef 
     
-valuesThenCoalesce = TestCase $ do
+valueThenCoalesce = TestCase $ do
     (b, push) <- sync $ newBehavior 9
     outRef <- newIORef []
-    unlisten <- sync $ listen (coalesce (\_ x -> x) . values $ b) $ \a -> modifyIORef outRef (++ [a])
+    unlisten <- sync $ listen (coalesce (\_ x -> x) . value $ b) $ \a -> modifyIORef outRef (++ [a])
     sync $ push 2
     sync $ push 7
     unlisten
-    assertEqual "valuesThenCoalesce" [9,2,7] =<< readIORef outRef
+    assertEqual "valueThenCoalesce" [9,2,7] =<< readIORef outRef
 
-valuesTwiceThenCoalesce = TestCase $ do
+valueTwiceThenCoalesce = TestCase $ do
     (b, push) <- sync $ newBehavior 9
     outRef <- newIORef []
-    unlisten <- sync $ listen (coalesce (+) . doubleUp. values $ b) $ \a -> modifyIORef outRef (++ [a])
+    unlisten <- sync $ listen (coalesce (+) . doubleUp. value $ b) $ \a -> modifyIORef outRef (++ [a])
     sync $ push 2
     sync $ push 7
     unlisten
-    assertEqual "valuesThenCoalesce" [18,4,14] =<< readIORef outRef
+    assertEqual "valueThenCoalesce" [18,4,14] =<< readIORef outRef
 
-valuesThenSnapshot = TestCase $ do
+valueThenSnapshot = TestCase $ do
     (bi, pushi) <- sync $ newBehavior (9 :: Int)
     (bc, pushc) <- sync $ newBehavior 'a'
     outRef <- newIORef []
-    unlisten <- sync $ listen (flip snapshot bc . values $ bi) $ \a -> modifyIORef outRef (++ [a])
+    unlisten <- sync $ listen (flip snapshot bc . value $ bi) $ \a -> modifyIORef outRef (++ [a])
     sync $ pushc 'b'
     sync $ pushi 2
     sync $ pushc 'c'
     sync $ pushi 7
     unlisten
-    assertEqual "valuesThenSnapshot" ['a','b','c'] =<< readIORef outRef
+    assertEqual "valueThenSnapshot" ['a','b','c'] =<< readIORef outRef
 
-valuesTwiceThenSnapshot = TestCase $ do
+valueTwiceThenSnapshot = TestCase $ do
     (bi, pushi) <- sync $ newBehavior (9 :: Int)
     (bc, pushc) <- sync $ newBehavior 'a'
     outRef <- newIORef []
-    unlisten <- sync $ listen (flip snapshot bc . doubleUp . values $ bi) $ \a -> modifyIORef outRef (++ [a])
+    unlisten <- sync $ listen (flip snapshot bc . doubleUp . value $ bi) $ \a -> modifyIORef outRef (++ [a])
     sync $ pushc 'b'
     sync $ pushi 2
     sync $ pushc 'c'
     sync $ pushi 7
     unlisten
-    assertEqual "valuesThenSnapshot" ['a','a','b','b','c','c'] =<< readIORef outRef
+    assertEqual "valueThenSnapshot" ['a','a','b','b','c','c'] =<< readIORef outRef
 
-valuesThenMerge = TestCase $ do
+valueThenMerge = TestCase $ do
     (bi, pushi) <- sync $ newBehavior (9 :: Int)
     (bj, pushj) <- sync $ newBehavior (2 :: Int)
     outRef <- newIORef []
-    unlisten <- sync $ listen (mergeWith (+) (values bi) (values bj)) $ \a -> modifyIORef outRef (++ [a])
+    unlisten <- sync $ listen (mergeWith (+) (value bi) (value bj)) $ \a -> modifyIORef outRef (++ [a])
     sync $ pushi 1
     sync $ pushj 4
     unlisten
-    assertEqual "valuesThenMerge" [11,1,4] =<< readIORef outRef 
+    assertEqual "valueThenMerge" [11,1,4] =<< readIORef outRef 
 
-valuesThenFilter = TestCase $ do
+valueThenFilter = TestCase $ do
     (b, push) <- sync $ newBehavior (9 :: Int)
     outRef <- newIORef []
-    unlisten <- sync $ listen (filterE (const True) . values $ b) $ \a -> modifyIORef outRef (++ [a])
+    unlisten <- sync $ listen (filterE (const True) . value $ b) $ \a -> modifyIORef outRef (++ [a])
     sync $ push 2
     sync $ push 7
     unlisten
-    assertEqual "valuesThenFilter" [9,2,7] =<< readIORef outRef
+    assertEqual "valueThenFilter" [9,2,7] =<< readIORef outRef
 
-valuesTwiceThenFilter = TestCase $ do
+valueTwiceThenFilter = TestCase $ do
     (b, push) <- sync $ newBehavior (9 :: Int)
     outRef <- newIORef []
-    unlisten <- sync $ listen (filterE (const True) . doubleUp . values $ b) $ \a -> modifyIORef outRef (++ [a])
+    unlisten <- sync $ listen (filterE (const True) . doubleUp . value $ b) $ \a -> modifyIORef outRef (++ [a])
     sync $ push 2
     sync $ push 7
     unlisten
-    assertEqual "valuesThenFilter" [9,9,2,2,7,7] =<< readIORef outRef
+    assertEqual "valueThenFilter" [9,9,2,2,7,7] =<< readIORef outRef
 
-valuesThenOnce = TestCase $ do
+valueThenOnce = TestCase $ do
     (b, push) <- sync $ newBehavior (9 :: Int)
     outRef <- newIORef []
-    unlisten <- sync $ listen (once . values $ b) $ \a -> modifyIORef outRef (++ [a])
+    unlisten <- sync $ listen (once . value $ b) $ \a -> modifyIORef outRef (++ [a])
     sync $ push 2
     sync $ push 7
     unlisten
-    assertEqual "valuesThenOnce" [9] =<< readIORef outRef
+    assertEqual "valueThenOnce" [9] =<< readIORef outRef
 
-valuesTwiceThenOnce = TestCase $ do
+valueTwiceThenOnce = TestCase $ do
     (b, push) <- sync $ newBehavior (9 :: Int)
     outRef <- newIORef []
-    unlisten <- sync $ listen (once . doubleUp . values $ b) $ \a -> modifyIORef outRef (++ [a])
+    unlisten <- sync $ listen (once . doubleUp . value $ b) $ \a -> modifyIORef outRef (++ [a])
     sync $ push 2
     sync $ push 7
     unlisten
-    assertEqual "valuesThenOnce" [9] =<< readIORef outRef
+    assertEqual "valueThenOnce" [9] =<< readIORef outRef
     
--- | Test values being "executed" before listen. Somewhat redundant since this is
--- Haskell and "values b" is pure.
-valuesLateListen = TestCase $ do
+-- | Test value being "executed" before listen. Somewhat redundant since this is
+-- Haskell and "value b" is pure.
+valueLateListen = TestCase $ do
     (b, push) <- sync $ newBehavior (9 :: Int)
     outRef <- newIORef []
-    let bv = values b
+    let bv = value b
     sync $ push 8
     unlisten <- sync $ listen bv $ \a -> modifyIORef outRef (++ [a])
     sync $ push 2
     unlisten
-    assertEqual "valuesLateListen" [8,2] =<< readIORef outRef
+    assertEqual "valueLateListen" [8,2] =<< readIORef outRef
 
 appl1 = TestCase $ do
     (ea, pusha) <- sync newEvent
@@ -289,7 +289,7 @@ appl1 = TestCase $ do
     bb <- sync $ hold 0 eb
     let esum = (+) <$> ba <*> bb
     outRef <- newIORef []
-    unlisten <- sync $ listen (values esum) $ \sum -> modifyIORef outRef (++ [sum])
+    unlisten <- sync $ listen (value esum) $ \sum -> modifyIORef outRef (++ [sum])
     sync $ pusha 5
     sync $ pushb 100
     sync $ pusha 10 >> pushb 200
@@ -327,7 +327,7 @@ count1 = TestCase $ do
     outRef <- newIORef []
     unlisten <- sync $ do
         count <- count ea
-        listen (changes count) $ \c -> modifyIORef outRef (++ [c])
+        listen (updates count) $ \c -> modifyIORef outRef (++ [c])
     sync $ push ()
     sync $ push ()
     sync $ push ()
@@ -340,7 +340,7 @@ collect1 = TestCase $ do
     unlisten <- sync $ do
         ba <- hold 100 ea
         sum <- collect (\a s -> (a+s, a+s)) 0 ba
-        listen (values sum) $ \sum -> modifyIORef outRef (++ [sum])
+        listen (value sum) $ \sum -> modifyIORef outRef (++ [sum])
     sync $ push 5
     sync $ push 7
     sync $ push 1
@@ -356,7 +356,7 @@ collect2 = TestCase $ do
         (ba, push) <- newBehavior 100
         sum <- collect (\a s -> (a + s, a + s)) 0 ba
         push 5
-        unlisten <- listen (values sum) $ \sum -> modifyIORef outRef (++ [sum])
+        unlisten <- listen (value sum) $ \sum -> modifyIORef outRef (++ [sum])
         return (unlisten, push)
     sync $ push 7
     sync $ push 1
@@ -422,7 +422,7 @@ switch1 = TestCase $ do
         (bb, pushb) <- newBehavior 'a'
         (bsw, pushsw) <- newBehavior ba
         bo <- switch bsw
-        unlisten <- listen (values bo) $ \o -> modifyIORef outRef (++ [o])
+        unlisten <- listen (value bo) $ \o -> modifyIORef outRef (++ [o])
         return (ba, bb, pusha, pushb, pushsw, unlisten)
     sync $ pusha 'B' >> pushb 'b'
     sync $ pushsw bb >> pusha 'C' >> pushb 'c'
@@ -470,7 +470,7 @@ cycle1 = TestCase $ do
             bPair <- hold initPair ePage
             let ePage = execute $ unPage <$> switchE (snd <$> bPair)
         return (fst <$> bPair)
-    unlisten <- sync $ listen (values bo) $ \o -> modifyIORef outRef (++ [o])
+    unlisten <- sync $ listen (value bo) $ \o -> modifyIORef outRef (++ [o])
     sync $ push (Page $ return ('b', ep))
     sync $ push (Page $ return ('c', ep))
     unlisten
@@ -551,9 +551,9 @@ split2 = TestCase $ do
                           "efgh","ef","e","f","gh","g","h"] =<< readIORef outRef
 
 tests = test [ event1, fmap1, merge1, filterJust1, filterE1, gate1, beh1, beh2, beh3, beh4, beh5,
-    behConstant, valuesThenMap, valuesTwiceThenMap, valuesThenCoalesce, valuesTwiceThenCoalesce,
-    valuesThenSnapshot, valuesTwiceThenSnapshot, valuesThenMerge, valuesThenFilter,
-    valuesTwiceThenFilter, valuesThenOnce, valuesTwiceThenOnce, valuesLateListen,
+    behConstant, valueThenMap, valueTwiceThenMap, valueThenCoalesce, valueTwiceThenCoalesce,
+    valueThenSnapshot, valueTwiceThenSnapshot, valueThenMerge, valueThenFilter,
+    valueTwiceThenFilter, valueThenOnce, valueTwiceThenOnce, valueLateListen,
     holdIsDelayed, appl1, snapshot1, count1, collect1, collect2, collectE1, collectE2, switchE1,
     switch1, once1, once2, cycle1, split1, split2 {-, mergeWith1, mergeWith2, mergeWith3,
     coalesce1-} ]

@@ -46,8 +46,8 @@ module FRP.Sodium (
         merge,
         filterJust,
         hold,
-        changes,
-        values,
+        updates,
+        value,
         snapshotWith,
         switchE,
         switch,
@@ -64,7 +64,10 @@ module FRP.Sodium (
         collectE,
         collect,
         accum,
-        count
+        count,
+        -- * Deprecated
+        changes,
+        values
     ) where
 
 import FRP.Sodium.Plain
