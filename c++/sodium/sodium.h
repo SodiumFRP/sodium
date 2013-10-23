@@ -426,7 +426,7 @@ namespace sodium {
              */
             template <class B>
             event<B, P> map_effectful(const std::function<B(const A&)>& f) const {
-                return map(f);  // Same as map() for now but this may change!
+                return map_(f);  // Same as map() for now but this may change!
             }
 
             /*!
@@ -438,7 +438,8 @@ namespace sodium {
              */
             template <class B>
             event<B, P> map_(const std::function<B(const A&)>& f) const {
-                return event<B, P>(impl::map_(SODIUM_DETYPE_FUNCTION1(A,B,f), *this));
+                transaction<P> trans;
+                return event<B, P>(impl::map_(trans.impl(), SODIUM_DETYPE_FUNCTION1(A,B,f), *this));
             }
 
             /*!
