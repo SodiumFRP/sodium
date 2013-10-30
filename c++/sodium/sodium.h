@@ -569,7 +569,7 @@ namespace sodium {
             }
 
             template <class B>
-            behavior<B, P> accum(
+            event<B, P> accum_e(
                 const B& initB,
                 const std::function<B(const A&, const B&)>& f
             ) const
@@ -583,7 +583,16 @@ namespace sodium {
                             pState->s = f(*ptr.cast_ptr<A>(NULL), pState->s);
                             send(target, trans, light_ptr::create<B>(pState->s));
                         }), false);
-                return event<B, P>(std::get<0>(p).unsafe_add_cleanup(kill)).hold(initB);
+                return event<B, P>(std::get<0>(p).unsafe_add_cleanup(kill));
+            }
+
+            template <class B>
+            behavior<B, P> accum(
+                const B& initB,
+                const std::function<B(const A&, const B&)>& f
+            ) const
+            {
+                return accum_e(initB, f).hold(initB);
             }
 
             behavior<int, P> count() const
