@@ -470,6 +470,14 @@ namespace sodium {
             }
 
             /*!
+             * If there's more than one firing in a single transaction, keep only the latest one.
+             */
+            event<A, P> coalesce() const
+            {
+                return coalesce([] (const A&, const A& snd) -> A { return snd; });
+            }
+
+            /*!
              * Merge two streams of events of the same type, combining simultaneous
              * event occurrences.
              *
