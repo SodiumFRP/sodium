@@ -288,6 +288,7 @@ namespace sodium {
              * Sample the value of this behavior.
              */
             A sample() const {
+                transaction<P> trans;
                 return *impl->sample().template cast_ptr<A>(NULL);
             }
 
