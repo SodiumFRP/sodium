@@ -5,6 +5,7 @@ module FRP.Sodium.Context where
 import Control.Applicative
 import Control.Monad
 import Control.Monad.Fix
+import Data.Monoid
 
 class (
           Applicative (Reactive r),
@@ -108,6 +109,10 @@ class Context r => ContextIO r where
     --
     -- Caveat: See 'executeAsyncIO'.
     executeSyncIO  :: Event r (IO a) -> Event r a
+
+instance Context r => Monoid (Event r a) where
+    mempty = never
+    mappend = merge
 
 -- | A time-varying value, British spelling.
 type Behaviour r a = Behavior r a
