@@ -17,6 +17,8 @@
 --
 --   * Applicative 'Control.Applicative.pure' is used to give a constant 'Behavior'.
 --
+--   * A Monoid instance on 'Event' where 'mempty' = 'never' and 'mappend' = 'merge'
+--
 --   * Recursive do (using the DoRec language extension) to make state loops with the @rec@ keyword.
 --
 -- Here's an example of recursive do to write state-keeping loops. Note that
@@ -70,5 +72,6 @@ module FRP.Sodium (
         values
     ) where
 
+import Data.Monoid
 import FRP.Sodium.Plain
 
