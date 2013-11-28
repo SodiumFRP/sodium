@@ -21,6 +21,8 @@
 --
 --   * Recursive do (using the DoRec language extension) to make state loops with the @rec@ keyword.
 --
+--   * Data.Traversable.'sequenceA' is useful to convert /[Behavior a]/ into /Behavior [a]/.
+--
 -- Here's an example of recursive do to write state-keeping loops. Note that
 -- all 'hold's are delayed, so 'snapshotWith' will capture the /old/ value of the state /s/.
 --
@@ -73,5 +75,6 @@ module FRP.Sodium (
     ) where
 
 import Data.Monoid
+import Data.Traversable (sequenceA)
 import FRP.Sodium.Plain
 
