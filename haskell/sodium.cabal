@@ -44,7 +44,7 @@ description:
   .
    * 0.8.0.0 - Add executeIO primitive.
   .
-   * 0.9.0.0 - Rename changes() to updates(). Rename values() to value().
+   * 0.9.0.0 - Rename changes to updates. Rename values to value.
   .
    * 0.9.1.0 - Add Monoid instance to Event - thanks Finlay Thompson.
 
