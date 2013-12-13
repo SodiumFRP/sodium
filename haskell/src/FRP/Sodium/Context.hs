@@ -62,7 +62,7 @@ class (
     -- | Sample the behavior at the time of the event firing. Note that the 'current value'
     -- of the behavior that's sampled is the value as at the start of the transaction
     -- before any state changes of the current transaction are applied through 'hold's.
-    snapshotWith  :: (a -> b -> c) -> Event r a -> Behavior r b -> Event r c
+    snapshot      :: (a -> b -> c) -> Event r a -> Behavior r b -> Event r c
     -- | Unwrap an event inside a behavior to give a time-varying event implementation.
     switchE       :: Behavior r (Event r a) -> Event r a
     -- | Unwrap a behavior inside another behavior to give a time-varying behavior implementation.
@@ -147,15 +147,11 @@ mergeWith f ea eb = coalesce f $ merge ea eb
 filterE :: Context r => (a -> Bool) -> Event r a -> Event r a
 filterE pred = filterJust . ((\a -> if pred a then Just a else Nothing) <$>)
 
--- | Variant of snapshotWith that throws away the event's value and captures the behavior's.
-snapshot :: Context r => Event r a -> Behavior r b -> Event r b
-snapshot = snapshotWith (flip const)
-
 -- | Let event occurrences through only when the behavior's value is True.
 -- Note that the behavior's value is as it was at the start of the transaction,
 -- that is, no state changes from the current transaction are taken into account.
 gate :: Context r => Event r a -> Behavior r Bool -> Event r a
-gate ea = filterJust . snapshotWith (\a b -> if b then Just a else Nothing) ea
+gate ea = filterJust . snapshot (\a b -> if b then Just a else Nothing) ea
 
 -- | Transform an event with a generalized state loop (a mealy machine). The function
 -- is passed the input and the old state and returns the new state and output value.
@@ -163,7 +159,7 @@ collectE :: Context r => (a -> s -> (b, s)) -> s -> Event r a -> Reactive r (Eve
 collectE f z ea = do
     rec
         s <- hold z es
-        let ebs = snapshotWith f ea s
+        let ebs = snapshot f ea s
             eb = fst <$> ebs
             es = snd <$> ebs
     return eb
@@ -177,16 +173,12 @@ collect f zs bea = do
     let (zb, zs') = f za zs
     rec
         bs <- hold (zb, zs') ebs
-        let ebs = snapshotWith f ea (snd <$> bs)
+        let ebs = snapshot f ea (snd <$> bs)
     return (fst <$> bs)
 
 -- | Accumulate state changes given in the input event.
 accum :: Context r => a -> Event r (a -> a) -> Reactive r (Behavior r a)
 accum z efa = do
     rec
-        s <- hold z $ snapshotWith ($) efa s
+        s <- hold z $ snapshot ($) efa s
     return s
-
--- | Count event occurrences, giving a behavior that starts with 0 before the first occurrence.
-count :: Context r => Event r a -> Reactive r (Behavior r Int)
-count = accum 0 . (const (1+) <$>)

@@ -118,7 +118,7 @@ instance R.Context Plain where
     hold = hold
     updates = updates 
     value = value
-    snapshotWith = snapshotWith
+    snapshot = snapshot
     switchE = switchE
     switch = switch
     execute = execute
@@ -276,8 +276,8 @@ value ba = sa `seq` ea `seq` eventify (listenValueRaw ba) (dep (sa, ea))
 -- | Sample the behavior at the time of the event firing. Note that the 'current value'
 -- of the behavior that's sampled is the value as at the start of the transaction
 -- before any state changes of the current transaction are applied through 'hold's.
-snapshotWith :: (a -> b -> c) -> Event a -> Behavior b -> Event c
-snapshotWith f ea bb = sample' `seq` Event gl cacheRef (dep (ea, sample))
+snapshot :: (a -> b -> c) -> Event a -> Behavior b -> Event c
+snapshot f ea bb = sample' `seq` Event gl cacheRef (dep (ea, sample))
   where
     cacheRef = unsafeNewIORef Nothing bb
     sample = sampleImpl bb
@@ -436,10 +436,6 @@ mergeWith = R.mergeWith
 filterE :: (a -> Bool) -> Event a -> Event a
 filterE = R.filterE
 
--- | Variant of 'snapshotWith' that throws away the event's value and captures the behavior's.
-snapshot :: Event a -> Behavior b -> Event b
-snapshot = R.snapshot
-
 -- | Let event occurrences through only when the behavior's value is True.
 -- Note that the behavior's value is as it was at the start of the transaction,
 -- that is, no state changes from the current transaction are taken into account.
@@ -459,10 +455,6 @@ collect = R.collect
 -- | Accumulate state changes given in the input event.
 accum :: a -> Event (a -> a) -> Reactive (Behavior a)
 accum = R.accum
-
--- | Count event occurrences, giving a behavior that starts with 0 before the first occurrence.
-count :: Event a -> Reactive (Behavior Int)
-count = R.count
 
 class PriorityQueueable k where
     priorityOf :: k -> IO Int64
@@ -897,3 +889,16 @@ changes = updates
 values :: Behavior a -> Event a
 {-# DEPRECATED values "renamed to 'value'" #-}
 values = value
+
+-- | Sample the behavior at the time of the event firing. Note that the 'current value'
+-- of the behavior that's sampled is the value as at the start of the transaction
+-- before any state changes of the current transaction are applied through 'hold's.
+snapshotWith :: (a -> b -> c) -> Event a -> Behavior b -> Event c
+{-# DEPRECATED snapshotWith "renamed to 'snapshot'" #-}
+snapshotWith = snapshot
+
+-- | Count event occurrences, giving a behavior that starts with 0 before the first occurrence.
+count :: Event a -> Reactive (Behavior Int)
+{-# DEPRECATED count "removing it in the pursuit of minimalism, replace with: accum 0 (const (1+) <$> e)" #-}
+count = accum 0 . (const (1+) <$>)
+

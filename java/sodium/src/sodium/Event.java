@@ -400,18 +400,6 @@ public class Event<A> {
     }
 
     /**
-     * Count event occurrences, giving a behavior that starts with 0 before the first occurrence.
-     */
-    public final Behavior<Integer> count()
-    {
-        return map(new Lambda1<A,Integer>() {
-        	public Integer apply(A a) { return 1; }
-        }).accum(0, new Lambda2<Integer,Integer,Integer>() {
-        	public Integer apply(Integer a, Integer b) { return a+b; }
-        });
-    }
-
-    /**
      * Throw away all event occurrences except for the first one.
      */
     public final Event<A> once()

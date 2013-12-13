@@ -11,7 +11,7 @@ main = do
     t <- sync $ hold 0 et
     let etens = (`div` 10) <$> et
     tens <- sync $ hold 0 etens
-    let changeTens = filterJust $ snapshotWith (\new old ->
+    let changeTens = filterJust $ snapshot (\new old ->
             if new /= old
                 then Just new
                 else Nothing) etens tens

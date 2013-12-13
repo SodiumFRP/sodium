@@ -24,14 +24,14 @@
 --   * Data.Traversable.'sequenceA' is useful to convert /[Behavior a]/ into /Behavior [a]/.
 --
 -- Here's an example of recursive do to write state-keeping loops. Note that
--- all 'hold's are delayed, so 'snapshotWith' will capture the /old/ value of the state /s/.
+-- all 'hold's are delayed, so 'snapshot' will capture the /old/ value of the state /s/.
 --
 -- > {-# LANGUAGE DoRec #-}
 -- > -- | Accumulate state changes given in the input event.
 -- > accum :: Context r => a -> Event r (a -> a) -> Reactive r (Behavior r a)
 -- > accum z efa = do
 -- >     rec
--- >         s <- hold z $ snapshotWith ($) efa s
+-- >         s <- hold z $ snapshot ($) efa s
 -- >     return s
 module FRP.Sodium (
         Plain,
@@ -52,7 +52,7 @@ module FRP.Sodium (
         hold,
         updates,
         value,
-        snapshotWith,
+        snapshot,
         switchE,
         switch,
         execute,
@@ -63,15 +63,15 @@ module FRP.Sodium (
         -- * Derived FRP functions
         mergeWith,
         filterE,
-        snapshot,
         gate,
         collectE,
         collect,
         accum,
-        count,
         -- * Deprecated
         changes,
-        values
+        values,
+        snapshotWith,
+        count
     ) where
 
 import Data.Monoid

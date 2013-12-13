@@ -1,5 +1,5 @@
 name:                sodium
-version:             0.9.1.0
+version:             0.10.0.0
 synopsis:            Sodium Reactive Programming (FRP) System
 description:         
   A general purpose Reactive Programming (FRP) system. This is part of a project to

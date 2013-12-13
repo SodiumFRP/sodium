@@ -125,8 +125,8 @@ stack eMouse initCards loc@(Stack ix) freeSpaces eDrop = do
         positions = iterate (\(x, y) -> (x, y-overlapY)) orig
     rec
         cards <- hold initCards (eRemoveCards `merge` eAddCards)
-        let eAddCards = snapshotWith (\newCards cards -> cards ++ newCards) eDrop cards
-            eMouseSelection = filterJust $ snapshotWith (\mev cards ->
+        let eAddCards = snapshot (\newCards cards -> cards ++ newCards) eDrop cards
+            eMouseSelection = filterJust $ snapshot (\mev cards ->
                     case mev of
                         MouseDown pt@(x, y) | x >= origX - cardWidth && x <= origX + cardWidth ->
                             let n = length cards
@@ -165,7 +165,7 @@ cell eMouse loc@(Cell ix) eDrop = do
         rect = (orig, cardSize)
     rec
         mCard <- hold Nothing $ eRemove `merge` (Just . head <$> eDrop)
-        let eMouseSelection = filterJust $ snapshotWith (\mev mCard ->
+        let eMouseSelection = filterJust $ snapshot (\mev mCard ->
                     case (mev, mCard) of
                         (MouseDown pt, Just card) | pt `inside` rect ->
                             Just (Nothing, Bunch (fst rect) pt [card] loc)
@@ -192,13 +192,13 @@ grave eMouse eDrop = do
         (cardWidth, cardHeight) = cardSize
         wholeRect = (((xOf 0 + xOf 3) * 0.5, topRow), ((cardSpacingNarrow * 3 + cardWidth*2) * 0.5, cardHeight))    
     rec
-        let eDropModify = snapshotWith (\newCards slots ->
+        let eDropModify = snapshot (\newCards slots ->
                     let newCard@(Card _ suit) = head newCards
                         ix = fromEnum suit
                     in  take ix slots ++ [Just newCard] ++ drop (ix+1) slots 
                 ) eDrop slots
         slots <- hold [Nothing, Nothing, Nothing, Nothing] (eDropModify `merge` eRemove)
-        let eMouseSelection = filterJust $ snapshotWith (\mev slots ->
+        let eMouseSelection = filterJust $ snapshot (\mev slots ->
                     case mev of
                         MouseDown pt ->
                             let isIn = map (pt `inside`) areas
@@ -249,7 +249,7 @@ dragger eMouse eStartDrag = do
             MouseDown pt -> pt
     rec
         dragging <- hold Nothing $ (const Nothing <$> eDrop) `merge` (Just <$> eStartDrag)
-        let eDrop = filterJust $ snapshotWith (\mev mDragging ->
+        let eDrop = filterJust $ snapshot (\mev mDragging ->
                     case (mev, mDragging) of
                         -- If the mouse is released, and we are dragging...
                         (MouseUp pt, Just dragging) -> Just (cardPos pt dragging, dragging)
@@ -269,7 +269,7 @@ dragger eMouse eStartDrag = do
 -- | Determine where dropped cards are routed to.
 dropper :: Event (Point, Bunch) -> Behavior [Destination] -> Event (Location, [Card])
 dropper eDrop dests =
-    snapshotWith (\(pt, bunch) dests ->
+    snapshot (\(pt, bunch) dests ->
                 -- If none of the destinations will accept the dropped cards, then send them
                 -- back where they originated from.
                 let findDest [] = (buOrigin bunch, buCards bunch)

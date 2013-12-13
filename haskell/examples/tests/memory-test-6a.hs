@@ -11,7 +11,7 @@ verbose = False
 flam :: Event () -> Reactive (Event Bool)
 flam e = do
     rec
-        let eToggle = snapshotWith (\() selected -> not selected) e selected
+        let eToggle = snapshot (\() selected -> not selected) e selected
         selected <- hold False eToggle
     return eToggle
 

@@ -24,8 +24,6 @@ class test_sodium : public CppUnit::TestFixture {
     CPPUNIT_TEST(gate1);
     CPPUNIT_TEST(collect1);
     CPPUNIT_TEST(accum1);
-    CPPUNIT_TEST(count_e1);
-    CPPUNIT_TEST(count1);
     CPPUNIT_TEST(once1);
     // behaviour tests
     CPPUNIT_TEST(collect2);
@@ -70,8 +68,6 @@ class test_sodium : public CppUnit::TestFixture {
     void gate1();
     void collect1();
     void accum1();
-    void count_e1();
-    void count1();
     void once1();
     void collect2();
     void hold1();

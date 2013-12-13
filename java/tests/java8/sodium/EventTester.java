@@ -167,18 +167,6 @@ public class EventTester extends TestCase {
         assertEquals(Arrays.asList(105,112,113,115,118), out);
     }
 
-    public void testCount()
-    {
-        EventSink<Unit> e = new EventSink();
-        List<Integer> out = new ArrayList();
-        Listener l = e.count().value().listen((x) -> { out.add(x); });
-        e.send(Unit.unit);
-        e.send(Unit.unit);
-        e.send(Unit.unit);
-        l.unlisten();
-        assertEquals(Arrays.asList(0,1,2,3), out);
-    }
-
     public void testOnce()
     {
         EventSink<Character> e = new EventSink();

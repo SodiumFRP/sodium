@@ -204,7 +204,7 @@ valueThenSnapshot = TestCase $ do
     (bi, pushi) <- sync $ newBehavior (9 :: Int)
     (bc, pushc) <- sync $ newBehavior 'a'
     outRef <- newIORef []
-    unlisten <- sync $ listen (flip snapshot bc . value $ bi) $ \a -> modifyIORef outRef (++ [a])
+    unlisten <- sync $ listen (flip (snapshot (flip const)) bc . value $ bi) $ \a -> modifyIORef outRef (++ [a])
     sync $ pushc 'b'
     sync $ pushi 2
     sync $ pushc 'c'
@@ -216,7 +216,7 @@ valueTwiceThenSnapshot = TestCase $ do
     (bi, pushi) <- sync $ newBehavior (9 :: Int)
     (bc, pushc) <- sync $ newBehavior 'a'
     outRef <- newIORef []
-    unlisten <- sync $ listen (flip snapshot bc . doubleUp . value $ bi) $ \a -> modifyIORef outRef (++ [a])
+    unlisten <- sync $ listen (flip (snapshot (flip const)) bc . doubleUp . value $ bi) $ \a -> modifyIORef outRef (++ [a])
     sync $ pushc 'b'
     sync $ pushi 2
     sync $ pushc 'c'
@@ -300,7 +300,7 @@ snapshot1 = TestCase $ do
     (ea, pusha) <- sync newEvent
     (eb, pushb) <- sync newEvent
     bb <- sync $ hold 0 eb
-    let ec = snapshotWith (,) ea bb
+    let ec = snapshot (,) ea bb
     outRef <- newIORef []
     unlisten <- sync $ listen ec $ \c -> modifyIORef outRef (++ [c])
     sync $ pusha 'A'
@@ -314,25 +314,13 @@ snapshot1 = TestCase $ do
 holdIsDelayed = TestCase $ do
     (e, push) <- sync newEvent
     h <- sync $ hold (0 :: Int) e
-    let pair = snapshotWith (\a b -> show a ++ " " ++ show b) e h
+    let pair = snapshot (\a b -> show a ++ " " ++ show b) e h
     outRef <- newIORef []
     unlisten <- sync $ listen pair $ \a -> modifyIORef outRef (++ [a])
     sync $ push 2
     sync $ push 3
     unlisten
     assertEqual "holdIsDelayed" ["2 0", "3 2"] =<< readIORef outRef
-
-count1 = TestCase $ do
-    (ea, push) <- sync newEvent
-    outRef <- newIORef []
-    unlisten <- sync $ do
-        count <- count ea
-        listen (updates count) $ \c -> modifyIORef outRef (++ [c])
-    sync $ push ()
-    sync $ push ()
-    sync $ push ()
-    unlisten
-    assertEqual "count1" [1,2,3] =<< readIORef outRef
 
 collect1 = TestCase $ do
     (ea, push) <- sync newEvent
@@ -554,7 +542,7 @@ tests = test [ event1, fmap1, merge1, filterJust1, filterE1, gate1, beh1, beh2, 
     behConstant, valueThenMap, valueTwiceThenMap, valueThenCoalesce, valueTwiceThenCoalesce,
     valueThenSnapshot, valueTwiceThenSnapshot, valueThenMerge, valueThenFilter,
     valueTwiceThenFilter, valueThenOnce, valueTwiceThenOnce, valueLateListen,
-    holdIsDelayed, appl1, snapshot1, count1, collect1, collect2, collectE1, collectE2, switchE1,
+    holdIsDelayed, appl1, snapshot1, collect1, collect2, collectE1, collectE2, switchE1,
     switch1, once1, once2, cycle1, split1, split2 {-, mergeWith1, mergeWith2, mergeWith3,
     coalesce1-} ]
 

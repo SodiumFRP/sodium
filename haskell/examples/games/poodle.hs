@@ -44,7 +44,7 @@ randomTimes rng time = do
         tLast <- hold 0 eAppear
         interval <- peelList eAppear intervals
         let eTime = value time
-            eAppear = filterJust $ snapshotWith (\t (tLast, interval) ->
+            eAppear = filterJust $ snapshot (\t (tLast, interval) ->
                     if t >= tLast + interval then Just t else Nothing
                 ) eTime ((,) <$> tLast <*> interval)
     return eAppear
@@ -78,7 +78,7 @@ poodleGame rng eMouse time = do
 
     rec
         -- Destroy poodles that are clicked on
-        let eDestructions = filterJust $ snapshotWith (\mev poodles ->
+        let eDestructions = filterJust $ snapshot (\mev poodles ->
                     case mev of
                         MouseDown clickPos -> listToMaybe
                             [ Destroy iD | (iD, (rect, _)) <- poodles,

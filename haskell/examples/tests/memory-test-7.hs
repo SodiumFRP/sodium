@@ -12,7 +12,7 @@ verbose = False
 
 flam :: Event () -> Behavior Int -> Reactive (Behavior Int)
 flam e time = do
-    let eStart = snapshot e time
+    let eStart = snapshot (flip const) e time
     -- Only allow eStart through when we're not already running
     hold 0 eStart
 

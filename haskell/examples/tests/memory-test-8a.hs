@@ -23,7 +23,7 @@ flam e time = do
     --
     -- ...get cleaned up when 'flam' is switched out. The issue is the 
     -- GATE/HOLD cycle at the bottom left. 
-    let eStart = snapshotWith (\() t -> Just t) e time
+    let eStart = snapshot (\() t -> Just t) e time
     rec
         -- Only allow eStart through when we're not already running
         mRunning <- hold Nothing $ eStart `gate` notRunning

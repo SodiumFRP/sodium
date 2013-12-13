@@ -164,32 +164,6 @@ void test_sodium::gate1()
     CPPUNIT_ASSERT_EQUAL(string("HI"), *out);
 }
 
-void test_sodium::count_e1()
-{
-    event_sink<unit> ea;
-    std::shared_ptr<vector<int>> out(new vector<int>);
-    behavior<int> sum = ea.count();
-    auto unlisten = sum.updates().listen([out] (const int& x) { out->push_back(x); });
-    ea.send(unit());
-    ea.send(unit());
-    ea.send(unit());
-    unlisten();
-    CPPUNIT_ASSERT(vector<int>({ 1, 2, 3 }) == *out);
-}
-
-void test_sodium::count1()
-{
-    event_sink<unit> ea;
-    std::shared_ptr<vector<int>> out(new vector<int>);
-    event<int> sum = ea.count().value();
-    auto unlisten = sum.listen([out] (const int& x) { out->push_back(x); });
-    ea.send(unit());
-    ea.send(unit());
-    ea.send(unit());
-    unlisten();
-    CPPUNIT_ASSERT(vector<int>({ 0, 1, 2, 3 }) == *out);
-}
-
 void test_sodium::once1()
 {
     event_sink<char> e;

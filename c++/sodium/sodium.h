@@ -604,13 +604,6 @@ namespace sodium {
                 return accum_e(initB, f).hold(initB);
             }
 
-            behavior<int, P> count() const
-            {
-                return accum<int>(0, [] (const A&, const int& total) -> int {
-                    return total+1;
-                });
-            }
-
             event<A, P> once() const
             {
                 transaction<P> trans;
