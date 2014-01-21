@@ -297,12 +297,8 @@ namespace sodium {
              * it will be executed when no copies of the new behavior are referenced.
              */
             behavior<A, P> add_cleanup(const std::function<void()>& cleanup) const {
-                return behavior<A, P>(new impl::behavior_impl(
-                    impl->updates,
-                    impl->sample,
-                    new std::function<void()>(cleanup),
-                    impl
-                ));
+                transaction<P> trans;
+                return updates().add_cleanup(cleanup).hold(sample());
             }
 
             /*!
@@ -604,10 +600,28 @@ namespace sodium {
                 return accum_e(initB, f).hold(initB);
             }
 
+            behavior<int, P> count() const
+            {
+                return accum<int>(0, [] (const A&, const int& total) -> int {
+                    return total+1;
+                });
+            }
+
             event<A, P> once() const
             {
                 transaction<P> trans;
                 return event<A, P>(once_(trans.impl()));
+            }
+
+            /*!
+             * Delays each event occurrence by putting it into a new transaction, using
+             * the same method as split.
+             */
+            event<A, P> delay()
+            {
+                return split<A,P>(map_<std::list<A>>(
+                        [] (const A& a) -> std::list<A> { return { a }; }
+                    ));
             }
 
             /*!
@@ -978,7 +992,6 @@ namespace sodium {
                 }), false);
         return std::get<0>(p).unsafe_add_cleanup(kill);
     }
-
 }  // end namespace sodium
 #endif
 
