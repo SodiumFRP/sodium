@@ -808,7 +808,7 @@ namespace sodium {
                     ))
                 );
                 auto p = impl::unsafe_new_event();
-                *this = event_loop<A>(
+                *this = event_loop<A, P>(
                     std::get<0>(p).unsafe_add_cleanup(new std::function<void()>([pKill] () {
                         std::function<void()>* kill = *pKill;
                         if (kill)
