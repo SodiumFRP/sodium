@@ -884,7 +884,7 @@ namespace sodium {
      * due to behavior's delay semantics, event occurrences for the new
      * event won't come through until the following transaction.
      */
-    template <class A, class P = def_part>
+    template <class A, class P>
     event<A, P> switch_e(const behavior<event<A, P>, P>& bea)
     {
         transaction<P> trans;
