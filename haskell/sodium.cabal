@@ -1,5 +1,5 @@
 name:                sodium
-version:             0.10.0.1
+version:             0.10.0.2
 synopsis:            Sodium Reactive Programming (FRP) System
 description:         
   A general purpose Reactive Programming (FRP) system. This is part of a project to
@@ -49,6 +49,8 @@ description:
    * 0.10.0.0 - Add Monoid instance to Event - thanks Finlay Thompson.
   .
    * 0.10.0.1 - Fix finalizer issue that caused breakage in ghc-7.8 - thanks Luite Stegeman.
+  .
+   * 0.10.0.2 - Second attempt.
 
 license:             BSD3
 license-file:        LICENSE
