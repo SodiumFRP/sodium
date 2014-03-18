@@ -87,7 +87,8 @@ type Behaviour = R.Behavior Plain
 -- Must be data not newtype, because we need to attach finalizers to it
 data Sample a = Sample {
         unSample :: IO a,
-        sDep     :: Dep
+        sDep     :: Dep,
+        sampleKeepAlive :: IORef ()
     }
 
 instance R.Context Plain where
@@ -205,7 +206,7 @@ listen ev handle = listenTrans ev $ \a -> ioReactive (handle a >> touch ev)
 -- | An event that never fires.
 never :: Event a
 never = Event {
-        getListenRaw = return $ Listen $ \_ _ _ -> return (return ()), 
+        getListenRaw = return $ Listen (\_ _ _ -> return (return ())) undefined, 
         evCacheRef   = unsafeNewIORef Nothing undefined,
         eDep         = undefined
     }
@@ -256,8 +257,9 @@ hold initA ea = do
             bs <- readIORef bsRef
             let newCurrent = fromJust (bsUpdate bs)
             writeIORef bsRef $ newCurrent `seq` BehaviorState newCurrent Nothing
+    keepAliveRef <- ioReactive $ newIORef ()
     sample <- ioReactive $ addCleanup_Sample unlistener
-        (Sample (bsCurrent <$> readIORef bsRef) (dep ea))
+        (Sample (bsCurrent <$> readIORef bsRef) (dep ea) keepAliveRef)
     let beh = sample `seq` Behavior {
                 updates_   = ea,
                 sampleImpl = sample
@@ -558,7 +560,9 @@ scheduleLast task = Reactive $ modify $ \as -> as { asFinal = asFinal as |> task
 schedulePost :: [Reactive ()] -> Reactive ()
 schedulePost tasks = Reactive $ modify $ \as -> as { asPost = Seq.fromList tasks >< asPost as }
 
-data Listen a = Listen { runListen_ :: Maybe (MVar Node) -> Bool -> (a -> Reactive ()) -> Reactive (IO ()) }
+data Listen a = Listen { runListen_ :: Maybe (MVar Node) -> Bool -> (a -> Reactive ()) -> Reactive (IO ())
+                       , listenerKeepAlive  :: IORef ()
+                       }
 
 -- | Unwrap an event's listener machinery.
 getListen :: Event a -> Reactive (Listen a)
@@ -608,7 +612,7 @@ newNode = do
 
 wrap :: (Maybe (MVar Node) -> Bool -> (a -> Reactive ()) -> Reactive (IO ())) -> IO (Listen a)
 {-# NOINLINE wrap #-}
-wrap l = return (Listen l)
+wrap l = Listen l <$> newIORef ()
 
 touch :: a -> IO ()
 {-# NOINLINE touch #-}
@@ -708,8 +712,8 @@ instance Functor (R.Event Plain) where
       where
         cacheRef = unsafeNewIORef Nothing e
         getListen' =
-            return $ Listen $ \mNodeRef suppressEarlierFirings handle -> do
-                linkedListen e mNodeRef suppressEarlierFirings (handle . f)
+            return $ Listen (\mNodeRef suppressEarlierFirings handle -> do
+                linkedListen e mNodeRef suppressEarlierFirings (handle . f)) undefined
 
 instance Functor (R.Behavior Plain) where
     f `fmap` Behavior e s =
@@ -717,12 +721,12 @@ instance Functor (R.Behavior Plain) where
       where
         fe = f `fmap` e
         s' = unSample s
-        fs = s' `seq` Sample (f `fmap` s') (dep s)
+        fs = s' `seq` Sample (f `fmap` s') (dep s) undefined
 
 constant :: a -> Behavior a
 constant a = Behavior {
         updates_   = never,
-        sampleImpl = Sample (return a) undefined
+        sampleImpl = Sample (return a) undefined undefined
     }
 
 data BehaviorState a = BehaviorState {
@@ -743,14 +747,14 @@ finalizeEvent ea unlisten = ea { getListenRaw = gl }
 finalizeListen :: Listen a -> IO () -> IO (Listen a)
 {-# NOINLINE finalizeListen #-}
 finalizeListen l unlisten = do
-    addFinalizer l unlisten
+    mkWeakIORef (listenerKeepAlive l) unlisten
     return l
 
 -- | Add a finalizer to a Reactive.
 finalizeSample :: Sample a -> IO () -> IO (Sample a)
 {-# NOINLINE finalizeSample #-}
 finalizeSample s unlisten = do
-    addFinalizer s unlisten
+    mkWeakIORef (sampleKeepAlive s) unlisten
     return s
 
 newtype Unlistener = Unlistener (MVar (Maybe (IO ())))
@@ -841,6 +845,7 @@ instance Applicative (R.Behavior Plain) where
     b1@(Behavior e1 s1) <*> b2@(Behavior e2 s2) = Behavior u s
       where
         cacheRef = unsafeNewIORef Nothing s2
+        keepaliveRef = unsafeNewIORef () s2
         u = Event gl cacheRef (dep (e1,e2))
         s1' = unSample s1
         s2' = unSample s2
@@ -859,7 +864,7 @@ instance Applicative (R.Behavior Plain) where
                     push (f a)
                 return (un1 >> un2)
             addCleanup_Listen unlistener l
-        s = s1' `seq` s2' `seq` Sample (($) <$> s1' <*> s2') (dep (s1, s2))
+        s = s1' `seq` s2' `seq` Sample (($) <$> s1' <*> s2') (dep (s1, s2)) keepaliveRef
 
 {-
 -- | Cross the specified event over to a different partition.
