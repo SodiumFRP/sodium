@@ -55,7 +55,7 @@ description:
 license:             BSD3
 license-file:        LICENSE
 author:              Stephen Blackheath
-maintainer:          http://blacksapphire.com/antispam/
+maintainer:          Stephen Blackheath <sodium2.stephen@blacksapphire.com>
 copyright:           (c) Stephen Blackheath 2012-2013
 category:            FRP
 build-type:          Simple
