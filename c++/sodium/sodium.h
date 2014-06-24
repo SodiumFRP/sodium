@@ -15,6 +15,7 @@
 #include <list>
 #include <set>
 #include <stdexcept>
+#include <vector>
 
 #define SODIUM_CONSTANT_OPTIMIZATION
 
@@ -24,13 +25,17 @@ namespace sodium {
     template <class A, class P> class behavior_sink;
     template <class A, class P> class behavior_loop;
     template <class A, class P> class event_loop;
-    template <class A, class B, class P = def_part>
+    template <class A, class B, class P EQ_DEF_PART>
+#if defined(NO_CXX11)
+    behavior<B, P> apply(const behavior<lambda1<B,const A&>, P>& bf, const behavior<A, P>& ba);
+#else
     behavior<B, P> apply(const behavior<std::function<B(const A&)>, P>& bf, const behavior<A, P>& ba);
-    template <class A, class P = def_part>
+#endif
+    template <class A, class P EQ_DEF_PART>
     event<A, P> filter_optional(const event<boost::optional<A>, P>& input);
-    template <class A, class P = def_part>
+    template <class A, class P EQ_DEF_PART>
     event<A, P> split(const event<std::list<A>, P>& e);
-    template <class A, class P = def_part>
+    template <class A, class P EQ_DEF_PART>
     event<A, P> switch_e(const behavior<event<A, P>, P>& bea);
 
     namespace impl {
@@ -46,28 +51,40 @@ namespace sodium {
         friend behavior_ switch_b(transaction_impl* trans, const behavior_& bba);
         friend behavior_impl* hold(transaction_impl* trans0, const light_ptr& initValue, const event_& input);
         template <class A, class B, class P>
+#if defined(NO_CXX11)
+        friend behavior<B, P> sodium::apply(const behavior<lambda1<B, const A&>, P>& bf, const behavior<A, P>& ba);
+#else
         friend behavior<B, P> sodium::apply(const behavior<std::function<B(const A&)>, P>& bf, const behavior<A, P>& ba);
+#endif
         template <class A, class P>
         friend event<A, P> sodium::filter_optional(const event<boost::optional<A>, P>& input);
         friend behavior_ apply(transaction_impl* trans0, const behavior_& bf, const behavior_& ba);
+#if defined(NO_CXX11)
+        friend event_ map_(transaction_impl* trans, const lambda1<light_ptr, const light_ptr&>& f, const event_& ev);
+#else
         friend event_ map_(transaction_impl* trans, const std::function<light_ptr(const light_ptr&)>& f, const event_& ev);
+#endif
         friend event_ switch_e(transaction_impl* trans, const behavior_& bea);
         template <class A, class P>
         friend event<A, P> sodium::split(const event<std::list<A>, P>& e);
 
         public:
+#if defined(NO_CXX11)
+            typedef lambda1<void, std::vector<light_ptr>&> sample_now_func;
+#else
             typedef std::function<void(std::vector<light_ptr>&)> sample_now_func;
+#endif
 
         protected:
-            boost::intrusive_ptr<listen_impl_func<H_EVENT>> p_listen_impl;
-            std::shared_ptr<sample_now_func> p_sample_now;
+            boost::intrusive_ptr<listen_impl_func<H_EVENT> > p_listen_impl;
+            SODIUM_SHARED_PTR<sample_now_func> p_sample_now;
 
         public:
             event_();
-            event_(const boost::intrusive_ptr<listen_impl_func<H_EVENT>>& p_listen_impl,
-                   const std::shared_ptr<sample_now_func>& p_sample_now)
+            event_(const boost::intrusive_ptr<listen_impl_func<H_EVENT> >& p_listen_impl,
+                   const SODIUM_SHARED_PTR<sample_now_func>& p_sample_now)
                 : p_listen_impl(p_listen_impl), p_sample_now(p_sample_now) {}
-            event_(const boost::intrusive_ptr<listen_impl_func<H_EVENT>>& p_listen_impl,
+            event_(const boost::intrusive_ptr<listen_impl_func<H_EVENT> >& p_listen_impl,
                    sample_now_func* p_sample_now)
                 : p_listen_impl(p_listen_impl), p_sample_now(p_sample_now) {}
 
@@ -80,19 +97,31 @@ namespace sodium {
             /*!
              * listen to events.
              */
+#if defined(NO_CXX11)
+            lambda0<void>* listen_raw(
+#else
             std::function<void()>* listen_raw(
+#endif
                         transaction_impl* trans0,
-                        const std::shared_ptr<impl::node>& target,
-                        std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handle,
+                        const SODIUM_SHARED_PTR<impl::node>& target,
+#if defined(NO_CXX11)
+                        lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, transaction_impl*, const light_ptr&>* handle,
+#else
+                        std::function<void(const SODIUM_SHARED_PTR<impl::node>&, transaction_impl*, const light_ptr&)>* handle,
+#endif
                         bool suppressEarlierFirings) const;
 
             /*!
              * This is far more efficient than add_cleanup because it modifies the event
              * in place.
              */
+#if defined(NO_CXX11)
+            event_ unsafe_add_cleanup(lambda0<void>* cleanup)
+#else
             event_ unsafe_add_cleanup(std::function<void()>* cleanup)
+#endif
             {
-                boost::intrusive_ptr<listen_impl_func<H_STRONG>> li(
+                boost::intrusive_ptr<listen_impl_func<H_STRONG> > li(
                     reinterpret_cast<listen_impl_func<H_STRONG>*>(p_listen_impl.get()));
                 if (cleanup != NULL) {
                     if (alive(li))
@@ -109,9 +138,13 @@ namespace sodium {
              * This is far more efficient than add_cleanup because it modifies the event
              * in place.
              */
+#if defined(NO_CXX11)
+            event_ unsafe_add_cleanup(lambda0<void>* cleanup1, lambda0<void>* cleanup2)
+#else
             event_ unsafe_add_cleanup(std::function<void()>* cleanup1, std::function<void()>* cleanup2)
+#endif
             {
-                boost::intrusive_ptr<listen_impl_func<H_STRONG>> li(
+                boost::intrusive_ptr<listen_impl_func<H_STRONG> > li(
                     reinterpret_cast<listen_impl_func<H_STRONG>*>(p_listen_impl.get()));
                 if (cleanup1 != NULL) {
                     if (alive(li))
@@ -135,27 +168,48 @@ namespace sodium {
             /*!
              * Create a new event that is like this event but has an extra cleanup.
              */
+#if defined(NO_CXX11)
+            event_ add_cleanup_(transaction_impl* trans, lambda0<void>* cleanup) const;
+#else
             event_ add_cleanup_(transaction_impl* trans, std::function<void()>* cleanup) const;
+#endif
             behavior_ hold_(transaction_impl* trans, const light_ptr& initA) const;
             event_ once_(transaction_impl* trans) const;
             event_ merge_(transaction_impl* trans, const event_& other) const;
+#if defined(NO_CXX11)
+            event_ coalesce_(transaction_impl* trans, const lambda2<light_ptr, const light_ptr&, const light_ptr&>& combine) const;
+#else
             event_ coalesce_(transaction_impl* trans, const std::function<light_ptr(const light_ptr&, const light_ptr&)>& combine) const;
+#endif
             event_ last_firing_only_(transaction_impl* trans) const;
+#if defined(NO_CXX11)
+            event_ snapshot_(transaction_impl* trans, const behavior_& beh, const lambda2<light_ptr, const light_ptr&, const light_ptr&>& combine) const;
+            event_ filter_(transaction_impl* trans, const lambda1<bool, const light_ptr&>& pred) const;
+#else
             event_ snapshot_(transaction_impl* trans, const behavior_& beh, const std::function<light_ptr(const light_ptr&, const light_ptr&)>& combine) const;
             event_ filter_(transaction_impl* trans, const std::function<bool(const light_ptr&)>& pred) const;
+#endif
 
             void sample_now(std::vector<light_ptr>& values) const {
                 if (p_sample_now != NULL)
                     (*p_sample_now)(values);
             }
 
+#if defined(NO_CXX11)
+            lambda0<void>* listen_impl(
+#else
             std::function<void()>* listen_impl(
+#endif
                 transaction_impl* trans,
-                const std::shared_ptr<impl::node>& target,
-                std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handler,
+                const SODIUM_SHARED_PTR<impl::node>& target,
+#if defined(NO_CXX11)
+                lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, transaction_impl*, const light_ptr&>* handler,
+#else
+                std::function<void(const SODIUM_SHARED_PTR<impl::node>&, transaction_impl*, const light_ptr&)>* handler,
+#endif
                 bool suppressEarlierFirings) const
             {
-                boost::intrusive_ptr<listen_impl_func<H_STRONG>> li(
+                boost::intrusive_ptr<listen_impl_func<H_STRONG> > li(
                     reinterpret_cast<listen_impl_func<H_STRONG>*>(p_listen_impl.get()));
                 if (alive(li))
                     return (*li->func)(trans, target, handler, suppressEarlierFirings);
@@ -165,45 +219,76 @@ namespace sodium {
                 }
             }
         };
+#if defined(NO_CXX11)
+        template <class A, class B>
+        class _de_type : public i_lambda1<light_ptr, const light_ptr&>
+        {
+        private:
+            lambda1<B,A> f;
+        public:
+            _de_type(const lambda1<B,A>& f) : f(f) {}
+            virtual light_ptr operator () (const light_ptr& a) const
+            {
+                return light_ptr::create<B>(f(*a.cast_ptr<A>(NULL)));
+            }
+        };
+        #define SODIUM_DETYPE_FUNCTION1(A,B,f) sodium::impl::_de_type<A,B>(f)
+        event_ map_(transaction_impl* trans, const lambda1<light_ptr, const light_ptr&>& f, const event_& ca);
+#else
         #define SODIUM_DETYPE_FUNCTION1(A,B,f) \
                    [f] (const light_ptr& a) -> light_ptr { \
                         return light_ptr::create<B>(f(*a.cast_ptr<A>(NULL))); \
                    }
-
         event_ map_(transaction_impl* trans, const std::function<light_ptr(const light_ptr&)>& f, const event_& ca);
+#endif
 
         /*!
          * Function to push a value into an event
          */
-        void send(const std::shared_ptr<node>& n, transaction_impl* trans, const light_ptr& ptr);
+        void send(const SODIUM_SHARED_PTR<node>& n, transaction_impl* trans, const light_ptr& ptr);
 
         /*!
          * Creates an event, that values can be pushed into using impl::send(). 
          */
-        std::tuple<
+        SODIUM_TUPLE<
                 event_,
-                std::shared_ptr<node>
+                SODIUM_SHARED_PTR<node>
             > unsafe_new_event(event_::sample_now_func* sample_now_func = NULL);
 
         struct behavior_impl {
             behavior_impl(const light_ptr& constant);
             behavior_impl(
                 const event_& updates,
+#if defined(NO_CXX11)
+                const lambda0<light_ptr>& sample,
+                lambda0<void>* kill,
+#else
                 const std::function<light_ptr()>& sample,
                 std::function<void()>* kill,
-                const std::shared_ptr<behavior_impl>& parent);
+#endif
+                const SODIUM_SHARED_PTR<behavior_impl>& parent);
             ~behavior_impl();
 
             event_ updates;  // Having this here allows references to behavior to keep the
                              // underlying event's cleanups alive, and provides access to the
                              // underlying event, for certain primitives.
 
+#if defined(NO_CXX11)
+            lambda0<light_ptr> sample;
+            lambda0<void>* kill;
+#else
             std::function<light_ptr()> sample;
             std::function<void()>* kill;
-            std::shared_ptr<behavior_impl> parent;
+#endif
+            SODIUM_SHARED_PTR<behavior_impl> parent;
 
-            std::function<std::function<void()>(transaction_impl*, const std::shared_ptr<node>&,
+#if defined(NO_CXX11)
+            lambda3<lambda0<void>, transaction_impl*, const SODIUM_SHARED_PTR<node>&,
+                             const lambda2<void, transaction_impl*, const light_ptr&>&> listen_value_raw() const;
+#else
+            std::function<std::function<void()>(transaction_impl*, const SODIUM_SHARED_PTR<node>&,
                              const std::function<void(transaction_impl*, const light_ptr&)>&)> listen_value_raw() const;
+#endif
         };
 
         behavior_impl* hold(transaction_impl* trans0,
@@ -222,9 +307,9 @@ namespace sodium {
             public:
                 behavior_();
                 behavior_(behavior_impl* impl);
-                behavior_(const std::shared_ptr<behavior_impl>& impl);
+                behavior_(const SODIUM_SHARED_PTR<behavior_impl>& impl);
                 behavior_(const light_ptr& a);
-                std::shared_ptr<impl::behavior_impl> impl;
+                SODIUM_SHARED_PTR<impl::behavior_impl> impl;
 
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
                 /*!
@@ -237,8 +322,13 @@ namespace sodium {
                 const event_& updates_() const { return impl->updates; }
         };
 
+#if defined(NO_CXX11)
+        behavior_ map_(transaction_impl* trans, const lambda1<light_ptr, const light_ptr&>& f,
+            const behavior_& beh);
+#else
         behavior_ map_(transaction_impl* trans, const std::function<light_ptr(const light_ptr&)>& f,
             const behavior_& beh);
+#endif
 
         template <class S>
         struct collect_state {
@@ -254,19 +344,23 @@ namespace sodium {
      * A like an event, but it tracks the input event's current value and causes it
      * always to be output once at the beginning for each listener.
      */
-    template <class A, class P = def_part>
+    template <class A, class P EQ_DEF_PART>
     class behavior : protected impl::behavior_ {
         template <class AA, class PP> friend class event;
         template <class AA, class PP> friend class behavior;
         template <class AA, class PP> friend class behavior_loop;
         template <class AA, class BB, class PP>
+#if defined(NO_CXX11)
+        friend behavior<BB, PP> apply(const behavior<lambda1<BB, const AA&>, PP>& bf, const behavior<AA, PP>& ba);
+#else
         friend behavior<BB, PP> apply(const behavior<std::function<BB(const AA&)>, PP>& bf, const behavior<AA, PP>& ba);
+#endif
         template <class AA, class PP>
         friend behavior<AA, PP> switch_b(const behavior<behavior<AA, PP>, PP>& bba);
         template <class AA, class PP>
         friend event<AA, PP> switch_e(const behavior<event<AA, PP>, PP>& bea);
         private:
-            behavior(const std::shared_ptr<impl::behavior_impl>& impl)
+            behavior(const SODIUM_SHARED_PTR<impl::behavior_impl>& impl)
                 : impl::behavior_(impl)
             {
             }
@@ -296,7 +390,11 @@ namespace sodium {
              * Returns a new behavior with the specified cleanup added to it, such that
              * it will be executed when no copies of the new behavior are referenced.
              */
+#if defined(NO_CXX11)
+            behavior<A, P> add_cleanup(const lambda0<void>& cleanup) const {
+#else
             behavior<A, P> add_cleanup(const std::function<void()>& cleanup) const {
+#endif
                 transaction<P> trans;
                 return updates().add_cleanup(cleanup).hold(sample());
             }
@@ -305,7 +403,11 @@ namespace sodium {
              * Map a function over this behaviour to modify the output value.
              */
             template <class B>
+#if defined(NO_CXX11)
+            behavior<B, P> map(const lambda1<B, const A&>& f) const {
+#else
             behavior<B, P> map(const std::function<B(const A&)>& f) const {
+#endif
                 transaction<P> trans;
                 return behavior<B, P>(impl::map_(trans.impl(), SODIUM_DETYPE_FUNCTION1(A,B,f), *this));
             }
@@ -318,7 +420,11 @@ namespace sodium {
              * work around it with map_.
              */
             template <class B>
+#if defined(NO_CXX11)
+            behavior<B, P> map_(const lambda1<B, const A&>& f) const {
+#else
             behavior<B, P> map_(const std::function<B(const A&)>& f) const {
+#endif
                 transaction<P> trans;
                 return behavior<B, P>(impl::map_(trans.impl(), SODIUM_DETYPE_FUNCTION1(A,B,f), *this));
             }
@@ -347,18 +453,27 @@ namespace sodium {
             template <class S, class B>
             behavior<B, P> collect(
                 const S& initS,
+#if defined(NO_CXX11)
+                const lambda2<SODIUM_TUPLE<B, S>, const A&, const S&>& f
+#else
                 const std::function<std::tuple<B, S>(const A&, const S&)>& f
+#endif
             ) const
             {
                 transaction<P> trans;
+#if defined(NO_CXX11)
+                /* ### */
                 auto ea = updates().coalesce([] (const A&, const A& snd) -> A { return snd; });
+#else
+                auto ea = updates().coalesce([] (const A&, const A& snd) -> A { return snd; });
+#endif
                 auto za = sample();
                 auto zbs = f(za, initS);
-                std::shared_ptr<impl::collect_state<S>> pState(new impl::collect_state<S>(std::get<1>(zbs)));
+                SODIUM_SHARED_PTR<impl::collect_state<S>> pState(new impl::collect_state<S>(std::get<1>(zbs)));
                 auto p = impl::unsafe_new_event();
                 auto kill = updates().listen_raw(trans.impl(), std::get<1>(p),
-                    new std::function<void(const std::shared_ptr<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
-                        [pState, f] (const std::shared_ptr<impl::node>& target, impl::transaction_impl* trans, const light_ptr& ptr) {
+                    new std::function<void(const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
+                        [pState, f] (const SODIUM_SHARED_PTR<impl::node>& target, impl::transaction_impl* trans, const light_ptr& ptr) {
                             auto outsSt = f(*ptr.cast_ptr<A>(NULL), pState->s);
                             pState->s = std::get<1>(outsSt);
                             send(target, trans, light_ptr::create<B>(std::get<0>(outsSt)));
@@ -368,7 +483,7 @@ namespace sodium {
 
     };  // end class behavior
 
-    template <class A, class P = def_part>
+    template <class A, class P EQ_DEF_PART>
     class event : protected impl::event_ {
         template <class AA, class PP> friend class event;
         template <class AA, class PP> friend class event_sink;
@@ -394,9 +509,9 @@ namespace sodium {
             std::function<void()> listen(std::function<void(const A&)> handle) const {
                 transaction<P> trans;
                 std::function<void()>* pKill = listen_raw(trans.impl(),
-                    std::shared_ptr<impl::node>(new impl::node(SODIUM_IMPL_RANK_T_MAX)),
-                    new std::function<void(const std::shared_ptr<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
-                        [handle] (const std::shared_ptr<impl::node>&, impl::transaction_impl* trans, const light_ptr& ptr) {
+                    SODIUM_SHARED_PTR<impl::node>(new impl::node(SODIUM_IMPL_RANK_T_MAX)),
+                    new std::function<void(const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
+                        [handle] (const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl* trans, const light_ptr& ptr) {
                             handle(*ptr.cast_ptr<A>(NULL));
                         }), false);
                 if (pKill != NULL) {
@@ -561,11 +676,11 @@ namespace sodium {
             ) const
             {
                 transaction<P> trans;
-                std::shared_ptr<impl::collect_state<S>> pState(new impl::collect_state<S>(initS));
+                SODIUM_SHARED_PTR<impl::collect_state<S>> pState(new impl::collect_state<S>(initS));
                 auto p = impl::unsafe_new_event();
                 auto kill = listen_raw(trans.impl(), std::get<1>(p),
-                    new std::function<void(const std::shared_ptr<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
-                        [pState, f] (const std::shared_ptr<impl::node>& target, impl::transaction_impl* trans, const light_ptr& ptr) {
+                    new std::function<void(const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
+                        [pState, f] (const SODIUM_SHARED_PTR<impl::node>& target, impl::transaction_impl* trans, const light_ptr& ptr) {
                             auto outsSt = f(*ptr.cast_ptr<A>(NULL), pState->s);
                             pState->s = std::get<1>(outsSt);
                             send(target, trans, light_ptr::create<B>(std::get<0>(outsSt)));
@@ -580,11 +695,11 @@ namespace sodium {
             ) const
             {
                 transaction<P> trans;
-                std::shared_ptr<impl::collect_state<B>> pState(new impl::collect_state<B>(initB));
+                SODIUM_SHARED_PTR<impl::collect_state<B>> pState(new impl::collect_state<B>(initB));
                 auto p = impl::unsafe_new_event();
                 auto kill = listen_raw(trans.impl(), std::get<1>(p),
-                    new std::function<void(const std::shared_ptr<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
-                        [pState, f] (const std::shared_ptr<impl::node>& target, impl::transaction_impl* trans, const light_ptr& ptr) {
+                    new std::function<void(const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
+                        [pState, f] (const SODIUM_SHARED_PTR<impl::node>& target, impl::transaction_impl* trans, const light_ptr& ptr) {
                             pState->s = f(*ptr.cast_ptr<A>(NULL), pState->s);
                             send(target, trans, light_ptr::create<B>(pState->s));
                         }), false);
@@ -640,7 +755,7 @@ namespace sodium {
             event_sink_impl();
             event_ construct();
             void send(transaction_impl* trans, const light_ptr& ptr) const;
-            std::shared_ptr<impl::node> target;
+            SODIUM_SHARED_PTR<impl::node> target;
         };
     }
 
@@ -648,7 +763,7 @@ namespace sodium {
      * An event with a send() method to allow values to be pushed into it
      * from the imperative world.
      */
-    template <class A, class P = def_part>
+    template <class A, class P EQ_DEF_PART>
     class event_sink : public event<A, P>
     {
         private:
@@ -703,8 +818,8 @@ namespace sodium {
         transaction<P> trans;
         auto p = impl::unsafe_new_event();
         auto kill = input.listen_raw(trans.impl(), std::get<1>(p),
-            new std::function<void(const std::shared_ptr<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
-                [] (const std::shared_ptr<impl::node>& target, impl::transaction_impl* trans, const light_ptr& poa) {
+            new std::function<void(const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
+                [] (const SODIUM_SHARED_PTR<impl::node>& target, impl::transaction_impl* trans, const light_ptr& poa) {
                     const boost::optional<A>& oa = *poa.cast_ptr<boost::optional<A>>(NULL);
                     if (oa) impl::send(target, trans, light_ptr::create<A>(oa.get()));
                 }), false);
@@ -715,7 +830,7 @@ namespace sodium {
      * A behavior with a send() method to allow its value to be changed
      * from the imperative world.
      */
-    template <class A, class P = def_part>
+    template <class A, class P EQ_DEF_PART>
     class behavior_sink : public behavior<A, P>
     {
         private:
@@ -727,7 +842,7 @@ namespace sodium {
             behavior_sink(const A& initA)
             {
                 transaction<P> trans;
-                this->impl = std::shared_ptr<impl::behavior_impl>(hold(trans.impl(), light_ptr::create<A>(initA), e));
+                this->impl = SODIUM_SHARED_PTR<impl::behavior_impl>(hold(trans.impl(), light_ptr::create<A>(initA), e));
             }
 
             void send(const A& a) const
@@ -777,30 +892,30 @@ namespace sodium {
      *
      * TO DO: Loops do not yet get deallocated properly.
      */
-    template <class A, class P = def_part>
+    template <class A, class P EQ_DEF_PART>
     class event_loop : public event<A, P>
     {
         private:
             struct info {
                 info(
-                    const std::shared_ptr<impl::node>& target,
-                    const std::shared_ptr<std::function<void()>*>& pKill
+                    const SODIUM_SHARED_PTR<impl::node>& target,
+                    const SODIUM_SHARED_PTR<std::function<void()>*>& pKill
                 )
                 : target(target), pKill(pKill)
                 {
                 }
-                std::shared_ptr<impl::node> target;
-                std::shared_ptr<std::function<void()>*> pKill;
+                SODIUM_SHARED_PTR<impl::node> target;
+                SODIUM_SHARED_PTR<std::function<void()>*> pKill;
             };
-            std::shared_ptr<info> i;
+            SODIUM_SHARED_PTR<info> i;
 
         private:
-            event_loop(const impl::event_& ev, const std::shared_ptr<info>& i) : event<A, P>(ev), i(i) {}
+            event_loop(const impl::event_& ev, const SODIUM_SHARED_PTR<info>& i) : event<A, P>(ev), i(i) {}
 
         public:
             event_loop()
             {
-                std::shared_ptr<std::function<void()>*> pKill(
+                SODIUM_SHARED_PTR<std::function<void()>*> pKill(
                     new std::function<void()>*(new std::function<void()>(
                         [] () {
                             throw std::runtime_error("event_loop not looped back");
@@ -815,7 +930,7 @@ namespace sodium {
                             (*kill)();
                         delete kill;
                     })),
-                    std::shared_ptr<info>(new info(std::get<1>(p), pKill))
+                    SODIUM_SHARED_PTR<info>(new info(std::get<1>(p), pKill))
                 );
             }
 
@@ -825,7 +940,7 @@ namespace sodium {
                     transaction<P> trans;
                     auto target(i->target);
                     *i->pKill = e.listen_raw(trans.impl(), target, NULL, false);
-                    i = std::shared_ptr<info>();
+                    i = SODIUM_SHARED_PTR<info>();
                 }
                 else
                     throw std::runtime_error("event_loop looped back more than once");
@@ -842,12 +957,12 @@ namespace sodium {
      *
      * TO DO: Loops do not yet get deallocated properly.
      */
-    template <class A, class P = def_part>
+    template <class A, class P EQ_DEF_PART>
     class behavior_loop : public behavior<A, P>
     {
         private:
             event_loop<A> elp;
-            std::shared_ptr<std::function<light_ptr()>> pSample;
+            SODIUM_SHARED_PTR<std::function<light_ptr()>> pSample;
 
         public:
             behavior_loop()
@@ -857,11 +972,11 @@ namespace sodium {
                   }))
             {
                 auto pSample = this->pSample;
-                this->impl = std::shared_ptr<impl::behavior_impl>(new impl::behavior_impl(
+                this->impl = SODIUM_SHARED_PTR<impl::behavior_impl>(new impl::behavior_impl(
                     elp,
                     [pSample] () { return (*pSample)(); },
                     NULL,
-                    std::shared_ptr<impl::behavior_impl>()));
+                    SODIUM_SHARED_PTR<impl::behavior_impl>()));
             }
 
             void loop(const behavior<A, P>& b)
@@ -898,7 +1013,7 @@ namespace sodium {
     /*!
      * Behavior variant of switch.
      */
-    template <class A, class P = def_part>
+    template <class A, class P EQ_DEF_PART>
     behavior<A, P> switch_b(const behavior<behavior<A, P>, P>& bba)
     {
         transaction<P> trans;
@@ -908,7 +1023,7 @@ namespace sodium {
     /*!
      * Lift a binary function into behaviors.
      */
-    template <class A, class B, class C, class P = def_part>
+    template <class A, class B, class C, class P EQ_DEF_PART>
     behavior<C, P> lift(const std::function<C(const A&, const B&)>& f, const behavior<A, P>& ba, const behavior<B, P>& bb)
     {
         std::function<std::function<C(const B&)>(const A&)> fa(
@@ -923,7 +1038,7 @@ namespace sodium {
     /*!
      * Lift a ternary function into behaviors.
      */
-    template <class A, class B, class C, class D, class P = def_part>
+    template <class A, class B, class C, class D, class P EQ_DEF_PART>
     behavior<D, P> lift(const std::function<D(const A&, const B&, const C&)>& f,
         const behavior<A, P>& ba,
         const behavior<B, P>& bb,
@@ -945,7 +1060,7 @@ namespace sodium {
     /*!
      * Lift a quaternary function into behaviors.
      */
-    template <class A, class B, class C, class D, class E, class P = def_part>
+    template <class A, class B, class C, class D, class E, class P EQ_DEF_PART>
     behavior<E, P> lift(const std::function<E(const A&, const B&, const C&, const D&)>& f,
         const behavior<A, P>& ba,
         const behavior<B, P>& bb,
@@ -980,8 +1095,8 @@ namespace sodium {
         auto p = impl::unsafe_new_event();
         transaction<P> trans;
         auto kill = e.listen_raw(trans.impl(), std::get<1>(p),
-            new std::function<void(const std::shared_ptr<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
-                [] (const std::shared_ptr<impl::node>& target, impl::transaction_impl* trans, const light_ptr& ptr) {
+            new std::function<void(const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
+                [] (const SODIUM_SHARED_PTR<impl::node>& target, impl::transaction_impl* trans, const light_ptr& ptr) {
                     const std::list<A>& la = *ptr.cast_ptr<std::list<A>>(NULL);
                     trans->part->post([la, target, ptr] () {
                         for (auto it = la.begin(); it != la.end(); ++it) {

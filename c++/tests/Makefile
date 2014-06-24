@@ -1,6 +1,12 @@
 all: test_sodium memory/release-sink-machinery memory/switch-memory
 
-CPPFLAGS=-I.. --std=c++0x -g
+CPPFLAGS=-I.. -g
+ifeq (NO_CXX11,)
+CPPFLAGS+=--std=c++0x
+else
+CPPFLAGS+=-DNO_CXX11
+endif
+
 OBJECT_FILES= \
     ../sodium/lock_pool.o \
     ../sodium/light_ptr.o \
