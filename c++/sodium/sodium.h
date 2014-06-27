@@ -335,7 +335,33 @@ namespace sodium {
             collect_state(const S& s) : s(s) {}
             S s;
         };
+
+        template <class A, class S, class B>
+        struct collect_handler {
+            collect_handler(const SODIUM_SHARED_PTR<collect_state<S> >& pState,
+                            const lambda2<SODIUM_TUPLE<B, S>, const A&, const S&>& f)
+            : pState(pState), f(f) {}
+            SODIUM_SHARED_PTR<collect_state<S> > pState;
+            lambda2<SODIUM_TUPLE<B, S>, const A&, const S&> f;
+            virtual void operator () (const SODIUM_SHARED_PTR<node>& target, transaction_impl* trans,
+                                      const light_ptr& ptr) {
+                SODIUM_TUPLE<B,S> outsSt = f(*ptr.cast_ptr<A>(NULL), pState->s);
+                pState->s = SODIUM_TUPLE_GET<1>(outsSt);
+                send(target, trans, light_ptr::create<B>(SODIUM_TUPLE_GET<0>(outsSt)));
+            }
+        };
     }  // end namespace impl
+
+#if defined(NO_CXX11)
+    template <class A, class B>
+    struct fst_arg : i_lambda2<A,A,B>  {
+        virtual A operator () (const A& a, const B&) const { return a; }
+    };
+    template <class A, class B>
+    struct snd_arg : i_lambda2<B,A,B> {
+        virtual B operator () (const A&, const B& b) const { return b; }
+    };
+#endif
 
     template <class A, class P>
     class event;
@@ -462,26 +488,56 @@ namespace sodium {
             {
                 transaction<P> trans;
 #if defined(NO_CXX11)
-                /* ### */
-                auto ea = updates().coalesce([] (const A&, const A& snd) -> A { return snd; });
+                event<A, P> ea = updates().coalesce(lambda2<A,A,A>(new snd_arg<A,A>));
 #else
                 auto ea = updates().coalesce([] (const A&, const A& snd) -> A { return snd; });
 #endif
-                auto za = sample();
-                auto zbs = f(za, initS);
-                SODIUM_SHARED_PTR<impl::collect_state<S>> pState(new impl::collect_state<S>(std::get<1>(zbs)));
-                auto p = impl::unsafe_new_event();
-                auto kill = updates().listen_raw(trans.impl(), std::get<1>(p),
+                A za = sample();
+                SODIUM_TUPLE<B,S> zbs = f(za, initS);
+                SODIUM_SHARED_PTR<impl::collect_state<S> > pState(new impl::collect_state<S>(SODIUM_TUPLE_GET<1>(zbs)));
+                SODIUM_TUPLE<impl::event_,SODIUM_SHARED_PTR<impl::node> > p = impl::unsafe_new_event();
+#if defined(NO_CXX11)
+                lambda0<void>* kill = updates().listen_raw(trans.impl(), SODIUM_TUPLE_GET<1>(p),
+                    new lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&>(
+                        new impl::collect_handler<A,S,B>(pState, f)
+                    ), false);
+#else
+                auto kill = updates().listen_raw(trans.impl(), SODIUM_TUPLE_GET<1>(p),
                     new std::function<void(const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
                         [pState, f] (const SODIUM_SHARED_PTR<impl::node>& target, impl::transaction_impl* trans, const light_ptr& ptr) {
-                            auto outsSt = f(*ptr.cast_ptr<A>(NULL), pState->s);
-                            pState->s = std::get<1>(outsSt);
-                            send(target, trans, light_ptr::create<B>(std::get<0>(outsSt)));
+                            SODIUM_TUPLE<B,S> outsSt = f(*ptr.cast_ptr<A>(NULL), pState->s);
+                            pState->s = SODIUM_TUPLE_GET<1>(outsSt);
+                            send(target, trans, light_ptr::create<B>(SODIUM_TUPLE_GET<0>(outsSt)));
                         }), false);
-                return event<B, P>(std::get<0>(p).unsafe_add_cleanup(kill)).hold(std::get<0>(zbs));
+#endif
+                return event<B, P>(SODIUM_TUPLE_GET<0>(p).unsafe_add_cleanup(kill)).hold(SODIUM_TUPLE_GET<0>(zbs));
             }
 
     };  // end class behavior
+
+#if defined(NO_CXX11)
+    namespace impl {
+        template <class A>
+        struct listen_wrap : i_lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&> {
+            listen_wrap(const lambda1<void, const A&>& handle) : handle(handle) {}
+            lambda1<void, const A&> handle;
+            virtual void operator () (const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl* trans, const light_ptr& ptr) const {
+                handle(*ptr.cast_ptr<A>(NULL));
+            }
+        };
+        struct null_action : i_lambda0<void> {
+            virtual void operator () () const {}
+        };
+        template <class A>
+        struct detype_combine : i_lambda2<light_ptr, const light_ptr&, const light_ptr&> {
+            detype_combine(const lambda2<A, const A&, const A&>& combine) : combine(combine) {}
+            lambda2<A, const A&, const A&> combine;
+            virtual light_ptr operator () (const light_ptr& a, const light_ptr& b) const {
+                return light_ptr::create<A>(combine(*a.cast_ptr<A>(NULL), *b.cast_ptr<A>(NULL)));
+            }
+        };
+    }
+#endif
 
     template <class A, class P EQ_DEF_PART>
     class event : protected impl::event_ {
@@ -506,21 +562,43 @@ namespace sodium {
             /*!
              * High-level interface to obtain an event's value.
              */
-            std::function<void()> listen(std::function<void(const A&)> handle) const {
+#if defined(NO_CXX11)
+            lambda0<void> listen(const lambda1<void, const A&>& handle) const {
+#else
+            std::function<void()> listen(const std::function<void(const A&)>& handle) const {
+#endif
                 transaction<P> trans;
+#if defined(NO_CXX11)
+                lambda0<void>* pKill = listen_raw(trans.impl(),
+#else
                 std::function<void()>* pKill = listen_raw(trans.impl(),
+#endif
                     SODIUM_SHARED_PTR<impl::node>(new impl::node(SODIUM_IMPL_RANK_T_MAX)),
+#if defined(NO_CXX11)
+                    //new lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&>(
+                        new impl::listen_wrap<A>(handle)
+                    /*)*/, false);
+#else
                     new std::function<void(const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
                         [handle] (const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl* trans, const light_ptr& ptr) {
                             handle(*ptr.cast_ptr<A>(NULL));
                         }), false);
+#endif
                 if (pKill != NULL) {
+#if defined(NO_CXX11)
+                    lambda0<void> kill(*pKill);
+#else
                     std::function<void()> kill(*pKill);
+#endif
                     delete pKill;
                     return kill;
                 }
                 else
+#if defined(NO_CXX11)
+                    return new impl::null_action();
+#else
                     return [] () {};
+#endif
             };
 
             /*!
@@ -528,7 +606,11 @@ namespace sodium {
              * pure (referentially transparent), that is, it must not have effects.
              */
             template <class B>
+#if defined(NO_CXX11)
+            event<B, P> map(const lambda1<B, const A&>& f) const {
+#else
             event<B, P> map(const std::function<B(const A&)>& f) const {
+#endif
                 transaction<P> trans;
                 return event<B, P>(impl::map_(trans.impl(), SODIUM_DETYPE_FUNCTION1(A,B,f), *this));
             }
@@ -537,7 +619,11 @@ namespace sodium {
              * Map a function over this event to modify the output value. Effects are allowed.
              */
             template <class B>
+#if defined(NO_CXX11)
+            event<B, P> map_effectful(const lambda1<B, const A&>& f) const {
+#else
             event<B, P> map_effectful(const std::function<B(const A&)>& f) const {
+#endif
                 return map_(f);  // Same as map() for now but this may change!
             }
 
@@ -549,7 +635,11 @@ namespace sodium {
              * work around it with map_.
              */
             template <class B>
+#if defined(NO_CXX11)
+            event<B, P> map_(const lambda1<B, const A&>& f) const {
+#else
             event<B, P> map_(const std::function<B(const A&)>& f) const {
+#endif
                 transaction<P> trans;
                 return event<B, P>(impl::map_(trans.impl(), SODIUM_DETYPE_FUNCTION1(A,B,f), *this));
             }
@@ -573,12 +663,22 @@ namespace sodium {
              * make any assumptions about the ordering, and the combining function would
              * ideally be commutative.
              */
+#if defined(NO_CXX11)
+            event<A, P> coalesce(const lambda2<A, const A&, const A&>& combine) const
+#else
             event<A, P> coalesce(const std::function<A(const A&, const A&)>& combine) const
+#endif
             {
                 transaction<P> trans;
-                return event<A, P>(coalesce_(trans.impl(), [combine] (const light_ptr& a, const light_ptr& b) -> light_ptr {
-                    return light_ptr::create<A>(combine(*a.cast_ptr<A>(NULL), *b.cast_ptr<A>(NULL)));
-                }));
+                return event<A, P>(coalesce_(trans.impl(),
+#if defined(NO_CXX11)
+                    new impl::detype_combine<A>(combine)
+#else
+                    [combine] (const light_ptr& a, const light_ptr& b) -> light_ptr {
+                        return light_ptr::create<A>(combine(*a.cast_ptr<A>(NULL), *b.cast_ptr<A>(NULL)));
+                    }
+#endif
+                ));
             }
 
             /*!
@@ -586,7 +686,13 @@ namespace sodium {
              */
             event<A, P> coalesce() const
             {
-                return coalesce([] (const A&, const A& snd) -> A { return snd; });
+                return coalesce(
+#if defined(NO_CXX11)
+                        new snd_arg<A,A>
+#else
+                        [] (const A&, const A& snd) -> A { return snd; }
+#endif
+                    );
             }
 
             /*!
@@ -597,7 +703,11 @@ namespace sodium {
              * within the same transaction), they are combined using the same logic as
              * 'coalesce'.
              */
+#if defined(NO_CXX11)
+            event<A, P> merge(const event<A, P>& other, const lambda2<A, const A&, const A&>& combine) const
+#else
             event<A, P> merge(const event<A, P>& other, const std::function<A(const A&, const A&)>& combine) const
+#endif
             {
                 return merge(other).coalesce(combine);
             }
@@ -606,7 +716,11 @@ namespace sodium {
              * Filter this event based on the specified predicate, passing through values
              * where the predicate returns true.
              */
+#if defined(NO_CXX11)
+            event<A, P> filter(const lambda1<bool, const A&>& pred) const
+#else
             event<A, P> filter(const std::function<bool(const A&)>& pred) const
+#endif
             {
                 transaction<P> trans;
                 return event<A, P>(filter_(trans.impl(), [pred] (const light_ptr& a) {
@@ -632,7 +746,11 @@ namespace sodium {
              * taken.
              */
             template <class B, class C>
+#if defined(NO_CXX11)
+            event<C, P> snapshot(const behavior<B, P>& beh, const lambda2<C, const A&, const B&>& combine) const
+#else
             event<C, P> snapshot(const behavior<B, P>& beh, const std::function<C(const A&, const B&)>& combine) const
+#endif
             {
                 transaction<P> trans;
                 return event<C, P>(snapshot_(trans.impl(), beh, [combine] (const light_ptr& a, const light_ptr& b) -> light_ptr {
@@ -672,7 +790,11 @@ namespace sodium {
             template <class S, class B>
             event<B, P> collect(
                 const S& initS,
-                const std::function<std::tuple<B, S>(const A&, const S&)>& f
+#if defined(NO_CXX11)
+                const lambda2<SODIUM_TUPLE<B, S>, const A&, const S&>& f
+#else
+                const std::function<SODIUM_TUPLE<B, S>(const A&, const S&)>& f
+#endif
             ) const
             {
                 transaction<P> trans;
@@ -691,7 +813,11 @@ namespace sodium {
             template <class B>
             event<B, P> accum_e(
                 const B& initB,
+#if defined(NO_CXX11)
+                const lambda2<B, const A&, const B&>& f
+#else
                 const std::function<B(const A&, const B&)>& f
+#endif
             ) const
             {
                 transaction<P> trans;
@@ -709,7 +835,11 @@ namespace sodium {
             template <class B>
             behavior<B, P> accum(
                 const B& initB,
+#if defined(NO_CXX11)
+                const lambda2<B, const A&, const B&>& f
+#else
                 const std::function<B(const A&, const B&)>& f
+#endif
             ) const
             {
                 return accum_e(initB, f).hold(initB);
@@ -743,7 +873,11 @@ namespace sodium {
              * Add a clean-up operation to be performed when this event is no longer
              * referenced.
              */
+#if defined(NO_CXX11)
+            event<A, P> add_cleanup(const lambda0<void>& cleanup) const
+#else
             event<A, P> add_cleanup(const std::function<void()>& cleanup) const
+#endif
             {
                 transaction<P> trans;
                 return event<A, P>(add_cleanup_(trans.impl(), new std::function<void()>(cleanup)));
