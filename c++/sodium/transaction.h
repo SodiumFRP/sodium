@@ -34,7 +34,7 @@
 #define SODIUM_TUPLE      boost::tuple
 #define SODIUM_TUPLE_GET  boost::get
 #else
-#define EQ_DEF_PART EQ_DEF_PART
+#define EQ_DEF_PART = sodium::def_part
 #define SODIUM_SHARED_PTR std::shared_ptr
 #define SODIUM_TUPLE      std::tuple
 #define SODIUM_TUPLE_GET  std::get

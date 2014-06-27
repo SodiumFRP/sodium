@@ -336,6 +336,7 @@ namespace sodium {
             S s;
         };
 
+#if defined(NO_CXX11)
         template <class A, class S, class B>
         struct collect_handler {
             collect_handler(const SODIUM_SHARED_PTR<collect_state<S> >& pState,
@@ -350,6 +351,7 @@ namespace sodium {
                 send(target, trans, light_ptr::create<B>(SODIUM_TUPLE_GET<0>(outsSt)));
             }
         };
+#endif
     }  // end namespace impl
 
 #if defined(NO_CXX11)
@@ -498,9 +500,9 @@ namespace sodium {
                 SODIUM_TUPLE<impl::event_,SODIUM_SHARED_PTR<impl::node> > p = impl::unsafe_new_event();
 #if defined(NO_CXX11)
                 lambda0<void>* kill = updates().listen_raw(trans.impl(), SODIUM_TUPLE_GET<1>(p),
-                    new lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&>(
+                    //new lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&>(
                         new impl::collect_handler<A,S,B>(pState, f)
-                    ), false);
+                    /*)*/, false);
 #else
                 auto kill = updates().listen_raw(trans.impl(), SODIUM_TUPLE_GET<1>(p),
                     new std::function<void(const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
@@ -534,6 +536,28 @@ namespace sodium {
             lambda2<A, const A&, const A&> combine;
             virtual light_ptr operator () (const light_ptr& a, const light_ptr& b) const {
                 return light_ptr::create<A>(combine(*a.cast_ptr<A>(NULL), *b.cast_ptr<A>(NULL)));
+            }
+        };
+        template <class A>
+        struct detype_pred : i_lambda1<bool, const light_ptr&> {
+            detype_pred(const lambda1<bool, A>& pred) : pred(pred) {}
+            lambda1<bool, A> pred;
+            virtual bool operator () (const light_ptr& a) const {
+                return pred(*a.cast_ptr<A>(NULL));
+            }
+        };
+        template <class A, class B, class C>
+        struct detype_snapshot : i_lambda2<light_ptr, const light_ptr&, const light_ptr&> {
+            detype_snapshot(const lambda2<C, const A&, const B&>& combine) : combine(combine) {}
+            lambda2<C, const A&, const B&> combine;
+            virtual light_ptr operator () (const light_ptr& a, const light_ptr& b) const {
+                return light_ptr::create<C>(combine(*a.cast_ptr<A>(NULL), *b.cast_ptr<B>(NULL)));
+            }
+        };
+        template <class A>
+        struct gate_handler : i_lambda2<boost::optional<A>, const A&, const bool&> {
+            virtual boost::optional<A> operator () (const A& a, const bool& gated) {
+                return gated ? boost::optional<A>(a) : boost::optional<A>();
             }
         };
     }
@@ -723,9 +747,15 @@ namespace sodium {
 #endif
             {
                 transaction<P> trans;
-                return event<A, P>(filter_(trans.impl(), [pred] (const light_ptr& a) {
-                    return pred(*a.cast_ptr<A>(NULL));
-                }));
+                return event<A, P>(filter_(trans.impl(),
+#if defined(NO_CXX11)
+                    new impl::detype_pred<A>(pred)
+#else
+                    [pred] (const light_ptr& a) {
+                        return pred(*a.cast_ptr<A>(NULL));
+                    }
+#endif
+                  ));
             }
 
             /*!
@@ -753,9 +783,15 @@ namespace sodium {
 #endif
             {
                 transaction<P> trans;
-                return event<C, P>(snapshot_(trans.impl(), beh, [combine] (const light_ptr& a, const light_ptr& b) -> light_ptr {
-                    return light_ptr::create<C>(combine(*a.cast_ptr<A>(NULL), *b.cast_ptr<B>(NULL)));
-                }));
+                return event<C, P>(snapshot_(trans.impl(), beh,
+#if defined(NO_CXX11)
+                    new impl::detype_snapshot<A,B,C>(combine)
+#else
+                    [combine] (const light_ptr& a, const light_ptr& b) -> light_ptr {
+                        return light_ptr::create<C>(combine(*a.cast_ptr<A>(NULL), *b.cast_ptr<B>(NULL)));
+                    }
+#endif
+                ));
             }
 
             /*!
@@ -766,7 +802,13 @@ namespace sodium {
             template <class B>
             event<B, P> snapshot(const behavior<B, P>& beh) const
             {
-                return snapshot<B, B>(beh, [] (const A&, const B& b) { return b; });
+                return snapshot<B, B>(beh,
+#if defined(NO_CXX11)
+                    new snd_arg<A,B>
+#else
+                    [] (const A&, const B& b) { return b; }
+#endif
+                    );
             }
 
             /*!
@@ -775,12 +817,16 @@ namespace sodium {
             event<A, P> gate(const behavior<bool, P>& g) const
             {
                 transaction<P> trans;
-                return filter_optional<A>(snapshot<bool, boost::optional<A>>(
+                return filter_optional<A>(snapshot<bool, boost::optional<A> >(
                     g,
+#if defined(NO_CXX11)
+                    new impl::gate_handler<A>()
+#else
                     [] (const A& a, const bool& gated) {
                         return gated ? boost::optional<A>(a) : boost::optional<A>();
-                    })
-                );
+                    }
+#endif
+                ));
             }
 
             /*!
@@ -798,8 +844,12 @@ namespace sodium {
             ) const
             {
                 transaction<P> trans;
-                SODIUM_SHARED_PTR<impl::collect_state<S>> pState(new impl::collect_state<S>(initS));
-                auto p = impl::unsafe_new_event();
+                SODIUM_SHARED_PTR<impl::collect_state<S> > pState(new impl::collect_state<S>(initS));
+                SODIUM_TUPLE<impl::event_,SODIUM_SHARED_PTR<impl::node> > p = impl::unsafe_new_event();
+#if defined(NO_CXX11)
+                lambda0<void>* kill = listen_raw(trans.impl(), SODIUM_TUPLE_GET<1>(p),
+                    new impl::collect_handler<A,S,B>(pState, f), false);
+#else
                 auto kill = listen_raw(trans.impl(), std::get<1>(p),
                     new std::function<void(const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
                         [pState, f] (const SODIUM_SHARED_PTR<impl::node>& target, impl::transaction_impl* trans, const light_ptr& ptr) {
@@ -807,7 +857,8 @@ namespace sodium {
                             pState->s = std::get<1>(outsSt);
                             send(target, trans, light_ptr::create<B>(std::get<0>(outsSt)));
                         }), false);
-                return std::get<0>(p).unsafe_add_cleanup(kill);
+#endif
+                return SODIUM_TUPLE_GET<0>(p).unsafe_add_cleanup(kill);
             }
 
             template <class B>
@@ -821,7 +872,7 @@ namespace sodium {
             ) const
             {
                 transaction<P> trans;
-                SODIUM_SHARED_PTR<impl::collect_state<B>> pState(new impl::collect_state<B>(initB));
+                SODIUM_SHARED_PTR<impl::collect_state<B> > pState(new impl::collect_state<B>(initB));
                 auto p = impl::unsafe_new_event();
                 auto kill = listen_raw(trans.impl(), std::get<1>(p),
                     new std::function<void(const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
