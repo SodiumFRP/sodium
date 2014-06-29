@@ -15,6 +15,7 @@
 #include <list>
 #include <set>
 #include <stdexcept>
+#include <vector>
 
 #define SODIUM_CONSTANT_OPTIMIZATION
 

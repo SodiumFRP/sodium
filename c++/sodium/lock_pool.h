@@ -7,13 +7,28 @@
 #ifndef _SODIUM_LOCKPOOL_H_
 #define _SODIUM_LOCKPOOL_H_
 
+#ifdef __APPLE__
+#include <libkern/OSAtomic.h>
+#else
 #include <pthread.h>
+#endif
 #include <stdint.h>
 #include <limits.h>
 
 namespace sodium {
     namespace impl {
         struct spin_lock {
+#ifdef __APPLE__
+            OSSpinLock sl;
+            spin_lock() : sl(0) {
+            }
+            inline void lock() {
+                OSSpinLockLock(&sl);
+            }
+            inline void unlock() {
+                OSSpinLockUnlock(&sl);
+            }
+#else
             pthread_spinlock_t sl;
             spin_lock() {
                 pthread_spin_init(&sl, PTHREAD_PROCESS_PRIVATE);
@@ -24,6 +39,7 @@ namespace sodium {
             inline void unlock() {
                 pthread_spin_unlock(&sl);
             }
+#endif
         };
         #define SODIUM_IMPL_LOCK_POOL_BITS 7
         extern spin_lock lock_pool[1<<SODIUM_IMPL_LOCK_POOL_BITS];
