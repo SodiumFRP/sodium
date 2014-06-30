@@ -560,6 +560,34 @@ namespace sodium {
                 return gated ? boost::optional<A>(a) : boost::optional<A>();
             }
         };
+        template <class A, class B>
+        struct accum_handler : i_lambda2<const SODIUM_SHARED_PTR<node>&, transaction_impl*, const light_ptr&> {
+            accum_handler(
+                const SODIUM_SHARED_PTR<collect_state<B> >& pState,
+                const lambda2<B, const A&, const B&>& f)
+            : pState(pState), f(f) {}
+            SODIUM_SHARED_PTR<collect_state<B> > pState;
+            lambda2<B, const A&, const B&> f;
+
+            virtual void operator () (const SODIUM_SHARED_PTR<node>& target, transaction_impl* trans, const light_ptr& ptr) {
+                pState->s = f(*ptr.cast_ptr<A>(NULL), pState->s);
+                send(target, trans, light_ptr::create<B>(pState->s));
+            }
+        };
+        template <class A>
+        struct count_handler : i_lambda2<int,const A&,int> {
+            virtual int operator () (const A&, int total) const {
+                return total+1;
+            }
+        };
+        template <class A>
+        struct delay_handler : i_lambda1<std::list<A>, const A&> {
+            virtual std::list<A> operator () (const A& a) const {
+                std::list<A> as;
+                as.push_back(a);
+                return as;
+            }
+        };
     }
 #endif
 
@@ -873,14 +901,20 @@ namespace sodium {
             {
                 transaction<P> trans;
                 SODIUM_SHARED_PTR<impl::collect_state<B> > pState(new impl::collect_state<B>(initB));
-                auto p = impl::unsafe_new_event();
-                auto kill = listen_raw(trans.impl(), std::get<1>(p),
+                SODIUM_TUPLE<impl::event_,SODIUM_SHARED_PTR<impl::node> > p = impl::unsafe_new_event();
+#if defined(NO_CXX11)
+                lambda0<void>* kill = listen_raw(trans.impl(), SODIUM_TUPLE_GET<1>(p),
+                    new impl::accum_handler<A,B>(pState, f)
+#else
+                auto kill = listen_raw(trans.impl(), SODIUM_TUPLE_GET<1>(p),
                     new std::function<void(const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
                         [pState, f] (const SODIUM_SHARED_PTR<impl::node>& target, impl::transaction_impl* trans, const light_ptr& ptr) {
                             pState->s = f(*ptr.cast_ptr<A>(NULL), pState->s);
                             send(target, trans, light_ptr::create<B>(pState->s));
-                        }), false);
-                return event<B, P>(std::get<0>(p).unsafe_add_cleanup(kill));
+                        })
+#endif
+                    , false);
+                return event<B, P>(SODIUM_TUPLE_GET<0>(p).unsafe_add_cleanup(kill));
             }
 
             template <class B>
@@ -898,9 +932,13 @@ namespace sodium {
 
             behavior<int, P> count() const
             {
-                return accum<int>(0, [] (const A&, const int& total) -> int {
-                    return total+1;
-                });
+                return accum<int>(0,
+#if defined(NO_CXX11)
+                    new impl::count_handler<A>
+#else
+                    [] (const A&, const int& total) -> int {  return total+1; }
+#endif
+                );
             }
 
             event<A, P> once() const
@@ -915,8 +953,12 @@ namespace sodium {
              */
             event<A, P> delay()
             {
-                return split<A,P>(map_<std::list<A>>(
+                return split<A,P>(map_<std::list<A> >(
+#if defined(NO_CXX11)
+                        new impl::delay_handler<A>
+#else
                         [] (const A& a) -> std::list<A> { return { a }; }
+#endif
                     ));
             }
 
@@ -931,7 +973,13 @@ namespace sodium {
 #endif
             {
                 transaction<P> trans;
-                return event<A, P>(add_cleanup_(trans.impl(), new std::function<void()>(cleanup)));
+                return event<A, P>(add_cleanup_(trans.impl(),
+#if defined(NO_CXX11)
+                    new lambda0<void>(cleanup)
+#else
+                    new std::function<void()>(cleanup)
+#endif
+                ));
             }
     };  // end class event
 
@@ -967,6 +1015,29 @@ namespace sodium {
             }
     };
 
+#if defined(NO_CXX11)
+    namespace impl {
+        template <class A, class Q>
+        struct cross_post : i_lambda0<void> {
+            cross_post(const event_sink<A, Q>& s, const A& a) : s(s), a(a) {}
+            event_sink<A, Q> s;
+            A a;
+            void operator () () const {
+                s.send(a);
+            }
+        };
+        template <class A, class P, class Q>
+        struct cross_handler : i_lambda1<void, const A&> {
+            cross_handler(const event_sink<A, Q>& s) : s(s) {}
+            event_sink<A, Q> s;
+            virtual void operator () (const A& a) const {
+                transaction<P> trans;
+                trans.impl()->part->post(new cross_post<A,Q>(s, a));
+            }
+        };
+    }
+#endif
+
     /*!
      * Make the specified event cross to partition Q.
      */
@@ -975,12 +1046,16 @@ namespace sodium {
     {
         transaction<P> trans;
         event_sink<A, Q> s;
+#if defined(NO_CXX11)
+        lambda0<void> kill = e.listen(new impl::cross_handler<A, P, Q>(s));
+#else
         auto kill = e.listen([s] (const A& a) {
             transaction<P> trans;
             trans.impl()->part->post([s, a] () {
                 s.send(a);
             });
         });
+#endif
         return s.add_cleanup(kill);
     }
 

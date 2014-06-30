@@ -2,7 +2,7 @@ all: test_sodium memory/release-sink-machinery memory/switch-memory
 
 CPPFLAGS=-I.. -g
 ifeq ($(NO_CXX11),)
-CPPFLAGS+=--std=c++0x
+CPPFLAGS+=--std=c++11
 else
 CPPFLAGS+=-DNO_CXX11
 endif
