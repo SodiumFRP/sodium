@@ -10,7 +10,11 @@
 
 namespace sodium {
     namespace impl {
+#ifdef SUPPORTS_INIT_PRIORITY
         spin_lock lock_pool[1<<SODIUM_IMPL_LOCK_POOL_BITS] __attribute__ ((init_priority (101)));
+#else
+        spin_lock lock_pool[1<<SODIUM_IMPL_LOCK_POOL_BITS];
+#endif
     }
 }
 
