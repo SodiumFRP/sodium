@@ -30,14 +30,16 @@
 
 #if defined(NO_CXX11)
 #define EQ_DEF_PART
-#define SODIUM_SHARED_PTR boost::shared_ptr
-#define SODIUM_TUPLE      boost::tuple
-#define SODIUM_TUPLE_GET  boost::get
+#define SODIUM_SHARED_PTR   boost::shared_ptr
+#define SODIUM_TUPLE        boost::tuple
+#define SODIUM_TUPLE_GET    boost::get
+#define SODIUM_FORWARD_LIST std::list
 #else
 #define EQ_DEF_PART = sodium::def_part
-#define SODIUM_SHARED_PTR std::shared_ptr
-#define SODIUM_TUPLE      std::tuple
-#define SODIUM_TUPLE_GET  std::get
+#define SODIUM_SHARED_PTR   std::shared_ptr
+#define SODIUM_TUPLE        std::tuple
+#define SODIUM_TUPLE_GET    std::get
+#define SODIUM_FORWARD_LIST std::forward_list
 #endif
 
 namespace sodium {
@@ -55,7 +57,7 @@ namespace sodium {
     template <class A>
     struct lambda0 {
         lambda0(i_lambda0<A>* f) : f(f) {}
-        A operator () () { return (*f)(); }
+        A operator () () const { return (*f)(); }
         SODIUM_SHARED_PTR<i_lambda0<A> > f;
     };
 
@@ -71,7 +73,7 @@ namespace sodium {
     template <class A, class B>
     struct lambda1 {
         lambda1(i_lambda1<A,B>* f) : f(f) {}
-        A operator () (B b) { return (*f)(b); }
+        A operator () (B b) const { return (*f)(b); }
         SODIUM_SHARED_PTR<i_lambda1<A,B> > f;
     };
 
@@ -87,7 +89,7 @@ namespace sodium {
     template <class A, class B, class C>
     struct lambda2 {
         lambda2(i_lambda2<A,B,C>* f) : f(f) {}
-        A operator () (B b, C c) { return (*f)(b, c); }
+        A operator () (B b, C c) const { return (*f)(b, c); }
         SODIUM_SHARED_PTR<i_lambda2<A,B,C> > f;
     };
 
@@ -103,7 +105,7 @@ namespace sodium {
     template <class A, class B, class C, class D>
     struct lambda3 {
         lambda3(i_lambda3<A,B,C,D>* f) : f(f) {}
-        A operator () (B b, C c, D d) { return (*f)(b, c, d); }
+        A operator () (B b, C c, D d) const { return (*f)(b, c, d); }
         SODIUM_SHARED_PTR<i_lambda3<A,B,C,D> > f;
     };
 
@@ -119,7 +121,7 @@ namespace sodium {
     template <class A, class B, class C, class D, class E>
     struct lambda4 {
         lambda4(i_lambda4<A,B,C,D,E>* f) : f(f) {}
-        A operator () (B b, C c, D d, E e) { return (*f)(b, c, d, e); }
+        A operator () (B b, C c, D d, E e) const { return (*f)(b, c, d, e); }
         SODIUM_SHARED_PTR<i_lambda4<A,B,C,D,E> > f;
     };
 #endif
@@ -199,9 +201,9 @@ namespace sodium {
             count_set counts;
             closure* func;
 #if defined(NO_CXX11)
-            std::list<lambda0<void>*> cleanups;
+            SODIUM_FORWARD_LIST<lambda0<void>*> cleanups;
 #else
-            std::forward_list<std::function<void()>*> cleanups;
+            SODIUM_FORWARD_LIST<std::function<void()>*> cleanups;
 #endif
             inline void update_and_unlock(spin_lock* l) {
                 if (func && !counts.active()) {
@@ -269,15 +271,9 @@ namespace sodium {
                 ~node();
 
                 rank_t rank;
-#if defined(NO_CXX11)
-                std::list<node::target> targets;
-                std::list<light_ptr> firings;
-                std::list<boost::intrusive_ptr<listen_impl_func<H_EVENT> > > sources;
-#else
-                std::forward_list<node::target> targets;
-                std::forward_list<light_ptr> firings;
-                std::forward_list<boost::intrusive_ptr<listen_impl_func<H_EVENT>>> sources;
-#endif
+                SODIUM_FORWARD_LIST<node::target> targets;
+                SODIUM_FORWARD_LIST<light_ptr> firings;
+                SODIUM_FORWARD_LIST<boost::intrusive_ptr<listen_impl_func<H_EVENT> > > sources;
                 boost::intrusive_ptr<listen_impl_func<H_NODE> > listen_impl;
 
                 void link(void* holder, const SODIUM_SHARED_PTR<node>& target);

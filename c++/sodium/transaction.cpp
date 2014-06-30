@@ -82,7 +82,11 @@ namespace sodium {
         pthread_key_delete(key);
     }
 
+#if defined(NO_CXX11)
+    void partition::post(const lambda0<void>& action)
+#else
     void partition::post(const std::function<void()>& action)
+#endif
     {
         mx.lock();
         postQ.push_back(action);
@@ -98,7 +102,11 @@ namespace sodium {
             processing_post = true;
             try {
                 while (postQ.begin() != postQ.end()) {
+#if defined(NO_CXX11)
+                    lambda0<void> action = *postQ.begin();
+#else
                     std::function<void()> action = *postQ.begin();
+#endif
                     postQ.erase(postQ.begin());
                     mx.unlock();
                     action();
@@ -126,22 +134,22 @@ namespace sodium {
         node::node(rank_t rank) : rank(rank) {}
         node::~node()
         {
-            for (auto it = targets.begin(); it != targets.end(); it++) {
-                auto targ = it->n;
+            for (SODIUM_FORWARD_LIST<node::target>::iterator it = targets.begin(); it != targets.end(); it++) {
+                SODIUM_SHARED_PTR<node> targ = it->n;
                 if (targ) {
-                    boost::intrusive_ptr<listen_impl_func<H_EVENT>> li(
+                    boost::intrusive_ptr<listen_impl_func<H_EVENT> > li(
                         reinterpret_cast<listen_impl_func<H_EVENT>*>(listen_impl.get()));
                     targ->sources.remove(li);
                 }
             }
         }
 
-        void node::link(void* holder, const std::shared_ptr<node>& targ)
+        void node::link(void* holder, const SODIUM_SHARED_PTR<node>& targ)
         {
             if (targ) {
                 std::set<node*> visited;
                 targ->ensure_bigger_than(visited, rank);
-                boost::intrusive_ptr<listen_impl_func<H_EVENT>> li(
+                boost::intrusive_ptr<listen_impl_func<H_EVENT> > li(
                     reinterpret_cast<listen_impl_func<H_EVENT>*>(listen_impl.get()));
                 targ->sources.push_front(li);
             }
@@ -150,17 +158,25 @@ namespace sodium {
 
         void node::unlink(void* holder)
         {
-            std::forward_list<node::target>::iterator this_it;
-            for (auto last_it = targets.before_begin(); true; last_it = this_it) {
+#if defined(NO_CXX11)
+            for (std::list<node::target>::iterator this_it = targets.begin(); this_it != targets.end(); ++this_it) {
+#else
+            SODIUM_FORWARD_LIST<node::target>::iterator this_it;
+            for (SODIUM_FORWARD_LIST<node::target>::iterator last_it = targets.before_begin(); true; last_it = this_it) {
                 this_it = last_it;
                 ++this_it;
                 if (this_it == targets.end())
                     break;
+#endif
                 if (this_it->h == holder) {
-                    auto targ = this_it->n;
+                    SODIUM_SHARED_PTR<node> targ = this_it->n;
+#if defined(NO_CXX11)
+                    targets.erase(this_it);
+#else
                     targets.erase_after(last_it);
+#endif
                     if (targ) {
-                        boost::intrusive_ptr<listen_impl_func<H_EVENT>> li(
+                        boost::intrusive_ptr<listen_impl_func<H_EVENT> > li(
                             reinterpret_cast<listen_impl_func<H_EVENT>*>(listen_impl.get()));
                         targ->sources.remove(li);
                     }
@@ -176,13 +192,13 @@ namespace sodium {
             else {
                 visited.insert(this);
                 rank = limit + 1;
-                for (auto it = targets.begin(); it != targets.end(); ++it)
+                for (SODIUM_FORWARD_LIST<node::target>::iterator it = targets.begin(); it != targets.end(); ++it)
                     if (it->n)
                         it->n->ensure_bigger_than(visited, rank);
             }
         }
 
-        rank_t rankOf(const std::shared_ptr<node>& target)
+        rank_t rankOf(const SODIUM_SHARED_PTR<node>& target)
         {
             if (target.get() != NULL)
                 return target->rank;
@@ -200,7 +216,7 @@ namespace sodium {
             if (to_regen) {
                 to_regen = false;
                 prioritizedQ.clear();
-                for (auto it = entries.begin(); it != entries.end(); ++it)
+                for (std::map<entryID, prioritized_entry>::iterator it = entries.begin(); it != entries.end(); ++it)
                     prioritizedQ.insert(pair<rank_t, entryID>(rankOf(it->second.target), it->first));
             }
         }
@@ -213,11 +229,15 @@ namespace sodium {
         {
             while (true) {
                 check_regen();
-                auto pit = prioritizedQ.begin();
+                std::multimap<rank_t, entryID>::iterator pit = prioritizedQ.begin();
                 if (pit == prioritizedQ.end()) break;
-                auto eit = entries.find(pit->second);
+                std::map<entryID, prioritized_entry>::iterator eit = entries.find(pit->second);
                 assert(eit != entries.end());
+#if defined(NO_CXX11)
+                lambda1<void, transaction_impl*> action = eit->second.action;
+#else
                 std::function<void(transaction_impl*)> action = eit->second.action;
+#endif
                 prioritizedQ.erase(pit);
                 entries.erase(eit);
                 action(this);
@@ -228,16 +248,24 @@ namespace sodium {
             }
         }
 
-        void transaction_impl::prioritized(const std::shared_ptr<node>& target,
+        void transaction_impl::prioritized(const SODIUM_SHARED_PTR<node>& target,
+#if defined(NO_CXX11)
+                                           const lambda1<void, transaction_impl*>& f)
+#else
                                            const std::function<void(transaction_impl*)>& f)
+#endif
         {
             entryID id = next_entry_id;
             next_entry_id = next_entry_id.succ();
             entries.insert(pair<entryID, prioritized_entry>(id, prioritized_entry(target, f)));
             prioritizedQ.insert(pair<rank_t, entryID>(rankOf(target), id));
         }
-    
+
+#if defined(NO_CXX11)
+        void transaction_impl::last(const lambda0<void>& action)
+#else
         void transaction_impl::last(const std::function<void()>& action)
+#endif
         {
             lastQ.push_back(action);
         }
@@ -251,6 +279,26 @@ namespace sodium {
             }
             part->depth++;
         }
+        
+#if defined(NO_CXX11)
+        struct process_trans_handler : i_lambda0<void> {
+            process_trans_handler(transaction_impl* impl_) : impl_(impl_) {}
+            transaction_impl* impl_;
+            virtual void operator () () const {
+                impl_->process_transactional();
+                impl_->part->depth--;
+            }
+        };
+        struct process_post_handler : i_lambda0<void> {
+            process_post_handler(transaction_impl* impl_) : impl_(impl_) {}
+            transaction_impl* impl_;
+            virtual void operator () () const {
+                partition* part = impl_->part;
+                delete impl_;
+                part->process_post();
+            }
+        };
+#endif
 
         transaction_::~transaction_()
         {
@@ -259,6 +307,10 @@ namespace sodium {
                 impl::transaction_impl* impl_(this->impl_);
                 policy::get_global()->dispatch(
                     impl_,
+#if defined(NO_CXX11)
+                    new process_trans_handler(impl_),
+                    new process_post_handler(impl_)
+#else
                     [impl_] () {
                         impl_->process_transactional();
                         impl_->part->depth--;
@@ -268,6 +320,7 @@ namespace sodium {
                         delete impl_;
                         part->process_post();
                     }
+#endif
                 );
             }
             else
@@ -308,8 +361,13 @@ namespace sodium {
     }
 
     void simple_policy::dispatch(impl::transaction_impl* impl,
+#if defined(NO_CXX11)
+        const lambda0<void>& transactional,
+        const lambda0<void>& post)
+#else
         const std::function<void()>& transactional,
         const std::function<void()>& post)
+#endif
     {
         transactional();
         pthread_setspecific(impl->part->key, NULL);
