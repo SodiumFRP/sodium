@@ -69,6 +69,8 @@ namespace sodium {
         friend event<A, P> sodium::split(const event<std::list<A>, P>& e);
 #if defined(NO_CXX11)
         friend struct snapshot_sample_now;
+        friend struct switch_e_task;
+        friend struct switch_b_handler;
 #endif
 
         public:

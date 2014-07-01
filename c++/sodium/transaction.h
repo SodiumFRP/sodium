@@ -20,6 +20,7 @@
 #include <memory>
 #if defined(NO_CXX11)
 #include <boost/shared_ptr.hpp>
+#include <boost/weak_ptr.hpp>
 #include <boost/fusion/adapted/boost_tuple.hpp>
 #include <boost/fusion/include/boost_tuple.hpp>
 #else
@@ -31,13 +32,17 @@
 #if defined(NO_CXX11)
 #define EQ_DEF_PART
 #define SODIUM_SHARED_PTR   boost::shared_ptr
+#define SODIUM_WEAK_PTR     boost::weak_ptr
 #define SODIUM_TUPLE        boost::tuple
+#define SODIUM_MAKE_TUPLE   boost::make_tuple
 #define SODIUM_TUPLE_GET    boost::get
 #define SODIUM_FORWARD_LIST std::list
 #else
 #define EQ_DEF_PART = sodium::def_part
 #define SODIUM_SHARED_PTR   std::shared_ptr
+#define SODIUM_WEAK_PTR     std::weak_ptr
 #define SODIUM_TUPLE        std::tuple
+#define SODIUM_MAKE_TUPLE   std::make_tuple
 #define SODIUM_TUPLE_GET    std::get
 #define SODIUM_FORWARD_LIST std::forward_list
 #endif
