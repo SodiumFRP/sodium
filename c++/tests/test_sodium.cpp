@@ -18,18 +18,41 @@ using namespace sodium;
 using namespace boost;
 
 
+#if defined(NO_CXX11)
+struct append_char : i_lambda1<void, const int&> {
+    append_char(const SODIUM_SHARED_PTR<string>& out) : out(out) {}
+    SODIUM_SHARED_PTR<string> out;
+    virtual void operator () (const int& ch) const {
+        *out = *out + (char)ch;
+    }
+};
+#endif
+
 void test_sodium::event1()
 {
+#if defined(NO_CXX11)
+    event_sink<int, def_part> ev;
+    SODIUM_SHARED_PTR<string> out(new string);
+#else
     event_sink<int> ev;
     auto out = std::make_shared<string>();
+#endif
     ev.send('?');
+#if defined(NO_CXX11)
+    lambda0<void> unlisten;
+#else
     function<void()> unlisten;
+#endif
     {
         transaction<> trans;
         ev.send('h');
+#if defined(NO_CXX11)
+        unlisten = ev.listen(new append_char(out));
+#else
         unlisten = ev.listen([out] (int ch) {
             *out = *out + (char)ch;
         });
+#endif
         ev.send('e');
     };
     {
@@ -43,6 +66,7 @@ void test_sodium::event1()
     CPPUNIT_ASSERT_EQUAL(string("hello"), *out);
 }
 
+#if !defined(NO_CXX11)
 void test_sodium::map()
 {
     event_sink<int> e;
@@ -692,6 +716,7 @@ void test_sodium::add_cleanup2()
     CPPUNIT_ASSERT(vector<string>({ string("custard apple"), string("persimmon"), string("<cleanup>"),
                                     string("date") }) == *out);
 }
+#endif
 
 int main(int argc, char* argv[])
 {

@@ -14,6 +14,7 @@ class test_sodium : public CppUnit::TestFixture {
     CPPUNIT_TEST_SUITE(test_sodium);
     // event tests
     CPPUNIT_TEST(event1);
+#if !defined(NO_CXX11)
     CPPUNIT_TEST(map);
     CPPUNIT_TEST(merge_non_simultaneous);
     CPPUNIT_TEST(merge_simultaneous);
@@ -55,9 +56,11 @@ class test_sodium : public CppUnit::TestFixture {
     CPPUNIT_TEST(split1);
     CPPUNIT_TEST(add_cleanup1);
     CPPUNIT_TEST(add_cleanup2);
+#endif
     CPPUNIT_TEST_SUITE_END();
 
     void event1();
+#if !defined(NO_CXX11)
     void map();
     void merge_non_simultaneous();
     void merge_simultaneous();
@@ -98,6 +101,7 @@ class test_sodium : public CppUnit::TestFixture {
     void split1();
     void add_cleanup1();
     void add_cleanup2();
+#endif
 };
 
 #endif

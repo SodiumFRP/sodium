@@ -32,6 +32,7 @@
 #if defined(NO_CXX11)
 #define EQ_DEF_PART
 #define SODIUM_SHARED_PTR   boost::shared_ptr
+#define SODIUM_MAKE_SHARED  boost::make_shared
 #define SODIUM_WEAK_PTR     boost::weak_ptr
 #define SODIUM_TUPLE        boost::tuple
 #define SODIUM_MAKE_TUPLE   boost::make_tuple
@@ -40,6 +41,7 @@
 #else
 #define EQ_DEF_PART = sodium::def_part
 #define SODIUM_SHARED_PTR   std::shared_ptr
+#define SODIUM_MAKE_SHARED  std::make_shared
 #define SODIUM_WEAK_PTR     std::weak_ptr
 #define SODIUM_TUPLE        std::tuple
 #define SODIUM_MAKE_TUPLE   std::make_tuple
@@ -61,6 +63,7 @@ namespace sodium {
 
     template <class A>
     struct lambda0 {
+        lambda0() {}
         lambda0(i_lambda0<A>* f) : f(f) {}
         A operator () () const { return (*f)(); }
         SODIUM_SHARED_PTR<i_lambda0<A> > f;
@@ -77,6 +80,7 @@ namespace sodium {
 
     template <class A, class B>
     struct lambda1 {
+        lambda1() {}
         lambda1(i_lambda1<A,B>* f) : f(f) {}
         A operator () (B b) const { return (*f)(b); }
         SODIUM_SHARED_PTR<i_lambda1<A,B> > f;
@@ -93,6 +97,7 @@ namespace sodium {
 
     template <class A, class B, class C>
     struct lambda2 {
+        lambda2() {}
         lambda2(i_lambda2<A,B,C>* f) : f(f) {}
         A operator () (B b, C c) const { return (*f)(b, c); }
         SODIUM_SHARED_PTR<i_lambda2<A,B,C> > f;
@@ -109,6 +114,7 @@ namespace sodium {
 
     template <class A, class B, class C, class D>
     struct lambda3 {
+        lambda3() {}
         lambda3(i_lambda3<A,B,C,D>* f) : f(f) {}
         A operator () (B b, C c, D d) const { return (*f)(b, c, d); }
         SODIUM_SHARED_PTR<i_lambda3<A,B,C,D> > f;
@@ -125,6 +131,7 @@ namespace sodium {
 
     template <class A, class B, class C, class D, class E>
     struct lambda4 {
+        lambda4() {}
         lambda4(i_lambda4<A,B,C,D,E>* f) : f(f) {}
         A operator () (B b, C c, D d, E e) const { return (*f)(b, c, d, e); }
         SODIUM_SHARED_PTR<i_lambda4<A,B,C,D,E> > f;
@@ -427,7 +434,7 @@ namespace sodium {
             const std::function<void()>& post);
 #endif
     };
-};  // end namespace sodium
+}  // end namespace sodium
 
 #endif
 

@@ -50,7 +50,7 @@ namespace sodium {
 
     SODIUM_DECLARE_LIGHTPTR(light_ptr)        // Thread-safe variant
     SODIUM_DECLARE_LIGHTPTR(unsafe_light_ptr)  // Non-thread-safe variant
-};
+}
 
 #endif
 
