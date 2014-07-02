@@ -10,7 +10,8 @@
 
     <target name="compile">
         <mkdir dir="build/src" />
-        <javac debug="true" srcdir="sodium/src" destdir="build/src" source="1.5" target="1.5"/>
+        <!-- <javac debug="true" srcdir="sodium/src" destdir="build/src" source="1.5" target="1.5"/> -->
+        <javac debug="true" srcdir="sodium/src" destdir="build/src" source="1.8" target="1.8"/>
     </target>
 
     <target name="jar" depends="compile">

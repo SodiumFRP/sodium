@@ -3,6 +3,7 @@ package sodium;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import junit.framework.TestCase;
 
@@ -96,6 +97,18 @@ public class EventTester extends TestCase {
         e.send("tomato");
         e.send(null);
         e.send("peach");
+        l.unlisten();
+        assertEquals(Arrays.asList("tomato","peach"), out);
+    }
+
+    public void testFilterOptional()
+    {
+        EventSink<Optional<String>> e = new EventSink();
+        List<String> out = new ArrayList();
+        Listener l = Event.filterOptional(e).listen(s -> { out.add(s); });
+        e.send(Optional.of("tomato"));
+        e.send(Optional.empty());
+        e.send(Optional.of("peach"));
         l.unlisten();
         assertEquals(Arrays.asList("tomato","peach"), out);
     }

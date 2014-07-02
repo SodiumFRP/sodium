@@ -2,6 +2,7 @@ package sodium;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 
 public class Event<A> {
 	private static final class ListenerImplementation<A> extends Listener {
@@ -352,6 +353,48 @@ public class Event<A> {
         return filter(new Lambda1<A,Boolean>() {
         	public Boolean apply(A a) { return a != null; }
         });
+    }
+
+    /**
+     * Filter the empty values out, and strip the Optional wrapper from the present ones.
+     */
+    public static final <A> Event<A> filterOptional(final Event<Optional<A>> ev)
+    {
+        final EventSink<A> out = new EventSink<A>() {
+    		@SuppressWarnings("unchecked")
+			@Override
+            protected Object[] sampleNow()
+            {
+                Object[] oi = ev.sampleNow();
+                if (oi != null) {
+                    Object[] oo = new Object[oi.length];
+                    int j = 0;
+                    for (int i = 0; i < oi.length; i++) {
+                        Optional<A> oa = (Optional<A>)oi[i];
+                        if (oa.isPresent())
+                            oo[j++] = oa.get();
+                    }
+                    if (j == 0)
+                        oo = null;
+                    else
+                    if (j < oo.length) {
+                        Object[] oo2 = new Object[j];
+                        for (int i = 0; i < j; i++)
+                            oo2[i] = oo[i];
+                        oo = oo2;
+                    }
+                    return oo;
+                }
+                else
+                    return null;
+            }
+        };
+        Listener l = ev.listen_(out.node, new TransactionHandler<Optional<A>>() {
+        	public void run(Transaction trans2, Optional<A> oa) {
+	            if (oa.isPresent()) out.send(trans2, oa.get());
+	        }
+        });
+        return out.addCleanup(l);
     }
 
     /**
