@@ -31,9 +31,9 @@ public interface Pump
     }
 
     public Outputs create(
-        Event<UpDown> nozzle1,
-        Event<UpDown> nozzle2,
-        Event<UpDown> nozzle3,
+        Behavior<UpDown> nozzle1,
+        Behavior<UpDown> nozzle2,
+        Behavior<UpDown> nozzle3,
         Event<Key> keypad,
         Event<Integer> fuelPulses,
         Behavior<Double> calibration,

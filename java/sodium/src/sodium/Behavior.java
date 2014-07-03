@@ -5,6 +5,7 @@ public class Behavior<A> {
 	A value;
 	A valueUpdate;
 	private Listener cleanup;
+    protected Lambda0<A> lazyInitValue;  // Used by LazyBehavior
 
 	/**
 	 * A behavior with a constant value.
@@ -27,6 +28,7 @@ public class Behavior<A> {
 			    			trans2.last(new Runnable() {
 			    				public void run() {
 				    				Behavior.this.value = Behavior.this.valueUpdate;
+				    				Behavior.this.lazyInitValue = null;
 				    				Behavior.this.valueUpdate = null;
 				    			}
 			    			});
@@ -59,8 +61,15 @@ public class Behavior<A> {
      */
     public final A sample()
     {
-        // Since pointers in Java are atomic, we don't need to explicitly create a
-        // transaction.
+        return Transaction.apply(new Lambda1<Transaction, A>() {
+        	public A apply(Transaction trans) {
+        		return sampleNoTrans();
+        	}
+        });
+    }
+
+    protected A sampleNoTrans()
+    {
         return value;
     }
 
@@ -93,7 +102,7 @@ public class Behavior<A> {
     		@Override
             protected Object[] sampleNow()
             {
-                return new Object[] { sample() };
+                return new Object[] { sampleNoTrans() };
             }
     	};
         Listener l = event.listen(out.node, trans1,
@@ -110,7 +119,7 @@ public class Behavior<A> {
      */
 	public final <B> Behavior<B> map(Lambda1<A,B> f)
 	{
-		return updates().map(f).hold(f.apply(sample()));
+		return updates().map(f).holdLazy(() -> f.apply(sampleNoTrans()));
 	}
 
 	/**
@@ -204,7 +213,7 @@ public class Behavior<A> {
 	            h.run(trans1);
 	        }
         });
-        return out.addCleanup(l1).addCleanup(l2).hold(bf.sample().apply(ba.sample()));
+        return out.addCleanup(l1).addCleanup(l2).holdLazy(() -> bf.sampleNoTrans().apply(ba.sampleNoTrans()));
 	}
 
 	/**
@@ -212,7 +221,7 @@ public class Behavior<A> {
 	 */
 	public static <A> Behavior<A> switchB(final Behavior<Behavior<A>> bba)
 	{
-	    A za = bba.sample().sample();
+	    Lambda0<A> za = () -> bba.sampleNoTrans().sampleNoTrans();
 	    final EventSink<A> out = new EventSink<A>();
         TransactionHandler<Behavior<A>> h = new TransactionHandler<Behavior<A>>() {
             private Listener currentListener;
@@ -240,7 +249,7 @@ public class Behavior<A> {
             }
         };
         Listener l1 = bba.value().listen_(out.node, h);
-        return out.addCleanup(l1).hold(za);
+        return out.addCleanup(l1).holdLazy(za);
 	}
 	
 	/**
@@ -264,7 +273,7 @@ public class Behavior<A> {
 	        }
         };
         TransactionHandler<Event<A>> h1 = new TransactionHandler<Event<A>>() {
-            private Listener currentListener = bea.sample().listen(out.node, trans1, h2, false);
+            private Listener currentListener = bea.sampleNoTrans().listen(out.node, trans1, h2, false);
 
             @Override
             public void run(final Transaction trans2, final Event<A> ea) {
@@ -296,10 +305,9 @@ public class Behavior<A> {
         final Event<A> ea = updates().coalesce(new Lambda2<A,A,A>() {
         	public A apply(A fst, A snd) { return snd; }
         });
-        final A za = sample();
-        final Tuple2<B, S> zbs = f.apply(za, initState);
+        final Lambda0<Tuple2<B, S>> zbs = () -> f.apply(sampleNoTrans(), initState);
         EventLoop<Tuple2<B,S>> ebs = new EventLoop<Tuple2<B,S>>();
-        Behavior<Tuple2<B,S>> bbs = ebs.hold(zbs);
+        Behavior<Tuple2<B,S>> bbs = ebs.holdLazy(zbs);
         Behavior<S> bs = bbs.map(new Lambda1<Tuple2<B,S>,S>() {
             public S apply(Tuple2<B,S> x) {
                 return x.b;

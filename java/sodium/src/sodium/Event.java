@@ -131,6 +131,14 @@ public class Event<A> {
 		});
 	}
 
+	final Behavior<A> holdLazy(final Lambda0<A> initValue) {
+		return Transaction.apply(new Lambda1<Transaction, Behavior<A>>() {
+			public Behavior<A> apply(Transaction trans) {
+			    return new LazyBehavior<A>(lastFiringOnly(trans), initValue);
+			}
+		});
+	}
+
 	/**
 	 * Variant of snapshot that throws away the event's value and captures the behavior's.
 	 */
@@ -160,7 +168,7 @@ public class Event<A> {
                 if (oi != null) {
                     Object[] oo = new Object[oi.length];
                     for (int i = 0; i < oo.length; i++)
-                        oo[i] = f.apply((A)oi[i], b.sample());
+                        oo[i] = f.apply((A)oi[i], b.sampleNoTrans());
                     return oo;
                 }
                 else
@@ -169,7 +177,7 @@ public class Event<A> {
 		};
         Listener l = listen_(out.node, new TransactionHandler<A>() {
         	public void run(Transaction trans2, A a) {
-	            out.send(trans2, f.apply(a, b.sample()));
+	            out.send(trans2, f.apply(a, b.sampleNoTrans()));
 	        }
         });
         return out.addCleanup(l);
