@@ -6,7 +6,7 @@
  */
 #include <sodium/light_ptr.h>
 #include <sodium/lock_pool.h>
-#include <pthread.h>
+#include <stdio.h>
 
 namespace sodium {
 #define SODIUM_DEFINE_LIGHTPTR(Name, GET_AND_LOCK, UNLOCK) \

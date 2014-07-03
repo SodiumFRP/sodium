@@ -18,7 +18,7 @@ using namespace sodium;
 using namespace boost;
 
 
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
 struct append_char : i_lambda1<void, const int&> {
     append_char(const SODIUM_SHARED_PTR<string>& out) : out(out) {}
     SODIUM_SHARED_PTR<string> out;
@@ -30,7 +30,7 @@ struct append_char : i_lambda1<void, const int&> {
 
 void test_sodium::event1()
 {
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
     event_sink<int, def_part> ev;
     SODIUM_SHARED_PTR<string> out(new string);
 #else
@@ -38,7 +38,7 @@ void test_sodium::event1()
     auto out = std::make_shared<string>();
 #endif
     ev.send('?');
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
     lambda0<void> unlisten;
 #else
     function<void()> unlisten;
@@ -46,7 +46,7 @@ void test_sodium::event1()
     {
         transaction<> trans;
         ev.send('h');
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
         unlisten = ev.listen(new append_char(out));
 #else
         unlisten = ev.listen([out] (int ch) {
@@ -66,7 +66,7 @@ void test_sodium::event1()
     CPPUNIT_ASSERT_EQUAL(string("hello"), *out);
 }
 
-#if !defined(NO_CXX11)
+#if !defined(SODIUM_NO_CXX11)
 void test_sodium::map()
 {
     event_sink<int> e;

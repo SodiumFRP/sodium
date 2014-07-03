@@ -4,7 +4,7 @@ CPPFLAGS=-I.. -g
 ifeq ($(NO_CXX11),)
 CPPFLAGS+=--std=c++11
 else
-CPPFLAGS+=-DNO_CXX11
+CPPFLAGS+=-DSODIUM_NO_CXX11
 endif
 
 OBJECT_FILES= \

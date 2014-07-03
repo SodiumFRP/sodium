@@ -21,14 +21,14 @@ namespace sodium {
         /*!
          * listen to events.
          */
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
         lambda0<void>* event_::listen_raw(
 #else
         std::function<void()>* event_::listen_raw(
 #endif
                     transaction_impl* trans0,
                     const SODIUM_SHARED_PTR<impl::node>& target,
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
                     lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, transaction_impl*, const light_ptr&>* handle,
 #else
                     std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handle,
@@ -54,7 +54,7 @@ namespace sodium {
             );
         }
 
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
         #define KILL_ONCE(ppKill) \
             do { \
                 lambda0<void>* pKill = *ppKill; \
@@ -113,14 +113,14 @@ namespace sodium {
 
         event_ event_::once_(transaction_impl* trans) const
         {
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
             SODIUM_SHARED_PTR<lambda0<void>*> ppKill(new lambda0<void>*(NULL));
 #else
             SODIUM_SHARED_PTR<function<void()>*> ppKill(new function<void()>*(NULL));
 #endif
 
             SODIUM_SHARED_PTR<sample_now_func> p_sample_now(this->p_sample_now);
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
             SODIUM_TUPLE<impl::event_,SODIUM_SHARED_PTR<impl::node> > p = impl::unsafe_new_event(new event_::sample_now_func(
                 new once_sample_now(ppKill, p_sample_now)
             ));
@@ -138,7 +138,7 @@ namespace sodium {
             }));
 #endif
             *ppKill = listen_raw(trans, SODIUM_TUPLE_GET<1>(p),
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
                 new lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, transaction_impl*, const light_ptr&>(
                     new once_handler(ppKill)
                 ),
@@ -151,7 +151,7 @@ namespace sodium {
 #endif
                 false);
             return SODIUM_TUPLE_GET<0>(p).unsafe_add_cleanup(
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
                 new lambda0<void>(new once_killer(ppKill))
 #else
                 new std::function<void()>([ppKill] () {
@@ -161,7 +161,7 @@ namespace sodium {
             );
         }
 
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
         struct merge_sample_now : i_lambda1<void, std::vector<light_ptr>&> {
             merge_sample_now(const SODIUM_SHARED_PTR<event_::sample_now_func>& sample_now_1,
                              const SODIUM_SHARED_PTR<event_::sample_now_func>& sample_now_2)
@@ -178,7 +178,7 @@ namespace sodium {
 #endif
 
         event_ event_::merge_(transaction_impl* trans, const event_& other) const {
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
             SODIUM_TUPLE<impl::event_,SODIUM_SHARED_PTR<impl::node> > p = impl::unsafe_new_event(
                 p_sample_now || other.p_sample_now ? new event_::sample_now_func(new merge_sample_now(p_sample_now, other.p_sample_now))
                                                    : NULL);
@@ -193,7 +193,7 @@ namespace sodium {
             }) : NULL);
 #endif
             const SODIUM_SHARED_PTR<impl::node>& target = SODIUM_TUPLE_GET<1>(p);
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
             lambda0<void>* kill_one = this->listen_raw(trans, target, NULL, false);
             lambda0<void>* kill_two = other.listen_raw(trans, target, NULL, false);
 #else
@@ -208,7 +208,7 @@ namespace sodium {
             ~coalesce_state() {}
             boost::optional<light_ptr> oValue;
         };
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
         struct coalesce_sample_now : i_lambda1<void, std::vector<light_ptr>&> {
             coalesce_sample_now(const SODIUM_SHARED_PTR<event_::sample_now_func>& p_sample_now,
                                 const lambda2<light_ptr, const light_ptr&, const light_ptr&>& combine)
@@ -264,7 +264,7 @@ namespace sodium {
 #endif
 
         event_ event_::coalesce_(transaction_impl* trans,
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
                 const lambda2<light_ptr, const light_ptr&, const light_ptr&>& combine
 #else
                 const std::function<light_ptr(const light_ptr&, const light_ptr&)>& combine
@@ -272,7 +272,7 @@ namespace sodium {
             ) const
         {
             SODIUM_SHARED_PTR<coalesce_state> pState(new coalesce_state);
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
             SODIUM_TUPLE<impl::event_,SODIUM_SHARED_PTR<impl::node> > p =
                 impl::unsafe_new_event(new event_::sample_now_func(new coalesce_sample_now(p_sample_now, combine)));
             lambda0<void>* kill = listen_raw(trans, SODIUM_TUPLE_GET<1>(p),
@@ -318,7 +318,7 @@ namespace sodium {
 
         event_ event_::last_firing_only_(transaction_impl* trans) const
         {
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
             return coalesce_(trans, new snd_arg<light_ptr,light_ptr>);
 #else
             return coalesce_(trans, [] (const light_ptr& fst, const light_ptr& snd) {
@@ -327,7 +327,7 @@ namespace sodium {
 #endif
         }
 
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
         struct snapshot_sample_now : i_lambda1<void, std::vector<light_ptr>&> {
             snapshot_sample_now(const event_& me,
                                 const lambda2<light_ptr, const light_ptr&, const light_ptr&>& combine,
@@ -362,14 +362,14 @@ namespace sodium {
          * taken.
          */
         event_ event_::snapshot_(transaction_impl* trans, const behavior_& beh,
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
                 const lambda2<light_ptr, const light_ptr&, const light_ptr&>& combine
 #else
                 const std::function<light_ptr(const light_ptr&, const light_ptr&)>& combine
 #endif
             ) const
         {
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
             SODIUM_TUPLE<impl::event_,SODIUM_SHARED_PTR<impl::node> > p =
                 impl::unsafe_new_event(new event_::sample_now_func(new snapshot_sample_now(*this, combine, beh)));
             lambda0<void>* kill = listen_raw(trans, SODIUM_TUPLE_GET<1>(p),
@@ -393,7 +393,7 @@ namespace sodium {
             return SODIUM_TUPLE_GET<0>(p).unsafe_add_cleanup(kill);
         }
 
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
         struct filter_sample_now : i_lambda1<void, std::vector<light_ptr>&> {
             filter_sample_now(const SODIUM_SHARED_PTR<event_::sample_now_func>& p_sample_now,
                               const lambda1<bool, const light_ptr&>& pred)
@@ -423,14 +423,14 @@ namespace sodium {
          * where the predicate returns true.
          */
         event_ event_::filter_(transaction_impl* trans,
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
                 const lambda1<bool, const light_ptr&>& pred
 #else
                 const std::function<bool(const light_ptr&)>& pred
 #endif
             ) const
         {
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
             SODIUM_TUPLE<impl::event_,SODIUM_SHARED_PTR<impl::node> > p =
                 impl::unsafe_new_event(new event_::sample_now_func(new filter_sample_now(p_sample_now, pred)));
             lambda0<void>* kill = listen_raw(trans, SODIUM_TUPLE_GET<1>(p),
@@ -461,7 +461,7 @@ namespace sodium {
         class holder {
             public:
                 holder(
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
                     lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, transaction_impl*, const light_ptr&>* handler
 #else
                     std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handler
@@ -479,14 +479,14 @@ namespace sodium {
                 }
 
             private:
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
                 lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, transaction_impl*, const light_ptr&>* handler;
 #else
                 std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handler;
 #endif
         };
 
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
         struct behavior_const_sample : i_lambda0<light_ptr> {
             behavior_const_sample(const light_ptr& a) : a(a) {}
             light_ptr a;
@@ -496,7 +496,7 @@ namespace sodium {
 
         behavior_impl::behavior_impl(const light_ptr& constant)
             : updates(event_()),
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
               sample(new behavior_const_sample(constant)),
 #else
               sample([constant] () { return constant; }),
@@ -507,7 +507,7 @@ namespace sodium {
 
         behavior_impl::behavior_impl(
             const event_& updates,
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
             const lambda0<light_ptr>& sample,
             lambda0<void>* kill,
 #else
@@ -527,7 +527,7 @@ namespace sodium {
             }
         }
         
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
         struct clear_firings : i_lambda0<void> {
             clear_firings(const SODIUM_SHARED_PTR<node>& n) : n(n) {}
             SODIUM_SHARED_PTR<node> n;
@@ -547,7 +547,7 @@ namespace sodium {
             std::list<node::target*> fsOverflow;
             {
                 if (n->firings.begin() == n->firings.end())
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
                     trans->last(new clear_firings(n));
 #else
                     trans->last([n] () {
@@ -574,7 +574,7 @@ namespace sodium {
                 ((holder*)(*it)->h)->handle((*it)->n, trans, ptr);
         }
 
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
         struct unregister : i_lambda0<void> {
             unregister(partition* part,
                        const SODIUM_WEAK_PTR<node>& n_weak,
@@ -586,9 +586,13 @@ namespace sodium {
             virtual void operator () () const {
                 SODIUM_SHARED_PTR<node> n = n_weak.lock();
                 if (n) {
+#if !defined(SODIUM_SINGLE_THREADED)
                     part->mx.lock();
+#endif
                     n->unlink(h);
+#if !defined(SODIUM_SINGLE_THREADED)
                     part->mx.unlock();
+#endif
                 }
                 delete h;
             }
@@ -609,9 +613,13 @@ namespace sodium {
                     SODIUM_FORWARD_LIST<light_ptr> firings;
                     holder* h = new holder(handler);
                     {
+#if !defined(SODIUM_SINGLE_THREADED)
                         trans->part->mx.lock();
+#endif
                         n->link(h, target);
+#if !defined(SODIUM_SINGLE_THREADED)
                         trans->part->mx.unlock();
+#endif
                         firings = n->firings;
                     }
                     if (!suppressEarlierFirings && firings.begin() != firings.end())
@@ -636,7 +644,7 @@ namespace sodium {
             SODIUM_SHARED_PTR<node> n(new node);
             SODIUM_WEAK_PTR<node> n_weak(n);
             boost::intrusive_ptr<listen_impl_func<H_STRONG> > impl(
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
                 new listen_impl_func<H_STRONG>(new listen_impl_func<H_STRONG>::closure(new listen_impl(n_weak)))
             );
 #else
@@ -693,7 +701,7 @@ namespace sodium {
             return SODIUM_TUPLE_GET<0>(p);
         }
 
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
         struct send_task : i_lambda1<void, transaction_impl*> {
             send_task(const SODIUM_SHARED_PTR<impl::node>& target, const light_ptr& value)
             : target(target), value(value) {}
@@ -707,7 +715,7 @@ namespace sodium {
 
         void event_sink_impl::send(transaction_impl* trans, const light_ptr& value) const
         {
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
             trans->prioritized(target, new send_task(target, value));
 #else
             auto target(this->target);
@@ -726,7 +734,7 @@ namespace sodium {
         {
         }
 
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
         struct hold_update_task : i_lambda0<void> {
             hold_update_task(const SODIUM_SHARED_PTR<behavior_state>& state) : state(state) {}
             SODIUM_SHARED_PTR<behavior_state> state;
@@ -763,13 +771,13 @@ namespace sodium {
             else {
 #endif
                 SODIUM_SHARED_PTR<behavior_state> state(new behavior_state(initValue));
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
                 lambda0<void>* kill =
 #else
                 auto kill =
 #endif
                     input.listen_raw(trans0, SODIUM_SHARED_PTR<node>(new node(SODIUM_IMPL_RANK_T_MAX)),
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
                     new lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, transaction_impl*, const light_ptr&>(
                         new hold_handler(state)
                     )
@@ -787,7 +795,7 @@ namespace sodium {
                         })
 #endif
                     , false);
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
                 return new behavior_impl(input, new hold_sample(state), kill,
                     SODIUM_SHARED_PTR<behavior_impl>());
 #else
@@ -820,7 +828,7 @@ namespace sodium {
         {
         }
 
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
         struct value_sample_now : i_lambda1<void, vector<light_ptr>&> {
             value_sample_now(const lambda0<light_ptr>& sample)
             : sample(sample) {}
@@ -833,7 +841,7 @@ namespace sodium {
 
         event_ behavior_::value_(transaction_impl* trans) const
         {
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
             return event_(
                 updates_().p_listen_impl,
                 new event_::sample_now_func(new value_sample_now(impl->sample))
@@ -859,7 +867,7 @@ namespace sodium {
 
         struct applicative_state {
             applicative_state() {}
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
             boost::optional<lambda1<light_ptr, const light_ptr&> > oF;
 #else
             boost::optional<std::function<light_ptr(const light_ptr&)>> oF;
@@ -873,7 +881,7 @@ namespace sodium {
             }
         };
 
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
         struct apply_const_a : i_lambda1<light_ptr, const light_ptr&> {
             apply_const_a(const light_ptr& a) : a(a) {}
             light_ptr a;
@@ -910,7 +918,7 @@ namespace sodium {
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
             boost::optional<light_ptr> ocf = bf.get_constant_value();
             if (ocf) { // function is constant
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
                 lambda1<light_ptr, const light_ptr&> f = *ocf.get().cast_ptr<lambda1<light_ptr, const light_ptr&> >(NULL);
 #else
                 auto f = *ocf.get().cast_ptr<std::function<light_ptr(const light_ptr&)>>(NULL);
@@ -921,7 +929,7 @@ namespace sodium {
                 boost::optional<light_ptr> oca = ba.get_constant_value();
                 if (oca) {  // 'a' value is constant but function is not
                     const light_ptr& a = oca.get();
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
                     return impl::map_(trans0, new apply_const_a(a), bf);
 #else
                     return impl::map_(trans0, [a] (const light_ptr& pf) -> light_ptr {
@@ -938,7 +946,7 @@ namespace sodium {
 
                     SODIUM_TUPLE<impl::event_,SODIUM_SHARED_PTR<impl::node> > p = impl::unsafe_new_event();
                     const SODIUM_SHARED_PTR<impl::node>& target = SODIUM_TUPLE_GET<1>(p);
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
                     lambda0<void>* kill1 = bf.value_(trans0).listen_raw(trans0, target,
                         new lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, transaction_impl*, const light_ptr&>(
                             new apply_bf(state)
@@ -978,7 +986,7 @@ namespace sodium {
 #endif
         }
 
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
         struct send_wrapper : i_lambda3<void, const SODIUM_SHARED_PTR<node>&, transaction_impl*, const light_ptr&> {
             virtual void operator () (const SODIUM_SHARED_PTR<node>& n, transaction_impl* trans, const light_ptr& ptr) const {
                 send(n, trans, ptr);
@@ -986,7 +994,7 @@ namespace sodium {
         };
 #endif
 
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
         event_ event_::add_cleanup_(transaction_impl* trans, lambda0<void>* cleanup) const
 #else
         event_ event_::add_cleanup_(transaction_impl* trans, std::function<void()>* cleanup) const
@@ -996,7 +1004,7 @@ namespace sodium {
                 p_sample_now != NULL
                 ? new event_::sample_now_func(*p_sample_now)
                 : NULL);
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
             lambda0<void>* kill = listen_raw(trans, SODIUM_TUPLE_GET<1>(p),
                 new lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, transaction_impl*, const light_ptr&>(
                     new send_wrapper
@@ -1009,7 +1017,7 @@ namespace sodium {
             return SODIUM_TUPLE_GET<0>(p).unsafe_add_cleanup(kill, cleanup);
         }
 
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
         struct map_sample_now : i_lambda1<void, vector<light_ptr>&> {
             map_sample_now(const SODIUM_SHARED_PTR<event_::sample_now_func>& p_sample_now,
                            const lambda1<light_ptr, const light_ptr&>& f)
@@ -1037,14 +1045,14 @@ namespace sodium {
          * Map a function over this event to modify the output value.
          */
         event_ map_(transaction_impl* trans,
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
             const lambda1<light_ptr, const light_ptr&>& f,
 #else
             const std::function<light_ptr(const light_ptr&)>& f,
 #endif
             const event_& ev)
         {
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
             SODIUM_TUPLE<impl::event_,SODIUM_SHARED_PTR<impl::node> > p = impl::unsafe_new_event(
                 ev.p_sample_now != NULL
                 ? new event_::sample_now_func(new map_sample_now(ev.p_sample_now, f))
@@ -1072,7 +1080,7 @@ namespace sodium {
             return SODIUM_TUPLE_GET<0>(p).unsafe_add_cleanup(kill);
         }
 
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
         struct map_behavior_sample : i_lambda0<light_ptr> {
             map_behavior_sample(const lambda1<light_ptr, const light_ptr&>& f,
                                 const behavior_& beh) : f(f), beh(beh) {}
@@ -1085,7 +1093,7 @@ namespace sodium {
 #endif
 
         behavior_ map_(transaction_impl* trans,
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
             const lambda1<light_ptr, const light_ptr&>& f,
 #else
             const std::function<light_ptr(const light_ptr&)>& f,
@@ -1100,7 +1108,7 @@ namespace sodium {
                 return behavior_(
                     new behavior_impl(
                         map_(trans, f, underlying_event(beh)),
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
                         new map_behavior_sample(f, beh),
 #else
                         [f, beh] () -> light_ptr {
@@ -1113,7 +1121,7 @@ namespace sodium {
                 );
         }
 
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
         struct switch_e_task : public i_lambda0<void> {
             switch_e_task(const SODIUM_SHARED_PTR<lambda0<void>*>& pKillInner,
                           const event_& ea,
@@ -1150,7 +1158,7 @@ namespace sodium {
         {
             SODIUM_TUPLE<impl::event_,SODIUM_SHARED_PTR<impl::node> > p = unsafe_new_event();
             const SODIUM_SHARED_PTR<impl::node>& target = SODIUM_TUPLE_GET<1>(p);
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
             SODIUM_SHARED_PTR<lambda0<void>*> pKillInner(new lambda0<void>*(
 #else
             std::shared_ptr<function<void()>*> pKillInner(new function<void()>*(
@@ -1158,7 +1166,7 @@ namespace sodium {
                 bea.impl->sample().cast_ptr<event_>(NULL)->listen_raw(trans0, target, NULL, false)
             ));
 
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
             lambda0<void>* killOuter = bea.updates_().listen_raw(trans0, target,
                 new lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, transaction_impl*, const light_ptr&>(
                     new switch_e_handler(pKillInner)
@@ -1177,7 +1185,7 @@ namespace sodium {
                 false
             );
             return SODIUM_TUPLE_GET<0>(p).unsafe_add_cleanup(
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
                 new lambda0<void>(new switch_e_kill(pKillInner))
 #else
                 new std::function<void()>([pKillInner] {
@@ -1187,7 +1195,7 @@ namespace sodium {
                 , killOuter);
         }
 
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
         struct switch_b_handler : i_lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, transaction_impl*, const light_ptr&> {
             switch_b_handler(const SODIUM_SHARED_PTR<lambda0<void>*>& pKillInner) : pKillInner(pKillInner) {}
             SODIUM_SHARED_PTR<lambda0<void>*> pKillInner;
@@ -1208,19 +1216,19 @@ namespace sodium {
         behavior_ switch_b(transaction_impl* trans0, const behavior_& bba)
         {
             light_ptr za = bba.impl->sample().cast_ptr<behavior_>(NULL)->impl->sample();
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
             SODIUM_SHARED_PTR<lambda0<void>*> pKillInner(new lambda0<void>*(NULL));
 #else
             SODIUM_SHARED_PTR<function<void()>*> pKillInner(new function<void()>*(NULL));
 #endif
             SODIUM_TUPLE<impl::event_,SODIUM_SHARED_PTR<impl::node> > p = unsafe_new_event();
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
             lambda0<void>* killOuter =
 #else
             auto killOuter =
 #endif
                 bba.value_(trans0).listen_raw(trans0, SODIUM_TUPLE_GET<1>(p),
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
                 new lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, transaction_impl*, const light_ptr&>(
                     new switch_b_handler(pKillInner)
                 )
@@ -1240,7 +1248,7 @@ namespace sodium {
 #endif
                 , false);
             return SODIUM_TUPLE_GET<0>(p).unsafe_add_cleanup(
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
                 new lambda0<void>(new switch_e_kill(pKillInner))
 #else
                 new std::function<void()>([pKillInner] {

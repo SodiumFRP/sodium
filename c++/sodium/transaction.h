@@ -7,18 +7,18 @@
 #ifndef _SODIUM_TRANSACTION_H_
 #define _SODIUM_TRANSACTION_H_
 
+#include <sodium/config.h>
 #include <sodium/count_set.h>
 #include <sodium/light_ptr.h>
 #include <sodium/lock_pool.h>
 #include <boost/optional.hpp>
 #include <boost/intrusive_ptr.hpp>
 #include <sodium/unit.h>
-#include <pthread.h>
 #include <map>
 #include <set>
 #include <list>
 #include <memory>
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
 #include <boost/fusion/adapted/boost_tuple.hpp>
@@ -29,29 +29,9 @@
 #endif
 #include <limits.h>
 
-#if defined(NO_CXX11)
-#define EQ_DEF_PART
-#define SODIUM_SHARED_PTR   boost::shared_ptr
-#define SODIUM_MAKE_SHARED  boost::make_shared
-#define SODIUM_WEAK_PTR     boost::weak_ptr
-#define SODIUM_TUPLE        boost::tuple
-#define SODIUM_MAKE_TUPLE   boost::make_tuple
-#define SODIUM_TUPLE_GET    boost::get
-#define SODIUM_FORWARD_LIST std::list
-#else
-#define EQ_DEF_PART = sodium::def_part
-#define SODIUM_SHARED_PTR   std::shared_ptr
-#define SODIUM_MAKE_SHARED  std::make_shared
-#define SODIUM_WEAK_PTR     std::weak_ptr
-#define SODIUM_TUPLE        std::tuple
-#define SODIUM_MAKE_TUPLE   std::make_tuple
-#define SODIUM_TUPLE_GET    std::get
-#define SODIUM_FORWARD_LIST std::forward_list
-#endif
-
 namespace sodium {
 
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
     template <class A>
     struct i_lambda0
     {
@@ -138,6 +118,7 @@ namespace sodium {
     };
 #endif
 
+#if !defined(SODIUM_SINGLE_THREADED)
     class mutex
     {
     private:
@@ -157,15 +138,20 @@ namespace sodium {
             pthread_mutex_unlock(&mx);
         }
     };
+#endif
 
     struct partition {
         partition();
         ~partition();
+#if !defined(SODIUM_SINGLE_THREADED)
         mutex mx;
+#endif
         int depth;
+#if !defined(SODIUM_SINGLE_THREADED)
         pthread_key_t key;
+#endif
         bool processing_post;
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
         std::list<lambda0<void> > postQ;
         void post(const lambda0<void>& action);
 #else
@@ -191,7 +177,7 @@ namespace sodium {
         class node;
         template <class Allocator>
         struct listen_impl_func {
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
             typedef lambda4<lambda0<void>*,
                 transaction_impl*,
                 const SODIUM_SHARED_PTR<impl::node>&,
@@ -212,7 +198,7 @@ namespace sodium {
             }
             count_set counts;
             closure* func;
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
             SODIUM_FORWARD_LIST<lambda0<void>*> cleanups;
 #else
             SODIUM_FORWARD_LIST<std::function<void()>*> cleanups;
@@ -221,7 +207,7 @@ namespace sodium {
                 if (func && !counts.active()) {
                     counts.inc_strong();
                     l->unlock();
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
                     for (std::list<lambda0<void>*>::iterator it = cleanups.begin(); it != cleanups.end(); ++it) {
 #else
                     for (auto it = cleanups.begin(); it != cleanups.end(); ++it) {
@@ -318,7 +304,7 @@ namespace sodium {
         rank_t rankOf(const SODIUM_SHARED_PTR<node>& target);
 
         struct prioritized_entry {
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
             prioritized_entry(const SODIUM_SHARED_PTR<node>& target,
                               const lambda1<void, transaction_impl*>& action)
 #else
@@ -329,7 +315,7 @@ namespace sodium {
             {
             }
             SODIUM_SHARED_PTR<node> target;
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
             lambda1<void, transaction_impl*> action;
 #else
             std::function<void(transaction_impl*)> action;
@@ -343,14 +329,14 @@ namespace sodium {
             entryID next_entry_id;
             std::map<entryID, prioritized_entry> entries;
             std::multimap<rank_t, entryID> prioritizedQ;
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
             std::list<lambda0<void> > lastQ;
 #else
             std::list<std::function<void()>> lastQ;
 #endif
 
             void prioritized(const SODIUM_SHARED_PTR<impl::node>& target,
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
                              const lambda1<void, impl::transaction_impl*>& action);
             void last(const lambda0<void>& action);
 #else
@@ -384,7 +370,7 @@ namespace sodium {
          * Dispatch the processing for this transaction according to the policy.
          * Note that post() will delete impl, so don't reference it after that.
          */
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
         virtual void dispatch(impl::transaction_impl* impl,
             const lambda0<void>& transactional,
             const lambda0<void>& post) = 0;
@@ -426,7 +412,7 @@ namespace sodium {
         virtual impl::transaction_impl* current_transaction(partition* part);
         virtual void initiate(impl::transaction_impl* impl);
         virtual void dispatch(impl::transaction_impl* impl,
-#if defined(NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
             const lambda0<void>& transactional,
             const lambda0<void>& post);
 #else

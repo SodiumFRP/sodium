@@ -7,13 +7,12 @@
 #ifndef _SODIUM_COUNT_SET_H_
 #define _SODIUM_COUNT_SET_H_
 
+#include <sodium/config.h>
 #include <limits.h>
 #include <assert.h>
 
 namespace sodium {
     namespace impl {
-
-#define SODIUM_CONSERVE_MEMORY
 
         struct large_count_set {
             large_count_set(
@@ -31,18 +30,6 @@ namespace sodium {
         };
 
 #if defined(SODIUM_CONSERVE_MEMORY)
-        #if __WORDSIZE == 32
-        #define SODIUM_STRONG_BITS 1
-        #define SODIUM_EVENT_BITS  14
-        #define SODIUM_NODE_BITS   14
-        #elif __WORDSIZE == 64
-        #define SODIUM_STRONG_BITS 1
-        #define SODIUM_EVENT_BITS  31
-        #define SODIUM_NODE_BITS   31
-        #else
-        #error This architecture is not supported
-        #endif
-
         struct small_count_set {
             unsigned is_small:1;
             unsigned strong_count:SODIUM_STRONG_BITS;
