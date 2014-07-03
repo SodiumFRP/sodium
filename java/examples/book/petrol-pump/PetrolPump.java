@@ -10,6 +10,7 @@ import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Rectangle;
 import java.awt.image.*;
+import java.awt.Toolkit;
 import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
@@ -116,7 +117,8 @@ class PumpFace extends Component {
                 Rectangle r = nozzleRects[i].sample();
                 g.drawImage(nozzleImgs[i], r.x, r.y, null);
             }
-        });
+        });  
+        Toolkit.getDefaultToolkit().sync();
     }
     @Override
     public void update(Graphics g) {
