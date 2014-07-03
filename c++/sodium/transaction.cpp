@@ -405,7 +405,7 @@ namespace sodium {
     {
         transactional();
 #if defined(SODIUM_SINGLE_THREADED)
-        global_transaction = impl;
+        global_transaction = NULL;
 #else
         pthread_setspecific(impl->part->key, NULL);
         impl->part->mx.unlock();

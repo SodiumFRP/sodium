@@ -570,7 +570,7 @@ namespace sodium {
             }
         };
         template <class A, class B>
-        struct accum_handler : i_lambda2<const SODIUM_SHARED_PTR<node>&, transaction_impl*, const light_ptr&> {
+        struct accum_handler : i_lambda3<void, const SODIUM_SHARED_PTR<node>&, transaction_impl*, const light_ptr&> {
             accum_handler(
                 const SODIUM_SHARED_PTR<collect_state<B> >& pState,
                 const lambda2<B, const A&, const B&>& f)
