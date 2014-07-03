@@ -14,7 +14,11 @@
 #include <memory>
 #include <list>
 #include <set>
+#if defined(SODIUM_NO_EXCEPTIONS)
+#include <stdlib.h>
+#else
 #include <stdexcept>
+#endif
 #include <vector>
 
 #define SODIUM_CONSTANT_OPTIMIZATION
@@ -574,7 +578,7 @@ namespace sodium {
             SODIUM_SHARED_PTR<collect_state<B> > pState;
             lambda2<B, const A&, const B&> f;
 
-            virtual void operator () (const SODIUM_SHARED_PTR<node>& target, transaction_impl* trans, const light_ptr& ptr) {
+            virtual void operator () (const SODIUM_SHARED_PTR<node>& target, transaction_impl* trans, const light_ptr& ptr) const {
                 pState->s = f(*ptr.cast_ptr<A>(NULL), pState->s);
                 send(target, trans, light_ptr::create<B>(pState->s));
             }
@@ -1078,7 +1082,7 @@ namespace sodium {
     namespace impl {
         template <class A>
         struct filter_optional_handler : public i_lambda3<void,const SODIUM_SHARED_PTR<node>&, transaction_impl*, const light_ptr&> {
-            virtual void operator () (const SODIUM_SHARED_PTR<node>& target, transaction_impl* trans, const light_ptr& poa) {
+            virtual void operator () (const SODIUM_SHARED_PTR<node>& target, transaction_impl* trans, const light_ptr& poa) const {
                 const boost::optional<A>& oa = *poa.cast_ptr<boost::optional<A> >(NULL);
                 if (oa) send(target, trans, light_ptr::create<A>(oa.get()));
             }
@@ -1193,7 +1197,9 @@ namespace sodium {
     namespace impl {
         struct event_non_looped_kill : i_lambda0<void> {
             virtual void operator () () const {
-#if !defined(SODIUM_NO_EXCEPTIONS)
+#if defined(SODIUM_NO_EXCEPTIONS)
+                abort();
+#else
                 throw std::runtime_error("event_loop not looped back");
 #endif
             }
@@ -1260,7 +1266,9 @@ namespace sodium {
                 SODIUM_SHARED_PTR<std::function<void()>*> pKill(
                     new std::function<void()>*(new std::function<void()>(
                         [] () {
-#if !defined(SODIUM_NO_EXCEPTIONS)
+#if defined(SODIUM_NO_EXCEPTIONS)
+                            abort();
+#else
                             throw std::runtime_error("event_loop not looped back");
 #endif
                         }
@@ -1295,8 +1303,13 @@ namespace sodium {
                     *i->pKill = e.listen_raw(trans.impl(), target, NULL, false);
                     i = SODIUM_SHARED_PTR<info>();
                 }
-                else
+                else {
+#if defined(SODIUM_NO_EXCEPTIONS)
+                    abort();
+#else
                     throw std::runtime_error("event_loop looped back more than once");
+#endif
+                }
             }
     };
 
@@ -1304,7 +1317,10 @@ namespace sodium {
     namespace impl {
         struct behavior_non_looped_sample : i_lambda0<light_ptr> {
             virtual light_ptr operator () () const {
-#if !defined(SODIUM_NO_EXCEPTIONS)
+#if defined(SODIUM_NO_EXCEPTIONS)
+                abort();
+                return light_ptr();
+#else
                 throw std::runtime_error("behavior_loop sampled before it was looped");
 #endif
             }
@@ -1349,7 +1365,9 @@ namespace sodium {
 #else
                       new std::function<light_ptr()>(
                           [] () -> light_ptr {
-#if !defined(SODIUM_NO_EXCEPTIONS)
+#if defined(SODIUM_NO_EXCEPTIONS)
+                              abort();
+#else
                               throw std::runtime_error("behavior_loop sampled before it was looped");
 #endif
                           }
@@ -1623,7 +1641,7 @@ namespace sodium {
         };
         template <class A, class P>
         struct split_handler : i_lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&> {
-            virtual void operator () (const SODIUM_SHARED_PTR<impl::node>& target, impl::transaction_impl* trans, const light_ptr& ptr) {
+            virtual void operator () (const SODIUM_SHARED_PTR<impl::node>& target, impl::transaction_impl* trans, const light_ptr& ptr) const {
                 const std::list<A>& la = *ptr.cast_ptr<std::list<A> >(NULL);
                 trans->part->post(new split_post<A,P>(la, target));
             }
