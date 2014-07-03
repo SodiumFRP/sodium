@@ -78,11 +78,11 @@ class PumpFace extends Component {
         })).append(priceLCD3.updates().listen(text -> {
             this.repaintSegments(615, 230, smalls, 4);
         })).append(nozzle1.updates().listen(ud -> {
-            this.repaint();
+            this.repaint(0);
         })).append(nozzle2.updates().listen(ud -> {
-            this.repaint();
+            this.repaint(0);
         })).append(nozzle3.updates().listen(ud -> {
-            this.repaint();
+            this.repaint(0);
         }));
         background = ImageIO.read(new URL(rootURL, "images/petrol-pump-front.png"));
         for (int i = 0; i < 8; i++) {
@@ -135,7 +135,7 @@ class PumpFace extends Component {
     private void repaintSegments(int ox, int oy, BufferedImage[] images, int noOfDigits)
     {
         Rectangle r = lcdBounds(ox, oy, images, noOfDigits);
-        repaint(r.x, r.y, r.width, r.height);
+        repaint(0, r.x, r.y, r.width, r.height);
     }
 
     public static void drawSegments(Graphics g, int ox, int oy, List<Integer> digits,
