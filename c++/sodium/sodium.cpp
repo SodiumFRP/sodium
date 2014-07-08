@@ -175,6 +175,20 @@ namespace sodium {
                     (*sample_now_2)(items);
             }
         };
+        struct send_task : i_lambda1<void, transaction_impl*> {
+            send_task(const SODIUM_SHARED_PTR<impl::node>& target, const light_ptr& value)
+            : target(target), value(value) {}
+            SODIUM_SHARED_PTR<impl::node> target;
+            light_ptr value;
+            virtual void operator () (transaction_impl* trans_impl) const {
+                sodium::impl::send(target, trans_impl, value);
+            }
+        };
+        struct merge_listen : i_lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, transaction_impl*, const light_ptr&> {
+            virtual void operator () (const SODIUM_SHARED_PTR<impl::node>& target, impl::transaction_impl* trans, const light_ptr& a) const {
+                trans->prioritized(target, new send_task(target, a));
+            }
+        };
 #endif
 
         event_ event_::merge_(transaction_impl* trans, const event_& other) const {
@@ -193,12 +207,22 @@ namespace sodium {
             }) : NULL);
 #endif
             const SODIUM_SHARED_PTR<impl::node>& target = SODIUM_TUPLE_GET<1>(p);
+            // defer right side to make sure merge is left-biased
 #if defined(SODIUM_NO_CXX11)
             lambda0<void>* kill_one = this->listen_raw(trans, target, NULL, false);
-            lambda0<void>* kill_two = other.listen_raw(trans, target, NULL, false);
+            lambda0<void>* kill_two = other.listen_raw(trans, target,
+                new lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, transaction_impl*, const light_ptr&>(
+                    new merge_listen
+                ), false);
 #else
             auto kill_one = this->listen_raw(trans, target, NULL, false);
-            auto kill_two = other.listen_raw(trans, target, NULL, false);
+            auto kill_two = other.listen_raw(trans, target,
+                new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(
+                    [] (const std::shared_ptr<impl::node>& target, impl::transaction_impl* trans, const light_ptr& a) {
+                        trans->prioritized(target, [target, a] (transaction_impl* trans) {
+                            send(target, trans, a);
+                        });
+                    }), false);
 #endif
             return SODIUM_TUPLE_GET<0>(p).unsafe_add_cleanup(kill_one, kill_two);
         }
@@ -700,18 +724,6 @@ namespace sodium {
             this->target = SODIUM_TUPLE_GET<1>(p);
             return SODIUM_TUPLE_GET<0>(p);
         }
-
-#if defined(SODIUM_NO_CXX11)
-        struct send_task : i_lambda1<void, transaction_impl*> {
-            send_task(const SODIUM_SHARED_PTR<impl::node>& target, const light_ptr& value)
-            : target(target), value(value) {}
-            SODIUM_SHARED_PTR<impl::node> target;
-            light_ptr value;
-            virtual void operator () (transaction_impl* trans_impl) const {
-                sodium::impl::send(target, trans_impl, value);
-            }
-        };
-#endif
 
         void event_sink_impl::send(transaction_impl* trans, const light_ptr& value) const
         {

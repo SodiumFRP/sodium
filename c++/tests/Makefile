@@ -1,10 +1,14 @@
+ifeq ($(NO_CXX11),)
 all: test_sodium memory/release-sink-machinery memory/switch-memory
+else
+all: test_sodium
+endif
 
 CPPFLAGS=-I.. -g
 ifeq ($(NO_CXX11),)
-CPPFLAGS+=--std=c++11
+CPPFLAGS+=--std=c++0x
 else
-CPPFLAGS+=-DSODIUM_NO_CXX11
+CPPFLAGS+=--std=c++03 -DSODIUM_NO_CXX11
 endif
 
 OBJECT_FILES= \

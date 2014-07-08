@@ -32,11 +32,10 @@ void test_sodium::event1()
 {
 #if defined(SODIUM_NO_CXX11)
     event_sink<int, def_part> ev;
-    SODIUM_SHARED_PTR<string> out(new string);
 #else
     event_sink<int> ev;
-    auto out = std::make_shared<string>();
 #endif
+    SODIUM_SHARED_PTR<string> out = SODIUM_MAKE_SHARED<string>();
     ev.send('?');
 #if defined(SODIUM_NO_CXX11)
     lambda0<void> unlisten;
@@ -44,7 +43,7 @@ void test_sodium::event1()
     function<void()> unlisten;
 #endif
     {
-        transaction<> trans;
+        transaction<def_part> trans;
         ev.send('h');
 #if defined(SODIUM_NO_CXX11)
         unlisten = ev.listen(new append_char(out));
@@ -56,7 +55,7 @@ void test_sodium::event1()
         ev.send('e');
     };
     {
-        transaction<> trans;
+        transaction<def_part> trans;
         ev.send('l');
         ev.send('l');
         ev.send('o');
@@ -66,37 +65,166 @@ void test_sodium::event1()
     CPPUNIT_ASSERT_EQUAL(string("hello"), *out);
 }
 
-#if !defined(SODIUM_NO_CXX11)
+#if defined(SODIUM_NO_CXX11)
+struct stringify : i_lambda1<string,const int&> {
+    virtual string operator () (const int& x) const {
+        char buf[128];
+        sprintf(buf, "%d", x);
+        return string(buf);
+    }
+};
+template <class T>
+struct append : i_lambda1<void,const T&> {
+    append(const SODIUM_SHARED_PTR<vector<T> >& out) : out(out) {}
+    SODIUM_SHARED_PTR<vector<T> > out;
+    virtual void operator () (const T& x) const {
+        out->push_back(x);
+    }
+};
+#endif
+
 void test_sodium::map()
 {
+#if defined(SODIUM_NO_CXX11)
+    event_sink<int, def_part> e;
+    event<string, def_part> m = e.map<string>(new stringify);
+#else
     event_sink<int> e;
     auto m = e.map<string>([] (const int& x) {
         char buf[128];
         sprintf(buf, "%d", x);
         return string(buf);
     });
-    auto out = std::make_shared<vector<string>>();
+#endif
+    SODIUM_SHARED_PTR<vector<string> > out = SODIUM_MAKE_SHARED<vector<string> >();
+#if defined(SODIUM_NO_CXX11)
+    lambda0<void> unlisten = m.listen(new append<string>(out));
+#else
     auto unlisten = m.listen([out] (const string& x) { out->push_back(x); });
+#endif
     e.send(5);
     unlisten();
+#if defined(SODIUM_NO_CXX11)
+    vector<string> shouldBe;
+    shouldBe.push_back("5");
+#else
     vector<string> shouldBe = { string("5") };
+#endif
+    CPPUNIT_ASSERT(shouldBe == *out);
+}
+
+void test_sodium::map_effectful()
+{
+#if defined(SODIUM_NO_CXX11)
+    event_sink<int, def_part> e;
+    event<string, def_part> m = e.map_effectful<string>(new stringify);
+#else
+    event_sink<int> e;
+    auto m = e.map_effectful<string>([] (const int& x) {
+        char buf[128];
+        sprintf(buf, "%d", x);
+        return string(buf);
+    });
+#endif
+    SODIUM_SHARED_PTR<vector<string> > out = SODIUM_MAKE_SHARED<vector<string> >();
+#if defined(SODIUM_NO_CXX11)
+    lambda0<void> unlisten = m.listen(new append<string>(out));
+#else
+    auto unlisten = m.listen([out] (const string& x) { out->push_back(x); });
+#endif
+    e.send(5);
+    unlisten();
+#if defined(SODIUM_NO_CXX11)
+    vector<string> shouldBe;
+    shouldBe.push_back("5");
+#else
+    vector<string> shouldBe = { string("5") };
+#endif
     CPPUNIT_ASSERT(shouldBe == *out);
 }
 
 void test_sodium::merge_non_simultaneous()
 {
+#if defined(SODIUM_NO_CXX11)
+    event_sink<int, def_part> e1;
+    event_sink<int, def_part> e2;
+#else
     event_sink<int> e1;
     event_sink<int> e2;
-    auto out = std::make_shared<vector<int>>();
+#endif
+    SODIUM_SHARED_PTR<vector<int> > out = SODIUM_MAKE_SHARED<vector<int> >();
+#if defined(SODIUM_NO_CXX11)
+    lambda0<void> unlisten = e1.merge(e2).listen(new append<int>(out));
+#else
     auto unlisten = e1.merge(e2).listen([out] (const int& x) { out->push_back(x); });
+#endif
     e1.send(7);
     e2.send(9);
     e1.send(8);
     unlisten();
+#if defined(SODIUM_NO_CXX11)
+    vector<int> shouldBe;
+    shouldBe.push_back(7);
+    shouldBe.push_back(9);
+    shouldBe.push_back(8);
+#else
     vector<int> shouldBe = {7,9,8};
+#endif
     CPPUNIT_ASSERT(shouldBe == *out);
 }
 
+void test_sodium::merge_left_bias()
+{
+#if defined(SODIUM_NO_CXX11)
+    event_sink<string, def_part> e1; 
+    event_sink<string, def_part> e2;
+#else
+    event_sink<string> e1;
+    event_sink<string> e2;
+#endif
+    SODIUM_SHARED_PTR<vector<string> > out = SODIUM_MAKE_SHARED<vector<string> >();
+    event<string, def_part> e = e1.merge(e2);
+#if defined(SODIUM_NO_CXX11)
+    lambda0<void> unlisten = e.listen(new append<string>(out));
+#else
+    auto unlisten = e.listen([out] (const string& x) { out->push_back(x); });
+#endif
+    {
+        transaction<def_part> trans;
+        e1.send("left1a");
+        e1.send("left1b");
+        e2.send("right1a");
+        e2.send("right1b");
+    }
+    {
+        transaction<def_part> trans;
+        e2.send("right2a");
+        e2.send("right2b");
+        e1.send("left2a");
+        e1.send("left2b");
+    }
+    unlisten();
+#if defined(SODIUM_NO_CXX11)
+    vector<string> shouldBe;
+    shouldBe.push_back("left1a");
+    shouldBe.push_back("left1b");
+    shouldBe.push_back("right1a");
+    shouldBe.push_back("right1b");
+    shouldBe.push_back("left2a");
+    shouldBe.push_back("left2b");
+    shouldBe.push_back("right2a");
+    shouldBe.push_back("right2b");
+#else
+    vector<string> shouldBe = {
+        string("left1a"), string("left1b"),
+        string("right1a"), string("right1b"),
+        string("left2a"), string("left2b"),
+        string("right2a"), string("right2b") };
+#endif
+    CPPUNIT_ASSERT(shouldBe == *out);
+}
+
+#if !defined(SODIUM_NO_CXX11)
 void test_sodium::merge_simultaneous()
 {
     event_sink<int> e;

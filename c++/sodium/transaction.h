@@ -394,7 +394,7 @@ namespace sodium {
         };
     };
 
-    template <class P = def_part>
+    template <class P EQ_DEF_PART>
     class transaction : public impl::transaction_
     {
         private:
