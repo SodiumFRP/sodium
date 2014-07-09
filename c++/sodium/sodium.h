@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2012-2013, Stephen Blackheath and Anthony Jones
+ * Copyright (c) 2012-2014, Stephen Blackheath and Anthony Jones
  * Released under a BSD3 licence.
  *
  * C++ implementation courtesy of International Telematics Ltd.
@@ -1262,7 +1262,7 @@ namespace sodium {
             {
 #if defined(SODIUM_NO_CXX11)
                 SODIUM_SHARED_PTR<lambda0<void>*> pKill(
-                    new lambda0<void>(new impl::event_non_looped_kill)
+                    new lambda0<void>*(new lambda0<void>(new impl::event_non_looped_kill))
                 );
 #else
                 SODIUM_SHARED_PTR<std::function<void()>*> pKill(

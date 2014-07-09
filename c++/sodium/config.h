@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2012-2014, Stephen Blackheath and Anthony Jones
+ * Released under a BSD3 licence.
+ *
+ * C++ implementation courtesy of International Telematics Ltd.
+ */
 #ifndef _SODIUM_CONFIG_H_
 #define _SODIUM_CONFIG_H_
 
