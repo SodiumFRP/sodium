@@ -7,14 +7,14 @@
 #ifndef _SODIUM_CONFIG_H_
 #define _SODIUM_CONFIG_H_
 
-#if defined(SODIUM_NO_CXX11)
-#include <boost/shared_ptr.hpp>
-#endif
-
 #if defined(__MSP430__)
 #define SODIUM_NO_CXX11
 #define SODIUM_NO_EXCEPTIONS
 #define SODIUM_SINGLE_THREADED
+#endif
+
+#if defined(SODIUM_NO_CXX11)
+#include <boost/shared_ptr.hpp>
 #endif
 
 #if defined(__MSP430__)
