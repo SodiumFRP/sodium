@@ -1,3 +1,3 @@
 package sodium;
 
-public enum Unit { UNIT };
+public enum Unit { UNIT }
