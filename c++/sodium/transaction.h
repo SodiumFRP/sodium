@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2012-2013, Stephen Blackheath and Anthony Jones
+ * Copyright (c) 2012-2014, Stephen Blackheath and Anthony Jones
  * Released under a BSD3 licence.
  *
  * C++ implementation courtesy of International Telematics Ltd.
@@ -394,7 +394,7 @@ namespace sodium {
         };
     };
 
-    template <class P = def_part>
+    template <class P EQ_DEF_PART>
     class transaction : public impl::transaction_
     {
         private:

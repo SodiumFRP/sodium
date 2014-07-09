@@ -1,5 +1,5 @@
 /**
- * Copyright (c) 2012-2013, Stephen Blackheath and Anthony Jones
+ * Copyright (c) 2012-2014, Stephen Blackheath and Anthony Jones
  * Released under a BSD3 licence.
  *
  * C++ implementation courtesy of International Telematics Ltd.
@@ -233,15 +233,15 @@ namespace sodium {
         class _de_type : public i_lambda1<light_ptr, const light_ptr&>
         {
         private:
-            lambda1<B,A> f;
+            lambda1<B,const A&> f;
         public:
-            _de_type(const lambda1<B,A>& f) : f(f) {}
+            _de_type(const lambda1<B,const A&>& f) : f(f) {}
             virtual light_ptr operator () (const light_ptr& a) const
             {
                 return light_ptr::create<B>(f(*a.cast_ptr<A>(NULL)));
             }
         };
-        #define SODIUM_DETYPE_FUNCTION1(A,B,f) sodium::impl::_de_type<A,B>(f)
+        #define SODIUM_DETYPE_FUNCTION1(A,B,f) new sodium::impl::_de_type<A,B>(f)
         event_ map_(transaction_impl* trans, const lambda1<light_ptr, const light_ptr&>& f, const event_& ca);
 #else
         #define SODIUM_DETYPE_FUNCTION1(A,B,f) \
@@ -685,7 +685,7 @@ namespace sodium {
 #else
             event<B, P> map_effectful(const std::function<B(const A&)>& f) const {
 #endif
-                return map_(f);  // Same as map() for now but this may change!
+                return this->template map_<B>(f);  // Same as map() for now but this may change!
             }
 
             /*!
@@ -1099,8 +1099,10 @@ namespace sodium {
         transaction<P> trans;
         SODIUM_TUPLE<impl::event_,SODIUM_SHARED_PTR<impl::node> > p = impl::unsafe_new_event();
 #if defined(SODIUM_NO_CXX11)
-        lambda0<void>* kill = listen_raw(trans.impl(), SODIUM_TUPLE_GET<1>(p),
-            new impl::filter_optional_handler<A>
+        lambda0<void>* kill = input.listen_raw(trans.impl(), SODIUM_TUPLE_GET<1>(p),
+            new lambda3<void, const boost::shared_ptr<sodium::impl::node>&, sodium::impl::transaction_impl*, const sodium::light_ptr&>(
+                new impl::filter_optional_handler<A>
+            )
 #else
         auto kill = input.listen_raw(trans.impl(), std::get<1>(p),
             new std::function<void(const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
@@ -1260,7 +1262,7 @@ namespace sodium {
             {
 #if defined(SODIUM_NO_CXX11)
                 SODIUM_SHARED_PTR<lambda0<void>*> pKill(
-                    new lambda0<void>(new impl::event_non_looped_kill)
+                    new lambda0<void>*(new lambda0<void>(new impl::event_non_looped_kill))
                 );
 #else
                 SODIUM_SHARED_PTR<std::function<void()>*> pKill(

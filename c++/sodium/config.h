@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2012-2014, Stephen Blackheath and Anthony Jones
+ * Released under a BSD3 licence.
+ *
+ * C++ implementation courtesy of International Telematics Ltd.
+ */
 #ifndef _SODIUM_CONFIG_H_
 #define _SODIUM_CONFIG_H_
 
@@ -5,6 +11,10 @@
 #define SODIUM_NO_CXX11
 #define SODIUM_NO_EXCEPTIONS
 #define SODIUM_SINGLE_THREADED
+#endif
+
+#if defined(SODIUM_NO_CXX11)
+#include <boost/shared_ptr.hpp>
 #endif
 
 #if defined(__MSP430__)
@@ -29,7 +39,14 @@
 #if defined(SODIUM_NO_CXX11)
 #define EQ_DEF_PART
 #define SODIUM_SHARED_PTR   boost::shared_ptr
-#define SODIUM_MAKE_SHARED  boost::make_shared
+namespace sodium {
+    template <class T>
+    boost::shared_ptr<T> make_shared()
+    {
+        return boost::shared_ptr<T>(new T);
+    }
+}
+#define SODIUM_MAKE_SHARED  sodium::make_shared
 #define SODIUM_WEAK_PTR     boost::weak_ptr
 #define SODIUM_TUPLE        boost::tuple
 #define SODIUM_MAKE_TUPLE   boost::make_tuple
