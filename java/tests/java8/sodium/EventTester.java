@@ -61,6 +61,33 @@ public class EventTester extends TestCase {
         assertEquals(Arrays.asList(7,7,9,9), out);
     }
 
+    public void testMergeLeftBias()
+    {
+        EventSink<String> e1 = new EventSink();
+        EventSink<String> e2 = new EventSink();
+        List<String> out = new ArrayList();
+        Listener l = Event.merge(e1,e2).listen(x -> { out.add(x); });
+        Transaction.run(() -> {
+            e1.send("left1a");
+            e1.send("left1b");
+            e2.send("right1a");
+            e2.send("right1b");
+        });
+        Transaction.run(() -> {
+            e2.send("right2a");
+            e2.send("right2b");
+            e1.send("left2a");
+            e1.send("left2b");
+        });
+        l.unlisten();
+        assertEquals(Arrays.asList(
+            "left1a", "left1b",
+            "right1a", "right1b",
+            "left2a", "left2b",
+            "right2a", "right2b"
+        ), out);
+    }
+
     public void testCoalesce()
     {
         EventSink<Integer> e1 = new EventSink();

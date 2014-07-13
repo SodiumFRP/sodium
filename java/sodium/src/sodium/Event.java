@@ -220,7 +220,15 @@ public class Event<A> {
 	        }
         };
         Listener l1 = ea.listen_(out.node, h);
-        Listener l2 = eb.listen_(out.node, h);
+        Listener l2 = eb.listen_(out.node, new TransactionHandler<A>() {
+        	public void run(Transaction trans1, A a) {
+                trans1.prioritized(out.node, new Handler<Transaction>() {
+                    public void run(Transaction trans2) {
+                        out.send(trans2, a);
+                    }
+                });
+	        }
+        });
         return out.addCleanup(l1).addCleanup(l2);
 	}
 
