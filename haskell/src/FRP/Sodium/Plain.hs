@@ -226,7 +226,8 @@ merge ea eb = Event gl cacheRef (dep (ea, eb))
         (l, push, nodeRef) <- ioReactive newEventImpl
         unlistener <- later $ do
             u1 <- linkedListen ea (Just nodeRef) False push
-            u2 <- linkedListen eb (Just nodeRef) False push
+            u2 <- linkedListen eb (Just nodeRef) False $
+                schedulePrioritized (Just nodeRef) . push
             return (u1 >> u2)
         addCleanup_Listen unlistener l
 
