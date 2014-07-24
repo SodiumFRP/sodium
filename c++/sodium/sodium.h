@@ -54,6 +54,7 @@ namespace sodium {
         template <class A, class P> friend class sodium::behavior;
         friend behavior_ switch_b(transaction_impl* trans, const behavior_& bba);
         friend behavior_impl* hold(transaction_impl* trans0, const light_ptr& initValue, const event_& input);
+        friend behavior_impl* hold_lazy(transaction_impl* trans0, const std::function<light_ptr()>& initValue, const event_& input);
         template <class A, class B, class P>
 #if defined(SODIUM_NO_CXX11)
         friend behavior<B, P> sodium::apply(const behavior<lambda1<B, const A&>, P>& bf, const behavior<A, P>& ba);
@@ -68,6 +69,13 @@ namespace sodium {
 #else
         friend event_ map_(transaction_impl* trans, const std::function<light_ptr(const light_ptr&)>& f, const event_& ev);
 #endif
+        friend behavior_ map_(transaction_impl* trans,
+#if defined(SODIUM_NO_CXX11)
+            const lambda1<light_ptr, const light_ptr&>& f,
+#else
+            const std::function<light_ptr(const light_ptr&)>& f,
+#endif
+            const behavior_& beh);
         friend event_ switch_e(transaction_impl* trans, const behavior_& bea);
         template <class A, class P>
         friend event<A, P> sodium::split(const event<std::list<A>, P>& e);
@@ -183,6 +191,7 @@ namespace sodium {
             event_ add_cleanup_(transaction_impl* trans, std::function<void()>* cleanup) const;
 #endif
             behavior_ hold_(transaction_impl* trans, const light_ptr& initA) const;
+            behavior_ hold_lazy_(transaction_impl* trans, const std::function<light_ptr()>& initA) const;
             event_ once_(transaction_impl* trans) const;
             event_ merge_(transaction_impl* trans, const event_& other) const;
 #if defined(SODIUM_NO_CXX11)
@@ -265,28 +274,27 @@ namespace sodium {
             > unsafe_new_event(event_::sample_now_func* sample_now_func = NULL);
 
         struct behavior_impl {
-            behavior_impl(const light_ptr& constant);
+            behavior_impl();
             behavior_impl(
                 const event_& updates,
 #if defined(SODIUM_NO_CXX11)
-                const lambda0<light_ptr>& sample,
                 lambda0<void>* kill,
 #else
-                const std::function<light_ptr()>& sample,
                 std::function<void()>* kill,
 #endif
                 const SODIUM_SHARED_PTR<behavior_impl>& parent);
-            ~behavior_impl();
+            virtual ~behavior_impl();
+
+            virtual const light_ptr& sample() const = 0;
+            virtual const light_ptr& newValue() const = 0;
 
             event_ updates;  // Having this here allows references to behavior to keep the
                              // underlying event's cleanups alive, and provides access to the
                              // underlying event, for certain primitives.
 
 #if defined(SODIUM_NO_CXX11)
-            lambda0<light_ptr> sample;
             lambda0<void>* kill;
 #else
-            std::function<light_ptr()> sample;
             std::function<void()>* kill;
 #endif
             SODIUM_SHARED_PTR<behavior_impl> parent;
@@ -303,12 +311,94 @@ namespace sodium {
         behavior_impl* hold(transaction_impl* trans0,
                             const light_ptr& initValue,
                             const event_& input);
+        behavior_impl* hold_lazy(transaction_impl* trans0,
+                            const std::function<light_ptr()>& initValue,
+                            const event_& input);
+
+        struct behavior_impl_constant : behavior_impl {
+            behavior_impl_constant(const light_ptr& k) : k(k) {}
+            light_ptr k;
+            virtual const light_ptr& sample() const { return k; }
+            virtual const light_ptr& newValue() const { return k; }
+        };
+
+        template <class state_t>
+        struct behavior_impl_concrete : behavior_impl {
+            behavior_impl_concrete(
+                const event_& updates,
+                const SODIUM_SHARED_PTR<state_t>& state,
+#if defined(SODIUM_NO_CXX11)
+                lambda0<void>* kill,
+#else
+                std::function<void()>* kill,
+#endif
+                const SODIUM_SHARED_PTR<behavior_impl>& parent)
+            : behavior_impl(updates, kill, parent),
+              state(state)
+            {
+            }
+            SODIUM_SHARED_PTR<state_t> state;
+
+            virtual const light_ptr& sample() const { return state->sample(); }
+            virtual const light_ptr& newValue() const { return state->newValue(); }
+        };
+
+        struct behavior_impl_loop : behavior_impl {
+            behavior_impl_loop(
+                const event_& updates,
+                const SODIUM_SHARED_PTR<SODIUM_SHARED_PTR<behavior_impl> >& pLooped,
+#if defined(SODIUM_NO_CXX11)
+                lambda0<void>* kill,
+#else
+                std::function<void()>* kill,
+#endif
+                const SODIUM_SHARED_PTR<behavior_impl>& parent)
+            : behavior_impl(updates, kill, parent),
+              pLooped(pLooped)
+            {
+            }
+            SODIUM_SHARED_PTR<SODIUM_SHARED_PTR<behavior_impl> > pLooped;
+
+            void assertLooped() const {
+                if (!*pLooped)
+                    throw std::runtime_error("behavior_loop sampled before it was looped");
+            }
+
+            virtual const light_ptr& sample() const { assertLooped(); return (*pLooped)->sample(); }
+            virtual const light_ptr& newValue() const { assertLooped(); return (*pLooped)->newValue(); }
+        };
 
         struct behavior_state {
-            behavior_state(const light_ptr& initA);
-            ~behavior_state();
+            behavior_state(const light_ptr& initA) : current(initA) {}
             light_ptr current;
             boost::optional<light_ptr> update;
+            const light_ptr& sample() { return current; }
+            const light_ptr& newValue() { return update ? update.get() : current; }
+            void finalize() {
+                current = update.get();
+                update = boost::optional<light_ptr>();
+            }
+        };
+
+        struct behavior_state_lazy {
+            behavior_state_lazy(const std::function<light_ptr()>& initA)
+            : pInitA(new std::function<light_ptr()>(initA)) {}
+            std::function<light_ptr()>* pInitA;
+            boost::optional<light_ptr> current;
+            boost::optional<light_ptr> update;
+            const light_ptr& sample() {
+                if (!current) {
+                    current = boost::optional<light_ptr>((*pInitA)());
+                    delete pInitA;
+                    pInitA = NULL;
+                }
+                return current.get();
+            }
+            const light_ptr& newValue() { return update ? update.get() : sample(); }
+            void finalize() {
+                current = update;
+                update = boost::optional<light_ptr>();
+            }
         };
 
         class behavior_ {
@@ -509,9 +599,9 @@ namespace sodium {
                 SODIUM_TUPLE<impl::event_,SODIUM_SHARED_PTR<impl::node> > p = impl::unsafe_new_event();
 #if defined(SODIUM_NO_CXX11)
                 lambda0<void>* kill = updates().listen_raw(trans.impl(), SODIUM_TUPLE_GET<1>(p),
-                    //new lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&>(
+                    new lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&>(
                         new impl::collect_handler<A,S,B>(pState, f)
-                    /*)*/, false);
+                    ), false);
 #else
                 auto kill = updates().listen_raw(trans.impl(), SODIUM_TUPLE_GET<1>(p),
                     new std::function<void(const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
@@ -521,6 +611,7 @@ namespace sodium {
                             send(target, trans, light_ptr::create<B>(SODIUM_TUPLE_GET<0>(outsSt)));
                         }), false);
 #endif
+                // TO DO: Convert to hold lazy
                 return event<B, P>(SODIUM_TUPLE_GET<0>(p).unsafe_add_cleanup(kill)).hold(SODIUM_TUPLE_GET<0>(zbs));
             }
 
@@ -806,6 +897,14 @@ namespace sodium {
                 transaction<P> trans;
                 return behavior<A, P>(hold_(trans.impl(), light_ptr::create<A>(initA)));
             }
+
+        private:
+            behavior<A, P> hold_lazy(const std::function<A()>& initA) const
+            {
+                transaction<P> trans;
+                return behavior<A, P>(hold_lazy_(trans.impl(), [initA] () -> light_ptr { return light_ptr::create<A>(initA()); }));
+            }
+        public:
 
             /*!
              * Sample the behavior's value as at the transaction before the
@@ -1199,11 +1298,13 @@ namespace sodium {
     namespace impl {
         struct event_non_looped_kill : i_lambda0<void> {
             virtual void operator () () const {
+/*
 #if defined(SODIUM_NO_EXCEPTIONS)
                 abort();
 #else
                 throw std::runtime_error("event_loop not looped back");
 #endif
+*/
             }
         };
         struct event_loop_kill : i_lambda0<void> {
@@ -1268,11 +1369,13 @@ namespace sodium {
                 SODIUM_SHARED_PTR<std::function<void()>*> pKill(
                     new std::function<void()>*(new std::function<void()>(
                         [] () {
+                            /*
 #if defined(SODIUM_NO_EXCEPTIONS)
                             abort();
 #else
                             throw std::runtime_error("event_loop not looped back");
 #endif
+*/
                         }
                     ))
                 );
@@ -1327,13 +1430,6 @@ namespace sodium {
 #endif
             }
         };
-        struct behavior_loop_sample : i_lambda0<light_ptr> {
-            behavior_loop_sample(const SODIUM_SHARED_PTR<lambda0<light_ptr> >& pSample) : pSample(pSample) {}
-            SODIUM_SHARED_PTR<lambda0<light_ptr> > pSample;
-            virtual light_ptr operator () () const {
-                return (*pSample)();
-            }
-        };
     }
 #endif
 
@@ -1352,43 +1448,16 @@ namespace sodium {
     {
         private:
             event_loop<A, P> elp;
-#if defined(SODIUM_NO_CXX11)
-            SODIUM_SHARED_PTR<lambda0<light_ptr> > pSample;
-#else
-            SODIUM_SHARED_PTR<std::function<light_ptr()>> pSample;
-#endif
+            SODIUM_SHARED_PTR<SODIUM_SHARED_PTR<impl::behavior_impl> > pLooped;
 
         public:
             behavior_loop()
                 : behavior<A, P>(impl::behavior_()),
-                  pSample(
-#if defined(SODIUM_NO_CXX11)
-                      new lambda0<light_ptr>(new impl::behavior_non_looped_sample)
-#else
-                      new std::function<light_ptr()>(
-                          [] () -> light_ptr {
-#if defined(SODIUM_NO_EXCEPTIONS)
-                              abort();
-#else
-                              throw std::runtime_error("behavior_loop sampled before it was looped");
-#endif
-                          }
-                      )
-#endif
-                  )
+                  pLooped(new SODIUM_SHARED_PTR<impl::behavior_impl>)
             {
-#if defined(SODIUM_NO_CXX11)
-                SODIUM_SHARED_PTR<lambda0<light_ptr> > pSample = this->pSample;
-#else
-                auto pSample = this->pSample;
-#endif
-                this->impl = SODIUM_SHARED_PTR<impl::behavior_impl>(new impl::behavior_impl(
+                this->impl = SODIUM_SHARED_PTR<impl::behavior_impl>(new impl::behavior_impl_loop(
                     elp,
-#if defined(SODIUM_NO_CXX11)
-                    new impl::behavior_loop_sample(pSample),
-#else
-                    [pSample] () { return (*pSample)(); },
-#endif
+                    pLooped,
                     NULL,
                     SODIUM_SHARED_PTR<impl::behavior_impl>()));
             }
@@ -1396,7 +1465,7 @@ namespace sodium {
             void loop(const behavior<A, P>& b)
             {
                 elp.loop(b.updates());
-                *pSample = b.impl->sample;
+                *pLooped = b.impl;
                 // TO DO: This keeps the memory allocated in a loop. Figure out how to
                 // break the loop.
                 this->impl->parent = b.impl;

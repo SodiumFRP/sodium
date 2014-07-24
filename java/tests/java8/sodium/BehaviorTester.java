@@ -406,5 +406,32 @@ public class BehaviorTester extends TestCase {
         l.unlisten();
         assertEquals(Arrays.asList(100,105,112,113,115,118), out);
     }
+
+    public void testLoopValue()
+    {
+        List<String> out = new ArrayList();
+        Behavior<String> a = new Behavior("lettuce");
+        BehaviorLoop<String> b = new BehaviorLoop();
+        Event<String> eSnap = a.value().snapshot(b, (String aa, String bb) -> aa + " " + bb);
+        b.loop(new Behavior<String>("cheese"));
+        Listener l = eSnap.listen((x) -> { out.add(x); });
+        l.unlisten();
+        assertEquals(Arrays.asList("lettuce cheese"), out);
+    }
+
+    public void testLiftLoop()
+    {
+        List<String> out = new ArrayList();
+        BehaviorLoop<String> a = new BehaviorLoop();
+        BehaviorSink<String> b = new BehaviorSink("kettle");
+        Behavior<String> c = Behavior.lift(
+            (aa, bb) -> aa + " " + bb,
+            a, b);
+        a.loop(new Behavior<String>("tea"));
+        Listener l = c.value().listen((x) -> { out.add(x); });
+        b.send("caddy");
+        l.unlisten();
+        assertEquals(Arrays.asList("tea kettle", "tea caddy"), out);
+    }
 }
 

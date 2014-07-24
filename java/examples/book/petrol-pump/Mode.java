@@ -7,6 +7,7 @@ public class Mode {
 
     public Mode(Type mode) {
         this.mode = mode;
+        this.prepayAmount = 0.0;
     }
 
     public Mode(Type mode, Double prepayAmount) {

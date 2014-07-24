@@ -224,6 +224,82 @@ void test_sodium::merge_left_bias()
     CPPUNIT_ASSERT(shouldBe == *out);
 }
 
+void test_sodium::merge_left_bias_2_common(   
+    event_sink<string> e1,
+    event_sink<string> e2,
+    event_sink<string> e3,
+    event<string> e,
+    SODIUM_SHARED_PTR<vector<string> > out
+)
+{
+    auto unlisten = e.listen([out] (const string& x) { out->push_back(x); });
+    {
+        transaction<> trans;
+        e1.send("1a");
+        e2.send("1b");
+        e3.send("1c");
+    }
+    {
+        transaction<> trans;
+        e2.send("2b");
+        e1.send("2a");
+        e3.send("2c");
+    }
+    {
+        transaction<> trans;
+        e1.send("3a");
+        e3.send("3c");
+        e2.send("3b");
+    }
+    {
+        transaction<> trans;
+        e3.send("4c");
+        e1.send("4a");
+        e2.send("4b");
+    }
+    {
+        transaction<> trans;
+        e2.send("5b");
+        e3.send("5c");
+        e1.send("5a");
+    }
+    {
+        transaction<> trans;
+        e3.send("6c");
+        e2.send("6b");
+        e1.send("6a");
+    }
+    vector<string> shouldBe = {
+        string("1a"), string("1b"), string("1c"),
+        string("2a"), string("2b"), string("2c"),
+        string("3a"), string("3b"), string("3c"),
+        string("4a"), string("4b"), string("4c"),
+        string("5a"), string("5b"), string("5c"),
+        string("6a"), string("6b"), string("6c"),
+    };
+    CPPUNIT_ASSERT(shouldBe == *out);
+}
+
+void test_sodium::merge_left_bias_2a()
+{
+    SODIUM_SHARED_PTR<vector<string> > out = SODIUM_MAKE_SHARED<vector<string> >();
+    event_sink<string> e1;
+    event_sink<string> e2;
+    event_sink<string> e3;
+    event<string> e = e1.merge(e2.merge(e3));
+    merge_left_bias_2_common(e1, e2, e3, e, out);
+}
+
+void test_sodium::merge_left_bias_2b()
+{
+    SODIUM_SHARED_PTR<vector<string> > out = SODIUM_MAKE_SHARED<vector<string> >();
+    event_sink<string> e1;
+    event_sink<string> e2;
+    event_sink<string> e3;
+    event<string> e = e1.merge(e2).merge(e3);
+    merge_left_bias_2_common(e1, e2, e3, e, out);
+}
+
 #if !defined(SODIUM_NO_CXX11)
 void test_sodium::merge_simultaneous()
 {
@@ -843,6 +919,33 @@ void test_sodium::add_cleanup2()
         */
     CPPUNIT_ASSERT(vector<string>({ string("custard apple"), string("persimmon"), string("<cleanup>"),
                                     string("date") }) == *out);
+}
+
+void test_sodium::loop_value()
+{
+    auto out = std::make_shared<vector<string>>();
+    behavior<string> a("lettuce");
+    behavior_loop<string> b;
+    auto eSnap = a.value().snapshot<string,string>(b, [] (const string& a, const string& b) {
+        return a + " " + b;
+    });
+    b.loop(behavior<string>("cheese"));
+    eSnap.listen([out] (const string& x) { out->push_back(x); });
+    CPPUNIT_ASSERT(vector<string>({ string("lettuce cheese") }) == *out);
+}
+
+void test_sodium::lift_loop()
+{
+    auto out = std::make_shared<vector<string>>();
+    behavior_loop<string> a;
+    behavior_sink<string> b("kettle");
+    auto c = lift<string, string, string>([] (const string& a, const string& b) {
+        return a+" "+b;
+    }, a, b);
+    a.loop(behavior<string>("tea"));
+    auto unlisten = c.value().listen([out] (const string& x) { out->push_back(x); });
+    b.send("caddy");
+    CPPUNIT_ASSERT(vector<string>({ string("tea kettle"), string("tea caddy") }) == *out);
 }
 #endif
 

@@ -36,15 +36,19 @@ namespace sodium {
             }
             spin_lock() {}
 #else
+            bool initialized;
             pthread_spinlock_t sl;
-            spin_lock() {
+            spin_lock() : initialized(true) {
                 pthread_spin_init(&sl, PTHREAD_PROCESS_PRIVATE);
             }
             inline void lock() {
-                pthread_spin_lock(&sl);
+                // Make sure nothing bad happens if this is called before the constructor.
+                // This can happen during static initialization if data structures that use
+                // this lock pool are declared statically.
+                if (initialized) pthread_spin_lock(&sl);
             }
             inline void unlock() {
-                pthread_spin_unlock(&sl);
+                if (initialized) pthread_spin_unlock(&sl);
             }
 #endif
         };

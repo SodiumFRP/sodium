@@ -9,6 +9,8 @@
 
 #include <cppunit/TestCase.h>
 #include <cppunit/extensions/HelperMacros.h>
+#include <sodium/sodium.h>
+#include <string>
 
 class test_sodium : public CppUnit::TestFixture {
     CPPUNIT_TEST_SUITE(test_sodium);
@@ -19,6 +21,8 @@ class test_sodium : public CppUnit::TestFixture {
     CPPUNIT_TEST(merge_non_simultaneous);
     CPPUNIT_TEST(merge_left_bias);
 #if !defined(SODIUM_NO_CXX11)
+    CPPUNIT_TEST(merge_left_bias_2a);
+    CPPUNIT_TEST(merge_left_bias_2b);
     CPPUNIT_TEST(merge_simultaneous);
     CPPUNIT_TEST(coalesce);
     CPPUNIT_TEST(filter);
@@ -58,8 +62,13 @@ class test_sodium : public CppUnit::TestFixture {
     CPPUNIT_TEST(split1);
     CPPUNIT_TEST(add_cleanup1);
     CPPUNIT_TEST(add_cleanup2);
+    /*
+    CPPUNIT_TEST(loop_value);
+    */
+    CPPUNIT_TEST(lift_loop);
 #endif
     CPPUNIT_TEST_SUITE_END();
+
 
     void event1();
     void map();
@@ -67,6 +76,14 @@ class test_sodium : public CppUnit::TestFixture {
     void merge_non_simultaneous();
     void merge_left_bias();
 #if !defined(SODIUM_NO_CXX11)
+    void merge_left_bias_2_common(
+        sodium::event_sink<std::string> e1,
+        sodium::event_sink<std::string> e2,
+        sodium::event_sink<std::string> e3,
+        sodium::event<std::string> e,
+        SODIUM_SHARED_PTR<std::vector<std::string> > out);
+    void merge_left_bias_2a();
+    void merge_left_bias_2b();
     void merge_simultaneous();
     void coalesce();
     void filter();
@@ -105,6 +122,8 @@ class test_sodium : public CppUnit::TestFixture {
     void split1();
     void add_cleanup1();
     void add_cleanup2();
+    void loop_value();
+    void lift_loop();
 #endif
 };
 
