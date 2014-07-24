@@ -533,13 +533,8 @@ namespace sodium {
 
         behavior_impl::behavior_impl(
             const event_& updates,
-#if defined(SODIUM_NO_CXX11)
-            lambda0<void>* kill,
-#else
-            std::function<void()>* kill,
-#endif
             const SODIUM_SHARED_PTR<behavior_impl>& parent)
-            : updates(updates), kill(kill), parent(parent)
+            : updates(updates), kill(NULL), parent(parent)
         {
         }
 
@@ -776,19 +771,18 @@ namespace sodium {
         };
 #endif
 
-        behavior_impl* hold(transaction_impl* trans0, const light_ptr& initValue, const event_& input)
+        SODIUM_SHARED_PTR<behavior_impl> hold(transaction_impl* trans0, const light_ptr& initValue, const event_& input)
         {
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
             if (input.is_never())
-                return new behavior_impl_constant(initValue);
+                return SODIUM_SHARED_PTR<behavior_impl>(new behavior_impl_constant(initValue));
             else {
 #endif
-                SODIUM_SHARED_PTR<behavior_state> state(new behavior_state(initValue));
-#if defined(SODIUM_NO_CXX11)
-                lambda0<void>* kill =
-#else
-                auto kill =
-#endif
+                behavior_state state(initValue);
+                SODIUM_SHARED_PTR<behavior_impl_concrete<behavior_state> > impl(
+                    new behavior_impl_concrete<behavior_state>(input, state, std::shared_ptr<behavior_impl>())
+                );
+                impl->kill =
                     input.listen_raw(trans0, SODIUM_SHARED_PTR<node>(new node(SODIUM_IMPL_RANK_T_MAX)),
 #if defined(SODIUM_NO_CXX11)
                     new lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, transaction_impl*, const light_ptr&>(
@@ -796,29 +790,28 @@ namespace sodium {
                     )
 #else
                     new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(
-                        [state] (const std::shared_ptr<impl::node>& target, transaction_impl* trans, const light_ptr& ptr) {
-                            bool first = !state->update;
-                            state->update = boost::optional<light_ptr>(ptr);
+                        [impl] (const std::shared_ptr<impl::node>& target, transaction_impl* trans, const light_ptr& ptr) {
+                            bool first = !impl->state.update;
+                            impl->state.update = boost::optional<light_ptr>(ptr);
                             if (first)
-                                trans->last([state] () { state->finalize(); });
+                                trans->last([impl] () { impl->state.finalize(); });
                             send(target, trans, ptr);
                         })
 #endif
                     , false);
-                return new behavior_impl_concrete<behavior_state>(input, state, kill, std::shared_ptr<behavior_impl>());
+                return static_pointer_cast<behavior_impl, behavior_impl_concrete<behavior_state>>(impl);
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
             }
 #endif
         }
 
-        behavior_impl* hold_lazy(transaction_impl* trans0, const std::function<light_ptr()>& initValue, const event_& input)
+        SODIUM_SHARED_PTR<behavior_impl> hold_lazy(transaction_impl* trans0, const std::function<light_ptr()>& initValue, const event_& input)
         {
-            SODIUM_SHARED_PTR<behavior_state_lazy> state(new behavior_state_lazy(initValue));
-#if defined(SODIUM_NO_CXX11)
-            lambda0<void>* kill =
-#else
-            auto kill =
-#endif
+            behavior_state_lazy state(initValue);
+            SODIUM_SHARED_PTR<behavior_impl_concrete<behavior_state_lazy> > impl(
+                new behavior_impl_concrete<behavior_state_lazy>(input, state, std::shared_ptr<behavior_impl>())
+            );
+            impl->kill =
                 input.listen_raw(trans0, SODIUM_SHARED_PTR<node>(new node(SODIUM_IMPL_RANK_T_MAX)),
 #if defined(SODIUM_NO_CXX11)
                 new lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, transaction_impl*, const light_ptr&>(
@@ -826,16 +819,16 @@ namespace sodium {
                 )
 #else
                 new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(
-                    [state] (const std::shared_ptr<impl::node>& target, transaction_impl* trans, const light_ptr& ptr) {
-                        bool first = !state->update;
-                        state->update = boost::optional<light_ptr>(ptr);
+                    [impl] (const std::shared_ptr<impl::node>& target, transaction_impl* trans, const light_ptr& ptr) {
+                        bool first = !impl->state.update;
+                        impl->state.update = boost::optional<light_ptr>(ptr);
                         if (first)
-                            trans->last([state] () { state->finalize(); });
+                            trans->last([impl] () { impl->state.finalize(); });
                         send(target, trans, ptr);
                     })
 #endif
                 , false);
-            return new behavior_impl_concrete<behavior_state_lazy>(input, state, kill, std::shared_ptr<behavior_impl>());
+            return static_pointer_cast<behavior_impl, behavior_impl_concrete<behavior_state_lazy>>(impl);
         }
 
         behavior_::behavior_()
