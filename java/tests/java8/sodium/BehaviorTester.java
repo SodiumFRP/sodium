@@ -357,9 +357,12 @@ public class BehaviorTester extends TestCase {
     public void testLoopBehavior()
     {
         final EventSink<Integer> ea = new EventSink();
-        BehaviorLoop<Integer> sum = new BehaviorLoop<Integer>();
-        Behavior<Integer> sum_out = ea.snapshot(sum, (x, y) -> x+y).hold(0);
-        sum.loop(sum_out);
+        Behavior<Integer> sum_out = Transaction.<Behavior<Integer>>run(() -> {
+            BehaviorLoop<Integer> sum = new BehaviorLoop<Integer>();
+            Behavior<Integer> sum_out_ = ea.snapshot(sum, (x, y) -> x+y).hold(0);
+            sum.loop(sum_out_);
+            return sum_out_;
+        });
         List<Integer> out = new ArrayList();
         Listener l = sum_out.value().listen(x -> { out.add(x); });
         ea.send(2);
@@ -367,7 +370,7 @@ public class BehaviorTester extends TestCase {
         ea.send(1);
         l.unlisten();
         assertEquals(Arrays.asList(0,2,5,6), out);
-        assertEquals((int)6, (int)sum.sample());
+        assertEquals((int)6, (int)sum_out.sample());
     }
 
     public void testCollect()
@@ -407,27 +410,49 @@ public class BehaviorTester extends TestCase {
         assertEquals(Arrays.asList(100,105,112,113,115,118), out);
     }
 
-    public void testLoopValue()
+    public void testLoopValueSnapshot()
     {
         List<String> out = new ArrayList();
-        Behavior<String> a = new Behavior("lettuce");
-        BehaviorLoop<String> b = new BehaviorLoop();
-        Event<String> eSnap = a.value().snapshot(b, (String aa, String bb) -> aa + " " + bb);
-        b.loop(new Behavior<String>("cheese"));
+        Event<String> eSnap = Transaction.<Event<String>>run(() -> {
+            Behavior<String> a = new Behavior("lettuce");
+            BehaviorLoop<String> b = new BehaviorLoop();
+            Event<String> eSnap_ = a.value().snapshot(b, (String aa, String bb) -> aa + " " + bb);
+            b.loop(new Behavior<String>("cheese"));
+            return eSnap_;
+        });
         Listener l = eSnap.listen((x) -> { out.add(x); });
         l.unlisten();
         assertEquals(Arrays.asList("lettuce cheese"), out);
     }
 
+    public void testLoopValueHold()
+    {
+        List<String> out = new ArrayList();
+        Behavior<String> value = Transaction.<Behavior<String>>run(() -> {
+            BehaviorLoop<String> a = new BehaviorLoop();
+            Behavior<String> value_ = a.value().hold("onion");
+            a.loop(new Behavior<String>("cheese"));
+            return value_;
+        });
+        EventSink<Unit> eTick = new EventSink();
+        Listener l = eTick.snapshot(value).listen((x) -> { out.add(x); });
+        eTick.send(Unit.UNIT);
+        l.unlisten();
+        assertEquals(Arrays.asList("cheese"), out);
+    }
+
     public void testLiftLoop()
     {
         List<String> out = new ArrayList();
-        BehaviorLoop<String> a = new BehaviorLoop();
         BehaviorSink<String> b = new BehaviorSink("kettle");
-        Behavior<String> c = Behavior.lift(
-            (aa, bb) -> aa + " " + bb,
-            a, b);
-        a.loop(new Behavior<String>("tea"));
+        Behavior<String> c = Transaction.<Behavior<String>>run(() -> {
+            BehaviorLoop<String> a = new BehaviorLoop();
+            Behavior<String> c_ = Behavior.lift(
+                (aa, bb) -> aa + " " + bb,
+                a, b);
+            a.loop(new Behavior<String>("tea"));
+            return c_;
+        });
         Listener l = c.value().listen((x) -> { out.add(x); });
         b.send("caddy");
         l.unlisten();

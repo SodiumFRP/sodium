@@ -50,13 +50,22 @@ public final class Transaction {
 	private static Transaction currentTransaction;
 
 	/**
+	 * Return the current transaction, or null if there isn't one.
+	 */
+	public static Transaction getCurrentTransaction() {
+        synchronized (transactionLock) {
+            return currentTransaction;
+        }
+	}
+
+	/**
 	 * Run the specified code inside a single transaction.
 	 *
 	 * In most cases this is not needed, because all APIs will create their own
 	 * transaction automatically. It is useful where you want to run multiple
 	 * reactive operations atomically.
 	 */
-	public static void run(Runnable code) {
+	public static void runVoid(Runnable code) {
         synchronized (transactionLock) {
             // If we are already inside a transaction (which must be on the same
             // thread otherwise we wouldn't have acquired transactionLock), then
@@ -66,6 +75,32 @@ public final class Transaction {
                 if (currentTransaction == null)
                     currentTransaction = new Transaction();
                 code.run();
+            } finally {
+                if (transWas == null)
+                    currentTransaction.close();
+                currentTransaction = transWas;
+            }
+        }
+	}
+
+	/**
+	 * Run the specified code inside a single transaction, with the contained
+	 * code returning a value of the parameter type A.
+	 *
+	 * In most cases this is not needed, because all APIs will create their own
+	 * transaction automatically. It is useful where you want to run multiple
+	 * reactive operations atomically.
+	 */
+	public static <A> A run(Lambda0<A> code) {
+        synchronized (transactionLock) {
+            // If we are already inside a transaction (which must be on the same
+            // thread otherwise we wouldn't have acquired transactionLock), then
+            // keep using that same transaction.
+            Transaction transWas = currentTransaction;
+            try {
+                if (currentTransaction == null)
+                    currentTransaction = new Transaction();
+                return code.apply();
             } finally {
                 if (transWas == null)
                     currentTransaction.close();
@@ -103,7 +138,8 @@ public final class Transaction {
                     currentTransaction = new Transaction();
                 return code.apply(currentTransaction);
             } finally {
-                currentTransaction.close();
+                if (transWas == null)
+                    currentTransaction.close();
                 currentTransaction = transWas;
             }
         }

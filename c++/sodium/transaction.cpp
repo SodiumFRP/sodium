@@ -55,6 +55,15 @@ namespace sodium {
             p->counts.dec_node();
             p->update_and_unlock(l);
         }
+        
+        void holder::handle(const SODIUM_SHARED_PTR<node>& target, transaction_impl* trans, const light_ptr& value) const
+        {
+            if (handler)
+                (*handler)(target, trans, value);
+            else
+                send(target, trans, value);
+        }
+
     }
 
 #if !defined(SODIUM_SINGLE_THREADED)
@@ -324,29 +333,37 @@ namespace sodium {
 
         transaction_::~transaction_()
         {
-            partition* part = impl_->part;
-            if (part->depth == 1) {
-                impl::transaction_impl* impl_(this->impl_);
-                policy::get_global()->dispatch(
-                    impl_,
+            close();
+        }
+
+        void transaction_::close()
+        {
+            impl::transaction_impl* impl_(this->impl_);
+            if (impl_) {
+                this->impl_ = NULL;
+                partition* part = impl_->part;
+                if (part->depth == 1) {
+                    policy::get_global()->dispatch(
+                        impl_,
 #if defined(SODIUM_NO_CXX11)
-                    new process_trans_handler(impl_),
-                    new process_post_handler(impl_)
+                        new process_trans_handler(impl_),
+                        new process_post_handler(impl_)
 #else
-                    [impl_] () {
-                        impl_->process_transactional();
-                        impl_->part->depth--;
-                    },
-                    [impl_] () {
-                        partition* part = impl_->part;
-                        delete impl_;
-                        part->process_post();
-                    }
+                        [impl_] () {
+                            impl_->process_transactional();
+                            impl_->part->depth--;
+                        },
+                        [impl_] () {
+                            partition* part = impl_->part;
+                            delete impl_;
+                            part->process_post();
+                        }
 #endif
-                );
+                    );
+                }
+                else
+                    part->depth--;
             }
-            else
-                part->depth--;
         }
     };  // end namespace impl
 

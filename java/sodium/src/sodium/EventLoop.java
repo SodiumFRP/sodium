@@ -7,7 +7,15 @@ public class EventLoop<A> extends Event<A> {
 
     public EventLoop()
     {
+    	if (Transaction.getCurrentTransaction() == null)
+    	    throw new RuntimeException("EventLoop/BehaviorLoop must be used within an explicit transaction");
     }
+
+	protected Object[] sampleNow() {
+	    if (ea_out == null)
+            throw new RuntimeException("EventLoop sampled before it was looped");
+        return ea_out.sampleNow();
+	}
 
     // TO DO: Copy & paste from EventSink. Can we improve this?
     private void send(Transaction trans, A a) {

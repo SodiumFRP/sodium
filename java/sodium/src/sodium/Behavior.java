@@ -302,23 +302,25 @@ public class Behavior<A> {
      */
     public final <B,S> Behavior<B> collect(final S initState, final Lambda2<A, S, Tuple2<B, S>> f)
     {
-        final Event<A> ea = updates().coalesce(new Lambda2<A,A,A>() {
-        	public A apply(A fst, A snd) { return snd; }
-        });
-        final Lambda0<Tuple2<B, S>> zbs = () -> f.apply(sampleNoTrans(), initState);
-        EventLoop<Tuple2<B,S>> ebs = new EventLoop<Tuple2<B,S>>();
-        Behavior<Tuple2<B,S>> bbs = ebs.holdLazy(zbs);
-        Behavior<S> bs = bbs.map(new Lambda1<Tuple2<B,S>,S>() {
-            public S apply(Tuple2<B,S> x) {
-                return x.b;
-            }
-        });
-        Event<Tuple2<B,S>> ebs_out = ea.snapshot(bs, f);
-        ebs.loop(ebs_out);
-        return bbs.map(new Lambda1<Tuple2<B,S>,B>() {
-            public B apply(Tuple2<B,S> x) {
-                return x.a;
-            }
+        return Transaction.<Behavior<B>>run(() -> {
+            final Event<A> ea = updates().coalesce(new Lambda2<A,A,A>() {
+                public A apply(A fst, A snd) { return snd; }
+            });
+            final Lambda0<Tuple2<B, S>> zbs = () -> f.apply(sampleNoTrans(), initState);
+            EventLoop<Tuple2<B,S>> ebs = new EventLoop<Tuple2<B,S>>();
+            Behavior<Tuple2<B,S>> bbs = ebs.holdLazy(zbs);
+            Behavior<S> bs = bbs.map(new Lambda1<Tuple2<B,S>,S>() {
+                public S apply(Tuple2<B,S> x) {
+                    return x.b;
+                }
+            });
+            Event<Tuple2<B,S>> ebs_out = ea.snapshot(bs, f);
+            ebs.loop(ebs_out);
+            return bbs.map(new Lambda1<Tuple2<B,S>,B>() {
+                public B apply(Tuple2<B,S> x) {
+                    return x.a;
+                }
+            });
         });
     }
 

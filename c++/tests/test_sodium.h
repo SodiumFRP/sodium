@@ -62,9 +62,10 @@ class test_sodium : public CppUnit::TestFixture {
     CPPUNIT_TEST(split1);
     CPPUNIT_TEST(add_cleanup1);
     CPPUNIT_TEST(add_cleanup2);
-    /*
+    CPPUNIT_TEST(constant_value);
     CPPUNIT_TEST(loop_value);
-    */
+    CPPUNIT_TEST(loop_value_snapshot);
+    CPPUNIT_TEST(loop_value_hold);
     CPPUNIT_TEST(lift_loop);
 #endif
     CPPUNIT_TEST_SUITE_END();
@@ -122,7 +123,10 @@ class test_sodium : public CppUnit::TestFixture {
     void split1();
     void add_cleanup1();
     void add_cleanup2();
+    void constant_value();
     void loop_value();
+    void loop_value_snapshot();
+    void loop_value_hold();
     void lift_loop();
 #endif
 };

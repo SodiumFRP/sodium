@@ -362,6 +362,7 @@ void test_sodium::loop_event()
     event_sink<int> ea;
     event<int> ec;
     {
+        transaction<> trans;
         event_loop<int> eb;
         ec = ea.map<int>([] (const int& x) { return x % 10; })
                     .merge(eb, [] (const int& x, const int& y) { return x+y; });
@@ -781,8 +782,11 @@ void test_sodium::switch_e1()
 void test_sodium::loop_behavior()
 {
     event_sink<int> ea;
+    transaction<> trans;
     behavior_loop<int> sum;
     sum.loop(ea.snapshot<int,int>(sum, [] (const int& x, const int& y) { return x+y; }).hold(0));
+    trans.close();
+
     auto out = std::make_shared<vector<int>>();
     auto unlisten = sum.value().listen([out] (const int& x) { out->push_back(x); });
     ea.send(2);
@@ -921,22 +925,64 @@ void test_sodium::add_cleanup2()
                                     string("date") }) == *out);
 }
 
+void test_sodium::constant_value()
+{
+    auto out = std::make_shared<vector<string>>();
+    transaction<> trans; 
+    behavior<string> a("cheese");
+    auto eValue = a.value();
+    trans.close();
+    eValue.listen([out] (const string& x) { out->push_back(x); });
+    CPPUNIT_ASSERT(vector<string>({ string("cheese") }) == *out);
+}
+
 void test_sodium::loop_value()
 {
     auto out = std::make_shared<vector<string>>();
+    transaction<> trans; 
+    behavior_loop<string> a;
+    auto eValue = a.value();
+    a.loop(behavior<string>("cheese"));
+    trans.close();
+    eValue.listen([out] (const string& x) { out->push_back(x); });
+    CPPUNIT_ASSERT(vector<string>({ string("cheese") }) == *out);
+}
+
+void test_sodium::loop_value_snapshot()
+{
+    auto out = std::make_shared<vector<string>>();
     behavior<string> a("lettuce");
+    transaction<> trans; 
     behavior_loop<string> b;
     auto eSnap = a.value().snapshot<string,string>(b, [] (const string& a, const string& b) {
         return a + " " + b;
     });
     b.loop(behavior<string>("cheese"));
-    eSnap.listen([out] (const string& x) { out->push_back(x); });
+    trans.close();
+    auto unlisten = eSnap.listen([out] (const string& x) { out->push_back(x); });
+    unlisten();
     CPPUNIT_ASSERT(vector<string>({ string("lettuce cheese") }) == *out);
+}
+
+void test_sodium::loop_value_hold()
+{
+    auto out = std::make_shared<vector<string>>();
+    transaction<> trans; 
+    behavior_loop<string> a;
+    behavior<string> value = a.value().hold("onion");
+    event_sink<unit> eTick;
+    a.loop(behavior<string>("cheese"));
+    trans.close();
+    auto unlisten = eTick.snapshot(value).listen([out] (const string& x) { out->push_back(x); });
+    eTick.send(unit());
+    unlisten();
+    CPPUNIT_ASSERT(vector<string>({ string("cheese") }) == *out);
 }
 
 void test_sodium::lift_loop()
 {
     auto out = std::make_shared<vector<string>>();
+    transaction<> trans;
     behavior_loop<string> a;
     behavior_sink<string> b("kettle");
     auto c = lift<string, string, string>([] (const string& a, const string& b) {
@@ -944,6 +990,7 @@ void test_sodium::lift_loop()
     }, a, b);
     a.loop(behavior<string>("tea"));
     auto unlisten = c.value().listen([out] (const string& x) { out->push_back(x); });
+    trans.close();
     b.send("caddy");
     CPPUNIT_ASSERT(vector<string>({ string("tea kettle"), string("tea caddy") }) == *out);
 }

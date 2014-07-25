@@ -67,13 +67,13 @@ public class EventTester extends TestCase {
         EventSink<String> e2 = new EventSink();
         List<String> out = new ArrayList();
         Listener l = Event.merge(e1,e2).listen(x -> { out.add(x); });
-        Transaction.run(() -> {
+        Transaction.runVoid(() -> {
             e1.send("left1a");
             e1.send("left1b");
             e2.send("right1a");
             e2.send("right1b");
         });
-        Transaction.run(() -> {
+        Transaction.runVoid(() -> {
             e2.send("right2a");
             e2.send("right2b");
             e1.send("left2a");
@@ -143,10 +143,13 @@ public class EventTester extends TestCase {
     public void testLoopEvent()
     {
         final EventSink<Integer> ea = new EventSink();
-        EventLoop<Integer> eb = new EventLoop<Integer>();
-        Event<Integer> ec = Event.mergeWith((x, y) -> x+y, ea.map(x -> x % 10), eb);
-        Event<Integer> eb_out = ea.map(x -> x / 10).filter(x -> x != 0);
-        eb.loop(eb_out);
+        Event<Integer> ec = Transaction.<Event<Integer>>run(() -> {
+            EventLoop<Integer> eb = new EventLoop<Integer>();
+            Event<Integer> ec_ = Event.mergeWith((x, y) -> x+y, ea.map(x -> x % 10), eb);
+            Event<Integer> eb_out = ea.map(x -> x / 10).filter(x -> x != 0);
+            eb.loop(eb_out);
+            return ec_;
+        });
         List<Integer> out = new ArrayList();
         Listener l = ec.listen(x -> { out.add(x); });
         ea.send(2);

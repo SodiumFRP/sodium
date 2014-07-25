@@ -173,6 +173,8 @@ namespace sodium {
 
         typedef unsigned long rank_t;
         #define SODIUM_IMPL_RANK_T_MAX ULONG_MAX
+        
+        class holder;
 
         class node;
         template <class Allocator>
@@ -181,13 +183,13 @@ namespace sodium {
             typedef lambda4<lambda0<void>*,
                 transaction_impl*,
                 const SODIUM_SHARED_PTR<impl::node>&,
-                lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, transaction_impl*, const light_ptr&>*,
+                const SODIUM_SHARED_PTR<holder>&,
                 bool> closure;
 #else
             typedef std::function<std::function<void()>*(
                 transaction_impl*,
                 const std::shared_ptr<impl::node>&,
-                std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>*,
+                const SODIUM_SHARED_PTR<holder>&,
                 bool)> closure;
 #endif
             listen_impl_func(closure* func)
@@ -228,6 +230,28 @@ namespace sodium {
                 else
                     l->unlock();
             }
+        };
+
+        class holder {
+            public:
+                holder(
+#if defined(SODIUM_NO_CXX11)
+                    lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, transaction_impl*, const light_ptr&>* handler
+#else
+                    std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handler
+#endif
+                ) : handler(handler) {}
+                ~holder() {
+                    delete handler;
+                }
+                void handle(const SODIUM_SHARED_PTR<node>& target, transaction_impl* trans, const light_ptr& value) const;
+
+            private:
+#if defined(SODIUM_NO_CXX11)
+                lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, transaction_impl*, const light_ptr&>* handler;
+#else
+                std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>* handler;
+#endif
         };
 
         struct H_EVENT {};
@@ -391,6 +415,8 @@ namespace sodium {
             transaction_(partition* part);
             ~transaction_();
             impl::transaction_impl* impl() const { return impl_; }
+        protected:
+            void close();
         };
     };
 
@@ -402,6 +428,11 @@ namespace sodium {
             transaction<P>& operator = (const transaction<P>& other) { return *this; };
         public:
             transaction() : transaction_(P::part()) {}
+            /*!
+             * The destructor will close the transaction, so normally close() isn't needed.
+             * But, in some cases you might want to close it earlier, and close() will do this for you.
+             */
+            inline void close() { impl::transaction_::close(); }
     };
 
     class simple_policy : public policy

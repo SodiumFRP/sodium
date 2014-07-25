@@ -10,5 +10,13 @@ public final class BehaviorLoop<A> extends Behavior<A> {
         ((EventLoop<A>)event).loop(a_out.updates());
         value = a_out.sample();
     }
+
+    @Override
+    protected A sampleNoTrans()
+    {
+        if (value == null)
+            throw new RuntimeException("BehaviorLoop sampled before it was looped");
+        return value;
+    }
 }
 

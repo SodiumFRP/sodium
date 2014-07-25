@@ -72,17 +72,21 @@ public class Event<A> {
                 trans.toRegen = true;
             listeners.add(action);
         }
-		Object[] aNow = sampleNow();
-		if (aNow != null) {    // In cases like value(), we start with an initial value.
-		    for (int i = 0; i < aNow.length; i++)
-                action.run(trans, (A)aNow[i]);  // <-- unchecked warning is here
-        }
-		if (!suppressEarlierFirings) {
-            // Anything sent already in this transaction must be sent now so that
-            // there's no order dependency between send and listen.
-            for (A a : firings)
-                action.run(trans, a);
-        }
+        trans.prioritized(target, new Handler<Transaction>() {
+            public void run(Transaction trans2) {
+                Object[] aNow = sampleNow();
+                if (aNow != null) {    // In cases like value(), we start with an initial value.
+                    for (int i = 0; i < aNow.length; i++)
+                        action.run(trans, (A)aNow[i]);  // <-- unchecked warning is here
+                }
+                if (!suppressEarlierFirings) {
+                    // Anything sent already in this transaction must be sent now so that
+                    // there's no order dependency between send and listen.
+                    for (A a : firings)
+                        action.run(trans, a);
+                }
+            }
+        });
 		return new ListenerImplementation<A>(this, action, target);
 	}
 
@@ -431,18 +435,20 @@ public class Event<A> {
      */
     public final <B,S> Event<B> collect(final S initState, final Lambda2<A, S, Tuple2<B, S>> f)
     {
-        final Event<A> ea = this;
-        EventLoop<S> es = new EventLoop<S>();
-        Behavior<S> s = es.hold(initState);
-        Event<Tuple2<B,S>> ebs = ea.snapshot(s, f);
-        Event<B> eb = ebs.map(new Lambda1<Tuple2<B,S>,B>() {
-            public B apply(Tuple2<B,S> bs) { return bs.a; }
+        return Transaction.<Event<B>>run(() -> {
+            final Event<A> ea = this;
+            EventLoop<S> es = new EventLoop<S>();
+            Behavior<S> s = es.hold(initState);
+            Event<Tuple2<B,S>> ebs = ea.snapshot(s, f);
+            Event<B> eb = ebs.map(new Lambda1<Tuple2<B,S>,B>() {
+                public B apply(Tuple2<B,S> bs) { return bs.a; }
+            });
+            Event<S> es_out = ebs.map(new Lambda1<Tuple2<B,S>,S>() {
+                public S apply(Tuple2<B,S> bs) { return bs.b; }
+            });
+            es.loop(es_out);
+            return eb;
         });
-        Event<S> es_out = ebs.map(new Lambda1<Tuple2<B,S>,S>() {
-            public S apply(Tuple2<B,S> bs) { return bs.b; }
-        });
-        es.loop(es_out);
-        return eb;
     }
 
     /**
@@ -450,12 +456,14 @@ public class Event<A> {
      */
     public final <S> Behavior<S> accum(final S initState, final Lambda2<A, S, S> f)
     {
-        final Event<A> ea = this;
-        EventLoop<S> es = new EventLoop<S>();
-        Behavior<S> s = es.hold(initState);
-        Event<S> es_out = ea.snapshot(s, f);
-        es.loop(es_out);
-        return es_out.hold(initState);
+        return Transaction.<Behavior<S>>run(() -> {
+            final Event<A> ea = this;
+            EventLoop<S> es = new EventLoop<S>();
+            Behavior<S> s = es.hold(initState);
+            Event<S> es_out = ea.snapshot(s, f);
+            es.loop(es_out);
+            return es_out.hold(initState);
+        });
     }
 
     /**
