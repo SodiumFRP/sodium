@@ -298,11 +298,11 @@ namespace sodium {
                 SODIUM_FORWARD_LIST<boost::intrusive_ptr<listen_impl_func<H_EVENT> > > sources;
                 boost::intrusive_ptr<listen_impl_func<H_NODE> > listen_impl;
 
-                void link(void* holder, const SODIUM_SHARED_PTR<node>& target);
+                bool link(void* holder, const SODIUM_SHARED_PTR<node>& target);
                 void unlink(void* holder);
 
             private:
-                void ensure_bigger_than(std::set<node*>& visited, rank_t limit);
+                bool ensure_bigger_than(std::set<node*>& visited, rank_t limit);
         };
     }
 }
@@ -330,12 +330,12 @@ namespace sodium {
         struct prioritized_entry {
 #if defined(SODIUM_NO_CXX11)
             prioritized_entry(const SODIUM_SHARED_PTR<node>& target,
-                              const lambda1<void, transaction_impl*>& action)
+                              const lambda1<void, transaction_impl*>& action, unsigned tick)
 #else
             prioritized_entry(const SODIUM_SHARED_PTR<node>& target,
-                              const std::function<void(transaction_impl*)>& action)
+                              const std::function<void(transaction_impl*)>& action, unsigned tick)
 #endif
-                : target(target), action(action)
+                : target(target), action(action), tick(tick)
             {
             }
             SODIUM_SHARED_PTR<node> target;
@@ -344,6 +344,7 @@ namespace sodium {
 #else
             std::function<void(transaction_impl*)> action;
 #endif
+            unsigned tick;
         };
 
         struct transaction_impl {
@@ -352,12 +353,13 @@ namespace sodium {
             partition* part;
             entryID next_entry_id;
             std::map<entryID, prioritized_entry> entries;
-            std::multimap<rank_t, entryID> prioritizedQ;
+            std::multimap<std::pair<rank_t, unsigned>, entryID> prioritizedQ;
 #if defined(SODIUM_NO_CXX11)
             std::list<lambda0<void> > lastQ;
 #else
             std::list<std::function<void()>> lastQ;
 #endif
+            unsigned tick;
 
             void prioritized(const SODIUM_SHARED_PTR<impl::node>& target,
 #if defined(SODIUM_NO_CXX11)

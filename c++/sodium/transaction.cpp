@@ -175,16 +175,20 @@ namespace sodium {
             }
         }
 
-        void node::link(void* holder, const SODIUM_SHARED_PTR<node>& targ)
+        bool node::link(void* holder, const SODIUM_SHARED_PTR<node>& targ)
         {
+            bool changed;
             if (targ) {
                 std::set<node*> visited;
-                targ->ensure_bigger_than(visited, rank);
+                changed = targ->ensure_bigger_than(visited, rank);
                 boost::intrusive_ptr<listen_impl_func<H_EVENT> > li(
                     reinterpret_cast<listen_impl_func<H_EVENT>*>(listen_impl.get()));
                 targ->sources.push_front(li);
             }
+            else
+                changed = false;
             targets.push_front(target(holder, targ));
+            return changed;
         }
 
         void node::unlink(void* holder)
@@ -216,16 +220,17 @@ namespace sodium {
             }
         }
 
-        void node::ensure_bigger_than(std::set<node*>& visited, rank_t limit)
+        bool node::ensure_bigger_than(std::set<node*>& visited, rank_t limit)
         {
             if (rank > limit || visited.find(this) != visited.end())
-                ;
+                return false;
             else {
                 visited.insert(this);
                 rank = limit + 1;
                 for (SODIUM_FORWARD_LIST<node::target>::iterator it = targets.begin(); it != targets.end(); ++it)
                     if (it->n)
                         it->n->ensure_bigger_than(visited, rank);
+                return true;
             }
         }
 
@@ -239,7 +244,8 @@ namespace sodium {
 
         transaction_impl::transaction_impl(partition* part)
             : part(part),
-              to_regen(false)
+              to_regen(false),
+              tick(0)
         {
         }
 
@@ -248,19 +254,19 @@ namespace sodium {
                 to_regen = false;
                 prioritizedQ.clear();
                 for (std::map<entryID, prioritized_entry>::iterator it = entries.begin(); it != entries.end(); ++it)
-                    prioritizedQ.insert(pair<rank_t, entryID>(rankOf(it->second.target), it->first));
+                    prioritizedQ.insert(pair<pair<rank_t, unsigned>, entryID>(pair<rank_t, unsigned>(rankOf(it->second.target), it->second.tick), it->first));
             }
         }
 
         transaction_impl::~transaction_impl()
         {
         }
-        
+
         void transaction_impl::process_transactional()
         {
             while (true) {
                 check_regen();
-                std::multimap<rank_t, entryID>::iterator pit = prioritizedQ.begin();
+                std::multimap<pair<rank_t, unsigned>, entryID>::iterator pit = prioritizedQ.begin();
                 if (pit == prioritizedQ.end()) break;
                 std::map<entryID, prioritized_entry>::iterator eit = entries.find(pit->second);
                 assert(eit != entries.end());
@@ -288,8 +294,9 @@ namespace sodium {
         {
             entryID id = next_entry_id;
             next_entry_id = next_entry_id.succ();
-            entries.insert(pair<entryID, prioritized_entry>(id, prioritized_entry(target, f)));
-            prioritizedQ.insert(pair<rank_t, entryID>(rankOf(target), id));
+            unsigned tick = this->tick++;
+            entries.insert(pair<entryID, prioritized_entry>(id, prioritized_entry(target, f, tick)));
+            prioritizedQ.insert(pair<pair<rank_t, unsigned>, entryID>(pair<rank_t, unsigned>(rankOf(target), tick), id));
         }
 
 #if defined(SODIUM_NO_CXX11)
