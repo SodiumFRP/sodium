@@ -359,6 +359,7 @@ namespace sodium {
 #else
             std::list<std::function<void()>> lastQ;
 #endif
+            bool to_regen;
             unsigned tick;
 
             void prioritized(const SODIUM_SHARED_PTR<impl::node>& target,
@@ -370,7 +371,6 @@ namespace sodium {
             void last(const std::function<void()>& action);
 #endif
 
-            bool to_regen;
             void check_regen();
             void process_transactional();
         };
