@@ -534,27 +534,22 @@ namespace sodium {
          */
         void send(const SODIUM_SHARED_PTR<node>& n, transaction_impl* trans, const light_ptr& a)
         {
-            int ifs = 0;
-            node::target* fs[16];
-            std::list<node::target*> fsOverflow;
-            {
-                if (n->firings.begin() == n->firings.end())
+            if (n->firings.begin() == n->firings.end())
 #if defined(SODIUM_NO_CXX11)
-                    trans->last(new clear_firings(n));
+                trans->last(new clear_firings(n));
 #else
-                    trans->last([n] () {
-                        n->firings.clear();
-                    });
+                trans->last([n] () {
+                    n->firings.clear();
+                });
 #endif
-                n->firings.push_front(a);
-                SODIUM_FORWARD_LIST<node::target>::iterator it = n->targets.begin();
-                while (it != n->targets.end()) {
-                    node::target* f = &*it;
-                    trans->prioritized(f->n, [f, a] (transaction_impl* trans) {
-                        ((holder*)f->h)->handle(f->n, trans, a);
-                    });
-                    it++;
-                }
+            n->firings.push_front(a);
+            SODIUM_FORWARD_LIST<node::target>::iterator it = n->targets.begin();
+            while (it != n->targets.end()) {
+                node::target* f = &*it;
+                trans->prioritized(f->n, [f, a] (transaction_impl* trans) {
+                    ((holder*)f->h)->handle(f->n, trans, a);
+                });
+                it++;
             }
         }
 
