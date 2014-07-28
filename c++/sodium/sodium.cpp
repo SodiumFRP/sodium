@@ -1208,7 +1208,6 @@ namespace sodium {
             auto p = impl::unsafe_new_event(
                 p_sample_now != NULL
                 ? new impl::event_::sample_now_func([p_sample_now, f] (std::vector<light_ptr>& items) {
-                    size_t start = items.size();
                     std::vector<light_ptr> new_items;
                     (*p_sample_now)(new_items);
                     for (auto it = new_items.begin(); it != new_items.end(); ++it) {
