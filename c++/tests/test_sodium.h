@@ -46,7 +46,9 @@ class test_sodium : public CppUnit::TestFixture {
     CPPUNIT_TEST(value_then_snapshot);
     CPPUNIT_TEST(value_twice_then_snapshot);
     CPPUNIT_TEST(value_then_merge);
-    CPPUNIT_TEST(value_then_filter);
+    CPPUNIT_TEST(value_then_filter1);
+    CPPUNIT_TEST(value_then_filter2a);
+    CPPUNIT_TEST(value_then_filter2b);
     CPPUNIT_TEST(value_twice_then_filter);
     CPPUNIT_TEST(value_then_once);
     CPPUNIT_TEST(value_twice_then_once);
@@ -108,7 +110,9 @@ class test_sodium : public CppUnit::TestFixture {
     void value_then_snapshot();
     void value_twice_then_snapshot();
     void value_then_merge();
-    void value_then_filter();
+    void value_then_filter1();
+    void value_then_filter2a();
+    void value_then_filter2b();
     void value_twice_then_filter();
     void value_then_once();
     void value_twice_then_once();

@@ -84,6 +84,8 @@ namespace sodium {
         friend struct switch_e_task;
         friend struct switch_b_handler;
 #endif
+        friend event_ filter_optional(transaction_impl* trans, const event_& input,
+            const std::function<boost::optional<light_ptr>(const light_ptr&)>& f);
 
         public:
 #if defined(SODIUM_NO_CXX11)
@@ -1208,6 +1210,11 @@ namespace sodium {
     }
 #endif
 
+    namespace impl {
+        event_ filter_optional(transaction_impl* trans, const event_& input,
+            const std::function<boost::optional<light_ptr>(const light_ptr&)>& f);
+    }
+
     /*!
      * Filter an event of optionals, keeping only the defined values.
      */
@@ -1215,22 +1222,13 @@ namespace sodium {
     event<A, P> filter_optional(const event<boost::optional<A>, P>& input)
     {
         transaction<P> trans;
-        SODIUM_TUPLE<impl::event_,SODIUM_SHARED_PTR<impl::node> > p = impl::unsafe_new_event();
-#if defined(SODIUM_NO_CXX11)
-        lambda0<void>* kill = input.listen_raw(trans.impl(), SODIUM_TUPLE_GET<1>(p),
-            new lambda3<void, const boost::shared_ptr<sodium::impl::node>&, sodium::impl::transaction_impl*, const sodium::light_ptr&>(
-                new impl::filter_optional_handler<A>
-            )
-#else
-        auto kill = input.listen_raw(trans.impl(), std::get<1>(p),
-            new std::function<void(const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
-                [] (const SODIUM_SHARED_PTR<impl::node>& target, impl::transaction_impl* trans, const light_ptr& poa) {
-                    const boost::optional<A>& oa = *poa.cast_ptr<boost::optional<A>>(NULL);
-                    if (oa) impl::send(target, trans, light_ptr::create<A>(oa.get()));
-                })
-#endif
-            , false, false);
-        return SODIUM_TUPLE_GET<0>(p).unsafe_add_cleanup(kill);
+        return impl::filter_optional(trans.impl(), input, [] (const light_ptr& poa) -> boost::optional<light_ptr> {
+            const boost::optional<A>& oa = *poa.cast_ptr<boost::optional<A>>(NULL);
+            if (oa)
+                return boost::optional<light_ptr>(light_ptr::create<A>(oa.get()));
+            else
+                return boost::optional<light_ptr>();
+        });
     }
 
     /*!

@@ -569,7 +569,7 @@ void test_sodium::value_then_merge()
     CPPUNIT_ASSERT(vector<int>({ 11, 1, 4 }) == *out);
 }
 
-void test_sodium::value_then_filter()
+void test_sodium::value_then_filter1()
 {
     behavior_sink<int> b(9);
     auto out = std::make_shared<vector<int>>();
@@ -579,6 +579,30 @@ void test_sodium::value_then_filter()
     b.send(7);
     unlisten();
     CPPUNIT_ASSERT(vector<int>({ 9, 2, 7 }) == *out);
+}
+
+void test_sodium::value_then_filter2a()
+{
+    behavior_sink<optional<int>> b = behavior_sink<optional<int>>(optional<int>(9));
+    auto out = std::make_shared<vector<int>>();
+    auto unlisten = filter_optional(b.value())
+        .listen([out] (const int& x) { out->push_back(x); });
+    b.send(optional<int>());
+    b.send(optional<int>(7));
+    unlisten();
+    CPPUNIT_ASSERT(vector<int>({ 9, 7 }) == *out);
+}
+
+void test_sodium::value_then_filter2b()
+{
+    behavior_sink<optional<int>> b = behavior_sink<optional<int>>(optional<int>());
+    auto out = std::make_shared<vector<int>>();
+    auto unlisten = filter_optional(b.value())
+        .listen([out] (const int& x) { out->push_back(x); });
+    b.send(optional<int>());
+    b.send(optional<int>(7));
+    unlisten();
+    CPPUNIT_ASSERT(vector<int>({ 7 }) == *out);
 }
 
 void test_sodium::value_twice_then_filter()

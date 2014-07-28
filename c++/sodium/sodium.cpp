@@ -1201,5 +1201,39 @@ namespace sodium {
                 , killOuter).hold_lazy_(trans0, za);
         }
 
+        event_ filter_optional(transaction_impl* trans, const event_& input,
+            const std::function<boost::optional<light_ptr>(const light_ptr&)>& f)
+        {
+            auto p_sample_now(input.p_sample_now);
+            auto p = impl::unsafe_new_event(
+                p_sample_now != NULL
+                ? new impl::event_::sample_now_func([p_sample_now, f] (std::vector<light_ptr>& items) {
+                    size_t start = items.size();
+                    std::vector<light_ptr> new_items;
+                    (*p_sample_now)(new_items);
+                    for (auto it = new_items.begin(); it != new_items.end(); ++it) {
+                        boost::optional<light_ptr> oa = f(*it);
+                        if (oa)
+                            items.push_back(oa.get());
+                    }
+                })
+                : NULL);
+#if defined(SODIUM_NO_CXX11)
+            lambda0<void>* kill = input.listen_raw(trans, SODIUM_TUPLE_GET<1>(p),
+                new lambda3<void, const boost::shared_ptr<sodium::impl::node>&, sodium::impl::transaction_impl*, const sodium::light_ptr&>(
+                    new impl::filter_optional_handler<A>
+                )
+#else
+            auto kill = input.listen_raw(trans, std::get<1>(p),
+                new std::function<void(const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
+                    [f] (const SODIUM_SHARED_PTR<impl::node>& target, impl::transaction_impl* trans, const light_ptr& poa) {
+                        boost::optional<light_ptr> oa = f(poa);
+                        if (oa) impl::send(target, trans, oa.get());
+                    })
+#endif
+                , false, false);
+            return SODIUM_TUPLE_GET<0>(p).unsafe_add_cleanup(kill);
+        }
+
     };  // end namespace impl
 };  // end namespace sodium
