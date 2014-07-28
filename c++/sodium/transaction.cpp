@@ -243,8 +243,7 @@ namespace sodium {
 
         transaction_impl::transaction_impl(partition* part)
             : part(part),
-              to_regen(false),
-              tick(0)
+              to_regen(false)
         {
         }
 
@@ -253,7 +252,7 @@ namespace sodium {
                 to_regen = false;
                 prioritizedQ.clear();
                 for (std::map<entryID, prioritized_entry>::iterator it = entries.begin(); it != entries.end(); ++it)
-                    prioritizedQ.insert(pair<pair<rank_t, unsigned>, entryID>(pair<rank_t, unsigned>(rankOf(it->second.target), it->second.tick), it->first));
+                    prioritizedQ.insert(pair<rank_t, entryID>(rankOf(it->second.target), it->first));
             }
         }
 
@@ -265,7 +264,7 @@ namespace sodium {
         {
             while (true) {
                 check_regen();
-                std::multimap<pair<rank_t, unsigned>, entryID>::iterator pit = prioritizedQ.begin();
+                std::multiset<pair<rank_t, entryID>>::iterator pit = prioritizedQ.begin();
                 if (pit == prioritizedQ.end()) break;
                 std::map<entryID, prioritized_entry>::iterator eit = entries.find(pit->second);
                 assert(eit != entries.end());
@@ -293,9 +292,8 @@ namespace sodium {
         {
             entryID id = next_entry_id;
             next_entry_id = next_entry_id.succ();
-            unsigned tick = this->tick++;
-            entries.insert(pair<entryID, prioritized_entry>(id, prioritized_entry(target, f, tick)));
-            prioritizedQ.insert(pair<pair<rank_t, unsigned>, entryID>(pair<rank_t, unsigned>(rankOf(target), tick), id));
+            entries.insert(pair<entryID, prioritized_entry>(id, prioritized_entry(target, f)));
+            prioritizedQ.insert(pair<rank_t, entryID>(rankOf(target), id));
         }
 
 #if defined(SODIUM_NO_CXX11)

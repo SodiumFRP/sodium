@@ -329,12 +329,12 @@ namespace sodium {
         struct prioritized_entry {
 #if defined(SODIUM_NO_CXX11)
             prioritized_entry(const SODIUM_SHARED_PTR<node>& target,
-                              const lambda1<void, transaction_impl*>& action, unsigned tick)
+                              const lambda1<void, transaction_impl*>& action)
 #else
             prioritized_entry(const SODIUM_SHARED_PTR<node>& target,
-                              const std::function<void(transaction_impl*)>& action, unsigned tick)
+                              const std::function<void(transaction_impl*)>& action)
 #endif
-                : target(target), action(action), tick(tick)
+                : target(target), action(action)
             {
             }
             SODIUM_SHARED_PTR<node> target;
@@ -343,7 +343,6 @@ namespace sodium {
 #else
             std::function<void(transaction_impl*)> action;
 #endif
-            unsigned tick;
         };
 
         struct transaction_impl {
@@ -352,14 +351,13 @@ namespace sodium {
             partition* part;
             entryID next_entry_id;
             std::map<entryID, prioritized_entry> entries;
-            std::multimap<std::pair<rank_t, unsigned>, entryID> prioritizedQ;
+            std::multiset<std::pair<rank_t, entryID>> prioritizedQ;
 #if defined(SODIUM_NO_CXX11)
             std::list<lambda0<void> > lastQ;
 #else
             std::list<std::function<void()>> lastQ;
 #endif
             bool to_regen;
-            unsigned tick;
 
             void prioritized(const SODIUM_SHARED_PTR<impl::node>& target,
 #if defined(SODIUM_NO_CXX11)

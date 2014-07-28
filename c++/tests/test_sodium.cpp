@@ -450,6 +450,15 @@ void test_sodium::value1()
     CPPUNIT_ASSERT(vector<int>({ 9, 2, 7 }) == *out);
 }
 
+void test_sodium::value_const()
+{
+    behavior<int> b(9);
+    auto out = std::make_shared<vector<int>>();
+    auto unlisten = b.value().listen([out] (const int& x) { out->push_back(x); });
+    unlisten();
+    CPPUNIT_ASSERT(vector<int>({ 9 }) == *out);
+}
+
 void test_sodium::constant_behavior()
 {
     behavior_sink<int> b(12);
