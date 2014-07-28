@@ -184,6 +184,45 @@ namespace sodium {
             }
 
             /*!
+             * This is far more efficient than add_cleanup because it modifies the event
+             * in place.
+             */
+#if defined(SODIUM_NO_CXX11)
+            event_ unsafe_add_cleanup(lambda0<void>* cleanup1, lambda0<void>* cleanup2, lambda0<void>* cleanup3)
+#else
+            event_ unsafe_add_cleanup(std::function<void()>* cleanup1, std::function<void()>* cleanup2, std::function<void()>* cleanup3)
+#endif
+            {
+                boost::intrusive_ptr<listen_impl_func<H_STRONG> > li(
+                    reinterpret_cast<listen_impl_func<H_STRONG>*>(p_listen_impl.get()));
+                if (cleanup1 != NULL) {
+                    if (alive(li))
+                        li->cleanups.push_front(cleanup1);
+                    else {
+                        (*cleanup1)();
+                        delete cleanup1;
+                    }
+                }
+                if (cleanup2 != NULL) {
+                    if (alive(li))
+                        li->cleanups.push_front(cleanup2);
+                    else {
+                        (*cleanup2)();
+                        delete cleanup2;
+                    }
+                }
+                if (cleanup3 != NULL) {
+                    if (alive(li))
+                        li->cleanups.push_front(cleanup3);
+                    else {
+                        (*cleanup3)();
+                        delete cleanup3;
+                    }
+                }
+                return *this;
+            }
+
+            /*!
              * Create a new event that is like this event but has an extra cleanup.
              */
 #if defined(SODIUM_NO_CXX11)

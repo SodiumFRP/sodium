@@ -219,20 +219,25 @@ namespace sodium {
 #endif
             SODIUM_SHARED_PTR<impl::node> left(new impl::node);
             const SODIUM_SHARED_PTR<impl::node>& right = SODIUM_TUPLE_GET<1>(p);
-            if (left->link(NULL, right))
+            char* h = new char;
+            if (left->link(h, right))
                 trans->to_regen = true;
             // defer right side to make sure merge is left-biased
 #if defined(SODIUM_NO_CXX11)
 *** TO DO
 #else
-            auto kill_one = this->listen_raw(trans, left,
+            auto kill1 = this->listen_raw(trans, left,
                 new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(
                     [right] (const std::shared_ptr<impl::node>&, impl::transaction_impl* trans, const light_ptr& a) {
                         send(right, trans, a);
                     }), false, false);
-            auto kill_two = other.listen_raw(trans, right, NULL, false, false);
+            auto kill2 = other.listen_raw(trans, right, NULL, false, false);
+            auto kill3 = new std::function<void()>([left, h] () {
+                left->unlink(h);
+                delete h;
+            });
 #endif
-            return SODIUM_TUPLE_GET<0>(p).unsafe_add_cleanup(kill_one, kill_two);
+            return SODIUM_TUPLE_GET<0>(p).unsafe_add_cleanup(kill1, kill2, kill3);
         }
 
         struct coalesce_state {
@@ -894,7 +899,8 @@ namespace sodium {
                     SODIUM_SHARED_PTR<impl::node> in_target(new impl::node);
                     SODIUM_TUPLE<impl::event_,SODIUM_SHARED_PTR<impl::node> > p = impl::unsafe_new_event();
                     const SODIUM_SHARED_PTR<impl::node>& out_target = SODIUM_TUPLE_GET<1>(p);
-                    if (in_target->link(NULL, out_target))
+                    char* h = new char;
+                    if (in_target->link(h, out_target))
                         trans0->to_regen = true;
 #if defined(SODIUM_NO_CXX11)
    *** // TO DO
@@ -922,10 +928,14 @@ namespace sodium {
                                     trans->prioritized(out_target, output);
                                 }
                             ), false, true);
+                    auto kill3 = new std::function<void()>([in_target, h] () {
+                        in_target->unlink(h);
+                        delete h;
+                    });
 #endif
                     // Suppress firing during first transaction.
                     trans0->last([state] () { state->fired = false; });
-                    return SODIUM_TUPLE_GET<0>(p).unsafe_add_cleanup(kill1, kill2).hold_lazy_(
+                    return SODIUM_TUPLE_GET<0>(p).unsafe_add_cleanup(kill1, kill2, kill3).hold_lazy_(
                         trans0, [bf, ba] () -> light_ptr {
                             auto f = *bf.impl->sample().cast_ptr<std::function<light_ptr(const light_ptr&)>>(NULL);
                             return f(ba.impl->sample());
