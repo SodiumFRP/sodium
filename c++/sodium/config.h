@@ -7,6 +7,8 @@
 #ifndef _SODIUM_CONFIG_H_
 #define _SODIUM_CONFIG_H_
 
+#include <limits.h>  // for __WORDSIZE
+
 #if defined(__MSP430__)
 #define SODIUM_NO_CXX11
 #define SODIUM_NO_EXCEPTIONS

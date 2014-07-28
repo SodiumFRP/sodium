@@ -27,7 +27,6 @@
 #include <forward_list>
 #include <tuple>
 #endif
-#include <limits.h>
 
 namespace sodium {
 

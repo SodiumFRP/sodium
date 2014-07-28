@@ -5,7 +5,6 @@
  * C++ implementation courtesy of International Telematics Ltd.
  */
 #include <sodium/sodium.h>
-#include <limits.h>
 
 using namespace std;
 using namespace boost;
