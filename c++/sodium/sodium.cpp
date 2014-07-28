@@ -1201,7 +1201,7 @@ namespace sodium {
                 , killOuter).hold_lazy_(trans0, za);
         }
 
-        event_ filter_optional(transaction_impl* trans, const event_& input,
+        event_ filter_optional_(transaction_impl* trans, const event_& input,
             const std::function<boost::optional<light_ptr>(const light_ptr&)>& f)
         {
             auto p_sample_now(input.p_sample_now);

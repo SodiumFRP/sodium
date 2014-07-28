@@ -61,8 +61,6 @@ namespace sodium {
 #else
         friend behavior<B, P> sodium::apply(const behavior<std::function<B(const A&)>, P>& bf, const behavior<A, P>& ba);
 #endif
-        template <class A, class P>
-        friend event<A, P> sodium::filter_optional(const event<boost::optional<A>, P>& input);
         friend behavior_ apply(transaction_impl* trans0, const behavior_& bf, const behavior_& ba);
 #if defined(SODIUM_NO_CXX11)
         friend event_ map_(transaction_impl* trans, const lambda1<light_ptr, const light_ptr&>& f, const event_& ev);
@@ -84,7 +82,7 @@ namespace sodium {
         friend struct switch_e_task;
         friend struct switch_b_handler;
 #endif
-        friend event_ filter_optional(transaction_impl* trans, const event_& input,
+        friend event_ filter_optional_(transaction_impl* trans, const event_& input,
             const std::function<boost::optional<light_ptr>(const light_ptr&)>& f);
 
         public:
@@ -1211,7 +1209,7 @@ namespace sodium {
 #endif
 
     namespace impl {
-        event_ filter_optional(transaction_impl* trans, const event_& input,
+        event_ filter_optional_(transaction_impl* trans, const event_& input,
             const std::function<boost::optional<light_ptr>(const light_ptr&)>& f);
     }
 
@@ -1222,7 +1220,7 @@ namespace sodium {
     event<A, P> filter_optional(const event<boost::optional<A>, P>& input)
     {
         transaction<P> trans;
-        return impl::filter_optional(trans.impl(), input, [] (const light_ptr& poa) -> boost::optional<light_ptr> {
+        return impl::filter_optional_(trans.impl(), input, [] (const light_ptr& poa) -> boost::optional<light_ptr> {
             const boost::optional<A>& oa = *poa.cast_ptr<boost::optional<A>>(NULL);
             if (oa)
                 return boost::optional<light_ptr>(light_ptr::create<A>(oa.get()));
