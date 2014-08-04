@@ -50,6 +50,12 @@ namespace Sodium
 
     ///  Listen for firings of this event. The returned Listener has an unlisten()
     ///  method to cause the listener to be removed. This is the observer pattern.
+
+    public Listener Listen(Action<TA> action)
+    {
+      return Listen(new Handler<TA>() { Run = action });
+    }
+
     public Listener Listen(Handler<TA> action)
     {
       return Listen_(Node.Null, new TransactionHandler<TA> { Run = (trans2, a) => action.Run(a) });
@@ -505,6 +511,7 @@ namespace Sodium
       foreach (Listener l in finalizers)
         l.Unlisten();
     }
+
   }
 
   public class CoalesceHandler<TA> : TransactionHandler<TA>

@@ -103,6 +103,11 @@ namespace Sodium
       }
     }
 
+    public static void RunVoid(Action code)
+    {
+      RunVoid(new Runnable() { Run = code });
+    }
+
     ///
     ///Run the specified code inside a single transaction, with the contained
     ///code returning a value of the parameter type A.
@@ -132,6 +137,11 @@ namespace Sodium
           currentTransaction = transWas;
         }
       }
+    }
+
+    public static void Run(Action<Transaction> code)
+    {
+      Run(new Handler<Transaction>() { Run = code });
     }
 
     public static void Run(Handler<Transaction> code)
@@ -178,6 +188,11 @@ namespace Sodium
           currentTransaction = transWas;
         }
       }
+    }
+
+    public void Prioritized(Node rank, Action<Transaction> action)
+    {
+      Prioritized(rank, new Handler<Transaction>() { Run = action });
     }
 
     public void Prioritized(Node rank, Handler<Transaction> action)
@@ -240,6 +255,7 @@ namespace Sodium
         postQ.Clear();
       }
     }
+
   }
 
   internal class RunableTask

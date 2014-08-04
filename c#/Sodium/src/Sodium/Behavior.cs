@@ -134,43 +134,31 @@ namespace Sodium
       return Apply(bf, b);
     }
 
-    //  /**
-    //   * Lift a binary function into behaviors.
-    //   */
-    //  public static final <A,B,C> Behavior<C> lift(Lambda2<A,B,C> f, Behavior<A> a, Behavior<B> b)
-    //  {
-    //    return a.lift(f, b);
-    //  }
+    ///
+    ///Lift a binary function into behaviors.
+    ///
+    public static Behavior<TC> Lift<TA, TB, TC>(Func<TA, TB, TC> f, Behavior<TA> a, Behavior<TB> b)
+    {
+      return a.Lift(f, b);
+    }
 
-    //  /**
-    //   * Lift a ternary function into behaviors.
-    //   */
-    //  public final <B,C,D> Behavior<D> lift(final Lambda3<A,B,C,D> f, Behavior<B> b, Behavior<C> c)
-    //  {
-    //    Lambda1<A, Lambda1<B, Lambda1<C,D>>> ffa = new Lambda1<A, Lambda1<B, Lambda1<C,D>>>() {
-    //      public Lambda1<B, Lambda1<C,D>> apply(final A aa) {
-    //        return new Lambda1<B, Lambda1<C,D>>() {
-    //          public Lambda1<C,D> apply(final B bb) {
-    //            return new Lambda1<C,D>() {
-    //              public D apply(C cc) {
-    //                return f.apply(aa,bb,cc);
-    //              }
-    //            };
-    //          }
-    //        };
-    //      }
-    //    };
-    //    Behavior<Lambda1<B, Lambda1<C, D>>> bf = map(ffa);
-    //    return apply(apply(bf, b), c);
-    //  }
+    ///
+    ///Lift a ternary function into behaviors.
+    ///
+    public Behavior<TD> Lift<TB, TC, TD>(Func<TA, TB, TC, TD> f, Behavior<TB> b, Behavior<TC> c)
+    {
+      var ffa = new Func<TA, Func<TB, Func<TC, TD>>>(aa => (bb => new Func<TC, TD>(cc => f(aa, bb, cc))));
+      Behavior<Func<TB, Func<TC, TD>>> bf = Map(ffa);
+      return Apply(Apply(bf, b), c);
+    }
 
-    //  /**
-    //   * Lift a ternary function into behaviors.
-    //   */
-    //  public static final <A,B,C,D> Behavior<D> lift(Lambda3<A,B,C,D> f, Behavior<A> a, Behavior<B> b, Behavior<C> c)
-    //  {
-    //    return a.lift(f, b, c);
-    //  }
+    ///
+    ///Lift a ternary function into behaviors.
+    ///
+    public static Behavior<TD> Lift<TA, TB, TC, TD>(Func<TA, TB, TC, TD> f, Behavior<TA> a, Behavior<TB> b, Behavior<TC> c)
+    {
+      return a.Lift(f, b, c);
+    }
 
     ///
     ///Apply a value inside a behavior to a function inside a behavior. This is the
