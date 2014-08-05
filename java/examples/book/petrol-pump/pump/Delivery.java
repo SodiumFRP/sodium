@@ -1,3 +1,5 @@
+package pump;
+
 public enum Delivery {
     OFF,
     SLOW1,

@@ -1,12 +1,19 @@
+package pump;
+
 import javax.swing.*;
 import javax.imageio.*;
+import java.applet.Applet;
+import java.applet.AudioClip;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseMotionAdapter;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
+import java.awt.BorderLayout;
 import java.awt.Component;
+import java.awt.Container;
 import java.awt.Point;
 import java.awt.Dimension;
+import java.awt.FlowLayout;
 import java.awt.Graphics;
 import java.awt.Rectangle;
 import java.awt.image.*;
@@ -106,7 +113,7 @@ class PumpFace extends Component {
     @Override
     public void paint(Graphics g) {
         g.drawImage(background, 0, 0, null);
-        Transaction.run(() -> {
+        Transaction.runVoid(() -> {
             drawSegments(g, 193, 140, presetLCD.sample(), larges, 5);
             drawSegments(g, 517, 30, saleCostLCD.sample(), larges, 5);
             drawSegments(g, 517, 120, saleQuantityLCD.sample(), larges, 5);
@@ -152,18 +159,55 @@ class PumpFace extends Component {
     }
 }
 
+class ClassNameRenderer extends DefaultListCellRenderer {
+    public ClassNameRenderer() {
+        setOpaque(true);
+    }
+
+    public Component getListCellRendererComponent(JList<?> list,
+                                                  Object value,
+                                                  int index,
+                                                  boolean isSelected,
+                                                  boolean cellHasFocus) {
+        return super.getListCellRendererComponent(list, value.getClass().getName(), index, isSelected, cellHasFocus);
+    }
+}
+
 public class PetrolPump extends JFrame
 {
     private Listener l = new Listener();
     private Event<Key> eKey;
-    public BehaviorSink<List<Integer>> presetLCD;
+
+    private static Behavior<List<Integer>> format7Seg(Behavior<String> text, int digits)
+    {
+        return text.map(text_ -> {
+            Integer[] segs = new Integer[digits];
+            for (int i = 0; i < digits; i++)
+                segs[i] = 0xff;
+            return Arrays.<Integer>asList(segs);
+        });
+    }
 
     public PetrolPump(URL rootURL) throws IOException
     {
         super("Functional Reactive Petrol Pump");
 
-        Transaction.run(() -> {
+        Transaction.runVoid(() -> {
             try {
+                setLayout(new BorderLayout());
+
+                Container topPanel = new Container();
+                add(topPanel, BorderLayout.NORTH);
+                topPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+                JLabel logicLbl = new JLabel("Logic");
+                topPanel.add(logicLbl);
+
+                SComboBox<Pump> logic = new SComboBox<>(new DefaultComboBoxModel<Pump>(new Pump[] {
+                    new chapter2.section2.Beeper()
+                }));
+                logic.setRenderer(new ClassNameRenderer());
+                topPanel.add(logic);
+
                 // An event of mouse presses
                 EventSink<Point> eClick = new EventSink<Point>();
 
@@ -175,37 +219,80 @@ public class PetrolPump extends JFrame
 
                 eKey = toKey(eClick);
 
+                /*
                 l = l.append(eKey.listen(key -> {
                     System.out.println(key);
                 }));
+                */
 
                 Integer[] five = {0xff, 0xff, 0xff, 0xff, 0xff};
                 List<Integer> five8s = Arrays.asList(five);
                 Integer[] four = {0xff, 0xff, 0xff, 0xff};
                 List<Integer> four8s = Arrays.asList(four);
-                presetLCD = new BehaviorSink<>(five8s);
-                Behavior<List<Integer>> saleCostLCD = new Behavior<>(five8s);
-                Behavior<List<Integer>> saleQuantityLCD = new Behavior<>(five8s);
-                Behavior<List<Integer>> priceLCD1 = new Behavior<>(four8s);
-                Behavior<List<Integer>> priceLCD2 = new Behavior<>(four8s);
-                Behavior<List<Integer>> priceLCD3 = new Behavior<>(four8s);
                 @SuppressWarnings("unchecked")
                 BehaviorLoop<UpDown>[] nozzles = new BehaviorLoop[3];
                 for (int i = 0; i < 3; i++)
                     nozzles[i] = new BehaviorLoop<UpDown>();
+                Event<Integer> eFuelPulses = new Event<>();
+                Behavior<Double> calibration = new Behavior<>(1.0);
+                Behavior<Double> price1 = new Behavior<>(1.0);
+                Behavior<Double> price2 = new Behavior<>(1.0);
+                Behavior<Double> price3 = new Behavior<>(1.0);
+                Behavior<Mode> mode = new Behavior<>(Mode.open());
+                Event<Unit> eClearSale = new Event<>();
+                Behavior<Double> clock = new Behavior<>(0.0);
+                Behavior<Integer> costPlaces = new Behavior<>(2);
+                Behavior<Integer> quantityPlaces = new Behavior<>(2);
+
+                Behavior<Pump.Outputs> outputs = logic.selectedItem.map(
+                    pump -> pump.create(
+                        new Pump.Inputs(
+                            nozzles[0],
+                            nozzles[1],
+                            nozzles[2],
+                            eKey,
+                            eFuelPulses,
+                            calibration,
+                            price1,
+                            price2,
+                            price3,
+                            mode,
+                            eClearSale,
+                            clock,
+                            costPlaces,
+                            quantityPlaces
+                        )
+                    )
+                );
+
+                Behavior<Delivery> delivery = Behavior.switchB(outputs.map(o -> o.delivery));
+                Behavior<String> presetLCD = Behavior.switchB(outputs.map(o -> o.presetLCD));
+                Behavior<String> saleCostLCD = Behavior.switchB(outputs.map(o -> o.saleCostLCD));
+                Behavior<String> saleQuantityLCD = Behavior.switchB(outputs.map(o -> o.saleQuantityLCD));
+                Behavior<String> priceLCD1 = Behavior.switchB(outputs.map(o -> o.priceLCD1));
+                Behavior<String> priceLCD2 = Behavior.switchB(outputs.map(o -> o.priceLCD2));
+                Behavior<String> priceLCD3 = Behavior.switchB(outputs.map(o -> o.priceLCD3));
+                Event<Unit> eBeep = Behavior.switchE(outputs.map(o -> o.eBeep));
+
+                AudioClip beepClip = Applet.newAudioClip(new URL(rootURL, "sounds/beep.wav"));
+                l = l.append(eBeep.listen(u -> {
+                    System.out.println("BEEP!");
+                    beepClip.play();
+                }));
+
                 PumpFace face = new PumpFace(
                         rootURL, eClick,
-                        presetLCD,
-                        saleCostLCD,
-                        saleQuantityLCD,
-                        priceLCD1,
-                        priceLCD2,
-                        priceLCD3,
+                        format7Seg(presetLCD,5),
+                        format7Seg(saleCostLCD,5),
+                        format7Seg(saleQuantityLCD,5),
+                        format7Seg(priceLCD1,4),
+                        format7Seg(priceLCD2,4),
+                        format7Seg(priceLCD3,4),
                         nozzles[0],
                         nozzles[1],
                         nozzles[2]
                     );
-                add("Center", face);
+                add(face, BorderLayout.CENTER);
                 for (int i = 0; i < 3; i++) {
                     final Behavior<Tuple2<Rectangle, UpDown>> rect_state =
                         Behavior.lift(
@@ -220,6 +307,9 @@ public class PetrolPump extends JFrame
                         ).hold(UpDown.DOWN)
                     );
                 }
+            }
+            catch (MalformedURLException e) {
+                System.err.println("Unexpected exception: "+e);
             }
             catch (IOException e) {
                 System.err.println("Unexpected exception: "+e);
@@ -271,7 +361,8 @@ public class PetrolPump extends JFrame
             }
         });
         view.setVisible(true);
-        
+
+/*        
         while (true) {
             for (int i = 0; i < 256; i++) {
                 Integer[] digits = {i, i, i, i, i};
@@ -279,6 +370,7 @@ public class PetrolPump extends JFrame
                 try { Thread.sleep(100); } catch (InterruptedException e) {}
             }
         }
+        */
     }
 }
 

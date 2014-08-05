@@ -1,3 +1,5 @@
+package pump;
+
 public class Sale
 {
     public Sale(double cost, double quantity) {

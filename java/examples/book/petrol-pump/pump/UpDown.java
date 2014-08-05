@@ -1,3 +1,5 @@
+package pump;
+
 public enum UpDown {
     UP, DOWN;
     public final UpDown invert() {

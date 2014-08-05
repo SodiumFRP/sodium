@@ -1,3 +1,5 @@
+package pump;
+
 public enum Key {
     ZERO,
     ONE,
