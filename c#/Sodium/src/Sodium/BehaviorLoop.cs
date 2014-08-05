@@ -6,7 +6,7 @@ namespace Sodium
   public class BehaviorLoop<TA> : Behavior<TA>
   {
     public BehaviorLoop()
-      : base(new EventLoop<TA>(), default(TA))
+      : base(new EventLoop<TA>(), default(TA), resetInitValue: true)
     {
     }
 
@@ -18,7 +18,7 @@ namespace Sodium
 
     public override TA SampleNoTrans()
     {
-      if (EventValue == null)
+      if (!_isEventValueSet)
         throw new Exception("BehaviorLoop sampled before it was looped");
       return EventValue;
     }

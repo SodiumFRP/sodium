@@ -6,14 +6,14 @@ namespace Sodium
   {
 
     public LazyBehavior(Event<TA> @event, Func<TA> lazyInitValue)
-      : base(@event, default(TA))
+      : base(@event, default(TA), resetInitValue: true)
     {
       LazyInitValue = lazyInitValue;
     }
 
     public override TA SampleNoTrans()
     {
-      if (EventValue == null)
+      if (!_isEventValueSet)
       {
         EventValue = LazyInitValue();
         LazyInitValue = null;

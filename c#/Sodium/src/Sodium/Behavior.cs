@@ -6,8 +6,53 @@ namespace Sodium
   public class Behavior<TA> : IDisposable
   {
     protected readonly Event<TA> Event;
-    protected TA EventValue;
-    TA valueUpdate;
+    TA _eventValue;
+    protected bool _isEventValueSet;
+    protected TA EventValue
+    {
+      get
+      {
+        if (!_isEventValueSet)
+          throw new Exception("ValueUpdate is not set");
+        return _eventValue;
+      }
+      set
+      {
+        _eventValue = value;
+        _isEventValueSet = value != null;
+      }
+    }
+    void ResetEventValue()
+    {
+      _eventValue = default(TA);
+      _isEventValueSet = false;
+    }
+
+
+    TA _valueUpdate;
+    bool _isValueUpdateSet;
+
+    TA ValueUpdate
+    {
+      get
+      {
+        if (!_isValueUpdateSet)
+          throw new Exception("ValueUpdate is not set");
+        return _valueUpdate;
+      }
+      set
+      {
+        _valueUpdate = value;
+        _isValueUpdateSet = value != null;
+      }
+    }
+
+    void ResetValueUpdate()
+    {
+      _valueUpdate = default(TA);
+      _isValueUpdateSet = false;
+    }
+
     private Listener cleanup;
     protected Func<TA> LazyInitValue;  // Used by LazyBehavior
 
@@ -20,10 +65,11 @@ namespace Sodium
       EventValue = value;
     }
 
-    public Behavior(Event<TA> @event, TA initValue)
+    public Behavior(Event<TA> @event, TA initValue, bool resetInitValue = false)
     {
       Event = @event;
       EventValue = initValue;
+      if (resetInitValue) ResetEventValue();
       Transaction.Run(new Handler<Transaction>
       {
         Run = trans1 =>
@@ -32,19 +78,19 @@ namespace Sodium
           {
             Run = (trans2, a) =>
             {
-              if (valueUpdate == null)
+              if (!_isValueUpdateSet)
               {
                 trans2.Last(new Runnable
                 {
                   Run = () =>
                   {
-                    EventValue = valueUpdate;
+                    EventValue = ValueUpdate;
                     LazyInitValue = null;
-                    valueUpdate = default(TA);
+                    ResetValueUpdate();
                   }
                 });
               }
-              valueUpdate = a;
+              ValueUpdate = a;
             }
           }, false);
         }
@@ -56,7 +102,7 @@ namespace Sodium
     ///
     TA NewValue()
     {
-      return valueUpdate == null ? EventValue : valueUpdate;
+      return !_isValueUpdateSet ? EventValue : ValueUpdate;
     }
 
     ///
