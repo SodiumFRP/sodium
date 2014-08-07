@@ -203,7 +203,7 @@ public class PetrolPump extends JFrame
                 topPanel.add(logicLbl);
 
                 SComboBox<Pump> logic = new SComboBox<>(new DefaultComboBoxModel<Pump>(new Pump[] {
-                    new chapter2.section2.Beeper()
+                    new chapter2.section3.Beeper()
                 }));
                 logic.setRenderer(new ClassNameRenderer());
                 topPanel.add(logic);
@@ -244,9 +244,9 @@ public class PetrolPump extends JFrame
                 Behavior<Integer> costPlaces = new Behavior<>(2);
                 Behavior<Integer> quantityPlaces = new Behavior<>(2);
 
-                Behavior<Pump.Outputs> outputs = logic.selectedItem.map(
+                Behavior<Outputs> outputs = logic.selectedItem.map(
                     pump -> pump.create(
-                        new Pump.Inputs(
+                        new Inputs(
                             nozzles[0],
                             nozzles[1],
                             nozzles[2],

@@ -1,13 +1,13 @@
-package chapter2.section2;
+package chapter2.section3;
 
 import pump.*;
 import sodium.*;
 
 public class Beeper implements Pump
 {
-    public Pump.Outputs create(Pump.Inputs inputs)
+    public Outputs create(Inputs inputs)
     {
-        return new Pump.Outputs().setBeep(
+        return new Outputs().setBeep(
             inputs.eKeypad.map(k -> Unit.UNIT)
         );
     }
