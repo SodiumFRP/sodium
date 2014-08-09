@@ -151,7 +151,7 @@ class PumpFace extends Component {
         if (g.getClipBounds().intersects(lcdBounds(ox, oy, images, noOfDigits)))
             for (int i = 0; i < digits.size() && i < noOfDigits; i++) {
                 int x = ox - images[0].getWidth(null)*(i+1);
-                int digit = digits.get(i);
+                int digit = digits.get(digits.size() - 1 - i);
                 for (int j = 0; j < 8; j++)
                     if ((digit & (1 << j)) != 0)
                         g.drawImage(images[j], x, oy, null); 
@@ -183,7 +183,26 @@ public class PetrolPump extends JFrame
         return text.map(text_ -> {
             Integer[] segs = new Integer[digits];
             for (int i = 0; i < digits; i++)
-                segs[i] = 0xff;
+                segs[i] = 0;
+            int i = digits-1;
+            int j = text_.length() - 1;
+            while (j >= 0 && i >= 0) {
+                char ch = text_.charAt(j);
+                switch (ch) {
+                    case '0': segs[i] |= 0x77; i--; break;
+                    case '1': segs[i] |= 0x24; i--; break;
+                    case '2': segs[i] |= 0x6b; i--; break;
+                    case '3': segs[i] |= 0x6d; i--; break;
+                    case '4': segs[i] |= 0x3c; i--; break;
+                    case '5': segs[i] |= 0x5d; i--; break;
+                    case '6': segs[i] |= 0x5f; i--; break;
+                    case '7': segs[i] |= 0x64; i--; break;
+                    case '8': segs[i] |= 0x7f; i--; break;
+                    case '9': segs[i] |= 0x7c; i--; break;
+                    case '.': segs[i] |= 0x80;
+                }
+                j--;
+            }
             return Arrays.<Integer>asList(segs);
         });
     }
@@ -203,7 +222,8 @@ public class PetrolPump extends JFrame
                 topPanel.add(logicLbl);
 
                 SComboBox<Pump> logic = new SComboBox<>(new DefaultComboBoxModel<Pump>(new Pump[] {
-                    new chapter2.section3.Beeper()
+                    new chapter2.section3.Beeper(),
+                    new chapter2.section5.NozzlePrice()
                 }));
                 logic.setRenderer(new ClassNameRenderer());
                 topPanel.add(logic);
