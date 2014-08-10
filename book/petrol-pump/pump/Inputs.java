@@ -4,9 +4,9 @@ import sodium.*;
 
 public class Inputs {
     public Inputs(
-            Behavior<UpDown> nozzle1,
-            Behavior<UpDown> nozzle2,
-            Behavior<UpDown> nozzle3,
+            Event<UpDown> eNozzle1,
+            Event<UpDown> eNozzle2,
+            Event<UpDown> eNozzle3,
             Event<Key> eKeypad,
             Event<Integer> eFuelPulses,
             Behavior<Double> calibration,
@@ -18,9 +18,9 @@ public class Inputs {
             Behavior<Double> clock,
             Behavior<Integer> costPlaces,
             Behavior<Integer> quantityPlaces) {
-        this.nozzle1 = nozzle1;
-        this.nozzle2 = nozzle2;
-        this.nozzle3 = nozzle3;
+        this.eNozzle1 = eNozzle1;
+        this.eNozzle2 = eNozzle2;
+        this.eNozzle3 = eNozzle3;
         this.eKeypad = eKeypad;
         this.eFuelPulses = eFuelPulses;
         this.calibration = calibration;
@@ -34,9 +34,9 @@ public class Inputs {
         this.quantityPlaces = quantityPlaces;
     }
 
-    public final Behavior<UpDown> nozzle1;
-    public final Behavior<UpDown> nozzle2;
-    public final Behavior<UpDown> nozzle3;
+    public final Event<UpDown> eNozzle1;
+    public final Event<UpDown> eNozzle2;
+    public final Event<UpDown> eNozzle3;
     public final Event<Key> eKeypad;
     public final Event<Integer> eFuelPulses;
     public final Behavior<Double> calibration;

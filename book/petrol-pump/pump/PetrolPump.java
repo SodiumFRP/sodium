@@ -267,9 +267,9 @@ public class PetrolPump extends JFrame
                 Behavior<Outputs> outputs = logic.selectedItem.map(
                     pump -> pump.create(
                         new Inputs(
-                            nozzles[0],
-                            nozzles[1],
-                            nozzles[2],
+                            nozzles[0].updates(),
+                            nozzles[1].updates(),
+                            nozzles[2].updates(),
                             eKey,
                             eFuelPulses,
                             calibration,
