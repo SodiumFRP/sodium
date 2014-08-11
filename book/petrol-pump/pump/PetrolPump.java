@@ -223,7 +223,7 @@ public class PetrolPump extends JFrame
 
                 SComboBox<Pump> logic = new SComboBox<>(new DefaultComboBoxModel<Pump>(new Pump[] {
                     new chapter2.section3.Beeper(),
-                    new chapter2.section5.NozzlePrice()
+                    new chapter2.section6.Nozzle8888()
                 }));
                 logic.setRenderer(new ClassNameRenderer());
                 topPanel.add(logic);
@@ -321,7 +321,7 @@ public class PetrolPump extends JFrame
                     ((BehaviorLoop<UpDown>)nozzles[i]).loop(
                         Event.<UpDown>filterOptional(
                             eClick.snapshot(rect_state,
-                                (pt, rs) -> rs.a.contains(pt) ? Optional.of(rs.b.invert())
+                                (pt, rs) -> rs.a.contains(pt) ? Optional.of(invert(rs.b))
                                                               : Optional.empty()
                             )
                         ).hold(UpDown.DOWN)
@@ -336,6 +336,10 @@ public class PetrolPump extends JFrame
             }
         });
         pack();
+    }
+
+    private static UpDown invert(UpDown u) {
+        return u == UpDown.UP ? UpDown.DOWN : UpDown.UP;
     }
 
     public static Event<Key> toKey(Event<Point> eClick) {
@@ -381,16 +385,6 @@ public class PetrolPump extends JFrame
             }
         });
         view.setVisible(true);
-
-/*        
-        while (true) {
-            for (int i = 0; i < 256; i++) {
-                Integer[] digits = {i, i, i, i, i};
-                view.presetLCD.send(Arrays.asList(digits));
-                try { Thread.sleep(100); } catch (InterruptedException e) {}
-            }
-        }
-        */
     }
 }
 

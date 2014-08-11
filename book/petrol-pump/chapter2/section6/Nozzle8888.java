@@ -1,9 +1,9 @@
-package chapter2.section5;
+package chapter2.section6;
 
 import pump.*;
 import sodium.*;
 
-public class NozzlePrice implements Pump
+public class Nozzle8888 implements Pump
 {
     public Outputs create(Inputs inputs)
     {
