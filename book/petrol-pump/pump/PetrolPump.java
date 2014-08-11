@@ -189,6 +189,7 @@ public class PetrolPump extends JFrame
             while (j >= 0 && i >= 0) {
                 char ch = text_.charAt(j);
                 switch (ch) {
+                    case '-': segs[i] |= 0x08; i--; break;
                     case '0': segs[i] |= 0x77; i--; break;
                     case '1': segs[i] |= 0x24; i--; break;
                     case '2': segs[i] |= 0x6b; i--; break;
@@ -218,15 +219,34 @@ public class PetrolPump extends JFrame
                 Container topPanel = new Container();
                 add(topPanel, BorderLayout.NORTH);
                 topPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
-                JLabel logicLbl = new JLabel("Logic");
-                topPanel.add(logicLbl);
+                topPanel.add(new JLabel("Logic"));
 
                 SComboBox<Pump> logic = new SComboBox<>(new DefaultComboBoxModel<Pump>(new Pump[] {
                     new chapter2.section3.Beeper(),
-                    new chapter2.section6.Nozzle8888()
+                    new chapter2.section6.Nozzle8888(),
+                    new chapter2.section7.NozzlePrice(),
+                    new chapter2.section8.CapturePrice()
                 }));
                 logic.setRenderer(new ClassNameRenderer());
                 topPanel.add(logic);
+                topPanel.add(new JLabel("Price1"));
+                STextField textPrice1 = new STextField("2.149", 7);
+                topPanel.add(textPrice1);
+                topPanel.add(new JLabel("Price2"));
+                STextField textPrice2 = new STextField("2.341", 7);
+                topPanel.add(textPrice2);
+                topPanel.add(new JLabel("Price3"));
+                STextField textPrice3 = new STextField("1.499", 7);
+                topPanel.add(textPrice3);
+                
+                Lambda1<String,Double> parseDbl = str -> {
+                    try {
+                        return Double.parseDouble(str);
+                    }
+                    catch (NumberFormatException e) {
+                        return 0.0;
+                    }
+                };
 
                 // An event of mouse presses
                 EventSink<Point> eClick = new EventSink<Point>();
@@ -255,9 +275,9 @@ public class PetrolPump extends JFrame
                     nozzles[i] = new BehaviorLoop<UpDown>();
                 Event<Integer> eFuelPulses = new Event<>();
                 Behavior<Double> calibration = new Behavior<>(1.0);
-                Behavior<Double> price1 = new Behavior<>(1.0);
-                Behavior<Double> price2 = new Behavior<>(1.0);
-                Behavior<Double> price3 = new Behavior<>(1.0);
+                Behavior<Double> price1 = textPrice1.text.map(parseDbl);
+                Behavior<Double> price2 = textPrice2.text.map(parseDbl);
+                Behavior<Double> price3 = textPrice3.text.map(parseDbl);
                 Behavior<Mode> mode = new Behavior<>(Mode.open());
                 Event<Unit> eClearSale = new Event<>();
                 Behavior<Double> clock = new Behavior<>(0.0);
