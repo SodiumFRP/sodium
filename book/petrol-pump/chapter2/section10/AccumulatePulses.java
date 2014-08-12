@@ -15,20 +15,27 @@ public class AccumulatePulses implements Pump
                     ? UpDown.UP : UpDown.DOWN,
             nozzle1, nozzle2, nozzle3);
 
-        BehaviorLoop<Integer> pulses = new BehaviorLoop<>();
-        pulses.loop(inputs.eFuelPulses.snapshot(pulses,
-            (neu, sum) -> neu + sum).hold(0));
-
-        Behavior<Double> quantity = Behavior.lift(
-            (pulses_, calibration_) -> pulses_ * calibration_,
-            pulses, inputs.calibration);
+        Behavior<Double> litersDelivered =
+                accumulate(inputs.eFuelPulses, inputs.calibration);
 
         return new Outputs()
             .setDelivery(anyNozzle.map(
                     u -> u == UpDown.UP ? Delivery.FAST1
                                         : Delivery.OFF))
-            .setSaleQuantityLCD(quantity.map(
+            .setSaleQuantityLCD(litersDelivered.map(
                     q -> Formatters.formatSaleQuantity(q)));
+    }
+
+    private static Behavior<Double> accumulate(
+            Event<Integer> ePulses, Behavior<Double> calibration)
+    {
+        BehaviorLoop<Integer> total = new BehaviorLoop<>();
+        total.loop(ePulses.snapshot(total,
+            (pulses_, total_) -> pulses_ + total_).hold(0));
+
+        return Behavior.lift(
+            (total_, calibration_) -> total_ * calibration_,
+            total, calibration);
     }
 }
 
