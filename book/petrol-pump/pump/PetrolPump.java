@@ -177,6 +177,8 @@ public class PetrolPump extends JFrame
 {
     private Listener l = new Listener();
     private Event<Key> eKey;
+    public EventSink<Integer> eFuelPulses = new EventSink<>();
+    public Behavior<Delivery> delivery;
 
     private static Behavior<List<Integer>> format7Seg(Behavior<String> text, int digits)
     {
@@ -226,7 +228,8 @@ public class PetrolPump extends JFrame
                     new chapter2.section6.Nozzle8888(),
                     new chapter2.section7.NozzlePrice(),
                     new chapter2.section8.CapturePrice(),
-                    new chapter2.section9.CapturePriceFiltered()
+                    new chapter2.section9.CapturePriceFiltered(),
+                    new chapter2.section10.AccumulatePulses()
                 }));
                 logic.setRenderer(new ClassNameRenderer());
                 topPanel.add(logic);
@@ -274,16 +277,14 @@ public class PetrolPump extends JFrame
                 BehaviorLoop<UpDown>[] nozzles = new BehaviorLoop[3];
                 for (int i = 0; i < 3; i++)
                     nozzles[i] = new BehaviorLoop<UpDown>();
-                Event<Integer> eFuelPulses = new Event<>();
-                Behavior<Double> calibration = new Behavior<>(1.0);
+
+                Behavior<Double> calibration = new Behavior<>(0.0133);
                 Behavior<Double> price1 = textPrice1.text.map(parseDbl);
                 Behavior<Double> price2 = textPrice2.text.map(parseDbl);
                 Behavior<Double> price3 = textPrice3.text.map(parseDbl);
                 Behavior<Mode> mode = new Behavior<>(Mode.open());
                 Event<Unit> eClearSale = new Event<>();
                 Behavior<Double> clock = new Behavior<>(0.0);
-                Behavior<Integer> costPlaces = new Behavior<>(2);
-                Behavior<Integer> quantityPlaces = new Behavior<>(2);
 
                 Behavior<Outputs> outputs = logic.selectedItem.map(
                     pump -> pump.create(
@@ -299,14 +300,12 @@ public class PetrolPump extends JFrame
                             price3,
                             mode,
                             eClearSale,
-                            clock,
-                            costPlaces,
-                            quantityPlaces
+                            clock
                         )
                     )
                 );
 
-                Behavior<Delivery> delivery = Behavior.switchB(outputs.map(o -> o.delivery));
+                delivery = Behavior.switchB(outputs.map(o -> o.delivery));
                 Behavior<String> presetLCD = Behavior.switchB(outputs.map(o -> o.presetLCD));
                 Behavior<String> saleCostLCD = Behavior.switchB(outputs.map(o -> o.saleCostLCD));
                 Behavior<String> saleQuantityLCD = Behavior.switchB(outputs.map(o -> o.saleQuantityLCD));
@@ -319,6 +318,30 @@ public class PetrolPump extends JFrame
                 l = l.append(eBeep.listen(u -> {
                     System.out.println("BEEP!");
                     beepClip.play();
+                }));
+
+                AudioClip fastRumble = Applet.newAudioClip(new URL(rootURL, "sounds/fast.wav"));
+                AudioClip slowRumble = Applet.newAudioClip(new URL(rootURL, "sounds/slow.wav"));
+
+                l = l.append(delivery.value().listen(d -> {
+                    switch (d) {
+                    case FAST1:
+                    case FAST2:
+                    case FAST3:
+                        fastRumble.loop();
+                        break;
+                    default:
+                        fastRumble.stop();
+                    }
+                    switch (d) {
+                    case SLOW1:
+                    case SLOW2:
+                    case SLOW3:
+                        slowRumble.loop();
+                        break;
+                    default:
+                        slowRumble.stop();
+                    }
                 }));
 
                 PumpFace face = new PumpFace(
@@ -406,6 +429,22 @@ public class PetrolPump extends JFrame
             }
         });
         view.setVisible(true);
+
+        // Simuate fuel pulses when 'delivery' is on.
+        while (true) {
+            try { Thread.sleep(200); } catch (InterruptedException e) {}
+            switch (view.delivery.sample()) {
+            case FAST1:
+            case FAST2:
+            case FAST3:
+                view.eFuelPulses.send(5);
+                break;
+            case SLOW1:
+            case SLOW2:
+            case SLOW3:
+                view.eFuelPulses.send(2);
+            }
+        }
     }
 }
 

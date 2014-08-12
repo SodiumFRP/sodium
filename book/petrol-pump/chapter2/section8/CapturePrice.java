@@ -20,7 +20,7 @@ public class CapturePrice implements Pump
         Behavior<UpDown> nozzle = eNozzle.hold(UpDown.DOWN);
         return Behavior.lift(
             (u, price_) ->
-                u.equals(UpDown.UP) ? Formatters.formatPrice(price_, 4)
+                u.equals(UpDown.UP) ? Formatters.formatPrice(price_)
                                     : "",
             nozzle, capPrice);
     }

@@ -12,7 +12,7 @@ public class NozzlePrice implements Pump
         Behavior<UpDown> nozzle3 = inputs.eNozzle3.hold(UpDown.DOWN);
         Lambda2<UpDown, Double, String> ifLiftedPrice =
             (u, price) ->
-                u.equals(UpDown.UP) ? Formatters.formatPrice(price, 4)
+                u.equals(UpDown.UP) ? Formatters.formatPrice(price)
                                     : "";
         return new Outputs()
             .setPriceLCD1(
