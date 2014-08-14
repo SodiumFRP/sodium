@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Sodium
 {
 
-  public class EventSink<TA> : Event<TA>
+  public class EventSink<TA> : Event<TA> where TA : class
   {
     public EventSink() { }
 

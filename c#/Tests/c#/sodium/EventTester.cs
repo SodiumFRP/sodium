@@ -1,10 +1,14 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Threading;
 
 using NUnit.Framework;
 
 using Sodium;
+using Sodium.src.Sodium;
+
+using Boolean = Sodium.src.Sodium.Boolean;
 
 namespace Tests.sodium
 {
@@ -21,20 +25,20 @@ namespace Tests.sodium
     [Test]
     public void TestSendEvent()
     {
-      var e = new EventSink<int>();
-      var @out = new List<int>();
+      var e = new EventSink<Integer>();
+      var @out = new List<Integer>();
       Listener l = e.Listen(x => { @out.Add(x); });
       e.Send(5);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 5 }, @out);
+      CollectionAssert.AreEqual(new[] { 5 }, @out.Select(x => (int)x));
       e.Send(6);
-      CollectionAssert.AreEqual(new[] { 5 }, @out);
+      CollectionAssert.AreEqual(new[] { 5 }, @out.Select(x => (int)x));
     }
 
     [Test]
     public void TestMap()
     {
-      var e = new EventSink<int>();
+      var e = new EventSink<Integer>();
       Event<String> m = e.Map(x => x.ToString());
       var @out = new List<string>();
       Listener l = m.Listen(x => { @out.Add(x); });
@@ -46,27 +50,27 @@ namespace Tests.sodium
     [Test]
     public void TestMergeNonSimultaneous()
     {
-      var e1 = new EventSink<int>();
-      var e2 = new EventSink<int>();
-      var @out = new List<int>();
-      Listener l = Event<int>.Merge(e1, e2).Listen(x => { @out.Add(x); });
+      var e1 = new EventSink<Integer>();
+      var e2 = new EventSink<Integer>();
+      var @out = new List<Integer>();
+      Listener l = Event<Integer>.Merge(e1, e2).Listen(x => { @out.Add(x); });
       e1.Send(7);
       e2.Send(9);
       e1.Send(8);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 7, 9, 8 }, @out);
+      CollectionAssert.AreEqual(new[] { 7, 9, 8 }, @out.Select(x => (int)x));
     }
 
     [Test]
     public void TestMergeSimultaneous()
     {
-      var e = new EventSink<int>();
-      var @out = new List<int>();
-      Listener l = Event<int>.Merge(e, e).Listen(x => { @out.Add(x); });
+      var e = new EventSink<Integer>();
+      var @out = new List<Integer>();
+      Listener l = Event<Integer>.Merge(e, e).Listen(x => { @out.Add(x); });
       e.Send(7);
       e.Send(9);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 7, 7, 9, 9 }, @out);
+      CollectionAssert.AreEqual(new[] { 7, 7, 9, 9 }, @out.Select(x => (int)x));
     }
 
     [Test]
@@ -102,31 +106,31 @@ namespace Tests.sodium
     [Test]
     public void TestCoalesce()
     {
-      var e1 = new EventSink<int>();
-      var e2 = new EventSink<int>();
-      var @out = new List<int>();
+      var e1 = new EventSink<Integer>();
+      var e2 = new EventSink<Integer>();
+      var @out = new List<Integer>();
       Listener l =
-           Event<int>.Merge(e1, Event<int>.Merge(e1.Map(x => x * 100), e2))
+           Event<Integer>.Merge<Integer>(e1, Event<Integer>.Merge<Integer>(e1.Map<Integer>(x => x * 100), e2))
           .Coalesce((a, b) => a + b)
           .Listen(x => { @out.Add(x); });
       e1.Send(2);
       e1.Send(8);
       e2.Send(40);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 202, 808, 40 }, @out);
+      CollectionAssert.AreEqual(new[] { 202, 808, 40 }, @out.Select(x => (int)x).ToArray());
     }
 
     [Test]
     public void TestFilter()
     {
-      var e = new EventSink<char>();
-      var @out = new List<char>();
-      Listener l = e.Filter(c => char.IsUpper(c)).Listen(c => { @out.Add(c); });
+      var e = new EventSink<Character>();
+      var @out = new List<Character>();
+      Listener l = e.Filter(c => Char.IsUpper((char)c)).Listen(c => { @out.Add(c); });
       e.Send('H');
       e.Send('o');
       e.Send('I');
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 'H', 'I' }, @out);
+      CollectionAssert.AreEqual(new[] { 'H', 'I' }, @out.Select(x => (char)x));
     }
 
     [Test]
@@ -158,29 +162,29 @@ namespace Tests.sodium
     [Test]
     public void TestLoopEvent()
     {
-      var ea = new EventSink<int>();
-      Event<int> ec = Transaction.Run(() =>
+      var ea = new EventSink<Integer>();
+      Event<Integer> ec = Transaction.Run(() =>
       {
-        var eb = new EventLoop<int>();
-        Event<int> ec_ = Event<int>.MergeWith((x, y) => x + y, ea.Map(x => x % 10), eb);
-        Event<int> ebOut = ea.Map(x => x / 10).Filter(x => x != 0);
+        var eb = new EventLoop<Integer>();
+        Event<Integer> ec_ = Event<Integer>.MergeWith<Integer>((x, y) => x + y, ea.Map<Integer>(x => x % 10), eb);
+        Event<Integer> ebOut = ea.Map<Integer>(x => x / 10).Filter(x => x != 0);
         eb.Loop(ebOut);
         return ec_;
       });
-      var @out = new List<int>();
+      var @out = new List<Integer>();
       Listener l = ec.Listen(x => { @out.Add(x); });
       ea.Send(2);
       ea.Send(52);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 2, 7 }, @out);
+      CollectionAssert.AreEqual(new[] { 2, 7 }, @out.Select(x => (int)x).ToArray());
     }
 
     [Test]
     public void TestGate()
     {
-      var ec = new EventSink<char>();
-      var epred = new BehaviorSink<bool>(true);
-      var @out = new List<char>();
+      var ec = new EventSink<Character>();
+      var epred = new BehaviorSink<Boolean>(true);
+      var @out = new List<Character>();
       Listener l = ec.Gate(epred).Listen(x => { @out.Add(x); });
       ec.Send('H');
       epred.Send(false);
@@ -188,18 +192,18 @@ namespace Tests.sodium
       epred.Send(true);
       ec.Send('I');
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 'H', 'I' }, @out);
+      CollectionAssert.AreEqual(new[] { 'H', 'I' }, @out.Select(x => (char)x));
     }
 
     [Test]
     public void TestCollect()
     {
-      var ea = new EventSink<int>();
-      var @out = new List<int>();
-      Event<int> sum = ea.Collect(
-        100,
+      var ea = new EventSink<Integer>();
+      var @out = new List<Integer>();
+      Event<Integer> sum = ea.Collect(
+        (Integer)100,
         //(a,s) => new Tuple2(a+s, a+s)
-        (a, s) => new Tuple<int, int>(a + s, a + s));
+        (a, s) => new Tuple<Integer, Integer>(a + s, a + s));
       Listener l = sum.Listen(x => { @out.Add(x); });
       ea.Send(5);
       ea.Send(7);
@@ -207,15 +211,15 @@ namespace Tests.sodium
       ea.Send(2);
       ea.Send(3);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 105, 112, 113, 115, 118 }, @out);
+      CollectionAssert.AreEqual(new[] { 105, 112, 113, 115, 118 }, @out.Select(x => (int)x));
     }
 
     [Test]
     public void TestAccum()
     {
-      var ea = new EventSink<int>();
-      var @out = new List<int>();
-      Behavior<int> sum = ea.Accum(100, (a, s) => a + s);
+      var ea = new EventSink<Integer>();
+      var @out = new List<Integer>();
+      Behavior<Integer> sum = ea.Accum((Integer)100, (a, s) => a + s);
       Listener l = sum.Updates().Listen(x => { @out.Add(x); });
       ea.Send(5);
       ea.Send(7);
@@ -223,34 +227,34 @@ namespace Tests.sodium
       ea.Send(2);
       ea.Send(3);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 105, 112, 113, 115, 118 }, @out);
+      CollectionAssert.AreEqual(new[] { 105, 112, 113, 115, 118 }, @out.Select<Integer, int>(x => (int)x));
     }
 
     [Test]
     public void TestOnce()
     {
-      var e = new EventSink<char>();
-      var @out = new List<char>();
+      var e = new EventSink<Character>();
+      var @out = new List<Character>();
       Listener l = e.Once().Listen(x => { @out.Add(x); });
       e.Send('A');
       e.Send('B');
       e.Send('C');
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 'A' }, @out);
+      CollectionAssert.AreEqual(new[] { 'A' }, @out.Select(x => (char)x));
     }
 
     [Test]
     public void TestDelay()
     {
-      var e = new EventSink<char>();
-      Behavior<char> b = e.Hold(' ');
-      var @out = new List<char>();
+      var e = new EventSink<Character>();
+      Behavior<Character> b = e.Hold(' ');
+      var @out = new List<Character>();
       Listener l = e.Delay().Snapshot(b).Listen(x => { @out.Add(x); });
       e.Send('C');
       e.Send('B');
       e.Send('A');
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 'C', 'B', 'A' }, @out);
+      CollectionAssert.AreEqual(new[] { 'C', 'B', 'A' }, @out.Select(x => (char)x));
     }
   }
 

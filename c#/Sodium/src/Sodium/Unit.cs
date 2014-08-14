@@ -6,5 +6,8 @@ using System.Threading.Tasks;
 
 namespace Sodium
 {
-  public enum Unit { Unit }
+  public class UnitEnum
+  {
+    public static string Unit { get { return "Unit"; } }
+  }
 }

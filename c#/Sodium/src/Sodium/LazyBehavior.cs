@@ -2,11 +2,11 @@ using System;
 
 namespace Sodium
 {
-  public class LazyBehavior<TA> : Behavior<TA>
+  public class LazyBehavior<TA> : Behavior<TA> where TA : class
   {
 
     public LazyBehavior(Event<TA> @event, Func<TA> lazyInitValue)
-      : base(@event, default(TA), resetInitValue: true)
+      : base(@event, null, resetInitValue: true)
     {
       LazyInitValue = lazyInitValue;
     }

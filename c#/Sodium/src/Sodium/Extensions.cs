@@ -17,7 +17,7 @@ namespace Sodium
     }
   }
 
-  public struct Optional<T>
+  public class Optional<T>
   {
     public bool IsPresent { get; private set; }
     private readonly T value;
@@ -29,7 +29,6 @@ namespace Sodium
     }
 
     public Optional(T value)
-      : this()
     {
       this.value = value;
       IsPresent = true;

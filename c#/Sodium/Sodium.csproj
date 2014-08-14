@@ -43,6 +43,7 @@
     <Compile Include="src\Sodium\Behavior.cs" />
     <Compile Include="src\Sodium\BehaviorLoop.cs" />
     <Compile Include="src\Sodium\BehaviorSink.cs" />
+    <Compile Include="src\Sodium\ValueClasses.cs" />
     <Compile Include="src\Sodium\Event.cs" />
     <Compile Include="src\Sodium\EventLoop.cs" />
     <Compile Include="src\Sodium\EventSink.cs" />
@@ -51,6 +52,7 @@
     <Compile Include="src\Sodium\LazyBehavior.cs" />
     <Compile Include="src\Sodium\Listener.cs" />
     <Compile Include="src\Sodium\Node.cs" />
+    <Compile Include="src\Sodium\PriorityQueue.cs" />
     <Compile Include="src\Sodium\Transaction.cs" />
     <Compile Include="src\Sodium\TransactionHandler.cs" />
     <Compile Include="src\Sodium\Unit.cs" />

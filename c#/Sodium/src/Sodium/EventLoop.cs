@@ -4,7 +4,7 @@ using System.Collections.Generic;
 namespace Sodium
 {
 
-  public class EventLoop<TA> : Event<TA>
+  public class EventLoop<TA> : Event<TA> where TA : class
   {
     Event<TA> eaOut;
 

@@ -2,6 +2,8 @@ using System;
 using System.Collections.Generic;
 using System.Linq;
 
+using JMBucknall.Containers;
+
 namespace Sodium
 {
   public interface IRunnable
@@ -24,23 +26,23 @@ namespace Sodium
     // True if we need to re-generate the priority queue.
     public bool ToRegen;
 
-    private class Entry : IComparable<Entry>
+    private class Entry : IComparable, IComparable<Entry>
     {
-      private readonly Node rank;
+      public readonly Node Rank;
       public readonly Handler<Transaction> Action;
       private static long nextSeq;
       private readonly long seq;
 
       public Entry(Node rank, Handler<Transaction> action)
       {
-        this.rank = rank;
+        Rank = rank;
         Action = action;
         seq = nextSeq++;
       }
 
       public int CompareTo(Entry other)
       {
-        int answer = rank.CompareTo(other.rank);
+        int answer = Rank.CompareTo(other.Rank);
         if (answer == 0)
         {  // Same rank: preserve chronological sequence.
           if (seq < other.seq) answer = -1;
@@ -49,11 +51,14 @@ namespace Sodium
         }
         return answer;
       }
+
+      public int CompareTo(object obj)
+      {
+        return CompareTo((Entry)obj);
+      }
     }
 
-    //TODO:
-    //  private PriorityQueue<Entry> prioritizedQ = new PriorityQueue<Entry>();
-    private readonly Queue<Entry> prioritizedQ = new Queue<Entry>();
+    private readonly PriorityQueue<Entry> prioritizedQ = new PriorityQueue<Entry>();
     private readonly HashSet<Entry> entries = new HashSet<Entry>();
     private readonly List<IRunnable> lastQ = new List<IRunnable>();
     private List<IRunnable> postQ;
@@ -198,7 +203,7 @@ namespace Sodium
     public void Prioritized(Node rank, Handler<Transaction> action)
     {
       Entry e = new Entry(rank, action);
-      prioritizedQ.Enqueue(e);
+      prioritizedQ.Enqueue(e, e);
       entries.Add(e);
     }
 
@@ -231,7 +236,7 @@ namespace Sodium
         ToRegen = false;
         prioritizedQ.Clear();
         foreach (Entry e in entries)
-          prioritizedQ.Enqueue(e);
+          prioritizedQ.Enqueue(e, e);
       }
     }
 
@@ -240,7 +245,7 @@ namespace Sodium
       while (true)
       {
         CheckRegen();
-        if (!prioritizedQ.Any()) break;
+        if (prioritizedQ.Count == 0) break;
         Entry e = prioritizedQ.Dequeue();
         entries.Remove(e);
         e.Action.Run(this);

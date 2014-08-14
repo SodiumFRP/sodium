@@ -3,10 +3,10 @@ using System;
 namespace Sodium
 {
 
-  public class BehaviorLoop<TA> : Behavior<TA>
+  public class BehaviorLoop<TA> : Behavior<TA> where TA : class
   {
     public BehaviorLoop()
-      : base(new EventLoop<TA>(), default(TA), resetInitValue: true)
+      : base(new EventLoop<TA>(), null, resetInitValue: true)
     {
     }
 
