@@ -1,8 +1,6 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 2013
-VisualStudioVersion = 12.0.30501.0
-MinimumVisualStudioVersion = 10.0.40219.1
+# Visual Studio 2012
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sodium", "Sodium.csproj", "{D2080704-D359-4743-B568-5D976F9882A0}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Tests", "..\Tests\Tests.csproj", "{3BD22EFF-873C-48CF-B8E6-075ACA62F48C}"
@@ -13,14 +11,31 @@ Global
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{D2080704-D359-4743-B568-5D976F9882A0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{D2080704-D359-4743-B568-5D976F9882A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{D2080704-D359-4743-B568-5D976F9882A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{D2080704-D359-4743-B568-5D976F9882A0}.Release|Any CPU.Build.0 = Release|Any CPU
 		{3BD22EFF-873C-48CF-B8E6-075ACA62F48C}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{3BD22EFF-873C-48CF-B8E6-075ACA62F48C}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{3BD22EFF-873C-48CF-B8E6-075ACA62F48C}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{3BD22EFF-873C-48CF-B8E6-075ACA62F48C}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D2080704-D359-4743-B568-5D976F9882A0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D2080704-D359-4743-B568-5D976F9882A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D2080704-D359-4743-B568-5D976F9882A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D2080704-D359-4743-B568-5D976F9882A0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(MonoDevelopProperties) = preSolution
+		StartupItem = Sodium.csproj
+		Policies = $0
+		$0.TextStylePolicy = $1
+		$1.FileWidth = 120
+		$1.TabWidth = 4
+		$1.IndentWidth = 2
+		$1.inheritsSet = Mono
+		$1.inheritsScope = text/plain
+		$1.scope = text/x-csharp
+		$0.CSharpFormattingPolicy = $2
+		$2.ElseIfNewLinePlacement = SameLine
+		$2.AfterDelegateDeclarationParameterComma = True
+		$2.inheritsSet = Mono
+		$2.inheritsScope = text/x-csharp
+		$2.scope = text/x-csharp
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

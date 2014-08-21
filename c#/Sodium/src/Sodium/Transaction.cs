@@ -42,12 +42,15 @@ namespace Sodium
 
       public int CompareTo(Entry other)
       {
-        int answer = Rank.CompareTo(other.Rank);
+	    // Note: This gives the reverse answer compared with the Java version,
+		// because the Java PriorityQueue pulls off the lowest-numbered value
+	    // and ours pulls off the highest.
+		int answer = other.Rank.CompareTo(Rank);
         if (answer == 0)
         {  // Same rank: preserve chronological sequence.
-          if (seq < other.seq) answer = -1;
+          if (seq < other.seq) answer = 1;
           else
-            if (seq > other.seq) answer = 1;
+            if (seq > other.seq) answer = -1;
         }
         return answer;
       }
