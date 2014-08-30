@@ -196,7 +196,21 @@ public class Event<A> {
      * their ordering is retained. In many common cases the ordering will
      * be undefined.
      */
-	public static <A> Event<A> merge(final Event<A> ea, final Event<A> eb)
+	public Event<A> merge(final Event<A> eb)
+	{
+	    return Event.<A>merge(this, eb);
+	}
+
+    /**
+     * Merge two streams of events of the same type.
+     *
+     * In the case where two event occurrences are simultaneous (i.e. both
+     * within the same transaction), both will be delivered in the same
+     * transaction. If the event firings are ordered for some reason, then
+     * their ordering is retained. In many common cases the ordering will
+     * be undefined.
+     */
+	private static <A> Event<A> merge(final Event<A> ea, final Event<A> eb)
 	{
 	    final EventSink<A> out = new EventSink<A>() {
     		@Override
@@ -319,9 +333,9 @@ public class Event<A> {
      * within the same transaction), they are combined using the same logic as
      * 'coalesce'.
      */
-    public static <A> Event<A> mergeWith(Lambda2<A,A,A> f, Event<A> ea, Event<A> eb)
+    public Event<A> merge(Event<A> eb, Lambda2<A,A,A> f)
     {
-        return merge(ea, eb).coalesce(f);
+        return merge(eb).coalesce(f);
     }
 
     /**

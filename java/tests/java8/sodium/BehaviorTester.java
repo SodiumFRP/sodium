@@ -79,7 +79,7 @@ public class BehaviorTester extends TestCase {
 	 */
 	private static Event<Integer> doubleUp(Event<Integer> ev)
 	{
-	    return Event.merge(ev, ev);
+	    return ev.merge(ev);
 	}
 
 	public void testValuesTwiceThenMap() {
@@ -142,7 +142,7 @@ public class BehaviorTester extends TestCase {
 		BehaviorSink<Integer> bi = new BehaviorSink<Integer>(9);
 		BehaviorSink<Integer> bj = new BehaviorSink<Integer>(2);
 		List<Integer> out = new ArrayList<Integer>();
-		Listener l = Event.mergeWith((x, y) -> x+y, bi.value(),bj.value())
+		Listener l = bi.value().merge(bj.value(), (x, y) -> x+y)
 		    .listen(x -> { out.add(x); });
 		bi.send(1);
 		bj.send(4);

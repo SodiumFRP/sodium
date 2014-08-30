@@ -229,7 +229,8 @@ public class PetrolPump extends JFrame
                     new chapter2.section7.NozzlePrice(),
                     new chapter2.section8.CapturePrice(),
                     new chapter2.section9.CapturePriceFiltered(),
-                    new chapter2.section10.AccumulatePulses()
+                    new chapter2.section10.AccumulatePulses(),
+                    new chapter3.section1.LifeCycle()
                 }));
                 logic.setRenderer(new ClassNameRenderer());
                 topPanel.add(logic);

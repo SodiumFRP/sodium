@@ -42,7 +42,7 @@ public class EventTester extends TestCase {
         EventSink<Integer> e1 = new EventSink();
         EventSink<Integer> e2 = new EventSink();
         List<Integer> out = new ArrayList();
-        Listener l = Event.merge(e1,e2).listen(x -> { out.add(x); });
+        Listener l = e1.merge(e2).listen(x -> { out.add(x); });
         e1.send(7);
         e2.send(9);
         e1.send(8);
@@ -54,7 +54,7 @@ public class EventTester extends TestCase {
     {
         EventSink<Integer> e = new EventSink();
         List<Integer> out = new ArrayList();
-        Listener l = Event.merge(e,e).listen(x -> { out.add(x); });
+        Listener l = e.merge(e).listen(x -> { out.add(x); });
         e.send(7);
         e.send(9);
         l.unlisten();
@@ -66,7 +66,7 @@ public class EventTester extends TestCase {
         EventSink<String> e1 = new EventSink();
         EventSink<String> e2 = new EventSink();
         List<String> out = new ArrayList();
-        Listener l = Event.merge(e1,e2).listen(x -> { out.add(x); });
+        Listener l = e1.merge(e2).listen(x -> { out.add(x); });
         Transaction.runVoid(() -> {
             e1.send("left1a");
             e1.send("left1b");
@@ -94,7 +94,7 @@ public class EventTester extends TestCase {
         EventSink<Integer> e2 = new EventSink();
         List<Integer> out = new ArrayList();
         Listener l =
-             Event.merge(e1,Event.merge(e1.map(x -> x * 100), e2))
+             e1.merge(e1.map(x -> x * 100).merge(e2))
             .coalesce((Integer a, Integer b) -> a+b)
             .listen((Integer x) -> { out.add(x); });
         e1.send(2);
@@ -145,7 +145,7 @@ public class EventTester extends TestCase {
         final EventSink<Integer> ea = new EventSink();
         Event<Integer> ec = Transaction.<Event<Integer>>run(() -> {
             EventLoop<Integer> eb = new EventLoop<Integer>();
-            Event<Integer> ec_ = Event.mergeWith((x, y) -> x+y, ea.map(x -> x % 10), eb);
+            Event<Integer> ec_ = ea.map(x -> x % 10).merge(eb, (x, y) -> x+y);
             Event<Integer> eb_out = ea.map(x -> x / 10).filter(x -> x != 0);
             eb.loop(eb_out);
             return ec_;
