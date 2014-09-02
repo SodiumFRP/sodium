@@ -235,7 +235,9 @@ public class PetrolPump extends JFrame
                     new chapter3.section2.LifeCycle(),
                     new chapter3.section3.AccumulatePulses(),
                     new chapter3.section4.ShowDollars(),
-                    new chapter3.section5.ClearSale()
+                    new chapter3.section5.ClearSale(),
+                    new chapter3.section6.Keypad(),
+                    new chapter3.section7.PresetAmount()
                 }));
                 logic.setRenderer(new ClassNameRenderer());
                 topPanel.add(logic);

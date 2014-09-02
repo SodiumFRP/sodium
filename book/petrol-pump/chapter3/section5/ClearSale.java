@@ -82,8 +82,10 @@ public class ClearSale implements Pump
         Behavior<Boolean> locked =
                 lc.eStart.map(u -> true).merge(
                 eClearSale.map(u -> false)).hold(false);
+
         Event<Fuel> eStart = lc.eStart.gate(locked.map(l -> !l));
         Event<End> eEnd    = lc.eEnd.gate(locked);
+
         Behavior<Optional<Fuel>> fuelSelected =
              eStart.map(f -> Optional.of(f)).merge(
              eClearSale.map(f -> Optional.empty())).hold(Optional.empty());
