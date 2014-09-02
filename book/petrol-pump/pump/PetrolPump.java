@@ -11,6 +11,7 @@ import java.awt.event.WindowEvent;
 import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Container;
+import java.awt.GridLayout;
 import java.awt.Point;
 import java.awt.Dimension;
 import java.awt.FlowLayout;
@@ -210,6 +211,7 @@ public class PetrolPump extends JFrame
         });
     }
 
+    @SuppressWarnings("unchecked")
     public PetrolPump(URL rootURL) throws IOException
     {
         super("Functional Reactive Petrol Pump");
@@ -230,7 +232,10 @@ public class PetrolPump extends JFrame
                     new chapter2.section8.CapturePrice(),
                     new chapter2.section9.CapturePriceFiltered(),
                     new chapter2.section10.AccumulatePulses(),
-                    new chapter3.section1.LifeCycle()
+                    new chapter3.section2.LifeCycle(),
+                    new chapter3.section3.AccumulatePulses(),
+                    new chapter3.section4.ShowDollars(),
+                    new chapter3.section5.ClearSale()
                 }));
                 logic.setRenderer(new ClassNameRenderer());
                 topPanel.add(logic);
@@ -284,7 +289,7 @@ public class PetrolPump extends JFrame
                 Behavior<Double> price2 = textPrice2.text.map(parseDbl);
                 Behavior<Double> price3 = textPrice3.text.map(parseDbl);
                 Behavior<Mode> mode = new Behavior<>(Mode.open());
-                Event<Unit> eClearSale = new Event<>();
+                EventSink<Unit> eClearSale = new EventSink<>();
                 Behavior<Double> clock = new Behavior<>(0.0);
 
                 Behavior<Outputs> outputs = logic.selectedItem.map(
@@ -314,6 +319,7 @@ public class PetrolPump extends JFrame
                 Behavior<String> priceLCD2 = Behavior.switchB(outputs.map(o -> o.priceLCD2));
                 Behavior<String> priceLCD3 = Behavior.switchB(outputs.map(o -> o.priceLCD3));
                 Event<Unit> eBeep = Behavior.switchE(outputs.map(o -> o.eBeep));
+                Event<Sale> eSaleComplete = Behavior.switchE(outputs.map(o -> o.eSaleComplete));
 
                 AudioClip beepClip = Applet.newAudioClip(new URL(rootURL, "sounds/beep.wav"));
                 l = l.append(eBeep.listen(u -> {
@@ -372,6 +378,27 @@ public class PetrolPump extends JFrame
                         ).hold(UpDown.DOWN)
                     );
                 }
+
+                l = l.append(eSaleComplete.listen(sale -> {
+                    JDialog dialog = new JDialog(this, "Sale complete", false);
+                    dialog.setLayout(new GridLayout(5,2));
+                    dialog.add(new JLabel("Fuel "));
+                    dialog.add(new JLabel(sale.fuel.toString()));
+                    dialog.add(new JLabel("Price "));
+                    dialog.add(new JLabel(Formatters.priceFmt.format(sale.price)));
+                    dialog.add(new JLabel("Dollars delivered "));
+                    dialog.add(new JLabel(Formatters.costFmt.format(sale.cost)));
+                    dialog.add(new JLabel("Liters delivered "));
+                    dialog.add(new JLabel(Formatters.quantityFmt.format(sale.quantity)));
+                    SButton ok = new SButton("OK");
+                    dialog.add(ok);
+                    dialog.pack();
+                    dialog.setVisible(true);
+                    Listener lOK = ok.eClicked.listen(u -> {
+                        dialog.dispose();
+                        eClearSale.send(Unit.UNIT);
+                    });
+                }));
             }
             catch (MalformedURLException e) {
                 System.err.println("Unexpected exception: "+e);

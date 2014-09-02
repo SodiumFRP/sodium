@@ -5,7 +5,7 @@ import java.text.DecimalFormatSymbols;
 import java.util.Locale;
 
 public class Formatters {
-    private static DecimalFormat priceFmt = new DecimalFormat("#0.0000000",
+    public static DecimalFormat priceFmt = new DecimalFormat("#0.0000000",
             new DecimalFormatSymbols(Locale.US));
     public static String formatPrice(double price)
     {
@@ -23,14 +23,14 @@ public class Formatters {
         return text;
     }
 
-    private static DecimalFormat costFmt = new DecimalFormat("#0.00",
+    public static DecimalFormat costFmt = new DecimalFormat("#0.00",
             new DecimalFormatSymbols(Locale.US));
     public static String formatSaleCost(double cost)
     {
         return costFmt.format(cost);
     }
 
-    private static DecimalFormat quantityFmt = new DecimalFormat("#0.00",
+    public static DecimalFormat quantityFmt = new DecimalFormat("#0.00",
             new DecimalFormatSymbols(Locale.US));
     public static String formatSaleQuantity(double quantity)
     {

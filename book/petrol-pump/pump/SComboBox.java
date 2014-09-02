@@ -7,6 +7,7 @@ import javax.swing.*;
 
 public class SComboBox<A> extends JComboBox
 {
+    @SuppressWarnings("unchecked")
     public SComboBox(ComboBoxModel<A> aModel)
     {
         super(aModel);

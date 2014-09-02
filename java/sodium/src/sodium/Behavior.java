@@ -179,6 +179,40 @@ public class Behavior<A> {
 	}
 
 	/**
+	 * Lift a quaternary function into behaviors.
+	 */
+	public final <B,C,D,E> Behavior<E> lift(final Lambda4<A,B,C,D,E> f, Behavior<B> b, Behavior<C> c, Behavior<D> d)
+	{
+		Lambda1<A, Lambda1<B, Lambda1<C, Lambda1<D,E>>>> ffa = new Lambda1<A, Lambda1<B, Lambda1<C, Lambda1<D,E>>>>() {
+			public Lambda1<B, Lambda1<C, Lambda1<D,E>>> apply(final A aa) {
+				return new Lambda1<B, Lambda1<C, Lambda1<D,E>>>() {
+					public Lambda1<C, Lambda1<D, E>> apply(final B bb) {
+						return new Lambda1<C, Lambda1<D,E>>() {
+							public Lambda1<D,E> apply(final C cc) {
+                                return new Lambda1<D, E>() {
+                                    public E apply(D dd) {
+                                        return f.apply(aa,bb,cc,dd);
+                                    }
+                                };
+							}
+						};
+					}
+				};
+			}
+		};
+		Behavior<Lambda1<B, Lambda1<C, Lambda1<D, E>>>> bf = map(ffa);
+		return apply(apply(apply(bf, b), c), d);
+	}
+
+	/**
+	 * Lift a quaternary function into behaviors.
+	 */
+	public static final <A,B,C,D,E> Behavior<E> lift(Lambda4<A,B,C,D,E> f, Behavior<A> a, Behavior<B> b, Behavior<C> c, Behavior<D> d)
+	{
+		return a.lift(f, b, c, d);
+	}
+
+	/**
 	 * Apply a value inside a behavior to a function inside a behavior. This is the
 	 * primitive for all function lifting.
 	 */
