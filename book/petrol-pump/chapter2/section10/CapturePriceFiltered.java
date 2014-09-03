@@ -1,9 +1,9 @@
-package chapter2.section8;
+package chapter2.section10;
 
 import pump.*;
 import sodium.*;
 
-public class CapturePrice implements Pump
+public class CapturePriceFiltered implements Pump
 {
     public Outputs create(Inputs inputs)
     {
@@ -13,10 +13,15 @@ public class CapturePrice implements Pump
             .setPriceLCD3(perFuel(inputs.eNozzle3, inputs.price3));
     }
 
+    enum StartFill { START_FILL };
+
     private static Behavior<String> perFuel(
                 Event<UpDown> eNozzle, Behavior<Double> price)
     {
-        Behavior<Double> capPrice = eNozzle.snapshot(price).hold(0.0);
+        Event<StartFill> eStartFill =
+                               eNozzle.filter(u -> u == UpDown.UP)
+                                      .map(u -> StartFill.START_FILL);
+        Behavior<Double> capPrice = eStartFill.snapshot(price).hold(0.0);
         Behavior<UpDown> nozzle = eNozzle.hold(UpDown.DOWN);
         return Behavior.lift(
             (u, price_) ->

@@ -234,11 +234,11 @@ public class PetrolPump extends JFrame
 
                 SComboBox<Pump> logic = new SComboBox<>(new DefaultComboBoxModel<Pump>(new Pump[] {
                     new chapter2.section3.Beeper(),
-                    new chapter2.section6.Nozzle8888(),
-                    new chapter2.section7.NozzlePrice(),
-                    new chapter2.section8.CapturePrice(),
-                    new chapter2.section9.CapturePriceFiltered(),
-                    new chapter2.section10.AccumulatePulses(),
+                    new chapter2.section7.Nozzle8888(),
+                    new chapter2.section8.NozzlePrice(),
+                    new chapter2.section9.CapturePrice(),
+                    new chapter2.section10.CapturePriceFiltered(),
+                    new chapter2.section11.AccumulatePulses(),
                     new chapter3.section2.LifeCycle(),
                     new chapter3.section3.AccumulatePulses(),
                     new chapter3.section4.ShowDollars(),
