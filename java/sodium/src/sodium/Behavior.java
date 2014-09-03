@@ -45,7 +45,7 @@ public class Behavior<A> {
      */
     final A newValue()
     {
-    	return valueUpdate == null ? value :  valueUpdate;
+    	return valueUpdate == null ? sampleNoTrans() :  valueUpdate;
     }
 
     /**

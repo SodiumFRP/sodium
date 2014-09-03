@@ -102,7 +102,7 @@ namespace Sodium
     ///
     TA NewValue()
     {
-      return !_isValueUpdateSet ? EventValue : ValueUpdate;
+      return !_isValueUpdateSet ? SampleNoTrans() : ValueUpdate;
     }
 
     ///
