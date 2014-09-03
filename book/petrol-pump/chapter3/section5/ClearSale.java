@@ -41,11 +41,11 @@ public class ClearSale implements Pump
                     q -> Formatters.formatSaleCost(q)))
             .setSaleQuantityLCD(fo.litersDelivered.map(
                     q -> Formatters.formatSaleQuantity(q)))
-            .setPriceLCD1(ShowDollars.priceLCD(np.fuelSelected, fo.price,
+            .setPriceLCD1(ShowDollars.priceLCD(np.fillActive, fo.price,
                     Fuel.ONE, inputs))
-            .setPriceLCD2(ShowDollars.priceLCD(np.fuelSelected, fo.price,
+            .setPriceLCD2(ShowDollars.priceLCD(np.fillActive, fo.price,
                     Fuel.TWO, inputs))
-            .setPriceLCD3(ShowDollars.priceLCD(np.fuelSelected, fo.price,
+            .setPriceLCD3(ShowDollars.priceLCD(np.fillActive, fo.price,
                     Fuel.THREE, inputs))
             .setBeep(np.eBeep)
             .setSaleComplete(np.eSaleComplete);
@@ -53,21 +53,21 @@ public class ClearSale implements Pump
 
     public static class NotifyPOSOut {
         NotifyPOSOut(Event<Fuel> eStart,
-                     Behavior<Optional<Fuel>> fuelSelected,
+                     Behavior<Optional<Fuel>> fillActive,
                      Behavior<Optional<Fuel>> filling,
                      Event<End> eEnd,
                      Event<Unit> eBeep,
                      Event<Sale> eSaleComplete)
         {
             this.eStart = eStart;
-            this.fuelSelected = fuelSelected;
+            this.fillActive = fillActive;
             this.filling = filling;
             this.eEnd = eEnd;
             this.eBeep = eBeep;
             this.eSaleComplete = eSaleComplete;
         }
         public final Event<Fuel> eStart;
-        public final Behavior<Optional<Fuel>> fuelSelected;
+        public final Behavior<Optional<Fuel>> fillActive;
         public final Behavior<Optional<Fuel>> filling;
         public final Event<End> eEnd;
         public final Event<Unit> eBeep;
@@ -86,12 +86,13 @@ public class ClearSale implements Pump
         Event<Fuel> eStart = lc.eStart.gate(locked.map(l -> !l));
         Event<End> eEnd    = lc.eEnd.gate(locked);
 
-        Behavior<Optional<Fuel>> fuelSelected =
-             eStart.map(f -> Optional.of(f)).merge(
-             eClearSale.map(f -> Optional.empty())).hold(Optional.empty());
         Behavior<Optional<Fuel>> filling =
                 eStart.map(f -> Optional.of(f)).merge(
                 eEnd.map(f -> Optional.empty())).hold(Optional.empty());
+        Behavior<Optional<Fuel>> fillActive =
+             eStart.map(f -> Optional.of(f)).merge(
+             eClearSale.map(f -> Optional.empty())).hold(Optional.empty());
+
         Event<Unit> eBeep = eClearSale;
 
         Event<Sale> eSaleComplete = Event.filterOptional(eEnd.snapshot(
@@ -103,7 +104,7 @@ public class ClearSale implements Pump
                 filling, fo.price, fo.dollarsDelivered,
                 fo.litersDelivered)));
 
-        return new NotifyPOSOut(eStart, fuelSelected, filling, eEnd, eBeep,
+        return new NotifyPOSOut(eStart, fillActive, filling, eEnd, eBeep,
             eSaleComplete);
     }
 }

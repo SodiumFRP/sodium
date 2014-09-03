@@ -17,10 +17,10 @@ public class LifeCycle implements Pump
 
     private static Event<End> whenSetDown(
             Event<UpDown> eNozzle, Fuel nozzleFuel,
-            Behavior<Optional<Fuel>> fuelSelected)
+            Behavior<Optional<Fuel>> fillActive)
     {
         return Event.<End>filterOptional(
-            eNozzle.snapshot(fuelSelected,
+            eNozzle.snapshot(fillActive,
                 (u,f) -> u == UpDown.DOWN &&
                          f.equals(Optional.of(nozzleFuel))
                                        ? Optional.of(End.END)
@@ -29,15 +29,15 @@ public class LifeCycle implements Pump
 
     public static class LifeCycleOut {
         public LifeCycleOut(Event<Fuel> eStart,
-                         Behavior<Optional<Fuel>> fuelSelected,
+                         Behavior<Optional<Fuel>> fillActive,
                          Event<End> eEnd)
         {
             this.eStart = eStart;
-            this.fuelSelected = fuelSelected;
+            this.fillActive = fillActive;
             this.eEnd = eEnd;
         }
         public Event<Fuel> eStart;
-        public Behavior<Optional<Fuel>> fuelSelected;
+        public Behavior<Optional<Fuel>> fillActive;
         public Event<End> eEnd;
     };
 
@@ -50,23 +50,23 @@ public class LifeCycle implements Pump
                                   whenLifted(eNozzle2, Fuel.TWO).merge(
                                   whenLifted(eNozzle3, Fuel.THREE)));
 
-        BehaviorLoop<Optional<Fuel>> fuelSelected = new BehaviorLoop<>();
+        BehaviorLoop<Optional<Fuel>> fillActive = new BehaviorLoop<>();
 
         Event<Fuel> eStart = Event.filterOptional(
-            eLiftNozzle.snapshot(fuelSelected, (newFuel, fuelSelected_) ->
-                fuelSelected_.isPresent() ? Optional.empty()
+            eLiftNozzle.snapshot(fillActive, (newFuel, fillActive_) ->
+                fillActive_.isPresent() ? Optional.empty()
                                           : Optional.of(newFuel)));
 
         Event<End> eEnd =
-                whenSetDown(eNozzle1, Fuel.ONE, fuelSelected).merge(
-                whenSetDown(eNozzle2, Fuel.TWO, fuelSelected).merge(
-                whenSetDown(eNozzle3, Fuel.THREE, fuelSelected)));
+                whenSetDown(eNozzle1, Fuel.ONE, fillActive).merge(
+                whenSetDown(eNozzle2, Fuel.TWO, fillActive).merge(
+                whenSetDown(eNozzle3, Fuel.THREE, fillActive)));
 
-        fuelSelected.loop(
+        fillActive.loop(
             eStart.map(f -> Optional.of(f)).merge(
                 eEnd.map(e -> Optional.empty()))
             .hold(Optional.empty()));
-        return new LifeCycleOut(eStart, fuelSelected, eEnd);
+        return new LifeCycleOut(eStart, fillActive, eEnd);
     }
 
     public Outputs create(Inputs inputs)
@@ -75,13 +75,13 @@ public class LifeCycle implements Pump
                                     inputs.eNozzle2,
                                     inputs.eNozzle3);
         return new Outputs()
-            .setDelivery(lc.fuelSelected.map(
+            .setDelivery(lc.fillActive.map(
                 of ->
                     of.equals(Optional.of(Fuel.ONE))   ? Delivery.FAST1 :
                     of.equals(Optional.of(Fuel.TWO))   ? Delivery.FAST2 :
                     of.equals(Optional.of(Fuel.THREE)) ? Delivery.FAST3 : 
                                                          Delivery.OFF))
-            .setSaleQuantityLCD(lc.fuelSelected.map(
+            .setSaleQuantityLCD(lc.fillActive.map(
                 of ->
                     of.equals(Optional.of(Fuel.ONE))   ? "1" :
                     of.equals(Optional.of(Fuel.TWO))   ? "2" :

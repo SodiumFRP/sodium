@@ -21,7 +21,7 @@ public class ShowDollars implements Pump
                           lc.eStart);
 
         return new Outputs()
-            .setDelivery(lc.fuelSelected.map(
+            .setDelivery(lc.fillActive.map(
                 of ->
                     of.equals(Optional.of(Fuel.ONE))   ? Delivery.FAST1 :
                     of.equals(Optional.of(Fuel.TWO))   ? Delivery.FAST2 :
@@ -31,11 +31,11 @@ public class ShowDollars implements Pump
                 q -> Formatters.formatSaleCost(q)))
             .setSaleQuantityLCD(fo.litersDelivered.map(
                 q -> Formatters.formatSaleQuantity(q)))
-            .setPriceLCD1(priceLCD(lc.fuelSelected, fo.price, Fuel.ONE,
+            .setPriceLCD1(priceLCD(lc.fillActive, fo.price, Fuel.ONE,
                 inputs))
-            .setPriceLCD2(priceLCD(lc.fuelSelected, fo.price, Fuel.TWO,
+            .setPriceLCD2(priceLCD(lc.fillActive, fo.price, Fuel.TWO,
                 inputs))
-            .setPriceLCD3(priceLCD(lc.fuelSelected, fo.price, Fuel.THREE,
+            .setPriceLCD3(priceLCD(lc.fillActive, fo.price, Fuel.THREE,
                 inputs));
     }
 
@@ -93,7 +93,7 @@ public class ShowDollars implements Pump
     }
 
     public static Behavior<String> priceLCD(
-            Behavior<Optional<Fuel>> fuelSelected,
+            Behavior<Optional<Fuel>> fillActive,
             Behavior<Double> fillPrice,
             Fuel fuel,
             Inputs inputs)
@@ -111,7 +111,7 @@ public class ShowDollars implements Pump
                                       ? Formatters.formatPrice(fillPrice_)
                                       : ""
                 : Formatters.formatPrice(idlePrice_),
-            fuelSelected,
+            fillActive,
             fillPrice,
             idlePrice);
     }

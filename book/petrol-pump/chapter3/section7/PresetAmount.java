@@ -34,29 +34,94 @@ public class PresetAmount implements Pump
                 fo);
         eStart.loop(np.eStart);
 
-        KeypadOut ko = Keypad.keypad(inputs.eKeypad, new Event<Unit>());
+        BehaviorLoop<Boolean> keypadActive = new BehaviorLoop<>();
+        KeypadOut ko = Keypad.lockableKeypad(inputs.eKeypad,
+                                             inputs.eClearSale,
+                                             keypadActive);
+
+        PresetOut po = preset(ko.value,
+                              fo,
+                              np.filling,
+                              np.fillActive.map(o -> o.isPresent()));
+        keypadActive.loop(po.keypadActive);
 
         return new Outputs()
-            .setDelivery(np.filling.map(
-                of ->
-                    of.equals(Optional.of(Fuel.ONE))   ? Delivery.FAST1 :
-                    of.equals(Optional.of(Fuel.TWO))   ? Delivery.FAST2 :
-                    of.equals(Optional.of(Fuel.THREE)) ? Delivery.FAST3 : 
-                                                         Delivery.OFF))
+            .setDelivery(po.delivery)
             .setSaleCostLCD(fo.dollarsDelivered.map(
                     q -> Formatters.formatSaleCost(q)))
             .setSaleQuantityLCD(fo.litersDelivered.map(
                     q -> Formatters.formatSaleQuantity(q)))
-            .setPriceLCD1(ShowDollars.priceLCD(np.fuelSelected, fo.price,
+            .setPriceLCD1(ShowDollars.priceLCD(np.fillActive, fo.price,
                     Fuel.ONE, inputs))
-            .setPriceLCD2(ShowDollars.priceLCD(np.fuelSelected, fo.price,
+            .setPriceLCD2(ShowDollars.priceLCD(np.fillActive, fo.price,
                     Fuel.TWO, inputs))
-            .setPriceLCD3(ShowDollars.priceLCD(np.fuelSelected, fo.price,
+            .setPriceLCD3(ShowDollars.priceLCD(np.fillActive, fo.price,
                     Fuel.THREE, inputs))
             .setSaleComplete(np.eSaleComplete)
             .setPresetLCD(ko.value.map(v ->
                 Formatters.formatSaleCost((double)v)))
             .setBeep(np.eBeep.merge(ko.eBeep));
+    }
+
+    public class PresetOut {
+        public PresetOut(Behavior<Delivery> delivery,
+                         Behavior<Boolean> keypadActive)
+        {
+            this.delivery = delivery;
+            this.keypadActive = keypadActive;
+        }
+        Behavior<Delivery> delivery;
+        Behavior<Boolean> keypadActive;
+    }
+
+    public enum Speed { FAST, SLOW, STOPPED };
+
+    public PresetOut preset(Behavior<Integer> presetDollars,
+                            FillOut fo,
+                            Behavior<Optional<Fuel>> filling,
+                            Behavior<Boolean> fillActive)
+    {
+        Behavior<Speed> speed = Behavior.lift(
+            (presetDollars_, price, dollarsDelivered, litersDelivered) -> {
+                if (presetDollars_ == 0)
+                    return Speed.FAST;
+                else {
+                    if (dollarsDelivered >= (double)presetDollars_)
+                        return Speed.STOPPED;
+                    double slowLiters =
+                            (double)presetDollars_/price - 0.10;
+                    if (litersDelivered >= slowLiters)
+                        return Speed.SLOW;
+                    else
+                        return Speed.FAST;
+                }
+            },
+            presetDollars, fo.price, fo.dollarsDelivered,
+                                     fo.litersDelivered);
+
+        Behavior<Delivery> delivery = Behavior.lift(
+            (of, speed_) ->
+                speed_ == Speed.FAST ? (
+                    of.equals(Optional.of(Fuel.ONE))   ? Delivery.FAST1 :
+                    of.equals(Optional.of(Fuel.TWO))   ? Delivery.FAST2 :
+                    of.equals(Optional.of(Fuel.THREE)) ? Delivery.FAST3 : 
+                                                         Delivery.OFF
+                ) :
+                speed_ == Speed.SLOW ? (
+                    of.equals(Optional.of(Fuel.ONE))   ? Delivery.SLOW1 :
+                    of.equals(Optional.of(Fuel.TWO))   ? Delivery.SLOW2 :
+                    of.equals(Optional.of(Fuel.THREE)) ? Delivery.SLOW3 : 
+                                                         Delivery.OFF
+                ) :
+                Delivery.OFF,
+            filling, speed);
+
+        Behavior<Boolean> keypadActive = Behavior.lift(
+            (of, speed_) ->
+                !of.isPresent() || speed_ == Speed.FAST,
+            filling, speed);
+
+        return new PresetOut(delivery, keypadActive);
     }
 }
 

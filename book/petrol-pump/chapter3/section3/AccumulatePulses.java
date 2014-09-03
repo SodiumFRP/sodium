@@ -20,7 +20,7 @@ public class AccumulatePulses implements Pump
                            inputs.calibration);
 
         return new Outputs()
-            .setDelivery(lc.fuelSelected.map(
+            .setDelivery(lc.fillActive.map(
                 of ->
                     of.equals(Optional.of(Fuel.ONE))   ? Delivery.FAST1 :
                     of.equals(Optional.of(Fuel.TWO))   ? Delivery.FAST2 :

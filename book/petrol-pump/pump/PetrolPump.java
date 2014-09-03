@@ -211,6 +211,13 @@ public class PetrolPump extends JFrame
         });
     }
 
+    public static <A> Event<A> changes(Behavior<A> b)
+    {
+        return Event.filterOptional(
+            b.value().snapshot(b, (neu, old) ->
+                old.equals(neu) ? Optional.empty() : Optional.of(neu)));
+    }
+
     @SuppressWarnings("unchecked")
     public PetrolPump(URL rootURL) throws IOException
     {
@@ -286,7 +293,7 @@ public class PetrolPump extends JFrame
                 for (int i = 0; i < 3; i++)
                     nozzles[i] = new BehaviorLoop<UpDown>();
 
-                Behavior<Double> calibration = new Behavior<>(0.0133);
+                Behavior<Double> calibration = new Behavior<>(0.001);
                 Behavior<Double> price1 = textPrice1.text.map(parseDbl);
                 Behavior<Double> price2 = textPrice2.text.map(parseDbl);
                 Behavior<Double> price3 = textPrice3.text.map(parseDbl);
@@ -332,7 +339,7 @@ public class PetrolPump extends JFrame
                 AudioClip fastRumble = Applet.newAudioClip(new URL(rootURL, "sounds/fast.wav"));
                 AudioClip slowRumble = Applet.newAudioClip(new URL(rootURL, "sounds/slow.wav"));
 
-                l = l.append(delivery.value().listen(d -> {
+                l = l.append(changes(delivery).listen(d -> {
                     switch (d) {
                     case FAST1:
                     case FAST2:
@@ -396,10 +403,10 @@ public class PetrolPump extends JFrame
                     dialog.add(ok);
                     dialog.pack();
                     dialog.setVisible(true);
-                    Listener lOK = ok.eClicked.listen(u -> {
+                    this.l = l.append(ok.eClicked.listen(u -> {
                         dialog.dispose();
                         eClearSale.send(Unit.UNIT);
-                    });
+                    }));
                 }));
             }
             catch (MalformedURLException e) {
@@ -462,16 +469,17 @@ public class PetrolPump extends JFrame
 
         // Simuate fuel pulses when 'delivery' is on.
         while (true) {
-            try { Thread.sleep(200); } catch (InterruptedException e) {}
             switch (view.delivery.sample()) {
             case FAST1:
             case FAST2:
             case FAST3:
-                view.eFuelPulses.send(5);
+                try { Thread.sleep(200); } catch (InterruptedException e) {}
+                view.eFuelPulses.send(40);
                 break;
             case SLOW1:
             case SLOW2:
             case SLOW3:
+                try { Thread.sleep(200); } catch (InterruptedException e) {}
                 view.eFuelPulses.send(2);
             }
         }
