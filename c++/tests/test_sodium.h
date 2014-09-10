@@ -53,6 +53,7 @@ class test_sodium : public CppUnit::TestFixture {
     CPPUNIT_TEST(value_then_once);
     CPPUNIT_TEST(value_twice_then_once);
     CPPUNIT_TEST(value_late_listen);
+    CPPUNIT_TEST(value_then_switch);
     CPPUNIT_TEST(mapB1);
     CPPUNIT_TEST(mapB_late_listen);
     CPPUNIT_TEST(apply1);
@@ -117,6 +118,7 @@ class test_sodium : public CppUnit::TestFixture {
     void value_then_once();
     void value_twice_then_once();
     void value_late_listen();
+    void value_then_switch();
     void mapB1();
     void mapB_late_listen();
     void apply1();

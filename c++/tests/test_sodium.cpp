@@ -651,7 +651,23 @@ void test_sodium::value_late_listen()
     unlisten();
     CPPUNIT_ASSERT(vector<int>({ 8, 2 }) == *out);
 }
-	
+
+void test_sodium::value_then_switch()
+{
+    transaction<> trans;
+    behavior_sink<int> b1(9);
+    behavior_sink<int> b2(11);
+    auto out = std::make_shared<vector<int>>();
+    behavior_sink<event<int>> be(b1.value());
+    auto unlisten = switch_e(be).listen([out] (const int& x) { out->push_back(x); });
+    trans.close();
+    b1.send(10);
+    be.send(b2.value());
+    b2.send(12);
+    unlisten();
+    CPPUNIT_ASSERT(vector<int>({ 9, 10, 11, 12 }) == *out);
+}
+
 void test_sodium::mapB1()
 {
     behavior_sink<int> b(6);

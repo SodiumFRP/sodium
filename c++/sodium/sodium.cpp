@@ -1118,9 +1118,9 @@ namespace sodium {
                 new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(
                     [pKillInner] (const std::shared_ptr<impl::node>& target, impl::transaction_impl* trans1, const light_ptr& pea) {
                         const event_& ea = *pea.cast_ptr<event_>(NULL);
-                        trans1->last([pKillInner, ea, trans1, target] () {
+                        trans1->prioritized(target, [pKillInner, ea, target] (transaction_impl* trans) {
                             KILL_ONCE(pKillInner);
-                            *pKillInner = ea.listen_raw(trans1, target, NULL, true, true);
+                            *pKillInner = ea.listen_raw(trans, target, NULL, true, true);
                         });
                     }),
 #endif
