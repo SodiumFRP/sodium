@@ -71,6 +71,7 @@ class test_sodium : public CppUnit::TestFixture {
     CPPUNIT_TEST(loop_value_snapshot);
     CPPUNIT_TEST(loop_value_hold);
     CPPUNIT_TEST(lift_loop);
+    CPPUNIT_TEST(loop_switch_e);
 #endif
     CPPUNIT_TEST_SUITE_END();
 
@@ -136,6 +137,7 @@ class test_sodium : public CppUnit::TestFixture {
     void loop_value_snapshot();
     void loop_value_hold();
     void lift_loop();
+    void loop_switch_e();
 #endif
 };
 

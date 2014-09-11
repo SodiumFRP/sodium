@@ -662,10 +662,19 @@ void test_sodium::value_then_switch()
     auto unlisten = switch_e(be).listen([out] (const int& x) { out->push_back(x); });
     trans.close();
     b1.send(10);
-    be.send(b2.value());
+    // This is an odd sort of case. We want
+    // 1. value() is supposed to simulate a behavior as an event, firing the current
+    //   value once in the transaction when we listen to it.
+    // 2. when we switch to a new event in switch_e(), any firing of the new event
+    //   that happens in that transaction should be ignored, because behaviors are
+    //   delayed. The switch should take place after the transaction.
+    // So we might think that it's sensible for switch_e() to fire out the value of
+    // the new behavior upon switching, in that same transaction. But this breaks
+    // 2., so in this case we can't maintain the "behavior as an event" fiction.
+    be.send(b2.value());  // This does NOT fire 11 for the reasons given above.
     b2.send(12);
     unlisten();
-    CPPUNIT_ASSERT(vector<int>({ 9, 10, 11, 12 }) == *out);
+    CPPUNIT_ASSERT(vector<int>({ 9, 10, 12 }) == *out);
 }
 
 void test_sodium::mapB1()
@@ -1043,6 +1052,26 @@ void test_sodium::lift_loop()
     b.send("caddy");
     CPPUNIT_ASSERT(vector<string>({ string("tea kettle"), string("tea caddy") }) == *out);
 }
+
+void test_sodium::loop_switch_e()
+{
+    auto out = std::make_shared<vector<string>>();
+    transaction<> trans;
+    event_sink<string> e1;
+    behavior_loop<event<string>> b_lp;
+    event<string> e = switch_e(b_lp);
+    e1.send("banana");
+    auto unlisten = e.listen([out] (const string& x) { out->push_back(x); });
+    behavior_sink<event<string>> b(e1);
+    b_lp.loop(b);
+    trans.close();
+    event_sink<string> e2;
+    e2.send("pear");
+    b.send(e2);
+    e2.send("apple");
+    CPPUNIT_ASSERT(vector<string>({ string("banana"), string("apple") }) == *out);
+}
+
 #endif
 
 int main(int argc, char* argv[])

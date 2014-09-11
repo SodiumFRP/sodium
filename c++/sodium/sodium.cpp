@@ -1101,12 +1101,14 @@ namespace sodium {
             SODIUM_TUPLE<impl::event_,SODIUM_SHARED_PTR<impl::node> > p = unsafe_new_event();
             const SODIUM_SHARED_PTR<impl::node>& target = SODIUM_TUPLE_GET<1>(p);
 #if defined(SODIUM_NO_CXX11)
-            SODIUM_SHARED_PTR<lambda0<void>*> pKillInner(new lambda0<void>*(
+            SODIUM_SHARED_PTR<lambda0<void>*> pKillInner(new lambda0<void>*(NULL));
 #else
-            std::shared_ptr<function<void()>*> pKillInner(new function<void()>*(
+            std::shared_ptr<function<void()>*> pKillInner(new function<void()>*(NULL));
 #endif
-                bea.impl->sample().cast_ptr<event_>(NULL)->listen_raw(trans0, target, NULL, false, true)
-            ));
+            trans0->prioritized(target, [pKillInner, bea, target] (transaction_impl* trans) {
+                if (*pKillInner == NULL)
+                    *pKillInner = bea.impl->sample().cast_ptr<event_>(NULL)->listen_raw(trans, target, NULL, false, true);
+            });
 
 #if defined(SODIUM_NO_CXX11)
             lambda0<void>* killOuter = bea.updates_().listen_raw(trans0, target,
@@ -1118,9 +1120,9 @@ namespace sodium {
                 new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(
                     [pKillInner] (const std::shared_ptr<impl::node>& target, impl::transaction_impl* trans1, const light_ptr& pea) {
                         const event_& ea = *pea.cast_ptr<event_>(NULL);
-                        trans1->prioritized(target, [pKillInner, ea, target] (transaction_impl* trans) {
+                        trans1->last([pKillInner, ea, target, trans1] () {
                             KILL_ONCE(pKillInner);
-                            *pKillInner = ea.listen_raw(trans, target, NULL, true, true);
+                            *pKillInner = ea.listen_raw(trans1, target, NULL, true, false);
                         });
                     }),
 #endif
