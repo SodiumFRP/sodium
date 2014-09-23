@@ -41,7 +41,7 @@ public class PresetAmount implements Pump
 
         PresetOut po = preset(ko.value,
                               fo,
-                              np.filling,
+                              np.fuelFlowing,
                               np.fillActive.map(o -> o.isPresent()));
         keypadActive.loop(po.keypadActive);
 
@@ -78,7 +78,7 @@ public class PresetAmount implements Pump
 
     public PresetOut preset(Behavior<Integer> presetDollars,
                             FillOut fo,
-                            Behavior<Optional<Fuel>> filling,
+                            Behavior<Optional<Fuel>> fuelFlowing,
                             Behavior<Boolean> fillActive)
     {
         Behavior<Speed> speed = Behavior.lift(
@@ -114,12 +114,12 @@ public class PresetAmount implements Pump
                                                          Delivery.OFF
                 ) :
                 Delivery.OFF,
-            filling, speed);
+            fuelFlowing, speed);
 
         Behavior<Boolean> keypadActive = Behavior.lift(
             (of, speed_) ->
                 !of.isPresent() || speed_ == Speed.FAST,
-            filling, speed);
+            fuelFlowing, speed);
 
         return new PresetOut(delivery, keypadActive);
     }

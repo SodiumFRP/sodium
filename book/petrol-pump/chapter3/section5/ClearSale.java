@@ -31,7 +31,7 @@ public class ClearSale implements Pump
         eStart.loop(np.eStart);
 
         return new Outputs()
-            .setDelivery(np.filling.map(
+            .setDelivery(np.fuelFlowing.map(
                 of ->
                     of.equals(Optional.of(Fuel.ONE))   ? Delivery.FAST1 :
                     of.equals(Optional.of(Fuel.TWO))   ? Delivery.FAST2 :
@@ -54,21 +54,21 @@ public class ClearSale implements Pump
     public static class NotifyPOSOut {
         NotifyPOSOut(Event<Fuel> eStart,
                      Behavior<Optional<Fuel>> fillActive,
-                     Behavior<Optional<Fuel>> filling,
+                     Behavior<Optional<Fuel>> fuelFlowing,
                      Event<End> eEnd,
                      Event<Unit> eBeep,
                      Event<Sale> eSaleComplete)
         {
             this.eStart = eStart;
             this.fillActive = fillActive;
-            this.filling = filling;
+            this.fuelFlowing = fuelFlowing;
             this.eEnd = eEnd;
             this.eBeep = eBeep;
             this.eSaleComplete = eSaleComplete;
         }
         public final Event<Fuel> eStart;
         public final Behavior<Optional<Fuel>> fillActive;
-        public final Behavior<Optional<Fuel>> filling;
+        public final Behavior<Optional<Fuel>> fuelFlowing;
         public final Event<End> eEnd;
         public final Event<Unit> eBeep;
         public final Event<Sale> eSaleComplete;
@@ -86,7 +86,7 @@ public class ClearSale implements Pump
         Event<Fuel> eStart = lc.eStart.gate(locked.map(l -> !l));
         Event<End> eEnd    = lc.eEnd.gate(locked);
 
-        Behavior<Optional<Fuel>> filling =
+        Behavior<Optional<Fuel>> fuelFlowing =
                 eStart.map(f -> Optional.of(f)).merge(
                 eEnd.map(f -> Optional.empty())).hold(Optional.empty());
         Behavior<Optional<Fuel>> fillActive =
@@ -101,10 +101,10 @@ public class ClearSale implements Pump
                     oFuel.isPresent() ? Optional.of(
                            new Sale(oFuel.get(), price_, dollars, liters))
                                       : Optional.empty(),
-                filling, fo.price, fo.dollarsDelivered,
+                fuelFlowing, fo.price, fo.dollarsDelivered,
                 fo.litersDelivered)));
 
-        return new NotifyPOSOut(eStart, fillActive, filling, eEnd, eBeep,
+        return new NotifyPOSOut(eStart, fillActive, fuelFlowing, eEnd, eBeep,
             eSaleComplete);
     }
 }
