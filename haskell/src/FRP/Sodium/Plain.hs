@@ -349,7 +349,10 @@ execute ev = Event gl cacheRef (dep ev)
 -- | Obtain the current value of a behavior.
 sample :: Behavior a -> Reactive a
 {-# NOINLINE sample #-}
-sample = ioReactive . unSample . sampleImpl
+sample beh = ioReactive $ do
+    let sample = sampleImpl beh
+    readIORef (sampleKeepAlive sample)  -- defeat optimizer on ghc-7.8
+    unSample sample
 
 -- | If there's more than one firing in a single transaction, combine them into
 -- one using the specified combining function.
