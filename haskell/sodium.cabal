@@ -1,5 +1,5 @@
 name:                sodium
-version:             0.11.0.1
+version:             0.11.0.2
 synopsis:            Sodium Reactive Programming (FRP) System
 description:         
   A general purpose Reactive Programming (FRP) system. This is part of a project to
@@ -54,7 +54,9 @@ description:
   .
    * 0.11.0.0 - Make 'merge' left-biased, like Reactive Banana.
   .
-   * 0.11.0.1 - Thank you Samuel Gélineau. Fix regression when using in ghc-7.8: prevent keepAlive from being GC'd early
+   * 0.11.0.1 - Fix regression when using in ghc-7.8: prevent keepAlive from being GC'd early
+  .
+   * 0.11.0.2 - Thank you Samuel Gélineau. Fix breakage in 0.11.0.1.
 
 license:             BSD3
 license-file:        LICENSE
