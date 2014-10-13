@@ -88,7 +88,7 @@ type Behaviour = R.Behavior Plain
 data Sample a = Sample {
         unSample :: IO a,
         sDep     :: Dep,
-        sampleKeepAlive :: IORef ()
+        sampleKeepAlive :: Maybe (IORef ())
     }
 
 instance R.Context Plain where
@@ -260,7 +260,7 @@ hold initA ea = do
             writeIORef bsRef $ newCurrent `seq` BehaviorState newCurrent Nothing
     keepAliveRef <- ioReactive $ newIORef ()
     sample <- ioReactive $ addCleanup_Sample unlistener
-        (Sample (bsCurrent <$> readIORef bsRef) (dep ea) keepAliveRef)
+        (Sample (bsCurrent <$> readIORef bsRef) (dep ea) (Just keepAliveRef))
     let beh = sample `seq` Behavior {
                 updates_   = ea,
                 sampleImpl = sample
@@ -351,7 +351,9 @@ sample :: Behavior a -> Reactive a
 {-# NOINLINE sample #-}
 sample beh = ioReactive $ do
     let sample = sampleImpl beh
-    readIORef (sampleKeepAlive sample)  -- defeat optimizer on ghc-7.8
+    maybe (return ())
+          readIORef
+          (sampleKeepAlive sample)  -- defeat optimizer on ghc-7.8
     unSample sample
 
 -- | If there's more than one firing in a single transaction, combine them into
@@ -725,12 +727,12 @@ instance Functor (R.Behavior Plain) where
       where
         fe = f `fmap` e
         s' = unSample s
-        fs = s' `seq` Sample (f `fmap` s') (dep s) undefined
+        fs = s' `seq` Sample (f `fmap` s') (dep s) Nothing
 
 constant :: a -> Behavior a
 constant a = Behavior {
         updates_   = never,
-        sampleImpl = Sample (return a) undefined undefined
+        sampleImpl = Sample (return a) undefined Nothing
     }
 
 data BehaviorState a = BehaviorState {
@@ -757,9 +759,11 @@ finalizeListen l unlisten = do
 -- | Add a finalizer to a Reactive.
 finalizeSample :: Sample a -> IO () -> IO (Sample a)
 {-# NOINLINE finalizeSample #-}
-finalizeSample s unlisten = do
-    mkWeakIORef (sampleKeepAlive s) unlisten
-    return s
+finalizeSample s unlisten = case sampleKeepAlive s of
+    Just keepaliveRef -> do
+        mkWeakIORef keepaliveRef unlisten
+        return s
+    Nothing -> error "finalizeSample called on sample with no keepAlive"
 
 newtype Unlistener = Unlistener (MVar (Maybe (IO ())))
 
@@ -868,7 +872,7 @@ instance Applicative (R.Behavior Plain) where
                     push (f a)
                 return (un1 >> un2)
             addCleanup_Listen unlistener l
-        s = s1' `seq` s2' `seq` Sample (($) <$> s1' <*> s2') (dep (s1, s2)) keepaliveRef
+        s = s1' `seq` s2' `seq` Sample (($) <$> s1' <*> s2') (dep (s1, s2)) (Just keepaliveRef)
 
 {-
 -- | Cross the specified event over to a different partition.
