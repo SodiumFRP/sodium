@@ -56,6 +56,10 @@ unsafeNewIORef :: a -> b -> IORef a
 {-# NOINLINE unsafeNewIORef #-}
 unsafeNewIORef v dummy = unsafePerformIO (newIORef v)
 
+-- A shared IORef which is sometimes read, but never written to.
+dummyIORef :: IORef ()
+dummyIORef = unsafeNewIORef () ()
+
 -- | Phantom type for use with 'R.Context' type class.
 data Plain
 
@@ -725,12 +729,12 @@ instance Functor (R.Behavior Plain) where
       where
         fe = f `fmap` e
         s' = unSample s
-        fs = s' `seq` Sample (f `fmap` s') (dep s) undefined
+        fs = s' `seq` Sample (f `fmap` s') (dep s) dummyIORef
 
 constant :: a -> Behavior a
 constant a = Behavior {
         updates_   = never,
-        sampleImpl = Sample (return a) undefined undefined
+        sampleImpl = Sample (return a) undefined dummyIORef
     }
 
 data BehaviorState a = BehaviorState {
