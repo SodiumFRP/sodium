@@ -1,7 +1,6 @@
 package pump;
 
-public interface Pump
-{
+public interface Pump {
     public Outputs create(Inputs inputs);
 }
 

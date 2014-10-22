@@ -5,8 +5,7 @@ import sodium.*;
 
 public class NozzlePrice implements Pump
 {
-    public Outputs create(Inputs inputs)
-    {
+    public Outputs create(Inputs inputs) {
         Behavior<UpDown> nozzle1 = inputs.eNozzle1.hold(UpDown.DOWN);
         Behavior<UpDown> nozzle2 = inputs.eNozzle2.hold(UpDown.DOWN);
         Behavior<UpDown> nozzle3 = inputs.eNozzle3.hold(UpDown.DOWN);
