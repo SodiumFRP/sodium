@@ -5,8 +5,7 @@ import sodium.*;
 
 public class CapturePriceFiltered implements Pump
 {
-    public Outputs create(Inputs inputs)
-    {
+    public Outputs create(Inputs inputs) {
         return new Outputs()
             .setPriceLCD1(perFuel(inputs.eNozzle1, inputs.price1))
             .setPriceLCD2(perFuel(inputs.eNozzle2, inputs.price2))
@@ -16,8 +15,7 @@ public class CapturePriceFiltered implements Pump
     enum StartFill { START_FILL };
 
     private static Behavior<String> perFuel(
-                Event<UpDown> eNozzle, Behavior<Double> price)
-    {
+                Event<UpDown> eNozzle, Behavior<Double> price) {
         Event<StartFill> eStartFill =
                                eNozzle.filter(u -> u == UpDown.UP)
                                       .map(u -> StartFill.START_FILL);
