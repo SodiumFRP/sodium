@@ -972,7 +972,7 @@ namespace sodium {
             event<A, P> gate(const behavior<bool, P>& g) const
             {
                 transaction<P> trans;
-                return filter_optional<A>(snapshot<bool, boost::optional<A> >(
+                return filter_optional<A, P>(snapshot<bool, boost::optional<A>>(
                     g,
 #if defined(SODIUM_NO_CXX11)
                     new impl::gate_handler<A>()
