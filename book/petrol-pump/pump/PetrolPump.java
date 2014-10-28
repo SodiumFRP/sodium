@@ -239,7 +239,7 @@ public class PetrolPump extends JFrame
                     new chapter2.section9.CapturePrice(),
                     new chapter2.section10.CapturePriceFiltered(),
                     new chapter2.section11.AccumulatePulses(),
-                    new chapter3.section2.LifeCycle(),
+                    new chapter3.section2.LifeCyclePump(),
                     new chapter3.section3.AccumulatePulses(),
                     new chapter3.section4.ShowDollars(),
                     new chapter3.section5.ClearSale(),

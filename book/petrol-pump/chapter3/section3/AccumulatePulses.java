@@ -2,7 +2,6 @@ package chapter3.section3;
 
 import pump.*;
 import chapter3.section2.LifeCycle;
-import chapter3.section2.LifeCycle.LifeCycleOut;
 import sodium.*;
 import java.util.Optional;
 
@@ -10,9 +9,9 @@ public class AccumulatePulses implements Pump
 {
     public Outputs create(Inputs inputs)
     {
-        LifeCycleOut lc = LifeCycle.lifeCycle(inputs.eNozzle1,
-                                              inputs.eNozzle2,
-                                              inputs.eNozzle3);
+        LifeCycle lc = new LifeCycle(inputs.eNozzle1,
+                                     inputs.eNozzle2,
+                                     inputs.eNozzle3);
 
         Behavior<Double> litersDelivered =
                 accumulate(lc.eStart.map(u -> Unit.UNIT),

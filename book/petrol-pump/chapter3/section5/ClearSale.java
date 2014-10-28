@@ -3,7 +3,6 @@ package chapter3.section5;
 import pump.*;
 import chapter3.section2.LifeCycle;
 import chapter3.section2.LifeCycle.End;
-import chapter3.section2.LifeCycle.LifeCycleOut;
 import chapter3.section3.AccumulatePulses;
 import chapter3.section4.ShowDollars;
 import chapter3.section4.ShowDollars.FillOut;
@@ -23,9 +22,9 @@ public class ClearSale implements Pump
                           eStart);
 
         NotifyPOSOut np = notifyPointOfSale(
-                LifeCycle.lifeCycle(inputs.eNozzle1,
-                                    inputs.eNozzle2,
-                                    inputs.eNozzle3),
+                new LifeCycle(inputs.eNozzle1,
+                              inputs.eNozzle2,
+                              inputs.eNozzle3),
                 inputs.eClearSale,
                 fo);
         eStart.loop(np.eStart);
@@ -75,7 +74,7 @@ public class ClearSale implements Pump
     };
 
     public static NotifyPOSOut notifyPointOfSale(
-             LifeCycleOut lc,
+             LifeCycle lc,
              Event<Unit> eClearSale,
              FillOut fo)
     {

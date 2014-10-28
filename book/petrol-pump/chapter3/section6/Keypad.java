@@ -1,9 +1,6 @@
 package chapter3.section6;
 
 import pump.*;
-import chapter3.section2.LifeCycle;
-import chapter3.section2.LifeCycle.End;
-import chapter3.section2.LifeCycle.LifeCycleOut;
 import chapter3.section3.AccumulatePulses;
 import chapter3.section4.ShowDollars;
 import chapter3.section4.ShowDollars.FillOut;

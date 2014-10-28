@@ -3,7 +3,6 @@ package chapter3.section7;
 import pump.*;
 import chapter3.section2.LifeCycle;
 import chapter3.section2.LifeCycle.End;
-import chapter3.section2.LifeCycle.LifeCycleOut;
 import chapter3.section3.AccumulatePulses;
 import chapter3.section4.ShowDollars;
 import chapter3.section4.ShowDollars.FillOut;
@@ -27,9 +26,9 @@ public class PresetAmount implements Pump
                           eStart);
 
         NotifyPOSOut np = ClearSale.notifyPointOfSale(
-                LifeCycle.lifeCycle(inputs.eNozzle1,
-                                    inputs.eNozzle2,
-                                    inputs.eNozzle3),
+                new LifeCycle(inputs.eNozzle1,
+                              inputs.eNozzle2,
+                              inputs.eNozzle3),
                 inputs.eClearSale,
                 fo);
         eStart.loop(np.eStart);

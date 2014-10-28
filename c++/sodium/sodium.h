@@ -505,6 +505,8 @@ namespace sodium {
         friend behavior<AA, PP> switch_b(const behavior<behavior<AA, PP>, PP>& bba);
         template <class AA, class PP>
         friend event<AA, PP> switch_e(const behavior<event<AA, PP>, PP>& bea);
+        template <class TT, class PP>
+        friend behavior<typename TT::time,PP> clock(const TT& t);
         private:
             behavior(const SODIUM_SHARED_PTR<impl::behavior_impl>& impl)
                 : impl::behavior_(impl)
