@@ -41,6 +41,8 @@ namespace sodium {
     event<A, P> split(const event<std::list<A>, P>& e);
     template <class A, class P EQ_DEF_PART>
     event<A, P> switch_e(const behavior<event<A, P>, P>& bea);
+    template <class T, class P EQ_DEF_PART>
+    behavior<typename T::time,P> clock(const T& t);
 
     namespace impl {
 

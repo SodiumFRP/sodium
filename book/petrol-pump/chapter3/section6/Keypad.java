@@ -1,43 +1,22 @@
 package chapter3.section6;
 
 import pump.*;
-import chapter3.section3.AccumulatePulses;
-import chapter3.section4.ShowDollars;
-import chapter3.section4.ShowDollars.FillOut;
 import sodium.*;
 import java.util.Optional;
 
-public class Keypad implements Pump
-{
-    public Outputs create(Inputs inputs)
-    {
-        KeypadOut ko = keypad(inputs.eKeypad, new Event<Unit>());
-        return new Outputs()
-            .setPresetLCD(ko.value.map(v ->
-                Formatters.formatSaleCost((double)v)))
-            .setBeep(ko.eBeep);
+public class Keypad {
+    public final Behavior<Integer> value;
+    public final Event<Unit> eBeep;
+
+    public Keypad(Event<Key> eKeypad, Event<Unit> eClear) {
+        this(eKeypad, eClear, new Behavior<>(true));
     }
 
-    public static class KeypadOut {
-        public KeypadOut(Behavior<Integer> value, Event<Unit> eBeep)
-        {
-            this.value = value;
-            this.eBeep = eBeep;
-        }
-        public final Behavior<Integer> value;
-        public final Event<Unit> eBeep;
-    }
-
-    public static KeypadOut keypad(Event<Key> eKeypad, Event<Unit> eClear)
-    {
-        return lockableKeypad(eKeypad, eClear, new Behavior<>(true));
-    }
-
-    public static KeypadOut lockableKeypad(Event<Key> eKeypad,
-                                           Event<Unit> eClear,
-                                           Behavior<Boolean> active)
-    {
+    public Keypad(Event<Key> eKeypad,
+                  Event<Unit> eClear,
+                  Behavior<Boolean> active) {
         BehaviorLoop<Integer> value = new BehaviorLoop<>();
+        this.value = value;
         Event<Integer> eKeyUpdate = Event.filterOptional(
             eKeypad.gate(active).snapshot(value,
                 (key, value_) -> {
@@ -63,11 +42,9 @@ public class Keypad implements Pump
                 }
             )
         );
-
         value.loop(eKeyUpdate.merge(eClear.map(u -> 0))
                              .hold(0));
-        Event<Unit> eBeep = eKeyUpdate.map(k -> Unit.UNIT);
-        return new KeypadOut(value, eBeep);
+        eBeep = eKeyUpdate.map(k -> Unit.UNIT);
     }
 }
 

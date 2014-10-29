@@ -4,8 +4,7 @@ import pump.*;
 import sodium.*;
 import java.util.Optional;
 
-public class LifeCycle
-{
+public class LifeCycle {
     public Event<Fuel> eStart;
     public Behavior<Optional<Fuel>> fillActive;
     public Event<End> eEnd;
