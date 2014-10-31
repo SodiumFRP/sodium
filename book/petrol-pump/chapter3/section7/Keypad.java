@@ -1,4 +1,4 @@
-package chapter3.section6;
+package chapter3.section7;
 
 import pump.*;
 import sodium.*;
@@ -8,17 +8,17 @@ public class Keypad {
     public final Behavior<Integer> value;
     public final Event<Unit> eBeep;
 
-    public Keypad(Event<Key> eKeypad, Event<Unit> eClear) {
-        this(eKeypad, eClear, new Behavior<>(true));
-    }
-
     public Keypad(Event<Key> eKeypad,
                   Event<Unit> eClear,
                   Behavior<Boolean> active) {
+        this(eKeypad.gate(active), eClear);
+    }
+
+    public Keypad(Event<Key> eKeypad, Event<Unit> eClear) {
         BehaviorLoop<Integer> value = new BehaviorLoop<>();
         this.value = value;
         Event<Integer> eKeyUpdate = Event.filterOptional(
-            eKeypad.gate(active).snapshot(value,
+            eKeypad.snapshot(value,
                 (key, value_) -> {
                     if (key == Key.CLEAR)
                         return Optional.of(0);

@@ -1,7 +1,7 @@
-package chapter3.section7;
+package chapter3.section9;
 
 import pump.*;
-import chapter3.section4.Fill;
+import chapter3.section5.Fill;
 import sodium.*;
 import java.util.Optional;
 
@@ -14,8 +14,7 @@ public class Preset {
     public Preset(Behavior<Integer> presetDollars,
                   Fill fi,
                   Behavior<Optional<Fuel>> fuelFlowing,
-                  Behavior<Boolean> fillActive)
-    {
+                  Behavior<Boolean> fillActive) {
         Behavior<Speed> speed = Behavior.lift(
             (presetDollars_, price, dollarsDelivered, litersDelivered) -> {
                 if (presetDollars_ == 0)
