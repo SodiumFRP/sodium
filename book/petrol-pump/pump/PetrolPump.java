@@ -227,10 +227,16 @@ public class PetrolPump extends JFrame
             try {
                 setLayout(new BorderLayout());
 
-                Container topPanel = new Container();
-                add(topPanel, BorderLayout.NORTH);
-                topPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
-                topPanel.add(new JLabel("Logic"));
+                Container topTwoPanels = new Container();
+                add(topTwoPanels, BorderLayout.NORTH);
+                topTwoPanels.setLayout(new GridLayout(0,1));
+                Container firstPanel = new Container();
+                firstPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+                topTwoPanels.add(firstPanel);
+                Container secondPanel = new Container();
+                secondPanel.setLayout(new FlowLayout(FlowLayout.LEFT));
+                topTwoPanels.add(secondPanel);
+                firstPanel.add(new JLabel("Logic"));
 
                 SComboBox<Pump> logic = new SComboBox<>(new DefaultComboBoxModel<Pump>(new Pump[] {
                     new chapter2.section3.Beeper(),
@@ -247,16 +253,16 @@ public class PetrolPump extends JFrame
                     new chapter3.section9.PresetAmountPump()
                 }));
                 logic.setRenderer(new ClassNameRenderer());
-                topPanel.add(logic);
-                topPanel.add(new JLabel("Price1"));
+                firstPanel.add(logic);
+                secondPanel.add(new JLabel("Price1"));
                 STextField textPrice1 = new STextField("2.149", 7);
-                topPanel.add(textPrice1);
-                topPanel.add(new JLabel("Price2"));
+                secondPanel.add(textPrice1);
+                secondPanel.add(new JLabel("Price2"));
                 STextField textPrice2 = new STextField("2.341", 7);
-                topPanel.add(textPrice2);
-                topPanel.add(new JLabel("Price3"));
+                secondPanel.add(textPrice2);
+                secondPanel.add(new JLabel("Price3"));
                 STextField textPrice3 = new STextField("1.499", 7);
-                topPanel.add(textPrice3);
+                secondPanel.add(textPrice3);
                 
                 Lambda1<String,Double> parseDbl = str -> {
                     try {
@@ -469,19 +475,20 @@ public class PetrolPump extends JFrame
 
         // Simuate fuel pulses when 'delivery' is on.
         while (true) {
-            switch (view.delivery.sample()) {
-            case FAST1:
-            case FAST2:
-            case FAST3:
-                try { Thread.sleep(200); } catch (InterruptedException e) {}
-                view.eFuelPulses.send(40);
-                break;
-            case SLOW1:
-            case SLOW2:
-            case SLOW3:
-                try { Thread.sleep(200); } catch (InterruptedException e) {}
-                view.eFuelPulses.send(2);
-            }
+            Transaction.runVoid(() -> {
+                switch (view.delivery.sample()) {
+                case FAST1:
+                case FAST2:
+                case FAST3:
+                    view.eFuelPulses.send(40);
+                    break;
+                case SLOW1:
+                case SLOW2:
+                case SLOW3:
+                    view.eFuelPulses.send(2);
+                }
+            });
+            try { Thread.sleep(200); } catch (InterruptedException e) {}
         }
     }
 }
