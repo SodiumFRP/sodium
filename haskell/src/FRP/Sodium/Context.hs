@@ -1,4 +1,4 @@
-{-# LANGUAGE TypeFamilies, DoRec, FlexibleContexts, ScopedTypeVariables #-}
+{-# LANGUAGE TypeFamilies, RecursiveDo, FlexibleContexts, ScopedTypeVariables #-}
 -- | Generalization of the Sodium API to allow for parallel processing.
 module FRP.Sodium.Context where
 

@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, DoRec, GADTs,
+{-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, RecursiveDo, GADTs,
     TypeFamilies, EmptyDataDecls, FlexibleInstances #-}
 {-# OPTIONS_GHC -fno-cse -fno-full-laziness #-}
 -- | Sodium Reactive Programming (FRP) system.

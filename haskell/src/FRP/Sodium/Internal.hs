@@ -1,4 +1,4 @@
-{-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, DoRec #-}
+{-# LANGUAGE GeneralizedNewtypeDeriving, ScopedTypeVariables, RecursiveDo #-}
 {-# OPTIONS_GHC -fno-cse -fno-full-laziness #-}
 module FRP.Sodium.Internal (
         C.Event(..),
