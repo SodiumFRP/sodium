@@ -303,7 +303,6 @@ public class PetrolPump extends JFrame
                 Behavior<Double> price1 = textPrice1.text.map(parseDbl);
                 Behavior<Double> price2 = textPrice2.text.map(parseDbl);
                 Behavior<Double> price3 = textPrice3.text.map(parseDbl);
-                Behavior<Mode> mode = new Behavior<>(Mode.open());
                 EventSink<Unit> eClearSale = new EventSink<>();
                 Behavior<Double> clock = new Behavior<>(0.0);
 
@@ -319,7 +318,6 @@ public class PetrolPump extends JFrame
                             price1,
                             price2,
                             price3,
-                            mode,
                             eClearSale,
                             clock
                         )
