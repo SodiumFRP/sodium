@@ -13,8 +13,7 @@ public class Inputs {
             Behavior<Double> price1,
             Behavior<Double> price2,
             Behavior<Double> price3,
-            Event<Unit> eClearSale,
-            Behavior<Double> clock) {
+            Event<Unit> eClearSale) {
         this.eNozzle1 = eNozzle1;
         this.eNozzle2 = eNozzle2;
         this.eNozzle3 = eNozzle3;
@@ -25,7 +24,6 @@ public class Inputs {
         this.price2 = price2;
         this.price3 = price3;
         this.eClearSale = eClearSale;
-        this.clock = clock;
     }
 
     public final Event<UpDown> eNozzle1;
@@ -38,5 +36,4 @@ public class Inputs {
     public final Behavior<Double> price2;
     public final Behavior<Double> price3;
     public final Event<Unit> eClearSale;
-    public final Behavior<Double> clock;
 }

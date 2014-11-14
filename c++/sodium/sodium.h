@@ -1710,6 +1710,44 @@ namespace sodium {
         return apply(apply(apply(ba.map_(fa), bb), bc), bd);
     }
 
+    /*!
+     * Lift a 5-argument function into behaviors.
+     */
+    template <class A, class B, class C, class D, class E, class F, class P EQ_DEF_PART>
+#if defined(SODIUM_NO_CXX11)
+    behavior<E, P> lift(const lambda5<E, const A&, const B&, const C&, const D&, const E&>& f,
+#else
+    behavior<E, P> lift(const std::function<F(const A&, const B&, const C&, const D&, const E&)>& f,
+#endif
+        const behavior<A, P>& ba,
+        const behavior<B, P>& bb,
+        const behavior<C, P>& bc,
+        const behavior<D, P>& bd,
+        const behavior<E, P>& be
+    )
+    {
+#if defined(SODIUM_NO_CXX11)
+        lambda1<lambda1<lambda1<lambda1<lambda1<lambda1<F, const E&>, const D&>, const C&>, const B&>, const A&>> fa(
+            new impl::lift5_handler1<A,B,C,D,E,F>(f)
+        );
+#else
+        std::function<std::function<std::function<std::function<std::function<F(const E&)>(const D&)>(const C&)>(const B&)>(const A&)> fa(
+            [f] (const A& a) -> std::function<std::function<std::function<std::function<F(const E&)>(const D&)>(const C&)>(const B&)> {
+                return [f, a] (const B& b) -> std::function<std::function<std::function<F(const E&)>(const D&)>(const C&)> {
+                    return [f, a, b] (const C& c) -> std::function<std::function<F(const E&)>(const D&)> {
+                        return [f, a, b, c] (const D& d) -> std::function<F(const E&)> {
+                            return [f, a, b, c, d] (const E& e) -> F {
+                                return f(a,b,c,d,e);
+                            };
+                        };
+                    };
+                };
+            }
+        );
+#endif
+        return apply(apply(apply(apply(ba.map_(fa), bb), bc), bd), be);
+    }
+
 #if defined(SODIUM_NO_CXX11)
     namespace impl {
         template <class A, class P>
