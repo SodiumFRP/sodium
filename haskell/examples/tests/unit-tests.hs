@@ -124,7 +124,7 @@ beh3 = TestCase $ do
     assertEqual "beh3" ["init", "second"] =<< readIORef outRef
 
 -- | This demonstrates the fact that if there are multiple updates to a behaviour
--- in a given transaction, the last one prevails.
+-- in a given transaction, the last one prevails in the result of 'value beh'.
 beh4 = TestCase $ do
     outRef <- newIORef []
     (push, unlisten) <- sync $ do
@@ -138,7 +138,21 @@ beh4 = TestCase $ do
     unlisten
     assertEqual "beh4" ["other", "second"] =<< readIORef outRef
 
+-- | This demonstrates the fact that if there are multiple updates to a behaviour
+-- in a given transaction, the last one prevails in the result of 'updates beh'.
 beh5 = TestCase $ do
+    outRef <- newIORef []
+    (push, unlisten) <- sync $ do
+        (beh, push) <- newBehavior "init"
+        unlisten <- listen (updates beh) $ \a -> modifyIORef outRef (++ [a])
+        return (push, unlisten)
+    sync $ do
+        push "first"
+        push "second"
+    unlisten
+    assertEqual "beh4" ["second"] =<< readIORef outRef
+
+beh6 = TestCase $ do
     (ea, push) <- sync newEvent
     outRef <- newIORef []
     unlisten <- sync $ do
