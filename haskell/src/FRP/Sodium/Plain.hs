@@ -129,9 +129,10 @@ instance R.Context Plain where
     split = split
 
 -- | An event that gives the updates for the behavior. If the behavior was created
--- with 'hold', then 'updates' gives you an event equivalent to the one that was held.
+-- with 'hold', then 'updates' gives you an event like to the one that was held
+-- but with only the last firing in any single transaction included.
 updates :: Behavior a -> Event a
-updates = updates_
+updates = coalesce (flip const) . updates_
 
 -- | Execute the specified 'Reactive' within a new transaction, blocking the caller
 -- until all resulting processing is complete and all callbacks have been called.
