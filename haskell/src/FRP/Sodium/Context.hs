@@ -80,7 +80,7 @@ class (
     -- ideally be commutative.
     coalesce      :: (a -> a -> a) -> Event r a -> Event r a
     -- | Throw away all event occurrences except for the first one.
-    once          :: Context r => Event r a -> Event r a
+    once          :: Event r a -> Event r a
     -- | Take each list item and put it into a new transaction of its own.
     --
     -- An example use case of this might be a situation where we are splitting
