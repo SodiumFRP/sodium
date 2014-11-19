@@ -1,4 +1,4 @@
-package chapter3.section2;
+package chapter3.section3;
 
 import pump.*;
 import sodium.*;

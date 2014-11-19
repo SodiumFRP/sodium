@@ -1,7 +1,7 @@
-package chapter3.section5;
+package chapter3.section6;
 
 import pump.*;
-import chapter3.section4.AccumulatePulsesPump;
+import chapter3.section5.AccumulatePulsesPump;
 import sodium.*;
 import java.util.Optional;
 
