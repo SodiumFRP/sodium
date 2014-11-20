@@ -14,7 +14,7 @@
         </javac>
     </target>
 
-    <target name="run">
+    <target name="run" depends="compile">
         <java classname="pump.PetrolPump" fork="true">
             <classpath>
                 <pathelement path="build/"/>
