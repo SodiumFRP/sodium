@@ -23,6 +23,10 @@
 
 #define SODIUM_CONSTANT_OPTIMIZATION
 
+// TO DO:
+// the sample_lazy() mechanism is not correct yet. The lazy value needs to be
+// fixed at the end of the transaction.
+
 namespace sodium {
     template <class A, class P> class event;
     template <class A, class P> class behavior;
