@@ -9,6 +9,7 @@ public class FillState {
 
     public FillState(Type mode) {
         this.mode = mode;
+        this.sale = null;
     }
 
     public FillState(Type mode, Sale sale) {
