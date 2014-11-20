@@ -452,8 +452,8 @@ namespace sodium {
 
         template <class S>
         struct collect_state {
-            collect_state(const S& s) : s(s) {}
-            S s;
+            collect_state(const std::function<S()>& s_lazy) : s_lazy(s_lazy) {}
+            std::function<S()> s_lazy;
         };
 
 #if defined(SODIUM_NO_CXX11)
@@ -536,6 +536,14 @@ namespace sodium {
                 return *impl->sample().template cast_ptr<A>(NULL);
             }
 
+            std::function<A()> sample_lazy() const {
+                const SODIUM_SHARED_PTR<impl::behavior_impl>& impl(this->impl);
+                return [impl] () -> A {
+                    transaction<P> trans;
+                    return *impl->sample().template cast_ptr<A>(NULL);
+                };
+            }
+
             /*!
              * Returns a new behavior with the specified cleanup added to it, such that
              * it will be executed when no copies of the new behavior are referenced.
@@ -601,8 +609,8 @@ namespace sodium {
              * is passed the input and the old state and returns the new state and output value.
              */
             template <class S, class B>
-            behavior<B, P> collect(
-                const S& initS,
+            behavior<B, P> collect_lazy(
+                const std::function<S()>& initS,
 #if defined(SODIUM_NO_CXX11)
                 const lambda2<SODIUM_TUPLE<B, S>, const A&, const S&>& f
 #else
@@ -616,9 +624,13 @@ namespace sodium {
 #else
                 auto ea = updates().coalesce([] (const A&, const A& snd) -> A { return snd; });
 #endif
-                A za = sample();
-                SODIUM_TUPLE<B,S> zbs = f(za, initS);
-                SODIUM_SHARED_PTR<impl::collect_state<S> > pState(new impl::collect_state<S>(SODIUM_TUPLE_GET<1>(zbs)));
+                std::function<A()> za_lazy = sample_lazy();
+                std::function<SODIUM_TUPLE<B,S>()> zbs = [za_lazy, initS, f] () -> SODIUM_TUPLE<B,S> {
+                    return f(za_lazy(), initS());
+                };
+                SODIUM_SHARED_PTR<impl::collect_state<S> > pState(new impl::collect_state<S>([zbs] () -> S {
+                    return SODIUM_TUPLE_GET<1>(zbs());
+                }));
                 SODIUM_TUPLE<impl::event_,SODIUM_SHARED_PTR<impl::node> > p = impl::unsafe_new_event();
 #if defined(SODIUM_NO_CXX11)
                 lambda0<void>* kill = updates().listen_raw(trans.impl(), SODIUM_TUPLE_GET<1>(p),
@@ -629,13 +641,32 @@ namespace sodium {
                 auto kill = updates().listen_raw(trans.impl(), SODIUM_TUPLE_GET<1>(p),
                     new std::function<void(const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
                         [pState, f] (const SODIUM_SHARED_PTR<impl::node>& target, impl::transaction_impl* trans, const light_ptr& ptr) {
-                            SODIUM_TUPLE<B,S> outsSt = f(*ptr.cast_ptr<A>(NULL), pState->s);
-                            pState->s = SODIUM_TUPLE_GET<1>(outsSt);
+                            SODIUM_TUPLE<B,S> outsSt = f(*ptr.cast_ptr<A>(NULL), pState->s_lazy());
+                            const S& new_s = SODIUM_TUPLE_GET<1>(outsSt);
+                            pState->s_lazy = [new_s] () { return new_s; };
                             send(target, trans, light_ptr::create<B>(SODIUM_TUPLE_GET<0>(outsSt)));
                         }), false, false);
 #endif
-                // TO DO: Convert to hold lazy
-                return event<B, P>(SODIUM_TUPLE_GET<0>(p).unsafe_add_cleanup(kill)).hold(SODIUM_TUPLE_GET<0>(zbs));
+                return event<B, P>(SODIUM_TUPLE_GET<0>(p).unsafe_add_cleanup(kill)).hold_lazy([zbs] () -> B {
+                    return SODIUM_TUPLE_GET<0>(zbs());
+                });
+            }
+
+            /**
+             * Transform a behavior with a generalized state loop (a mealy machine). The function
+             * is passed the input and the old state and returns the new state and output value.
+             */
+            template <class S, class B>
+            behavior<B, P> collect(
+                const S& initS,
+#if defined(SODIUM_NO_CXX11)
+                const lambda2<SODIUM_TUPLE<B, S>, const A&, const S&>& f
+#else
+                const std::function<std::tuple<B, S>(const A&, const S&)>& f
+#endif
+            ) const
+            {
+                return collect_lazy<S, B>([initS] () -> S { return initS; }, f);
             }
 
     };  // end class behavior
@@ -921,13 +952,11 @@ namespace sodium {
                 return behavior<A, P>(hold_(trans.impl(), light_ptr::create<A>(initA)));
             }
 
-        private:
             behavior<A, P> hold_lazy(const std::function<A()>& initA) const
             {
                 transaction<P> trans;
                 return behavior<A, P>(hold_lazy_(trans.impl(), [initA] () -> light_ptr { return light_ptr::create<A>(initA()); }));
             }
-        public:
 
             /*!
              * Sample the behavior's value as at the transaction before the
@@ -993,8 +1022,8 @@ namespace sodium {
              * input.
              */
             template <class S, class B>
-            event<B, P> collect(
-                const S& initS,
+            event<B, P> collect_lazy(
+                const std::function<S()>& initS,
 #if defined(SODIUM_NO_CXX11)
                 const lambda2<SODIUM_TUPLE<B, S>, const A&, const S&>& f
 #else
@@ -1012,17 +1041,35 @@ namespace sodium {
                 auto kill = listen_raw(trans.impl(), std::get<1>(p),
                     new std::function<void(const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
                         [pState, f] (const SODIUM_SHARED_PTR<impl::node>& target, impl::transaction_impl* trans, const light_ptr& ptr) {
-                            auto outsSt = f(*ptr.cast_ptr<A>(NULL), pState->s);
-                            pState->s = std::get<1>(outsSt);
+                            auto outsSt = f(*ptr.cast_ptr<A>(NULL), pState->s_lazy());
+                            const S& new_s = SODIUM_TUPLE_GET<1>(outsSt);
+                            pState->s_lazy = [new_s] () { return new_s; };
                             send(target, trans, light_ptr::create<B>(std::get<0>(outsSt)));
                         }), false, true);
 #endif
                 return SODIUM_TUPLE_GET<0>(p).unsafe_add_cleanup(kill);
             }
 
+            /*!
+             * Adapt an event to a new event statefully.  Always outputs one output for each
+             * input.
+             */
+            template <class S, class B>
+            event<B, P> collect(
+                const S& initS,
+#if defined(SODIUM_NO_CXX11)
+                const lambda2<SODIUM_TUPLE<B, S>, const A&, const S&>& f
+#else
+                const std::function<SODIUM_TUPLE<B, S>(const A&, const S&)>& f
+#endif
+            ) const
+            {
+                return collect_lazy<S,B>([initS] () -> S { return initS; }, f);
+            }
+
             template <class B>
-            event<B, P> accum_e(
-                const B& initB,
+            event<B, P> accum_e_lazy(
+                const std::function<B()>& initB,
 #if defined(SODIUM_NO_CXX11)
                 const lambda2<B, const A&, const B&>& f
 #else
@@ -1040,12 +1087,26 @@ namespace sodium {
                 auto kill = listen_raw(trans.impl(), SODIUM_TUPLE_GET<1>(p),
                     new std::function<void(const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
                         [pState, f] (const SODIUM_SHARED_PTR<impl::node>& target, impl::transaction_impl* trans, const light_ptr& ptr) {
-                            pState->s = f(*ptr.cast_ptr<A>(NULL), pState->s);
-                            send(target, trans, light_ptr::create<B>(pState->s));
+                            B b = f(*ptr.cast_ptr<A>(NULL), pState->s_lazy());
+                            pState->s_lazy = [b] () { return b; };
+                            send(target, trans, light_ptr::create<B>(b));
                         })
 #endif
                     , false, true);
                 return event<B, P>(SODIUM_TUPLE_GET<0>(p).unsafe_add_cleanup(kill));
+            }
+
+            template <class B>
+            event<B, P> accum_e(
+                const B& initB,
+#if defined(SODIUM_NO_CXX11)
+                const lambda2<B, const A&, const B&>& f
+#else
+                const std::function<B(const A&, const B&)>& f
+#endif
+            ) const
+            {
+                return accum_e_lazy<B>([initB] () -> B { return initB; }, f);
             }
 
             template <class B>
