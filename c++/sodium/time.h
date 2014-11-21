@@ -10,8 +10,8 @@ namespace sodium {
      * A timer that fires at the specified time.
      * The T class provides the implementation of a timer system.
      */
-    template <class T, class P EQ_DEF_PART>
-    event<unit, P> at(const T& timeSys, const behavior<boost::optional<typename T::time>>& tAlarm) {
+    template <class P EQ_DEF_PART, class T>
+    event<unit, P> at(const T& timeSys, const behavior<boost::optional<typename T::time>, P>& tAlarm) {
         using namespace boost;
         std::shared_ptr<optional<typename T::timer>> current(new optional<typename T::timer>);
         event_sink<unit, P> eOut;
@@ -50,7 +50,7 @@ namespace sodium {
     /*!
      * A behavior that always has the current clock time.
      */
-    template <class T, class P EQ_DEF_PART>
+    template <class P, class T>
     behavior<typename T::time,P> clock(const T& t)
     {
         return behavior<typename T::time,P>(SODIUM_SHARED_PTR<impl::behavior_impl>(

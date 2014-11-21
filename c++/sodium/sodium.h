@@ -45,8 +45,8 @@ namespace sodium {
     event<A, P> split(const event<std::list<A>, P>& e);
     template <class A, class P EQ_DEF_PART>
     event<A, P> switch_e(const behavior<event<A, P>, P>& bea);
-    template <class T, class P EQ_DEF_PART>
-    behavior<typename T::time,P> clock(const T& t);
+    template <class P EQ_DEF_PART, class T>
+    behavior<typename T::time, P> clock(const T& t);
 
     namespace impl {
 
@@ -511,7 +511,7 @@ namespace sodium {
         friend behavior<AA, PP> switch_b(const behavior<behavior<AA, PP>, PP>& bba);
         template <class AA, class PP>
         friend event<AA, PP> switch_e(const behavior<event<AA, PP>, PP>& bea);
-        template <class TT, class PP>
+        template <class PP, class TT>
         friend behavior<typename TT::time,PP> clock(const TT& t);
         private:
             behavior(const SODIUM_SHARED_PTR<impl::behavior_impl>& impl)
