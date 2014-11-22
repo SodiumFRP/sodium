@@ -1,7 +1,7 @@
 BUILDING SODIUM
 ===============
 
-To build (form c++ subdirectory):
+To build (from c++ subdirectory):
 
     mkdir build
     cd build
@@ -17,4 +17,4 @@ e.g., use
 
     cmake -G'Xcode' ..
 
-To generate and Xcode project
+To generate an Xcode project
