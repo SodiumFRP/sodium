@@ -26,7 +26,7 @@ namespace sodium {
             inline void unlock() {}
 #elif defined(__APPLE__)
             OSSpinLock sl;
-            spin_lock() : sl(0) {
+            spin_lock() : sl(OS_SPINLOCK_INIT) {
             }
             inline void lock() {
                 OSSpinLockLock(&sl);
@@ -34,7 +34,6 @@ namespace sodium {
             inline void unlock() {
                 OSSpinLockUnlock(&sl);
             }
-            spin_lock() {}
 #else
             bool initialized;
             pthread_spinlock_t sl;
