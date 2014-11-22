@@ -18,6 +18,7 @@
 #include <set>
 #include <list>
 #include <memory>
+#include <pthread/pthread.h>
 #if defined(SODIUM_NO_CXX11)
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
