@@ -1072,6 +1072,21 @@ void test_sodium::loop_switch_e()
     CPPUNIT_ASSERT(vector<string>({ string("banana"), string("apple") }) == *out);
 }
 
+void test_sodium::detach_sink()
+{
+    // Check that holding the sink doesn't prevent a cleanup added to an event
+    // from working.
+    event_sink<int>* esnk = new event_sink<int>;
+    shared_ptr<bool> cleanedUp(new bool(false));
+    event<int>* e(new event<int>(esnk->add_cleanup([cleanedUp] () {
+        *cleanedUp = true;
+    })));
+    CPPUNIT_ASSERT(*cleanedUp == false);
+    delete e;
+    CPPUNIT_ASSERT(*cleanedUp == true);
+    delete esnk;
+}
+
 #endif
 
 int main(int argc, char* argv[])
