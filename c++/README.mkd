@@ -1,0 +1,20 @@
+BUILDING SODIUM
+===============
+
+To build (from c++ subdirectory):
+
+    mkdir build
+    cd build
+    cmake ..
+    make
+    make install
+
+By default, the install is to prefix /usr/local.
+
+Of course, you can use any generator you want. This has been tested with Unix Makefiles and Xcode
+
+e.g., use
+
+    cmake -G'Xcode' ..
+
+To generate an Xcode project

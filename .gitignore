@@ -3,3 +3,8 @@
 *.dll
 *.pdb
 *.cache
+.DS_Store
+# Created by xcodebuild
+Build
+Logs
+info.plist
