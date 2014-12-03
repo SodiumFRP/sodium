@@ -6,7 +6,6 @@ using System.Threading;
 using NUnit.Framework;
 
 using Sodium;
-using Sodium.src.Sodium;
 
 namespace Tests.sodium
 {
@@ -24,10 +23,10 @@ namespace Tests.sodium
     [Test]
     public void TestHold()
     {
-      var e = new EventSink<Integer>();
-      Behavior<Integer> b = e.Hold(0);
-      var @out = new List<Integer>();
-      Listener l = b.Updates().Listen(new Handler<Integer> { Run = x => @out.Add(x) });
+      var e = new EventSink<int>();
+      Behavior<int> b = e.Hold(0);
+      var @out = new List<int>();
+      Listener l = b.Updates().Listen(new Handler<int> { Run = x => @out.Add(x) });
       e.Send(2);
       e.Send(9);
       l.Unlisten();
@@ -37,8 +36,8 @@ namespace Tests.sodium
     [Test]
     public void TestSnapshot()
     {
-      var b = new BehaviorSink<Integer>(0);
-      var trigger = new EventSink<Long>();
+      var b = new BehaviorSink<int>(0);
+      var trigger = new EventSink<long>();
       var @out = new List<string>();
       var l = trigger.Snapshot(b, (x, y) => x + " " + y)
           .Listen(new Handler<string> { Run = x => @out.Add(x) });
@@ -55,8 +54,8 @@ namespace Tests.sodium
     [Test]
     public void TestValues()
     {
-      var b = new BehaviorSink<Integer>(9);
-      var @out = new List<Integer>();
+      var b = new BehaviorSink<int>(9);
+      var @out = new List<int>();
       var l = b.Value().Listen(x => @out.Add(x));
       b.Send(2);
       b.Send(7);
@@ -67,8 +66,8 @@ namespace Tests.sodium
     [Test]
     public void TestConstantBehavior()
     {
-      var b = new Behavior<Integer>(12);
-      var @out = new List<Integer>();
+      var b = new Behavior<int>(12);
+      var @out = new List<int>();
       Listener l = b.Value().Listen(x => { @out.Add(x); });
       l.Unlisten();
       CollectionAssert.AreEqual(new[] { 12 }, @out.Select(x => (int)x));
@@ -77,9 +76,9 @@ namespace Tests.sodium
     [Test]
     public void TestValuesThenMap()
     {
-      var b = new BehaviorSink<Integer>(9);
-      var @out = new List<Integer>();
-      Listener l = b.Value().Map<Integer>(x => x + 100).Listen(x => { @out.Add(x); });
+      var b = new BehaviorSink<int>(9);
+      var @out = new List<int>();
+      Listener l = b.Value().Map<int>(x => x + 100).Listen(x => { @out.Add(x); });
       b.Send(2);
       b.Send(7);
       l.Unlisten();
@@ -92,17 +91,17 @@ namespace Tests.sodium
      * This needs testing separately, because the code must be done carefully to achieve
      * this.
      */
-    private static Event<Integer> DoubleUp(Event<Integer> ev)
+    private static Event<int> DoubleUp(Event<int> ev)
     {
-      return Event<Integer>.Merge(ev, ev);
+      return Event<int>.Merge(ev, ev);
     }
 
     [Test]
     public void TestValuesTwiceThenMap()
     {
-      var b = new BehaviorSink<Integer>(9);
-      var @out = new List<Integer>();
-      Listener l = DoubleUp(b.Value()).Map<Integer>(x => x + 100).Listen(x => { @out.Add(x); });
+      var b = new BehaviorSink<int>(9);
+      var @out = new List<int>();
+      Listener l = DoubleUp(b.Value()).Map<int>(x => x + 100).Listen(x => { @out.Add(x); });
       b.Send(2);
       b.Send(7);
       l.Unlisten();
@@ -112,8 +111,8 @@ namespace Tests.sodium
     [Test]
     public void TestValuesThenCoalesce()
     {
-      var b = new BehaviorSink<Integer>(9);
-      var @out = new List<Integer>();
+      var b = new BehaviorSink<int>(9);
+      var @out = new List<int>();
       Listener l = b.Value().Coalesce((fst, snd) => snd).Listen(x => { @out.Add(x); });
       b.Send(2);
       b.Send(7);
@@ -124,8 +123,8 @@ namespace Tests.sodium
     [Test]
     public void TestValuesTwiceThenCoalesce()
     {
-      var b = new BehaviorSink<Integer>(9);
-      var @out = new List<Integer>();
+      var b = new BehaviorSink<int>(9);
+      var @out = new List<int>();
       Listener l = DoubleUp(b.Value()).Coalesce((fst, snd) => fst + snd).Listen(x => { @out.Add(x); });
       b.Send(2);
       b.Send(7);
@@ -136,9 +135,9 @@ namespace Tests.sodium
     [Test]
     public void TestValuesThenSnapshot()
     {
-      var bi = new BehaviorSink<Integer>(9);
-      var bc = new BehaviorSink<Character>('a');
-      var @out = new List<Character>();
+      var bi = new BehaviorSink<int>(9);
+      var bc = new BehaviorSink<char>('a');
+      var @out = new List<char>();
       Listener l = bi.Value().Snapshot(bc).Listen(x => { @out.Add(x); });
       bc.Send('b');
       bi.Send(2);
@@ -151,9 +150,9 @@ namespace Tests.sodium
     [Test]
     public void TestValuesTwiceThenSnapshot()
     {
-      var bi = new BehaviorSink<Integer>(9);
-      var bc = new BehaviorSink<Character>('a');
-      var @out = new List<Character>();
+      var bi = new BehaviorSink<int>(9);
+      var bc = new BehaviorSink<char>('a');
+      var @out = new List<char>();
       Listener l = DoubleUp(bi.Value()).Snapshot(bc).Listen(x => { @out.Add(x); });
       bc.Send('b');
       bi.Send(2);
@@ -166,10 +165,10 @@ namespace Tests.sodium
     [Test]
     public void TestValuesThenMerge()
     {
-      var bi = new BehaviorSink<Integer>(9);
-      var bj = new BehaviorSink<Integer>(2);
-      var @out = new List<Integer>();
-      Listener l = Event<Integer>.MergeWith((x, y) => x + y, bi.Value(), bj.Value())
+      var bi = new BehaviorSink<int>(9);
+      var bj = new BehaviorSink<int>(2);
+      var @out = new List<int>();
+      Listener l = Event<int>.MergeWith((x, y) => x + y, bi.Value(), bj.Value())
           .Listen(x => { @out.Add(x); });
       bi.Send(1);
       bj.Send(4);
@@ -180,8 +179,8 @@ namespace Tests.sodium
     [Test]
     public void TestValuesThenFilter()
     {
-      var b = new BehaviorSink<Integer>(9);
-      var @out = new List<Integer>();
+      var b = new BehaviorSink<int>(9);
+      var @out = new List<int>();
       Listener l = b.Value().Filter(a => true).Listen(x => { @out.Add(x); });
       b.Send(2);
       b.Send(7);
@@ -192,8 +191,8 @@ namespace Tests.sodium
     [Test]
     public void TestValuesTwiceThenFilter()
     {
-      var b = new BehaviorSink<Integer>(9);
-      var @out = new List<Integer>();
+      var b = new BehaviorSink<int>(9);
+      var @out = new List<int>();
       Listener l = DoubleUp(b.Value()).Filter(a => true).Listen(x => { @out.Add(x); });
       b.Send(2);
       b.Send(7);
@@ -204,8 +203,8 @@ namespace Tests.sodium
     [Test]
     public void TestValuesThenOnce()
     {
-      var b = new BehaviorSink<Integer>(9);
-      var @out = new List<Integer>();
+      var b = new BehaviorSink<int>(9);
+      var @out = new List<int>();
       Listener l = b.Value().Once().Listen(x => { @out.Add(x); });
       b.Send(2);
       b.Send(7);
@@ -216,8 +215,8 @@ namespace Tests.sodium
     [Test]
     public void TestValuesTwiceThenOnce()
     {
-      var b = new BehaviorSink<Integer>(9);
-      var @out = new List<Integer>();
+      var b = new BehaviorSink<int>(9);
+      var @out = new List<int>();
       Listener l = DoubleUp(b.Value()).Once().Listen(x => { @out.Add(x); });
       b.Send(2);
       b.Send(7);
@@ -228,9 +227,9 @@ namespace Tests.sodium
     [Test]
     public void TestValuesLateListen()
     {
-      var b = new BehaviorSink<Integer>(9);
-      var @out = new List<Integer>();
-      Event<Integer> value = b.Value();
+      var b = new BehaviorSink<int>(9);
+      var @out = new List<int>();
+      Event<int> value = b.Value();
       b.Send(8);
       Listener l = value.Listen(x => { @out.Add(x); });
       b.Send(2);
@@ -241,7 +240,7 @@ namespace Tests.sodium
     [Test]
     public void TestMapB()
     {
-      var b = new BehaviorSink<Integer>(6);
+      var b = new BehaviorSink<int>(6);
       var @out = new List<String>();
       Listener l = b.Map(x => x.ToString())
           .Value().Listen(x => { @out.Add(x); });
@@ -253,7 +252,7 @@ namespace Tests.sodium
     [Test]
     public void TestMapBLateListen()
     {
-      var b = new BehaviorSink<Integer>(6);
+      var b = new BehaviorSink<int>(6);
       var @out = new List<String>();
       Behavior<String> bm = b.Map(x => x.ToString());
       b.Send(2);
@@ -274,10 +273,10 @@ namespace Tests.sodium
     [Test]
     public void TestApply()
     {
-      var bf = new BehaviorSink<Func<Long, String>>(b => "1 " + b);
-      var ba = new BehaviorSink<Long>(5L);
+      var bf = new BehaviorSink<Func<long, String>>(b => "1 " + b);
+      var ba = new BehaviorSink<long>(5L);
       var @out = new List<String>();
-      Listener l = Behavior<Long>.Apply(bf, ba).Value().Listen(x => { @out.Add(x); });
+      Listener l = Behavior<long>.Apply(bf, ba).Value().Listen(x => { @out.Add(x); });
       bf.Send(b => "12 " + b);
       ba.Send(6L);
       l.Unlisten();
@@ -287,10 +286,10 @@ namespace Tests.sodium
     [Test]
     public void TestLift()
     {
-      var a = new BehaviorSink<Integer>(1);
-      var b = new BehaviorSink<Long>(5L);
+      var a = new BehaviorSink<int>(1);
+      var b = new BehaviorSink<long>(5L);
       var @out = new List<String>();
-      Listener l = Behavior<Integer>.Lift(
+      Listener l = Behavior<int>.Lift(
         (x, y) => x + " " + y,
         a,
         b
@@ -304,10 +303,10 @@ namespace Tests.sodium
     [Test]
     public void TestLiftGlitch()
     {
-      var a = new BehaviorSink<Integer>(1);
-      Behavior<Integer> a3 = a.Map<Integer>(x => x * 3);
-      Behavior<Integer> a5 = a.Map<Integer>(x => x * 5);
-      Behavior<String> b = Behavior<Integer>.Lift((x, y) => x + " " + y, a3, a5);
+      var a = new BehaviorSink<int>(1);
+      Behavior<int> a3 = a.Map<int>(x => x * 3);
+      Behavior<int> a5 = a.Map<int>(x => x * 5);
+      Behavior<String> b = Behavior<int>.Lift((x, y) => x + " " + y, a3, a5);
       var @out = new List<String>();
       Listener l = b.Value().Listen(x => { @out.Add(x); });
       a.Send(2);
@@ -318,8 +317,8 @@ namespace Tests.sodium
     [Test]
     public void TestHoldIsDelayed()
     {
-      var e = new EventSink<Integer>();
-      Behavior<Integer> h = e.Hold(0);
+      var e = new EventSink<int>();
+      Behavior<int> h = e.Hold(0);
       Event<String> pair = e.Snapshot(h, (a, b) => a + " " + b);
       var @out = new List<String>();
       Listener l = pair.Listen(x => { @out.Add(x); });
@@ -331,16 +330,17 @@ namespace Tests.sodium
 
     class SB
     {
-      public SB(Character a, Character b, Behavior<Character> sw)
+      public SB(string a, string b, Behavior<string> sw)
       {
         A = a;
         B = b;
         Sw = sw;
       }
-      public readonly Character A;
-      public readonly Character B;
-      public readonly Behavior<Character> Sw;
+      public readonly string A;
+      public readonly string B;
+      public readonly Behavior<string> Sw;
     }
+
 
     [Test]
     public void TestSwitchB()
@@ -348,48 +348,48 @@ namespace Tests.sodium
       var esb = new EventSink<SB>();
       // Split each field @out of SB so we can update multiple behaviours in a
       // single transaction.
-      Behavior<Character> ba = esb.Map(s => s.A).FilterNotNull().Hold('A');
-      Behavior<Character> bb = esb.Map(s => s.B).FilterNotNull().Hold('a');
-      Behavior<Behavior<Character>> bsw = esb.Map(s => s.Sw).FilterNotNull().Hold(ba);
-      Behavior<Character> bo = Behavior<Character>.SwitchB(bsw);
-      var @out = new List<Character>();
+      Behavior<string> ba = esb.Map(s => s.A).FilterNotNull().Hold("A");
+      Behavior<string> bb = esb.Map(s => s.B).FilterNotNull().Hold("a");
+      Behavior<Behavior<string>> bsw = esb.Map(s => s.Sw).FilterNotNull().Hold(ba);
+      Behavior<string> bo = Behavior<string>.SwitchB(bsw);
+      var @out = new List<string>();
       Listener l = bo.Value().Listen(c => { @out.Add(c); });
-      esb.Send(new SB('B', 'b', null));
-      esb.Send(new SB('C', 'c', bb));
-      esb.Send(new SB('D', 'd', null));
-      esb.Send(new SB('E', 'e', ba));
-      esb.Send(new SB('F', 'f', null));
+      esb.Send(new SB("B", "b", null));
+      esb.Send(new SB("C", "c", bb));
+      esb.Send(new SB("D", "d", null));
+      esb.Send(new SB("E", "e", ba));
+      esb.Send(new SB("F", "f", null));
       esb.Send(new SB(null, null, bb));
       esb.Send(new SB(null, null, ba));
-      esb.Send(new SB('G', 'g', bb));
-      esb.Send(new SB('H', 'h', ba));
-      esb.Send(new SB('I', 'i', ba));
+      esb.Send(new SB("G", "g", bb));
+      esb.Send(new SB("H", "h", ba));
+      esb.Send(new SB("I", "i", ba));
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 'A', 'B', 'c', 'd', 'E', 'F', 'f', 'F', 'g', 'H', 'I' }, @out.Select(x => (char)x));
+      CollectionAssert.AreEqual(new[] { "A", "B", "c", "d", "E", "F", "f", "F", "g", "H", "I" }, @out.Select(x => (string)x));
     }
 
     class SE
     {
-      public SE(Character a, Character b, Event<Character> sw)
+      public SE(char a, char b, Event<char> sw)
       {
         A = a;
         B = b;
         Sw = sw;
       }
-      public readonly Character A;
-      public readonly Character B;
-      public readonly Event<Character> Sw;
+      public readonly char A;
+      public readonly char B;
+      public readonly Event<char> Sw;
     }
 
     [Test]
     public void TestSwitchE()
     {
       var ese = new EventSink<SE>();
-      Event<Character> ea = ese.Map(s => s.A).FilterNotNull();
-      Event<Character> eb = ese.Map(s => s.B).FilterNotNull();
-      Behavior<Event<Character>> bsw = ese.Map(s => s.Sw).FilterNotNull().Hold(ea);
-      var @out = new List<Character>();
-      Event<Character> eo = Behavior<Character>.SwitchE(bsw);
+      Event<char> ea = ese.Map(s => s.A).FilterNotNull();
+      Event<char> eb = ese.Map(s => s.B).FilterNotNull();
+      Behavior<Event<char>> bsw = ese.Map(s => s.Sw).FilterNotNull().Hold(ea);
+      var @out = new List<char>();
+      Event<char> eo = Behavior<char>.SwitchE(bsw);
       Listener l = eo.Listen(@out.Add);
       ese.Send(new SE('A', 'a', null));
       ese.Send(new SE('B', 'b', null));
@@ -407,15 +407,15 @@ namespace Tests.sodium
     [Test]
     public void TestLoopBehavior()
     {
-      var ea = new EventSink<Integer>();
-      Behavior<Integer> sum_out = Transaction.Run(() =>
+      var ea = new EventSink<int>();
+      Behavior<int> sum_out = Transaction.Run(() =>
       {
-        var sum = new BehaviorLoop<Integer>();
-        Behavior<Integer> sumOut = ea.Snapshot<Integer, Integer>(sum, (x, y) => x + y).Hold(0);
+        var sum = new BehaviorLoop<int>();
+        Behavior<int> sumOut = ea.Snapshot<int, int>(sum, (x, y) => x + y).Hold(0);
         sum.Loop(sumOut);
         return sumOut;
       });
-      var @out = new List<Integer>();
+      var @out = new List<int>();
       Listener l = sum_out.Value().Listen(x => { @out.Add(x); });
       ea.Send(2);
       ea.Send(3);
@@ -428,12 +428,12 @@ namespace Tests.sodium
     [Test]
     public void TestCollect()
     {
-      var ea = new EventSink<Integer>();
-      var @out = new List<Integer>();
-      Behavior<Integer> sum = ea.Hold(100).Collect(
-        (Integer)0,
+      var ea = new EventSink<int>();
+      var @out = new List<int>();
+      Behavior<int> sum = ea.Hold(100).Collect(
+        (int)0,
         //(a,s) => new Tuple2(a+s, a+s)
-        (a, s) => new Tuple<Integer, Integer>(a + s, a + s));
+        (a, s) => new Tuple<int, int>(a + s, a + s));
       Listener l = sum.Value().Listen(x => { @out.Add(x); });
       ea.Send(5);
       ea.Send(7);
@@ -447,9 +447,9 @@ namespace Tests.sodium
     [Test]
     public void TestAccum()
     {
-      var ea = new EventSink<Integer>();
-      var @out = new List<Integer>();
-      Behavior<Integer> sum = ea.Accum<Integer>(100, (a, s) => a + s);
+      var ea = new EventSink<int>();
+      var @out = new List<int>();
+      Behavior<int> sum = ea.Accum<int>(100, (a, s) => a + s);
       Listener l = sum.Value().Listen(x => { @out.Add(x); });
       ea.Send(5);
       ea.Send(7);

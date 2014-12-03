@@ -3,7 +3,7 @@ using System;
 namespace Sodium
 {
 
-  public class Behavior<TA> : IDisposable where TA : class
+  public class Behavior<TA> : IDisposable
   {
     protected readonly Event<TA> Event;
     TA _eventValue;
@@ -19,12 +19,11 @@ namespace Sodium
       set
       {
         _eventValue = value;
-        _isEventValueSet = value != null;
+        _isEventValueSet = true;
       }
     }
     void ResetEventValue()
     {
-      _eventValue = null;
       _isEventValueSet = false;
     }
 
@@ -43,13 +42,12 @@ namespace Sodium
       set
       {
         _valueUpdate = value;
-        _isValueUpdateSet = value != null;
+        _isValueUpdateSet = true;
       }
     }
 
     void ResetValueUpdate()
     {
-      _valueUpdate = null;
       _isValueUpdateSet = false;
     }
 
@@ -164,7 +162,7 @@ namespace Sodium
     ///
     ///Transform the behavior's value according to the supplied function.
     ///
-    public Behavior<TB> Map<TB>(Func<TA, TB> f) where TB : class
+    public Behavior<TB> Map<TB>(Func<TA, TB> f) 
     {
       return Updates().Map(f).HoldLazy(() => f(SampleNoTrans()));
     }
@@ -173,8 +171,6 @@ namespace Sodium
     ///Lift a binary function into behaviors.
     ///
     public Behavior<TC> Lift<TB, TC>(Func<TA, TB, TC> f, Behavior<TB> b)
-      where TB : class
-      where TC : class
     {
       var ffa = new Func<TA, Func<TB, TC>>(
         aa => (bb => f(aa, bb)));
@@ -186,9 +182,6 @@ namespace Sodium
     ///Lift a binary function into behaviors.
     ///
     public static Behavior<TC> Lift<TA, TB, TC>(Func<TA, TB, TC> f, Behavior<TA> a, Behavior<TB> b)
-      where TA : class
-      where TB : class
-      where TC : class
     {
       return a.Lift(f, b);
     }
@@ -197,9 +190,6 @@ namespace Sodium
     ///Lift a ternary function into behaviors.
     ///
     public Behavior<TD> Lift<TB, TC, TD>(Func<TA, TB, TC, TD> f, Behavior<TB> b, Behavior<TC> c)
-      where TB : class
-      where TC : class
-      where TD : class
     {
       var ffa = new Func<TA, Func<TB, Func<TC, TD>>>(aa => (bb => new Func<TC, TD>(cc => f(aa, bb, cc))));
       Behavior<Func<TB, Func<TC, TD>>> bf = Map(ffa);
@@ -210,10 +200,6 @@ namespace Sodium
     ///Lift a ternary function into behaviors.
     ///
     public static Behavior<TD> Lift<TA, TB, TC, TD>(Func<TA, TB, TC, TD> f, Behavior<TA> a, Behavior<TB> b, Behavior<TC> c)
-      where TA : class
-      where TB : class
-      where TC : class
-      where TD : class
     {
       return a.Lift(f, b, c);
     }
@@ -223,8 +209,6 @@ namespace Sodium
     ///primitive for all function lifting.
     ///
     public static Behavior<TB> Apply<TA, TB>(Behavior<Func<TA, TB>> bf, Behavior<TA> ba)
-      where TA : class
-      where TB : class
     {
       var @out = new EventSink<TB>();
 
@@ -264,7 +248,7 @@ namespace Sodium
     ///
     ///Unwrap a behavior inside another behavior to give a time-varying behavior implementation.
     ///
-    public static Behavior<TA> SwitchB<TA>(Behavior<Behavior<TA>> bba) where TA : class
+    public static Behavior<TA> SwitchB<TA>(Behavior<Behavior<TA>> bba) 
     {
       Func<TA> za = () => bba.SampleNoTrans().SampleNoTrans();
       var @out = new EventSink<TA>();
@@ -295,12 +279,12 @@ namespace Sodium
     ///
     ///Unwrap an event inside a behavior to give a time-varying event implementation.
     ///
-    public static Event<TA> SwitchE<TA>(Behavior<Event<TA>> bea) where TA : class
+    public static Event<TA> SwitchE<TA>(Behavior<Event<TA>> bea) 
     {
       return Transaction.Apply(trans => SwitchE(trans, bea));
     }
 
-    private static Event<TA> SwitchE<TA>(Transaction trans1, Behavior<Event<TA>> bea) where TA : class
+    private static Event<TA> SwitchE<TA>(Transaction trans1, Behavior<Event<TA>> bea) 
     {
       var @out = new EventSink<TA>();
       var h2 = new TransactionHandler<TA>
@@ -328,8 +312,6 @@ namespace Sodium
     ///is passed the input and the old state and returns the new state and output value.
     ///
     public Behavior<TB> Collect<TB, TS>(TS initState, Func<TA, TS, Tuple<TB, TS>> f)
-      where TS : class
-      where TB : class
     {
       return Transaction.Run(() =>
       {

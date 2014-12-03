@@ -2,15 +2,12 @@
 using System;
 using System.Collections.Generic;
 
-using Sodium.src.Sodium;
-
-using Boolean = Sodium.src.Sodium.Boolean;
 
 namespace Sodium
 {
-  public class Event<TA> where TA : class
+  public class Event<TA>
   {
-    private class ListenerImplementation<TA> : Listener, IDisposable where TA : class
+    private class ListenerImplementation<TA> : Listener, IDisposable
     {
       private readonly Event<TA> _event;
       private readonly TransactionHandler<TA> action;
@@ -104,7 +101,7 @@ namespace Sodium
     ///
     ///Transform the event's value according to the supplied function.
     ///
-    public Event<TB> Map<TB>(Func<TA, TB> f) where TB : class
+    public Event<TB> Map<TB>(Func<TA, TB> f)
     {
       Event<TA> ev = this;
       var @out = new EventSink<TB>
@@ -150,7 +147,7 @@ namespace Sodium
     ///
     ///Variant of snapshot that throws away the event's value and captures the behavior's.
     ///
-    public Event<TB> Snapshot<TB>(Behavior<TB> beh) where TB : class
+    public Event<TB> Snapshot<TB>(Behavior<TB> beh) 
     {
       return Snapshot(beh, (a, b) => b);
     }
@@ -161,8 +158,6 @@ namespace Sodium
     /// before any state changes of the current transaction are applied through 'hold's.
     ///
     public Event<TC> Snapshot<TB, TC>(Behavior<TB> b, Func<TA, TB, TC> f)
-      where TC : class
-      where TB : class
     {
       Event<TA> ev = this;
       var @out = new EventSink<TC>
@@ -198,7 +193,7 @@ namespace Sodium
     ///their ordering is retained. In many common cases the ordering will
     ///be undefined.
     ///
-    public static Event<TA> Merge<TA>(Event<TA> ea, Event<TA> eb) where TA : class
+    public static Event<TA> Merge<TA>(Event<TA> ea, Event<TA> eb) 
     {
       var @out = new EventSink<TA>
       {
@@ -317,7 +312,7 @@ namespace Sodium
     ///within the same transaction), they are combined using the same logic as
     ///'coalesce'.
     ///
-    public static Event<TA> MergeWith<TA>(Func<TA, TA, TA> f, Event<TA> ea, Event<TA> eb) where TA : class
+    public static Event<TA> MergeWith<TA>(Func<TA, TA, TA> f, Event<TA> ea, Event<TA> eb)
     {
       return Merge(ea, eb).Coalesce(f);
     }
@@ -325,7 +320,7 @@ namespace Sodium
     ///
     ///Only keep event occurrences for which the predicate returns true.
     ///
-    public Event<TA> Filter(Func<TA, Boolean> f)
+    public Event<TA> Filter(Func<TA, bool> f)
     {
       Event<TA> ev = this;
       var @out = new EventSink<TA>
@@ -376,7 +371,7 @@ namespace Sodium
     ///
     ///Filter the empty values out, and strip the Optional wrapper from the present ones.
     ///
-    public static Event<TA> FilterOptional<TA>(Event<Optional<TA>> ev) where TA : class
+    public static Event<TA> FilterOptional<TA>(Event<Optional<TA>> ev)
     {
       var @out = new EventSink<TA>
       {
@@ -423,18 +418,17 @@ namespace Sodium
     ///Note that the behavior's value is as it was at the start of the transaction,
     ///that is, no state changes from the current transaction are taken into account.
     ///
-    public Event<TA> Gate(Behavior<Boolean> bPred)
-    {
-      return Snapshot(bPred, (a, pred) => pred ? a : null).FilterNotNull();
-    }
+    //TODO: Fix null for value type.
+    //public Event<TA> Gate(Behavior<Boolean> bPred)
+    //{
+    //  return Snapshot(bPred, (a, pred) => pred ? a : null).FilterNotNull();
+    //}
 
     ///
     ///Transform an event with a generalized state loop (a mealy machine). The function
     ///is passed the input and the old state and returns the new state and output value.
     ///
     public Event<TB> Collect<TB, TS>(TS initState, Func<TA, TS, Tuple<TB, TS>> f)
-      where TB : class
-      where TS : class
     {
       return Transaction.Run(() =>
       {
@@ -452,7 +446,7 @@ namespace Sodium
     ///
     ///Accumulate on input event, outputting the new state each time.
     ///
-    public Behavior<TS> Accum<TS>(TS initState, Func<TA, TS, TS> f) where TS : class
+    public Behavior<TS> Accum<TS>(TS initState, Func<TA, TS, TS> f) 
     {
       return Transaction.Run(() =>
       {
@@ -522,7 +516,7 @@ namespace Sodium
 
   }
 
-  public class CoalesceHandler<TA> : TransactionHandler<TA> where TA : class
+  public class CoalesceHandler<TA> : TransactionHandler<TA>
   {
     public CoalesceHandler(Func<TA, TA, TA> f, EventSink<TA> @out)
     {
@@ -543,7 +537,7 @@ namespace Sodium
               {
                 @out.Send(trans2, thiz.accum);
                 thiz.accumValid = false;
-                thiz.accum = null;
+                thiz.accum = default(TA);
               }
             });
           accum = a;

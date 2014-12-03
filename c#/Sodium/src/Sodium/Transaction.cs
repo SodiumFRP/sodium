@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 
 using JMBucknall.Containers;
 
@@ -42,10 +41,10 @@ namespace Sodium
 
       public int CompareTo(Entry other)
       {
-	    // Note: This gives the reverse answer compared with the Java version,
-		// because the Java PriorityQueue pulls off the lowest-numbered value
-	    // and ours pulls off the highest.
-		int answer = other.Rank.CompareTo(Rank);
+      // Note: This gives the reverse answer compared with the Java version,
+    // because the Java PriorityQueue pulls off the lowest-numbered value
+      // and ours pulls off the highest.
+    int answer = other.Rank.CompareTo(Rank);
         if (answer == 0)
         {  // Same rank: preserve chronological sequence.
           if (seq < other.seq) answer = 1;

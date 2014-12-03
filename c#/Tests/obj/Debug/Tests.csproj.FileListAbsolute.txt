@@ -1,0 +1,9 @@
+C:\Users\ml\Documents\GitHub\sodium\c#\Tests\bin\Debug\Tests.dll
+C:\Users\ml\Documents\GitHub\sodium\c#\Tests\bin\Debug\Tests.pdb
+C:\Users\ml\Documents\GitHub\sodium\c#\Tests\bin\Debug\nunit.framework.dll
+C:\Users\ml\Documents\GitHub\sodium\c#\Tests\bin\Debug\Sodium.dll
+C:\Users\ml\Documents\GitHub\sodium\c#\Tests\bin\Debug\Sodium.pdb
+C:\Users\ml\Documents\GitHub\sodium\c#\Tests\bin\Debug\nunit.framework.xml
+C:\Users\ml\Documents\GitHub\sodium\c#\Tests\obj\Debug\Tests.csprojResolveAssemblyReference.cache
+C:\Users\ml\Documents\GitHub\sodium\c#\Tests\obj\Debug\Tests.dll
+C:\Users\ml\Documents\GitHub\sodium\c#\Tests\obj\Debug\Tests.pdb

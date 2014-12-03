@@ -45,7 +45,6 @@
     <Compile Include="src\Sodium\Behavior.cs" />
     <Compile Include="src\Sodium\BehaviorLoop.cs" />
     <Compile Include="src\Sodium\BehaviorSink.cs" />
-    <Compile Include="src\Sodium\ValueClasses.cs" />
     <Compile Include="src\Sodium\Event.cs" />
     <Compile Include="src\Sodium\EventLoop.cs" />
     <Compile Include="src\Sodium\EventSink.cs" />

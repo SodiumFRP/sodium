@@ -18,18 +18,26 @@ namespace JMBucknall.Containers
 {
 
   [Serializable]
-  public struct HeapEntry<TA> where TA : class
+  public struct HeapEntry<TA> 
   {
     private TA item;
     private IComparable priority;
+    bool itemSet;
+
     public HeapEntry(TA item, IComparable priority)
     {
       this.item = item;
       this.priority = priority;
+      this.itemSet = true;
     }
     public TA Item
     {
-      get { return item; }
+      get
+      {
+        if(itemSet == false)
+          throw new Exception("Item not set");  
+        return item;
+      }
     }
     public IComparable Priority
     {
@@ -37,13 +45,13 @@ namespace JMBucknall.Containers
     }
     public void Clear()
     {
-      item = null;
+      itemSet = false;
       priority = null;
     }
   }
 
   [Serializable]
-  public class PriorityQueue<TA> : ICollection, ISerializable where TA : class, IComparable<TA>
+  public class PriorityQueue<TA> : ICollection, ISerializable where TA : IComparable<TA>
   {
     private int count;
     private int capacity;
@@ -192,7 +200,7 @@ namespace JMBucknall.Containers
 
     #region Priority Queue enumerator
     [Serializable]
-    private class PriorityQueueEnumerator<TA> : IEnumerator<TA> where TA : class, IComparable<TA>
+    private class PriorityQueueEnumerator<TA> : IEnumerator<TA> where TA : IComparable<TA>
     {
       private int index;
       private PriorityQueue<TA> pq;
