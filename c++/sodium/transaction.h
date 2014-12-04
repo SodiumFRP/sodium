@@ -18,7 +18,11 @@
 #include <set>
 #include <list>
 #include <memory>
+#ifdef __linux
+#include <pthread.h>
+#else
 #include <pthread/pthread.h>
+#endif
 #if defined(SODIUM_NO_CXX11)
 #include <boost/shared_ptr.hpp>
 #include <boost/weak_ptr.hpp>
