@@ -640,10 +640,14 @@ namespace sodium {
                         bool suppressEarlierFirings) -> std::function<void()>* {  // Register listener
                     SODIUM_SHARED_PTR<node> n = n_weak.lock();
                     if (n) {
+#if !defined(SODIUM_SINGLE_THREADED)
                         trans->part->mx.lock();
+#endif
                         if (n->link(h.get(), target))
                             trans->to_regen = true;
+#if !defined(SODIUM_SINGLE_THREADED)
                         trans->part->mx.unlock();
+#endif
                         if (!suppressEarlierFirings && n->firings.begin() != n->firings.end()) {
                             SODIUM_FORWARD_LIST<light_ptr> firings = n->firings;
                             trans->prioritized(target, [target, h, firings] (transaction_impl* trans) {
