@@ -28,16 +28,20 @@ namespace Sodium
       throw new InvalidOperationException();
     }
 
+    private Optional()
+    {
+      IsPresent = false;
+    }
+
     public Optional(T value)
     {
       this.value = value;
       IsPresent = true;
     }
 
-    public Optional<T> Empty()
+    public static Optional<T> Empty()
     {
-      IsPresent = false;
-      return this;
+      return new Optional<T>();
     }
 
     public static explicit operator T(Optional<T> optional)

@@ -7,8 +7,6 @@ using NUnit.Framework;
 
 using Sodium;
 
-using Strilanc.Value;
-
 namespace Tests.sodium
 {
   [TestFixture]
@@ -152,7 +150,7 @@ namespace Tests.sodium
       List<String> @out = new List<string>();
       Listener l = Event<Optional<String>>.FilterOptional(e).Listen(s => { @out.Add(s); });
       e.Send(new Optional<string> ("tomato"));
-      e.Send(new Optional<string>.Empty());
+      e.Send(Optional<string>.Empty());
       e.Send(new Optional<string>("peach"));
       l.Unlisten();
       CollectionAssert.AreEqual(new[] { "tomato", "peach" }, @out);
