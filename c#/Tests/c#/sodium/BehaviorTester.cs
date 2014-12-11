@@ -60,7 +60,7 @@ namespace Tests.sodium
       b.Send(2);
       b.Send(7);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 9, 2, 7 }, @out.Select(x => (int)x));
+      CollectionAssert.AreEqual(new[] { 9, 2, 7 }, @out);
     }
 
     [Test]
@@ -70,7 +70,7 @@ namespace Tests.sodium
       var @out = new List<int>();
       Listener l = b.Value().Listen(x => { @out.Add(x); });
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 12 }, @out.Select(x => (int)x));
+      CollectionAssert.AreEqual(new[] { 12 }, @out);
     }
 
     [Test]
@@ -82,7 +82,7 @@ namespace Tests.sodium
       b.Send(2);
       b.Send(7);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 109, 102, 107 }, @out.Select(x => (int)x));
+      CollectionAssert.AreEqual(new[] { 109, 102, 107 }, @out);
     }
 
     /**
@@ -105,7 +105,7 @@ namespace Tests.sodium
       b.Send(2);
       b.Send(7);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 109, 109, 102, 102, 107, 107 }, @out.Select(x => (int)x));
+      CollectionAssert.AreEqual(new[] { 109, 109, 102, 102, 107, 107 }, @out);
     }
 
     [Test]
@@ -117,7 +117,7 @@ namespace Tests.sodium
       b.Send(2);
       b.Send(7);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 9, 2, 7 }, @out.Select(x => (int)x));
+      CollectionAssert.AreEqual(new[] { 9, 2, 7 }, @out);
     }
 
     [Test]
@@ -129,7 +129,7 @@ namespace Tests.sodium
       b.Send(2);
       b.Send(7);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 18, 4, 14 }, @out.Select(x => (int)x));
+      CollectionAssert.AreEqual(new[] { 18, 4, 14 }, @out);
     }
 
     [Test]
@@ -144,7 +144,7 @@ namespace Tests.sodium
       bc.Send('c');
       bi.Send(7);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 'a', 'b', 'c' }, @out.Select(x => (char)x));
+      CollectionAssert.AreEqual(new[] { 'a', 'b', 'c' }, @out);
     }
 
     [Test]
@@ -159,7 +159,7 @@ namespace Tests.sodium
       bc.Send('c');
       bi.Send(7);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 'a', 'a', 'b', 'b', 'c', 'c' }, @out.Select(x => (char)x));
+      CollectionAssert.AreEqual(new[] { 'a', 'a', 'b', 'b', 'c', 'c' }, @out);
     }
 
     [Test]
@@ -173,7 +173,7 @@ namespace Tests.sodium
       bi.Send(1);
       bj.Send(4);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 11, 1, 4 }, @out.Select(x => (int)x));
+      CollectionAssert.AreEqual(new[] { 11, 1, 4 }, @out);
     }
 
     [Test]
@@ -185,7 +185,7 @@ namespace Tests.sodium
       b.Send(2);
       b.Send(7);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 9, 2, 7 }, @out.Select(x => (int)x));
+      CollectionAssert.AreEqual(new[] { 9, 2, 7 }, @out);
     }
 
     [Test]
@@ -197,7 +197,7 @@ namespace Tests.sodium
       b.Send(2);
       b.Send(7);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 9, 9, 2, 2, 7, 7 }, @out.Select(x => (int)x));
+      CollectionAssert.AreEqual(new[] { 9, 9, 2, 2, 7, 7 }, @out);
     }
 
     [Test]
@@ -209,7 +209,7 @@ namespace Tests.sodium
       b.Send(2);
       b.Send(7);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 9 }, @out.Select(x => (int)x));
+      CollectionAssert.AreEqual(new[] { 9 }, @out);
     }
 
     [Test]
@@ -221,7 +221,7 @@ namespace Tests.sodium
       b.Send(2);
       b.Send(7);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 9 }, @out.Select(x => (int)x));
+      CollectionAssert.AreEqual(new[] { 9 }, @out);
     }
 
     [Test]
@@ -234,7 +234,7 @@ namespace Tests.sodium
       Listener l = value.Listen(x => { @out.Add(x); });
       b.Send(2);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 8, 2 }, @out.Select(x => (int)x));
+      CollectionAssert.AreEqual(new[] { 8, 2 }, @out);
     }
 
     [Test]
@@ -365,7 +365,7 @@ namespace Tests.sodium
       esb.Send(new SB("H", "h", ba));
       esb.Send(new SB("I", "i", ba));
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { "A", "B", "c", "d", "E", "F", "f", "F", "g", "H", "I" }, @out.Select(x => (string)x));
+      CollectionAssert.AreEqual(new[] { "A", "B", "c", "d", "E", "F", "f", "F", "g", "H", "I" }, @out);
     }
 
     class SE
@@ -401,7 +401,7 @@ namespace Tests.sodium
       ese.Send(new SE('H', 'h', ea));
       ese.Send(new SE('I', 'i', ea));
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 'A', 'B', 'C', 'd', 'e', 'F', 'G', 'h', 'I' }, @out.Select(x => (char)x));
+      CollectionAssert.AreEqual(new[] { 'A', 'B', 'C', 'd', 'e', 'F', 'G', 'h', 'I' }, @out);
     }
 
     [Test]
@@ -421,7 +421,7 @@ namespace Tests.sodium
       ea.Send(3);
       ea.Send(1);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 0, 2, 5, 6 }, @out.Select(x => (int)x));
+      CollectionAssert.AreEqual(new[] { 0, 2, 5, 6 }, @out);
       Assert.That((int)sum_out.Sample(), Is.EqualTo(6));
     }
 
@@ -441,7 +441,7 @@ namespace Tests.sodium
       ea.Send(2);
       ea.Send(3);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 100, 105, 112, 113, 115, 118 }, @out.Select(x => (int)x));
+      CollectionAssert.AreEqual(new[] { 100, 105, 112, 113, 115, 118 }, @out);
     }
 
     [Test]
@@ -457,7 +457,7 @@ namespace Tests.sodium
       ea.Send(2);
       ea.Send(3);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 100, 105, 112, 113, 115, 118 }, @out.Select(x => (int)x));
+      CollectionAssert.AreEqual(new[] { 100, 105, 112, 113, 115, 118 }, @out);
     }
 
     [Test]

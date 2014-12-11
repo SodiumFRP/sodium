@@ -7,6 +7,8 @@ using NUnit.Framework;
 
 using Sodium;
 
+using Strilanc.Value;
+
 namespace Tests.sodium
 {
   [TestFixture]
@@ -27,9 +29,9 @@ namespace Tests.sodium
       Listener l = e.Listen(x => { @out.Add(x); });
       e.Send(5);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 5 }, @out.Select(x => (int)x));
+      CollectionAssert.AreEqual(new[] { 5 }, @out);
       e.Send(6);
-      CollectionAssert.AreEqual(new[] { 5 }, @out.Select(x => (int)x));
+      CollectionAssert.AreEqual(new[] { 5 }, @out);
     }
 
     [Test]
@@ -55,7 +57,7 @@ namespace Tests.sodium
       e2.Send(9);
       e1.Send(8);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 7, 9, 8 }, @out.Select(x => (int)x));
+      CollectionAssert.AreEqual(new[] { 7, 9, 8 }, @out);
     }
 
     [Test]
@@ -67,7 +69,7 @@ namespace Tests.sodium
       e.Send(7);
       e.Send(9);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 7, 7, 9, 9 }, @out.Select(x => (int)x));
+      CollectionAssert.AreEqual(new[] { 7, 7, 9, 9 }, @out);
     }
 
     [Test]
@@ -114,7 +116,7 @@ namespace Tests.sodium
       e1.Send(8);
       e2.Send(40);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 202, 808, 40 }, @out.Select(x => (int)x).ToArray());
+      CollectionAssert.AreEqual(new[] { 202, 808, 40 }, @out.ToArray());
     }
 
     [Test]
@@ -127,7 +129,7 @@ namespace Tests.sodium
       e.Send('o');
       e.Send('I');
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 'H', 'I' }, @out.Select(x => (char)x));
+      CollectionAssert.AreEqual(new[] { 'H', 'I' }, @out);
     }
 
     [Test]
@@ -143,18 +145,18 @@ namespace Tests.sodium
       CollectionAssert.AreEqual(new[] { "tomato", "peach" }, @out);
     }
 
-    //[Test]
-    //public void testFilterOptional()
-    //{
-    //  EventSink<Optional<String>> e = new EventSink<Optional<String>>();
-    //  List<String> @out = new List<string>();
-    //  Listener l = Event<Optional<String>>.FilterOptional(e).Listen(s => { @out.Add(s); });
-    //  e.Send(Optional.of("tomato"));
-    //  e.Send(Optional.empty());
-    //  e.Send(Optional.of("peach"));
-    //  l.Unlisten();
-    //  CollectionAssert.AreEqual(new[] { "tomato", "peach" }, @out);
-    //}
+    [Test]
+    public void testFilterOptional()
+    {
+      EventSink<Optional<String>> e = new EventSink<Optional<String>>();
+      List<String> @out = new List<string>();
+      Listener l = Event<Optional<String>>.FilterOptional(e).Listen(s => { @out.Add(s); });
+      e.Send(new Optional<string> ("tomato"));
+      e.Send(new Optional<string>.Empty());
+      e.Send(new Optional<string>("peach"));
+      l.Unlisten();
+      CollectionAssert.AreEqual(new[] { "tomato", "peach" }, @out);
+    }
 
     [Test]
     public void TestLoopEvent()
@@ -173,25 +175,24 @@ namespace Tests.sodium
       ea.Send(2);
       ea.Send(52);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 2, 7 }, @out.Select(x => (int)x).ToArray());
+      CollectionAssert.AreEqual(new[] { 2, 7 }, @out.ToArray());
     }
 
-    //TODO: Fix gate 
-    //[Test]
-    //public void TestGate()
-    //{
-    //  var ec = new EventSink<char>();
-    //  var epred = new BehaviorSink<Boolean>(true);
-    //  var @out = new List<char>();
-    //  Listener l = ec.Gate(epred).Listen(x => { @out.Add(x); });
-    //  ec.Send('H');
-    //  epred.Send(false);
-    //  ec.Send('O');
-    //  epred.Send(true);
-    //  ec.Send('I');
-    //  l.Unlisten();
-    //  CollectionAssert.AreEqual(new[] { 'H', 'I' }, @out.Select(x => (char)x));
-    //}
+    [Test]
+    public void TestGate()
+    {
+      var ec = new EventSink<char?>();
+      var epred = new BehaviorSink<Boolean>(true);
+      var @out = new List<char?>();
+      Listener l = ec.Gate(epred).Listen(x => { @out.Add(x); });
+      ec.Send('H');
+      epred.Send(false);
+      ec.Send('O');
+      epred.Send(true);
+      ec.Send('I');
+      l.Unlisten();
+      CollectionAssert.AreEqual(new[] { 'H', 'I' }, @out);
+    }
 
     [Test]
     public void TestCollect()
@@ -209,7 +210,7 @@ namespace Tests.sodium
       ea.Send(2);
       ea.Send(3);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 105, 112, 113, 115, 118 }, @out.Select(x => (int)x));
+      CollectionAssert.AreEqual(new[] { 105, 112, 113, 115, 118 }, @out);
     }
 
     [Test]
@@ -225,7 +226,7 @@ namespace Tests.sodium
       ea.Send(2);
       ea.Send(3);
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 105, 112, 113, 115, 118 }, @out.Select<int, int>(x => (int)x));
+      CollectionAssert.AreEqual(new[] { 105, 112, 113, 115, 118 }, @out);
     }
 
     [Test]
@@ -238,7 +239,7 @@ namespace Tests.sodium
       e.Send('B');
       e.Send('C');
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 'A' }, @out.Select(x => (char)x));
+      CollectionAssert.AreEqual(new[] { 'A' }, @out);
     }
 
     [Test]
@@ -252,7 +253,7 @@ namespace Tests.sodium
       e.Send('B');
       e.Send('A');
       l.Unlisten();
-      CollectionAssert.AreEqual(new[] { 'C', 'B', 'A' }, @out.Select(x => (char)x));
+      CollectionAssert.AreEqual(new[] { 'C', 'B', 'A' }, @out);
     }
   }
 

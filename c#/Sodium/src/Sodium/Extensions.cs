@@ -34,6 +34,12 @@ namespace Sodium
       IsPresent = true;
     }
 
+    public Optional<T> Empty()
+    {
+      IsPresent = false;
+      return this;
+    }
+
     public static explicit operator T(Optional<T> optional)
     {
       return optional.Get();

@@ -418,11 +418,10 @@ namespace Sodium
     ///Note that the behavior's value is as it was at the start of the transaction,
     ///that is, no state changes from the current transaction are taken into account.
     ///
-    //TODO: Fix null for value type.
-    //public Event<TA> Gate(Behavior<Boolean> bPred)
-    //{
-    //  return Snapshot(bPred, (a, pred) => pred ? a : null).FilterNotNull();
-    //}
+    public Event<TA> Gate(Behavior<Boolean> bPred)
+    {
+      return Snapshot(bPred, (a, pred) => pred ? a : default(TA)).FilterNotNull();
+    }
 
     ///
     ///Transform an event with a generalized state loop (a mealy machine). The function
