@@ -1,0 +1,28 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 2013
+VisualStudioVersion = 12.0.31101.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PetrolPump", "PetrolPump\PetrolPump.csproj", "{CF9BA1A1-D559-418C-9A00-43A4F4138EF0}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sodium", "..\..\..\Sodium\Sodium.csproj", "{D2080704-D359-4743-B568-5D976F9882A0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CF9BA1A1-D559-418C-9A00-43A4F4138EF0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CF9BA1A1-D559-418C-9A00-43A4F4138EF0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CF9BA1A1-D559-418C-9A00-43A4F4138EF0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CF9BA1A1-D559-418C-9A00-43A4F4138EF0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D2080704-D359-4743-B568-5D976F9882A0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D2080704-D359-4743-B568-5D976F9882A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D2080704-D359-4743-B568-5D976F9882A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D2080704-D359-4743-B568-5D976F9882A0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
