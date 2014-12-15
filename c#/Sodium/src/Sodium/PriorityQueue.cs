@@ -8,6 +8,8 @@
 //* .NET priority queue class (heap algorithm)             *
 //**********************************************************
 
+// Modified by Michael Lund to handle genererics for use with Sodium.
+
 using System;
 using System.Collections;
 using System.Collections.Generic;

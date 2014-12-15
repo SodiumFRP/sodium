@@ -205,6 +205,24 @@ namespace Sodium
     }
 
     ///
+    ///Lift a quaternary function into behaviors.
+    ///
+    public Behavior<TE> Lift<TB,TC,TD,TE>(Func<TA,TB,TC,TD,TE> f, Behavior<TB> b, Behavior<TC> c, Behavior<TD> d)
+    {
+      var ffa = new Func<TA, Func<TB, Func<TC, Func<TD, TE>>>>(aa => (bb => (cc => new Func<TD,TE>(dd => f(aa, bb, cc, dd)))));
+      Behavior<Func<TB, Func<TC, Func<TD, TE>>>> bf = Map(ffa);
+      return Apply(Apply(Apply(bf, b), c), d);
+    }
+
+    ///
+    ///Lift a quaternary function into behaviors.
+    ///
+    public static Behavior<TE> Lift<TA, TB, TC, TD, TE>(Func<TA, TB, TC, TD, TE> f, Behavior<TA> a, Behavior<TB> b, Behavior<TC> c, Behavior<TD> d)
+    {
+      return a.Lift(f, b, c, d);
+    }
+
+    ///
     ///Apply a value inside a behavior to a function inside a behavior. This is the
     ///primitive for all function lifting.
     ///
