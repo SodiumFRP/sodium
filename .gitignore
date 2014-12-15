@@ -8,3 +8,216 @@
 Build
 Logs
 info.plist
+
+# User-specific files 
+5 *.suo 
+6 *.user 
+7 *.userosscache 
+8 *.sln.docstates 
+9 
+ 
+10 # Build results 
+11 [Dd]ebug/ 
+12 [Dd]ebugPublic/ 
+13 [Rr]elease/ 
+14 [Rr]eleases/ 
+15 x64/ 
+16 x86/ 
+17 build/ 
+18 bld/ 
+19 [Bb]in/ 
+20 [Oo]bj/ 
+21 
+ 
+22 # Roslyn cache directories 
+23 *.ide/ 
+24 
+ 
+25 # MSTest test Results 
+26 [Tt]est[Rr]esult*/ 
+27 [Bb]uild[Ll]og.* 
+28 
+ 
+29 #NUNIT 
+30 *.VisualState.xml 
+31 TestResult.xml 
+32 
+ 
+33 # Build Results of an ATL Project 
+34 [Dd]ebugPS/ 
+35 [Rr]eleasePS/ 
+36 dlldata.c 
+37 
+ 
+38 *_i.c 
+39 *_p.c 
+40 *_i.h 
+41 *.ilk 
+42 *.meta 
+43 *.obj 
+44 *.pch 
+45 *.pdb 
+46 *.pgc 
+47 *.pgd 
+48 *.rsp 
+49 *.sbr 
+50 *.tlb 
+51 *.tli 
+52 *.tlh 
+53 *.tmp 
+54 *.tmp_proj 
+55 *.log 
+56 *.vspscc 
+57 *.vssscc 
+58 .builds 
+59 *.pidb 
+60 *.svclog 
+61 *.scc 
+62 
+ 
+63 # Chutzpah Test files 
+64 _Chutzpah* 
+65 
+ 
+66 # Visual C++ cache files 
+67 ipch/ 
+68 *.aps 
+69 *.ncb 
+70 *.opensdf 
+71 *.sdf 
+72 *.cachefile 
+73 
+ 
+74 # Visual Studio profiler 
+75 *.psess 
+76 *.vsp 
+77 *.vspx 
+78 
+ 
+79 # TFS 2012 Local Workspace 
+80 $tf/ 
+81 
+ 
+82 # Guidance Automation Toolkit 
+83 *.gpState 
+84 
+ 
+85 # ReSharper is a .NET coding add-in 
+86 _ReSharper*/ 
+87 *.[Rr]e[Ss]harper 
+88 *.DotSettings.user 
+89 
+ 
+90 # JustCode is a .NET coding addin-in 
+91 .JustCode 
+92 
+ 
+93 # TeamCity is a build add-in 
+94 _TeamCity* 
+95 
+ 
+96 # DotCover is a Code Coverage Tool 
+97 *.dotCover 
+98 
+ 
+99 # NCrunch 
+100 _NCrunch_* 
+101 .*crunch*.local.xml 
+102 
+ 
+103 # MightyMoose 
+104 *.mm.* 
+105 AutoTest.Net/ 
+106 
+ 
+107 # Web workbench (sass) 
+108 .sass-cache/ 
+109 
+ 
+110 # Installshield output folder 
+111 [Ee]xpress/ 
+112 
+ 
+113 # DocProject is a documentation generator add-in 
+114 DocProject/buildhelp/ 
+115 DocProject/Help/*.HxT 
+116 DocProject/Help/*.HxC 
+117 DocProject/Help/*.hhc 
+118 DocProject/Help/*.hhk 
+119 DocProject/Help/*.hhp 
+120 DocProject/Help/Html2 
+121 DocProject/Help/html 
+122 
+ 
+123 # Click-Once directory 
+124 publish/ 
+125 
+ 
+126 # Publish Web Output 
+127 *.[Pp]ublish.xml 
+128 *.azurePubxml 
+129 # TODO: Comment the next line if you want to checkin your web deploy settings  
+130 # but database connection strings (with potential passwords) will be unencrypted 
+131 *.pubxml 
+132 *.publishproj 
+133 
+ 
+134 # NuGet Packages 
+135 *.nupkg 
+136 # The packages folder can be ignored because of Package Restore 
+137 **/packages/* 
+138 # except build/, which is used as an MSBuild target. 
+139 !**/packages/build/ 
+140 # If using the old MSBuild-Integrated Package Restore, uncomment this: 
+141 #!**/packages/repositories.config 
+142 
+ 
+143 # Windows Azure Build Output 
+144 csx/ 
+145 *.build.csdef 
+146 
+ 
+147 # Windows Store app package directory 
+148 AppPackages/ 
+149 
+ 
+150 # Others 
+151 *.Cache 
+152 ClientBin/ 
+153 [Ss]tyle[Cc]op.* 
+154 ~$* 
+155 *~ 
+156 *.dbmdl 
+157 *.dbproj.schemaview 
+158 *.pfx 
+159 *.publishsettings 
+160 node_modules/ 
+161 bower_components/ 
+162 
+ 
+163 # RIA/Silverlight projects 
+164 Generated_Code/ 
+165 
+ 
+166 # Backup & report files from converting an old project file 
+167 # to a newer Visual Studio version. Backup files are not needed, 
+168 # because we have git ;-) 
+169 _UpgradeReport_Files/ 
+170 Backup*/ 
+171 UpgradeLog*.XML 
+172 UpgradeLog*.htm 
+173 
+ 
+174 # SQL Server files 
+175 *.mdf 
+176 *.ldf 
+177 
+ 
+178 # Business Intelligence projects 
+179 *.rdl.data 
+180 *.bim.layout 
+181 *.bim_*.settings 
+182 
+ 
+183 # Microsoft Fakes 
+184 FakesAssemblies/ 
