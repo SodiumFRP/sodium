@@ -70,6 +70,7 @@
     <Compile Include="Chapter3\Section8\Keypad.cs" />
     <Compile Include="Chapter3\Section8\KeypadPump.cs" />
     <Compile Include="Pump\Delivery.cs" />
+    <Compile Include="Pump\FillState.cs" />
     <Compile Include="Pump\Formatters.cs" />
     <Compile Include="Pump\Fuel.cs" />
     <Compile Include="Pump\Inputs.cs" />

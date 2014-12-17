@@ -162,7 +162,7 @@ namespace JMBucknall.Containers
 
     public IEnumerator GetEnumerator()
     {
-      return new PriorityQueueEnumerator<TA>(this);
+      return new PriorityQueueEnumerator(this);
     }
     #endregion
 
@@ -202,7 +202,7 @@ namespace JMBucknall.Containers
 
     #region Priority Queue enumerator
     [Serializable]
-    private class PriorityQueueEnumerator<TA> : IEnumerator<TA> where TA : IComparable<TA>
+    private class PriorityQueueEnumerator : IEnumerator<TA> 
     {
       private int index;
       private PriorityQueue<TA> pq;

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Xml.Schema;
 
 namespace Sodium
 {
@@ -63,6 +64,14 @@ namespace Sodium
       if (obj is Optional<T>)
         return Equals((Optional<T>)obj);
       return false;
+    }
+
+    public override int GetHashCode()
+    {
+      var hash = IsPresent.GetHashCode();
+      if (value != null)
+        hash = (hash * 397) ^ value.GetHashCode();
+      return hash;
     }
 
     public bool Equals(Optional<T> other)
