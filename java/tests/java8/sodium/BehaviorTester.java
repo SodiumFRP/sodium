@@ -302,7 +302,7 @@ public class BehaviorTester extends TestCase {
 	    Behavior<Character> ba = esb.map(s -> s.a).filterNotNull().hold('A');
 	    Behavior<Character> bb = esb.map(s -> s.b).filterNotNull().hold('a');
 	    Behavior<Behavior<Character>> bsw = esb.map(s -> s.sw).filterNotNull().hold(ba);
-	    Behavior<Character> bo = Behavior.switchB(bsw);
+	    Behavior<Character> bo = Behavior.switchC(bsw);
 		List<Character> out = new ArrayList<Character>();
 	    Listener l = bo.value().listen(c -> { out.add(c); });
 	    esb.send(new SB('B','b',null));
@@ -339,7 +339,7 @@ public class BehaviorTester extends TestCase {
         Event<Character> eb = ese.map(s -> s.b).filterNotNull();
         Behavior<Event<Character>> bsw = ese.map(s -> s.sw).filterNotNull().hold(ea);
         List<Character> out = new ArrayList();
-        Event<Character> eo = Behavior.switchE(bsw);
+        Event<Character> eo = Behavior.switchS(bsw);
 	    Listener l = eo.listen(c -> { out.add(c); });
 	    ese.send(new SE('A','a',null));
 	    ese.send(new SE('B','b',null));

@@ -4,15 +4,15 @@ import sodium.*;
 
 public class Outputs {
     private Outputs(
-            Behavior<Delivery> delivery,
-            Behavior<String> presetLCD,
-            Behavior<String> saleCostLCD,
-            Behavior<String> saleQuantityLCD,
-            Behavior<String> priceLCD1,
-            Behavior<String> priceLCD2,
-            Behavior<String> priceLCD3,
-            Event<Unit> eBeep,
-            Event<Sale> eSaleComplete) {
+            Cell<Delivery> delivery,
+            Cell<String> presetLCD,
+            Cell<String> saleCostLCD,
+            Cell<String> saleQuantityLCD,
+            Cell<String> priceLCD1,
+            Cell<String> priceLCD2,
+            Cell<String> priceLCD3,
+            Stream<Unit> sBeep,
+            Stream<Sale> sSaleComplete) {
         this.delivery = delivery;
         this.presetLCD = presetLCD;
         this.saleCostLCD = saleCostLCD;
@@ -20,76 +20,76 @@ public class Outputs {
         this.priceLCD1 = priceLCD1;
         this.priceLCD2 = priceLCD2;
         this.priceLCD3 = priceLCD3;
-        this.eBeep = eBeep;
-        this.eSaleComplete = eSaleComplete;
+        this.sBeep = sBeep;
+        this.sSaleComplete = sSaleComplete;
     }
 
     public Outputs() {
-        this.delivery = new Behavior<Delivery>(Delivery.OFF);
-        this.presetLCD = new Behavior<String>("");
-        this.saleCostLCD = new Behavior<String>("");
-        this.saleQuantityLCD = new Behavior<String>("");
-        this.priceLCD1 = new Behavior<String>("");
-        this.priceLCD2 = new Behavior<String>("");
-        this.priceLCD3 = new Behavior<String>("");
-        this.eBeep = new Event<Unit>();
-        this.eSaleComplete = new Event<Sale>();
+        this.delivery = new Cell<Delivery>(Delivery.OFF);
+        this.presetLCD = new Cell<String>("");
+        this.saleCostLCD = new Cell<String>("");
+        this.saleQuantityLCD = new Cell<String>("");
+        this.priceLCD1 = new Cell<String>("");
+        this.priceLCD2 = new Cell<String>("");
+        this.priceLCD3 = new Cell<String>("");
+        this.sBeep = new Stream<Unit>();
+        this.sSaleComplete = new Stream<Sale>();
     }
 
-    public final Behavior<Delivery> delivery;
-    public final Behavior<String> presetLCD;
-    public final Behavior<String> saleCostLCD;
-    public final Behavior<String> saleQuantityLCD;
-    public final Behavior<String> priceLCD1;
-    public final Behavior<String> priceLCD2;
-    public final Behavior<String> priceLCD3;
-    public final Event<Unit> eBeep;
-    public final Event<Sale> eSaleComplete;
+    public final Cell<Delivery> delivery;
+    public final Cell<String> presetLCD;
+    public final Cell<String> saleCostLCD;
+    public final Cell<String> saleQuantityLCD;
+    public final Cell<String> priceLCD1;
+    public final Cell<String> priceLCD2;
+    public final Cell<String> priceLCD3;
+    public final Stream<Unit> sBeep;
+    public final Stream<Sale> sSaleComplete;
 
-    public Outputs setDelivery(Behavior<Delivery> delivery) {
+    public Outputs setDelivery(Cell<Delivery> delivery) {
         return new Outputs(delivery, presetLCD, saleCostLCD,
-                saleQuantityLCD, priceLCD1, priceLCD2, priceLCD3, eBeep,
-                eSaleComplete);
+                saleQuantityLCD, priceLCD1, priceLCD2, priceLCD3, sBeep,
+                sSaleComplete);
     }
-    public Outputs setPresetLCD(Behavior<String> presetLCD) {
+    public Outputs setPresetLCD(Cell<String> presetLCD) {
         return new Outputs(delivery, presetLCD, saleCostLCD,
-                saleQuantityLCD, priceLCD1, priceLCD2, priceLCD3, eBeep,
-                eSaleComplete);
+                saleQuantityLCD, priceLCD1, priceLCD2, priceLCD3, sBeep,
+                sSaleComplete);
     }
-    public Outputs setSaleCostLCD(Behavior<String> saleCostLCD) {
+    public Outputs setSaleCostLCD(Cell<String> saleCostLCD) {
         return new Outputs(delivery, presetLCD, saleCostLCD,
-                saleQuantityLCD, priceLCD1, priceLCD2, priceLCD3, eBeep,
-                eSaleComplete);
+                saleQuantityLCD, priceLCD1, priceLCD2, priceLCD3, sBeep,
+                sSaleComplete);
     }
-    public Outputs setSaleQuantityLCD(Behavior<String> saleQuantityLCD) {
+    public Outputs setSaleQuantityLCD(Cell<String> saleQuantityLCD) {
         return new Outputs(delivery, presetLCD, saleCostLCD,
-                saleQuantityLCD, priceLCD1, priceLCD2, priceLCD3, eBeep,
-                eSaleComplete);
+                saleQuantityLCD, priceLCD1, priceLCD2, priceLCD3, sBeep,
+                sSaleComplete);
     }
-    public Outputs setPriceLCD1(Behavior<String> priceLCD1) {
+    public Outputs setPriceLCD1(Cell<String> priceLCD1) {
         return new Outputs(delivery, presetLCD, saleCostLCD,
-                saleQuantityLCD, priceLCD1, priceLCD2, priceLCD3, eBeep,
-                eSaleComplete);
+                saleQuantityLCD, priceLCD1, priceLCD2, priceLCD3, sBeep,
+                sSaleComplete);
     }
-    public Outputs setPriceLCD2(Behavior<String> priceLCD2) {
+    public Outputs setPriceLCD2(Cell<String> priceLCD2) {
         return new Outputs(delivery, presetLCD, saleCostLCD,
-                saleQuantityLCD, priceLCD1, priceLCD2, priceLCD3, eBeep,
-                eSaleComplete);
+                saleQuantityLCD, priceLCD1, priceLCD2, priceLCD3, sBeep,
+                sSaleComplete);
     }
-    public Outputs setPriceLCD3(Behavior<String> priceLCD3) {
+    public Outputs setPriceLCD3(Cell<String> priceLCD3) {
         return new Outputs(delivery, presetLCD, saleCostLCD,
-                saleQuantityLCD, priceLCD1, priceLCD2, priceLCD3, eBeep,
-                eSaleComplete);
+                saleQuantityLCD, priceLCD1, priceLCD2, priceLCD3, sBeep,
+                sSaleComplete);
     }
-    public Outputs setBeep(Event<Unit> eBeep) {
+    public Outputs setBeep(Stream<Unit> sBeep) {
         return new Outputs(delivery, presetLCD, saleCostLCD,
-                saleQuantityLCD, priceLCD1, priceLCD2, priceLCD3, eBeep,
-                eSaleComplete);
+                saleQuantityLCD, priceLCD1, priceLCD2, priceLCD3, sBeep,
+                sSaleComplete);
     }
-    public Outputs setSaleComplete(Event<Sale> eSaleComplete) {
+    public Outputs setSaleComplete(Stream<Sale> sSaleComplete) {
         return new Outputs(delivery, presetLCD, saleCostLCD,
-                saleQuantityLCD, priceLCD1, priceLCD2, priceLCD3, eBeep,
-                eSaleComplete);
+                saleQuantityLCD, priceLCD1, priceLCD2, priceLCD3, sBeep,
+                sSaleComplete);
     }
 }
 

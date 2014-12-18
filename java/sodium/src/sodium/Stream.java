@@ -4,17 +4,17 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
 
-public class Event<A> {
+public class Stream<A> {
 	private static final class ListenerImplementation<A> extends Listener {
 		/**
 		 * It's essential that we keep the listener alive while the caller holds
 		 * the Listener, so that the finalizer doesn't get triggered.
 		 */
-		private final Event<A> event;
+		private final Stream<A> event;
 		private final TransactionHandler<A> action;
 		private final Node target;
 
-		private ListenerImplementation(Event<A> event, TransactionHandler<A> action, Node target) {
+		private ListenerImplementation(Stream<A> event, TransactionHandler<A> action, Node target) {
 			this.event = event;
 			this.action = action;
 			this.target = target;
@@ -40,7 +40,7 @@ public class Event<A> {
 	/**
 	 * An event that never fires.
 	 */
-	public Event() {
+	public Stream() {
 	}
 
 	protected Object[] sampleNow() { return null; }
@@ -93,10 +93,10 @@ public class Event<A> {
     /**
      * Transform the event's value according to the supplied function.
      */
-	public final <B> Event<B> map(final Lambda1<A,B> f)
+	public final <B> Stream<B> map(final Lambda1<A,B> f)
 	{
-	    final Event<A> ev = this;
-	    final EventSink<B> out = new EventSink<B>() {
+	    final Stream<A> ev = this;
+	    final StreamSink<B> out = new StreamSink<B>() {
     		@SuppressWarnings("unchecked")
 			@Override
             protected Object[] sampleNow()
@@ -127,18 +127,18 @@ public class Event<A> {
      * That is, state updates caused by event firings get processed at the end of
      * the transaction.
      */
-	public final Behavior<A> hold(final A initValue) {
-		return Transaction.apply(new Lambda1<Transaction, Behavior<A>>() {
-			public Behavior<A> apply(Transaction trans) {
-			    return new Behavior<A>(lastFiringOnly(trans), initValue);
+	public final Cell<A> hold(final A initValue) {
+		return Transaction.apply(new Lambda1<Transaction, Cell<A>>() {
+			public Cell<A> apply(Transaction trans) {
+			    return new Cell<A>(lastFiringOnly(trans), initValue);
 			}
 		});
 	}
 
-	final Behavior<A> holdLazy(final Lambda0<A> initValue) {
-		return Transaction.apply(new Lambda1<Transaction, Behavior<A>>() {
-			public Behavior<A> apply(Transaction trans) {
-			    return new LazyBehavior<A>(lastFiringOnly(trans), initValue);
+	final Cell<A> holdLazy(final Lambda0<A> initValue) {
+		return Transaction.apply(new Lambda1<Transaction, Cell<A>>() {
+			public Cell<A> apply(Transaction trans) {
+			    return new LazyCell<A>(lastFiringOnly(trans), initValue);
 			}
 		});
 	}
@@ -146,7 +146,7 @@ public class Event<A> {
 	/**
 	 * Variant of snapshot that throws away the event's value and captures the behavior's.
 	 */
-	public final <B> Event<B> snapshot(Behavior<B> beh)
+	public final <B> Stream<B> snapshot(Cell<B> beh)
 	{
 	    return snapshot(beh, new Lambda2<A,B,B>() {
 	    	public B apply(A a, B b) {
@@ -160,10 +160,10 @@ public class Event<A> {
      * of the behavior that's sampled is the value as at the start of the transaction
      * before any state changes of the current transaction are applied through 'hold's.
      */
-	public final <B,C> Event<C> snapshot(final Behavior<B> b, final Lambda2<A,B,C> f)
+	public final <B,C> Stream<C> snapshot(final Cell<B> b, final Lambda2<A,B,C> f)
 	{
-	    final Event<A> ev = this;
-		final EventSink<C> out = new EventSink<C>() {
+	    final Stream<A> ev = this;
+		final StreamSink<C> out = new StreamSink<C>() {
     		@SuppressWarnings("unchecked")
 			@Override
             protected Object[] sampleNow()
@@ -196,9 +196,9 @@ public class Event<A> {
      * their ordering is retained. In many common cases the ordering will
      * be undefined.
      */
-	public Event<A> merge(final Event<A> eb)
+	public Stream<A> merge(final Stream<A> eb)
 	{
-	    return Event.<A>merge(this, eb);
+	    return Stream.<A>merge(this, eb);
 	}
 
     /**
@@ -210,9 +210,9 @@ public class Event<A> {
      * their ordering is retained. In many common cases the ordering will
      * be undefined.
      */
-	private static <A> Event<A> merge(final Event<A> ea, final Event<A> eb)
+	private static <A> Stream<A> merge(final Stream<A> ea, final Stream<A> eb)
 	{
-	    final EventSink<A> out = new EventSink<A>() {
+	    final StreamSink<A> out = new StreamSink<A>() {
     		@Override
             protected Object[] sampleNow()
             {
@@ -253,9 +253,9 @@ public class Event<A> {
 	/**
 	 * Push each event occurrence onto a new transaction.
 	 */
-	public final Event<A> delay()
+	public final Stream<A> delay()
 	{
-	    final EventSink<A> out = new EventSink<A>();
+	    final StreamSink<A> out = new StreamSink<A>();
 	    Listener l1 = listen_(out.node, new TransactionHandler<A>() {
 	        public void run(Transaction trans, final A a) {
 	            trans.post(new Runnable() {
@@ -282,19 +282,19 @@ public class Event<A> {
      * make any assumptions about the ordering, and the combining function would
      * ideally be commutative.
      */
-	public final Event<A> coalesce(final Lambda2<A,A,A> f)
+	public final Stream<A> coalesce(final Lambda2<A,A,A> f)
 	{
-	    return Transaction.apply(new Lambda1<Transaction, Event<A>>() {
-	    	public Event<A> apply(Transaction trans) {
+	    return Transaction.apply(new Lambda1<Transaction, Stream<A>>() {
+	    	public Stream<A> apply(Transaction trans) {
 	    		return coalesce(trans, f);
 	    	}
 	    });
 	}
 
-	final Event<A> coalesce(Transaction trans1, final Lambda2<A,A,A> f)
+	final Stream<A> coalesce(Transaction trans1, final Lambda2<A,A,A> f)
 	{
-	    final Event<A> ev = this;
-	    final EventSink<A> out = new EventSink<A>() {
+	    final Stream<A> ev = this;
+	    final StreamSink<A> out = new StreamSink<A>() {
     		@SuppressWarnings("unchecked")
 			@Override
             protected Object[] sampleNow()
@@ -318,7 +318,7 @@ public class Event<A> {
     /**
      * Clean up the output by discarding any firing other than the last one. 
      */
-    final Event<A> lastFiringOnly(Transaction trans)
+    final Stream<A> lastFiringOnly(Transaction trans)
     {
         return coalesce(trans, new Lambda2<A,A,A>() {
         	public A apply(A first, A second) { return second; }
@@ -333,7 +333,7 @@ public class Event<A> {
      * within the same transaction), they are combined using the same logic as
      * 'coalesce'.
      */
-    public Event<A> merge(Event<A> eb, Lambda2<A,A,A> f)
+    public Stream<A> merge(Stream<A> eb, Lambda2<A,A,A> f)
     {
         return merge(eb).coalesce(f);
     }
@@ -341,10 +341,10 @@ public class Event<A> {
     /**
      * Only keep event occurrences for which the predicate returns true.
      */
-    public final Event<A> filter(final Lambda1<A,Boolean> f)
+    public final Stream<A> filter(final Lambda1<A,Boolean> f)
     {
-        final Event<A> ev = this;
-        final EventSink<A> out = new EventSink<A>() {
+        final Stream<A> ev = this;
+        final StreamSink<A> out = new StreamSink<A>() {
     		@SuppressWarnings("unchecked")
 			@Override
             protected Object[] sampleNow()
@@ -382,7 +382,7 @@ public class Event<A> {
     /**
      * Filter out any event occurrences whose value is a Java null pointer.
      */
-    public final Event<A> filterNotNull()
+    public final Stream<A> filterNotNull()
     {
         return filter(new Lambda1<A,Boolean>() {
         	public Boolean apply(A a) { return a != null; }
@@ -392,9 +392,9 @@ public class Event<A> {
     /**
      * Filter the empty values out, and strip the Optional wrapper from the present ones.
      */
-    public static final <A> Event<A> filterOptional(final Event<Optional<A>> ev)
+    public static final <A> Stream<A> filterOptional(final Stream<Optional<A>> ev)
     {
-        final EventSink<A> out = new EventSink<A>() {
+        final StreamSink<A> out = new StreamSink<A>() {
     		@SuppressWarnings("unchecked")
 			@Override
             protected Object[] sampleNow()
@@ -436,7 +436,7 @@ public class Event<A> {
      * Note that the behavior's value is as it was at the start of the transaction,
      * that is, no state changes from the current transaction are taken into account.
      */
-    public final Event<A> gate(Behavior<Boolean> bPred)
+    public final Stream<A> gate(Cell<Boolean> bPred)
     {
         return snapshot(bPred, new Lambda2<A,Boolean,A>() {
         	public A apply(A a, Boolean pred) { return pred ? a : null; }
@@ -447,17 +447,17 @@ public class Event<A> {
      * Transform an event with a generalized state loop (a mealy machine). The function
      * is passed the input and the old state and returns the new state and output value.
      */
-    public final <B,S> Event<B> collect(final S initState, final Lambda2<A, S, Tuple2<B, S>> f)
+    public final <B,S> Stream<B> collect(final S initState, final Lambda2<A, S, Tuple2<B, S>> f)
     {
-        return Transaction.<Event<B>>run(() -> {
-            final Event<A> ea = this;
-            EventLoop<S> es = new EventLoop<S>();
-            Behavior<S> s = es.hold(initState);
-            Event<Tuple2<B,S>> ebs = ea.snapshot(s, f);
-            Event<B> eb = ebs.map(new Lambda1<Tuple2<B,S>,B>() {
+        return Transaction.<Stream<B>>run(() -> {
+            final Stream<A> ea = this;
+            StreamLoop<S> es = new StreamLoop<S>();
+            Cell<S> s = es.hold(initState);
+            Stream<Tuple2<B,S>> ebs = ea.snapshot(s, f);
+            Stream<B> eb = ebs.map(new Lambda1<Tuple2<B,S>,B>() {
                 public B apply(Tuple2<B,S> bs) { return bs.a; }
             });
-            Event<S> es_out = ebs.map(new Lambda1<Tuple2<B,S>,S>() {
+            Stream<S> es_out = ebs.map(new Lambda1<Tuple2<B,S>,S>() {
                 public S apply(Tuple2<B,S> bs) { return bs.b; }
             });
             es.loop(es_out);
@@ -468,13 +468,13 @@ public class Event<A> {
     /**
      * Accumulate on input event, outputting the new state each time.
      */
-    public final <S> Behavior<S> accum(final S initState, final Lambda2<A, S, S> f)
+    public final <S> Cell<S> accum(final S initState, final Lambda2<A, S, S> f)
     {
-        return Transaction.<Behavior<S>>run(() -> {
-            final Event<A> ea = this;
-            EventLoop<S> es = new EventLoop<S>();
-            Behavior<S> s = es.hold(initState);
-            Event<S> es_out = ea.snapshot(s, f);
+        return Transaction.<Cell<S>>run(() -> {
+            final Stream<A> ea = this;
+            StreamLoop<S> es = new StreamLoop<S>();
+            Cell<S> s = es.hold(initState);
+            Stream<S> es_out = ea.snapshot(s, f);
             es.loop(es_out);
             return es_out.hold(initState);
         });
@@ -483,13 +483,13 @@ public class Event<A> {
     /**
      * Throw away all event occurrences except for the first one.
      */
-    public final Event<A> once()
+    public final Stream<A> once()
     {
         // This is a bit long-winded but it's efficient because it deregisters
         // the listener.
-        final Event<A> ev = this;
+        final Stream<A> ev = this;
         final Listener[] la = new Listener[1];
-        final EventSink<A> out = new EventSink<A>() {
+        final StreamSink<A> out = new StreamSink<A>() {
             @Override
             protected Object[] sampleNow()
             {
@@ -518,7 +518,7 @@ public class Event<A> {
         return out.addCleanup(la[0]);
     }
 
-    Event<A> addCleanup(Listener cleanup)
+    Stream<A> addCleanup(Listener cleanup)
     {
         finalizers.add(cleanup);
         return this;
@@ -533,13 +533,13 @@ public class Event<A> {
 
 class CoalesceHandler<A> implements TransactionHandler<A>
 {
-	public CoalesceHandler(Lambda2<A,A,A> f, EventSink<A> out)
+	public CoalesceHandler(Lambda2<A,A,A> f, StreamSink<A> out)
 	{
 	    this.f = f;
 	    this.out = out;
 	}
 	private Lambda2<A,A,A> f;
-	private EventSink<A> out;
+	private StreamSink<A> out;
     private boolean accumValid = false;
     private A accum;
     @Override

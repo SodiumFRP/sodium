@@ -1,39 +1,39 @@
 package sodium;
 
-public class Behavior<A> {
-	protected Event<A> event;
+public class Cell<A> {
+	protected Stream<A> event;
 	A value;
 	A valueUpdate;
 	private Listener cleanup;
-    protected Lambda0<A> lazyInitValue;  // Used by LazyBehavior
+    protected Lambda0<A> lazyInitValue;  // Used by LazyCell
 
 	/**
 	 * A behavior with a constant value.
 	 */
-    public Behavior(A value)
+    public Cell(A value)
     {
-    	this.event = new Event<A>();
+    	this.event = new Stream<A>();
     	this.value = value;
     }
 
-    Behavior(final Event<A> event, A initValue)
+    Cell(final Stream<A> event, A initValue)
     {
     	this.event = event;
     	this.value = initValue;
     	Transaction.run(new Handler<Transaction>() {
     		public void run(Transaction trans1) {
-	    		Behavior.this.cleanup = event.listen(Node.NULL, trans1, new TransactionHandler<A>() {
+	    		Cell.this.cleanup = event.listen(Node.NULL, trans1, new TransactionHandler<A>() {
 	    			public void run(Transaction trans2, A a) {
-			    		if (Behavior.this.valueUpdate == null) {
+			    		if (Cell.this.valueUpdate == null) {
 			    			trans2.last(new Runnable() {
 			    				public void run() {
-				    				Behavior.this.value = Behavior.this.valueUpdate;
-				    				Behavior.this.lazyInitValue = null;
-				    				Behavior.this.valueUpdate = null;
+				    				Cell.this.value = Cell.this.valueUpdate;
+				    				Cell.this.lazyInitValue = null;
+				    				Cell.this.valueUpdate = null;
 				    			}
 			    			});
 			    		}
-			    		Behavior.this.valueUpdate = a;
+			    		Cell.this.valueUpdate = a;
 			    	}
 	    		}, false);
     		}
@@ -77,7 +77,7 @@ public class Behavior<A> {
      * An event that gives the updates for the behavior. If this behavior was created
      * with a hold, then updates() gives you an event equivalent to the one that was held.
      */
-    public final Event<A> updates()
+    public final Stream<A> updates()
     {
     	return event;
     }
@@ -87,18 +87,18 @@ public class Behavior<A> {
      * the current value of the behavior, and thereafter behaves like updates(),
      * firing for each update to the behavior's value.
      */
-    public final Event<A> value()
+    public final Stream<A> value()
     {
-        return Transaction.apply(new Lambda1<Transaction, Event<A>>() {
-        	public Event<A> apply(Transaction trans) {
+        return Transaction.apply(new Lambda1<Transaction, Stream<A>>() {
+        	public Stream<A> apply(Transaction trans) {
         		return value(trans);
         	}
         });
     }
 
-    final Event<A> value(Transaction trans1)
+    final Stream<A> value(Transaction trans1)
     {
-    	final EventSink<A> out = new EventSink<A>() {
+    	final StreamSink<A> out = new StreamSink<A>() {
     		@Override
             protected Object[] sampleNow()
             {
@@ -117,7 +117,7 @@ public class Behavior<A> {
     /**
      * Transform the behavior's value according to the supplied function.
      */
-	public final <B> Behavior<B> map(Lambda1<A,B> f)
+	public final <B> Cell<B> map(Lambda1<A,B> f)
 	{
 		return updates().map(f).holdLazy(() -> f.apply(sampleNoTrans()));
 	}
@@ -125,7 +125,7 @@ public class Behavior<A> {
 	/**
 	 * Lift a binary function into behaviors.
 	 */
-	public final <B,C> Behavior<C> lift(final Lambda2<A,B,C> f, Behavior<B> b)
+	public final <B,C> Cell<C> lift(final Lambda2<A,B,C> f, Cell<B> b)
 	{
 		Lambda1<A, Lambda1<B,C>> ffa = new Lambda1<A, Lambda1<B,C>>() {
 			public Lambda1<B,C> apply(final A aa) {
@@ -136,14 +136,14 @@ public class Behavior<A> {
 				};
 			}
 		};
-		Behavior<Lambda1<B,C>> bf = map(ffa);
+		Cell<Lambda1<B,C>> bf = map(ffa);
 		return apply(bf, b);
 	}
 
 	/**
 	 * Lift a binary function into behaviors.
 	 */
-	public static final <A,B,C> Behavior<C> lift(Lambda2<A,B,C> f, Behavior<A> a, Behavior<B> b)
+	public static final <A,B,C> Cell<C> lift(Lambda2<A,B,C> f, Cell<A> a, Cell<B> b)
 	{
 		return a.lift(f, b);
 	}
@@ -151,7 +151,7 @@ public class Behavior<A> {
 	/**
 	 * Lift a ternary function into behaviors.
 	 */
-	public final <B,C,D> Behavior<D> lift(final Lambda3<A,B,C,D> f, Behavior<B> b, Behavior<C> c)
+	public final <B,C,D> Cell<D> lift(final Lambda3<A,B,C,D> f, Cell<B> b, Cell<C> c)
 	{
 		Lambda1<A, Lambda1<B, Lambda1<C,D>>> ffa = new Lambda1<A, Lambda1<B, Lambda1<C,D>>>() {
 			public Lambda1<B, Lambda1<C,D>> apply(final A aa) {
@@ -166,14 +166,14 @@ public class Behavior<A> {
 				};
 			}
 		};
-		Behavior<Lambda1<B, Lambda1<C, D>>> bf = map(ffa);
+		Cell<Lambda1<B, Lambda1<C, D>>> bf = map(ffa);
 		return apply(apply(bf, b), c);
 	}
 
 	/**
 	 * Lift a ternary function into behaviors.
 	 */
-	public static final <A,B,C,D> Behavior<D> lift(Lambda3<A,B,C,D> f, Behavior<A> a, Behavior<B> b, Behavior<C> c)
+	public static final <A,B,C,D> Cell<D> lift(Lambda3<A,B,C,D> f, Cell<A> a, Cell<B> b, Cell<C> c)
 	{
 		return a.lift(f, b, c);
 	}
@@ -181,7 +181,7 @@ public class Behavior<A> {
 	/**
 	 * Lift a quaternary function into behaviors.
 	 */
-	public final <B,C,D,E> Behavior<E> lift(final Lambda4<A,B,C,D,E> f, Behavior<B> b, Behavior<C> c, Behavior<D> d)
+	public final <B,C,D,E> Cell<E> lift(final Lambda4<A,B,C,D,E> f, Cell<B> b, Cell<C> c, Cell<D> d)
 	{
 		Lambda1<A, Lambda1<B, Lambda1<C, Lambda1<D,E>>>> ffa = new Lambda1<A, Lambda1<B, Lambda1<C, Lambda1<D,E>>>>() {
 			public Lambda1<B, Lambda1<C, Lambda1<D,E>>> apply(final A aa) {
@@ -200,14 +200,14 @@ public class Behavior<A> {
 				};
 			}
 		};
-		Behavior<Lambda1<B, Lambda1<C, Lambda1<D, E>>>> bf = map(ffa);
+		Cell<Lambda1<B, Lambda1<C, Lambda1<D, E>>>> bf = map(ffa);
 		return apply(apply(apply(bf, b), c), d);
 	}
 
 	/**
 	 * Lift a quaternary function into behaviors.
 	 */
-	public static final <A,B,C,D,E> Behavior<E> lift(Lambda4<A,B,C,D,E> f, Behavior<A> a, Behavior<B> b, Behavior<C> c, Behavior<D> d)
+	public static final <A,B,C,D,E> Cell<E> lift(Lambda4<A,B,C,D,E> f, Cell<A> a, Cell<B> b, Cell<C> c, Cell<D> d)
 	{
 		return a.lift(f, b, c, d);
 	}
@@ -216,9 +216,9 @@ public class Behavior<A> {
 	 * Apply a value inside a behavior to a function inside a behavior. This is the
 	 * primitive for all function lifting.
 	 */
-	public static <A,B> Behavior<B> apply(final Behavior<Lambda1<A,B>> bf, final Behavior<A> ba)
+	public static <A,B> Cell<B> apply(final Cell<Lambda1<A,B>> bf, final Cell<A> ba)
 	{
-		final EventSink<B> out = new EventSink<B>();
+		final StreamSink<B> out = new StreamSink<B>();
 
         final Handler<Transaction> h = new Handler<Transaction>() {
             boolean fired = false;			
@@ -253,14 +253,14 @@ public class Behavior<A> {
 	/**
 	 * Unwrap a behavior inside another behavior to give a time-varying behavior implementation.
 	 */
-	public static <A> Behavior<A> switchB(final Behavior<Behavior<A>> bba)
+	public static <A> Cell<A> switchC(final Cell<Cell<A>> bba)
 	{
 	    Lambda0<A> za = () -> bba.sampleNoTrans().sampleNoTrans();
-	    final EventSink<A> out = new EventSink<A>();
-        TransactionHandler<Behavior<A>> h = new TransactionHandler<Behavior<A>>() {
+	    final StreamSink<A> out = new StreamSink<A>();
+        TransactionHandler<Cell<A>> h = new TransactionHandler<Cell<A>>() {
             private Listener currentListener;
             @Override
-            public void run(Transaction trans2, Behavior<A> ba) {
+            public void run(Transaction trans2, Cell<A> ba) {
                 // Note: If any switch takes place during a transaction, then the
                 // value().listen will always cause a sample to be fetched from the
                 // one we just switched to. The caller will be fetching our output
@@ -289,28 +289,28 @@ public class Behavior<A> {
 	/**
 	 * Unwrap an event inside a behavior to give a time-varying event implementation.
 	 */
-	public static <A> Event<A> switchE(final Behavior<Event<A>> bea)
+	public static <A> Stream<A> switchS(final Cell<Stream<A>> bea)
 	{
-        return Transaction.apply(new Lambda1<Transaction, Event<A>>() {
-        	public Event<A> apply(final Transaction trans) {
-                return switchE(trans, bea);
+        return Transaction.apply(new Lambda1<Transaction, Stream<A>>() {
+        	public Stream<A> apply(final Transaction trans) {
+                return switchS(trans, bea);
         	}
         });
     }
 
-	private static <A> Event<A> switchE(final Transaction trans1, final Behavior<Event<A>> bea)
+	private static <A> Stream<A> switchS(final Transaction trans1, final Cell<Stream<A>> bea)
 	{
-        final EventSink<A> out = new EventSink<A>();
+        final StreamSink<A> out = new StreamSink<A>();
         final TransactionHandler<A> h2 = new TransactionHandler<A>() {
         	public void run(Transaction trans2, A a) {
 	            out.send(trans2, a);
 	        }
         };
-        TransactionHandler<Event<A>> h1 = new TransactionHandler<Event<A>>() {
+        TransactionHandler<Stream<A>> h1 = new TransactionHandler<Stream<A>>() {
             private Listener currentListener = bea.sampleNoTrans().listen(out.node, trans1, h2, false);
 
             @Override
-            public void run(final Transaction trans2, final Event<A> ea) {
+            public void run(final Transaction trans2, final Stream<A> ea) {
                 trans2.last(new Runnable() {
                 	public void run() {
 	                    if (currentListener != null)
@@ -334,21 +334,21 @@ public class Behavior<A> {
      * Transform a behavior with a generalized state loop (a mealy machine). The function
      * is passed the input and the old state and returns the new state and output value.
      */
-    public final <B,S> Behavior<B> collect(final S initState, final Lambda2<A, S, Tuple2<B, S>> f)
+    public final <B,S> Cell<B> collect(final S initState, final Lambda2<A, S, Tuple2<B, S>> f)
     {
-        return Transaction.<Behavior<B>>run(() -> {
-            final Event<A> ea = updates().coalesce(new Lambda2<A,A,A>() {
+        return Transaction.<Cell<B>>run(() -> {
+            final Stream<A> ea = updates().coalesce(new Lambda2<A,A,A>() {
                 public A apply(A fst, A snd) { return snd; }
             });
             final Lambda0<Tuple2<B, S>> zbs = () -> f.apply(sampleNoTrans(), initState);
-            EventLoop<Tuple2<B,S>> ebs = new EventLoop<Tuple2<B,S>>();
-            Behavior<Tuple2<B,S>> bbs = ebs.holdLazy(zbs);
-            Behavior<S> bs = bbs.map(new Lambda1<Tuple2<B,S>,S>() {
+            StreamLoop<Tuple2<B,S>> ebs = new StreamLoop<Tuple2<B,S>>();
+            Cell<Tuple2<B,S>> bbs = ebs.holdLazy(zbs);
+            Cell<S> bs = bbs.map(new Lambda1<Tuple2<B,S>,S>() {
                 public S apply(Tuple2<B,S> x) {
                     return x.b;
                 }
             });
-            Event<Tuple2<B,S>> ebs_out = ea.snapshot(bs, f);
+            Stream<Tuple2<B,S>> ebs_out = ea.snapshot(bs, f);
             ebs.loop(ebs_out);
             return bbs.map(new Lambda1<Tuple2<B,S>,B>() {
                 public B apply(Tuple2<B,S> x) {

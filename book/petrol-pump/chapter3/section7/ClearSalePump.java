@@ -9,19 +9,19 @@ import java.util.Optional;
 
 public class ClearSalePump implements Pump {
     public Outputs create(Inputs inputs) {
-        EventLoop<Fuel> eStart = new EventLoop<>();
+        StreamLoop<Fuel> sStart = new StreamLoop<>();
         Fill fi = new Fill(
-                          inputs.eClearSale.map(u -> Unit.UNIT),
-                          inputs.eFuelPulses, inputs.calibration,
+                          inputs.sClearSale.map(u -> Unit.UNIT),
+                          inputs.sFuelPulses, inputs.calibration,
                           inputs.price1, inputs.price2, inputs.price3,
-                          eStart);
+                          sStart);
         NotifyPointOfSale np = new NotifyPointOfSale(
-                new LifeCycle(inputs.eNozzle1,
-                              inputs.eNozzle2,
-                              inputs.eNozzle3),
-                inputs.eClearSale,
+                new LifeCycle(inputs.sNozzle1,
+                              inputs.sNozzle2,
+                              inputs.sNozzle3),
+                inputs.sClearSale,
                 fi);
-        eStart.loop(np.eStart);
+        sStart.loop(np.sStart);
         return new Outputs()
             .setDelivery(np.fuelFlowing.map(
                 of ->
@@ -39,8 +39,8 @@ public class ClearSalePump implements Pump {
                     Fuel.TWO, inputs))
             .setPriceLCD3(ShowDollarsPump.priceLCD(np.fillActive, fi.price,
                     Fuel.THREE, inputs))
-            .setBeep(np.eBeep)
-            .setSaleComplete(np.eSaleComplete);
+            .setBeep(np.sBeep)
+            .setSaleComplete(np.sSaleComplete);
     }
 }
 

@@ -5,20 +5,20 @@ import sodium.*;
 import java.util.Optional;
 
 public class Keypad {
-    public final Behavior<Integer> value;
-    public final Event<Unit> eBeep;
+    public final Cell<Integer> value;
+    public final Stream<Unit> sBeep;
 
-    public Keypad(Event<Key> eKeypad,
-                  Event<Unit> eClear,
-                  Behavior<Boolean> active) {
-        this(eKeypad.gate(active), eClear);
+    public Keypad(Stream<Key> sKeypad,
+                  Stream<Unit> eClear,
+                  Cell<Boolean> active) {
+        this(sKeypad.gate(active), eClear);
     }
 
-    public Keypad(Event<Key> eKeypad, Event<Unit> eClear) {
-        BehaviorLoop<Integer> value = new BehaviorLoop<>();
+    public Keypad(Stream<Key> sKeypad, Stream<Unit> eClear) {
+        CellLoop<Integer> value = new CellLoop<>();
         this.value = value;
-        Event<Integer> eKeyUpdate = Event.filterOptional(
-            eKeypad.snapshot(value,
+        Stream<Integer> sKeyUpdate = Stream.filterOptional(
+            sKeypad.snapshot(value,
                 (key, value_) -> {
                     if (key == Key.CLEAR)
                         return Optional.of(0);
@@ -42,9 +42,9 @@ public class Keypad {
                 }
             )
         );
-        value.loop(eKeyUpdate.merge(eClear.map(u -> 0))
+        value.loop(sKeyUpdate.merge(eClear.map(u -> 0))
                              .hold(0));
-        eBeep = eKeyUpdate.map(k -> Unit.UNIT);
+        sBeep = sKeyUpdate.map(k -> Unit.UNIT);
     }
 }
 

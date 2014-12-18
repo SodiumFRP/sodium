@@ -2,22 +2,22 @@ package sodium;
 
 import java.util.List;
 
-public class EventLoop<A> extends Event<A> {
-    private Event<A> ea_out;
+public class StreamLoop<A> extends Stream<A> {
+    private Stream<A> ea_out;
 
-    public EventLoop()
+    public StreamLoop()
     {
     	if (Transaction.getCurrentTransaction() == null)
-    	    throw new RuntimeException("EventLoop/BehaviorLoop must be used within an explicit transaction");
+    	    throw new RuntimeException("StreamLoop/CellLoop must be used within an explicit transaction");
     }
 
 	protected Object[] sampleNow() {
 	    if (ea_out == null)
-            throw new RuntimeException("EventLoop sampled before it was looped");
+            throw new RuntimeException("StreamLoop sampled before it was looped");
         return ea_out.sampleNow();
 	}
 
-    // TO DO: Copy & paste from EventSink. Can we improve this?
+    // TO DO: Copy & paste from StreamSink. Can we improve this?
     private void send(Transaction trans, A a) {
         if (firings.isEmpty())
             trans.last(new Runnable() {
@@ -37,12 +37,12 @@ public class EventLoop<A> extends Event<A> {
     	}
     }
 
-    public void loop(Event<A> ea_out)
+    public void loop(Stream<A> ea_out)
     {
         if (this.ea_out != null)
-            throw new RuntimeException("EventLoop looped more than once");
+            throw new RuntimeException("StreamLoop looped more than once");
         this.ea_out = ea_out;
-        final EventLoop<A> me = this;
+        final StreamLoop<A> me = this;
         addCleanup(ea_out.listen_(this.node, new TransactionHandler<A>() {
             public void run(Transaction trans, A a) {
                 me.send(trans, a);

@@ -13,21 +13,21 @@ import java.util.Optional;
 
 public class PresetAmountPump implements Pump {
     public Outputs create(Inputs inputs) {
-        EventLoop<Fuel> eStart = new EventLoop<>();
-        Fill fi = new Fill(inputs.eClearSale.map(u -> Unit.UNIT),
-                           inputs.eFuelPulses, inputs.calibration,
+        StreamLoop<Fuel> sStart = new StreamLoop<>();
+        Fill fi = new Fill(inputs.sClearSale.map(u -> Unit.UNIT),
+                           inputs.sFuelPulses, inputs.calibration,
                            inputs.price1, inputs.price2, inputs.price3,
-                           eStart);
+                           sStart);
         NotifyPointOfSale np = new NotifyPointOfSale(
-                new LifeCycle(inputs.eNozzle1,
-                              inputs.eNozzle2,
-                              inputs.eNozzle3),
-                inputs.eClearSale,
+                new LifeCycle(inputs.sNozzle1,
+                              inputs.sNozzle2,
+                              inputs.sNozzle3),
+                inputs.sClearSale,
                 fi);
-        eStart.loop(np.eStart);
-        BehaviorLoop<Boolean> keypadActive = new BehaviorLoop<>();
-        Keypad ke = new Keypad(inputs.eKeypad,
-                               inputs.eClearSale,
+        sStart.loop(np.sStart);
+        CellLoop<Boolean> keypadActive = new CellLoop<>();
+        Keypad ke = new Keypad(inputs.sKeypad,
+                               inputs.sClearSale,
                                keypadActive);
         Preset pr = new Preset(ke.value,
                                fi,
@@ -46,10 +46,10 @@ public class PresetAmountPump implements Pump {
                     Fuel.TWO, inputs))
             .setPriceLCD3(ShowDollarsPump.priceLCD(np.fillActive, fi.price,
                     Fuel.THREE, inputs))
-            .setSaleComplete(np.eSaleComplete)
+            .setSaleComplete(np.sSaleComplete)
             .setPresetLCD(ke.value.map(v ->
                 Formatters.formatSaleCost((double)v)))
-            .setBeep(np.eBeep.merge(ke.eBeep));
+            .setBeep(np.sBeep.merge(ke.sBeep));
     }
 }
 

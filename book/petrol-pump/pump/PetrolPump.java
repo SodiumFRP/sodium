@@ -36,32 +36,32 @@ class PumpFace extends Component {
     private final BufferedImage[] smalls = new BufferedImage[8];
     private final BufferedImage[] larges = new BufferedImage[8];
     private final BufferedImage[] nozzleImgs = new BufferedImage[3];
-    private final Behavior<List<Integer>> presetLCD;
-    private final Behavior<List<Integer>> saleCostLCD;
-    private final Behavior<List<Integer>> saleQuantityLCD;
-    private final Behavior<List<Integer>> priceLCD1;
-    private final Behavior<List<Integer>> priceLCD2;
-    private final Behavior<List<Integer>> priceLCD3;
+    private final Cell<List<Integer>> presetLCD;
+    private final Cell<List<Integer>> saleCostLCD;
+    private final Cell<List<Integer>> saleQuantityLCD;
+    private final Cell<List<Integer>> priceLCD1;
+    private final Cell<List<Integer>> priceLCD2;
+    private final Cell<List<Integer>> priceLCD3;
     @SuppressWarnings("unchecked")
-    private final Behavior<UpDown> nozzles[] = new Behavior[3];
+    private final Cell<UpDown> nozzles[] = new Cell[3];
     @SuppressWarnings("unchecked")
-    public final Behavior<Rectangle>[] nozzleRects = new Behavior[3];
+    public final Cell<Rectangle>[] nozzleRects = new Cell[3];
     PumpFace(
         URL rootURL,
-        EventSink<Point> eClick,
-        Behavior<List<Integer>> presetLCD,
-        Behavior<List<Integer>> saleCostLCD,
-        Behavior<List<Integer>> saleQuantityLCD,
-        Behavior<List<Integer>> priceLCD1,
-        Behavior<List<Integer>> priceLCD2,
-        Behavior<List<Integer>> priceLCD3,
-        Behavior<UpDown> nozzle1,
-        Behavior<UpDown> nozzle2,
-        Behavior<UpDown> nozzle3
+        StreamSink<Point> sClick,
+        Cell<List<Integer>> presetLCD,
+        Cell<List<Integer>> saleCostLCD,
+        Cell<List<Integer>> saleQuantityLCD,
+        Cell<List<Integer>> priceLCD1,
+        Cell<List<Integer>> priceLCD2,
+        Cell<List<Integer>> priceLCD3,
+        Cell<UpDown> nozzle1,
+        Cell<UpDown> nozzle2,
+        Cell<UpDown> nozzle3
     ) throws IOException {
         addMouseListener(new MouseAdapter() {
             public void mousePressed(java.awt.event.MouseEvent ev) {
-                eClick.send(new Point(ev.getX(), ev.getY()));
+                sClick.send(new Point(ev.getX(), ev.getY()));
             }
         });
         this.presetLCD = presetLCD;
@@ -177,11 +177,11 @@ class ClassNameRenderer extends DefaultListCellRenderer {
 public class PetrolPump extends JFrame
 {
     private Listener l = new Listener();
-    private Event<Key> eKey;
-    public EventSink<Integer> eFuelPulses = new EventSink<>();
-    public Behavior<Delivery> delivery;
+    private Stream<Key> sKey;
+    public StreamSink<Integer> sFuelPulses = new StreamSink<>();
+    public Cell<Delivery> delivery;
 
-    private static Behavior<List<Integer>> format7Seg(Behavior<String> text, int digits)
+    private static Cell<List<Integer>> format7Seg(Cell<String> text, int digits)
     {
         return text.map(text_ -> {
             Integer[] segs = new Integer[digits];
@@ -211,9 +211,9 @@ public class PetrolPump extends JFrame
         });
     }
 
-    public static <A> Event<A> changes(Behavior<A> b)
+    public static <A> Stream<A> changes(Cell<A> b)
     {
-        return Event.filterOptional(
+        return Stream.filterOptional(
             b.value().snapshot(b, (neu, old) ->
                 old.equals(neu) ? Optional.empty() : Optional.of(neu)));
     }
@@ -274,18 +274,18 @@ public class PetrolPump extends JFrame
                 };
 
                 // An event of mouse presses
-                EventSink<Point> eClick = new EventSink<Point>();
+                StreamSink<Point> sClick = new StreamSink<Point>();
 
                 /*
-                l = l.append(eClick.listen(pt -> {
+                l = l.append(sClick.listen(pt -> {
                     System.out.println(pt);
                 }));
                 */
 
-                eKey = toKey(eClick);
+                sKey = toKey(sClick);
 
                 /*
-                l = l.append(eKey.listen(key -> {
+                l = l.append(sKey.listen(key -> {
                     System.out.println(key);
                 }));
                 */
@@ -295,45 +295,45 @@ public class PetrolPump extends JFrame
                 Integer[] four = {0xff, 0xff, 0xff, 0xff};
                 List<Integer> four8s = Arrays.asList(four);
                 @SuppressWarnings("unchecked")
-                BehaviorLoop<UpDown>[] nozzles = new BehaviorLoop[3];
+                CellLoop<UpDown>[] nozzles = new CellLoop[3];
                 for (int i = 0; i < 3; i++)
-                    nozzles[i] = new BehaviorLoop<UpDown>();
+                    nozzles[i] = new CellLoop<UpDown>();
 
-                Behavior<Double> calibration = new Behavior<>(0.001);
-                Behavior<Double> price1 = textPrice1.text.map(parseDbl);
-                Behavior<Double> price2 = textPrice2.text.map(parseDbl);
-                Behavior<Double> price3 = textPrice3.text.map(parseDbl);
-                EventSink<Unit> eClearSale = new EventSink<>();
+                Cell<Double> calibration = new Cell<>(0.001);
+                Cell<Double> price1 = textPrice1.text.map(parseDbl);
+                Cell<Double> price2 = textPrice2.text.map(parseDbl);
+                Cell<Double> price3 = textPrice3.text.map(parseDbl);
+                StreamSink<Unit> sClearSale = new StreamSink<>();
 
-                Behavior<Outputs> outputs = logic.selectedItem.map(
+                Cell<Outputs> outputs = logic.selectedItem.map(
                     pump -> pump.create(
                         new Inputs(
                             nozzles[0].updates(),
                             nozzles[1].updates(),
                             nozzles[2].updates(),
-                            eKey,
-                            eFuelPulses,
+                            sKey,
+                            sFuelPulses,
                             calibration,
                             price1,
                             price2,
                             price3,
-                            eClearSale
+                            sClearSale
                         )
                     )
                 );
 
-                delivery = Behavior.switchB(outputs.map(o -> o.delivery));
-                Behavior<String> presetLCD = Behavior.switchB(outputs.map(o -> o.presetLCD));
-                Behavior<String> saleCostLCD = Behavior.switchB(outputs.map(o -> o.saleCostLCD));
-                Behavior<String> saleQuantityLCD = Behavior.switchB(outputs.map(o -> o.saleQuantityLCD));
-                Behavior<String> priceLCD1 = Behavior.switchB(outputs.map(o -> o.priceLCD1));
-                Behavior<String> priceLCD2 = Behavior.switchB(outputs.map(o -> o.priceLCD2));
-                Behavior<String> priceLCD3 = Behavior.switchB(outputs.map(o -> o.priceLCD3));
-                Event<Unit> eBeep = Behavior.switchE(outputs.map(o -> o.eBeep));
-                Event<Sale> eSaleComplete = Behavior.switchE(outputs.map(o -> o.eSaleComplete));
+                delivery = Cell.switchC(outputs.map(o -> o.delivery));
+                Cell<String> presetLCD = Cell.switchC(outputs.map(o -> o.presetLCD));
+                Cell<String> saleCostLCD = Cell.switchC(outputs.map(o -> o.saleCostLCD));
+                Cell<String> saleQuantityLCD = Cell.switchC(outputs.map(o -> o.saleQuantityLCD));
+                Cell<String> priceLCD1 = Cell.switchC(outputs.map(o -> o.priceLCD1));
+                Cell<String> priceLCD2 = Cell.switchC(outputs.map(o -> o.priceLCD2));
+                Cell<String> priceLCD3 = Cell.switchC(outputs.map(o -> o.priceLCD3));
+                Stream<Unit> sBeep = Cell.switchS(outputs.map(o -> o.sBeep));
+                Stream<Sale> sSaleComplete = Cell.switchS(outputs.map(o -> o.sSaleComplete));
 
                 AudioClip beepClip = Applet.newAudioClip(new URL(rootURL, "sounds/beep.wav"));
-                l = l.append(eBeep.listen(u -> {
+                l = l.append(sBeep.listen(u -> {
                     System.out.println("BEEP!");
                     beepClip.play();
                 }));
@@ -363,7 +363,7 @@ public class PetrolPump extends JFrame
                 }));
 
                 PumpFace face = new PumpFace(
-                        rootURL, eClick,
+                        rootURL, sClick,
                         format7Seg(presetLCD,5),
                         format7Seg(saleCostLCD,5),
                         format7Seg(saleQuantityLCD,5),
@@ -376,13 +376,13 @@ public class PetrolPump extends JFrame
                     );
                 add(face, BorderLayout.CENTER);
                 for (int i = 0; i < 3; i++) {
-                    final Behavior<Tuple2<Rectangle, UpDown>> rect_state =
-                        Behavior.lift(
+                    final Cell<Tuple2<Rectangle, UpDown>> rect_state =
+                        Cell.lift(
                             (rect, state) -> new Tuple2<Rectangle, UpDown>(rect, state),
                             face.nozzleRects[i], nozzles[i]);
-                    ((BehaviorLoop<UpDown>)nozzles[i]).loop(
-                        Event.<UpDown>filterOptional(
-                            eClick.snapshot(rect_state,
+                    ((CellLoop<UpDown>)nozzles[i]).loop(
+                        Stream.<UpDown>filterOptional(
+                            sClick.snapshot(rect_state,
                                 (pt, rs) -> rs.a.contains(pt) ? Optional.of(invert(rs.b))
                                                               : Optional.empty()
                             )
@@ -390,7 +390,7 @@ public class PetrolPump extends JFrame
                     );
                 }
 
-                l = l.append(eSaleComplete.listen(sale -> {
+                l = l.append(sSaleComplete.listen(sale -> {
                     JDialog dialog = new JDialog(this, "Sale complete", false);
                     dialog.setLayout(new GridLayout(5,2));
                     dialog.add(new JLabel("Fuel "));
@@ -405,9 +405,9 @@ public class PetrolPump extends JFrame
                     dialog.add(ok);
                     dialog.pack();
                     dialog.setVisible(true);
-                    this.l = l.append(ok.eClicked.listen(u -> {
+                    this.l = l.append(ok.sClicked.listen(u -> {
                         dialog.dispose();
-                        eClearSale.send(Unit.UNIT);
+                        sClearSale.send(Unit.UNIT);
                     }));
                 }));
             }
@@ -425,7 +425,7 @@ public class PetrolPump extends JFrame
         return u == UpDown.UP ? UpDown.DOWN : UpDown.UP;
     }
 
-    public static Event<Key> toKey(Event<Point> eClick) {
+    public static Stream<Key> toKey(Stream<Point> sClick) {
         HashMap<Tuple2<Integer,Integer>, Key> keys = new HashMap<>();
         keys.put(new Tuple2<>(0,0), Key.ONE);
         keys.put(new Tuple2<>(1,0), Key.TWO);
@@ -439,7 +439,7 @@ public class PetrolPump extends JFrame
         keys.put(new Tuple2<>(1,3), Key.ZERO);
         keys.put(new Tuple2<>(2,3), Key.CLEAR);
 
-        return Event.filterOptional(eClick.map(pt -> {
+        return Stream.filterOptional(sClick.map(pt -> {
             int x = pt.x - 40;
             int y = pt.y - 230;
             int col = x / 50;
@@ -476,12 +476,12 @@ public class PetrolPump extends JFrame
                 case FAST1:
                 case FAST2:
                 case FAST3:
-                    view.eFuelPulses.send(40);
+                    view.sFuelPulses.send(40);
                     break;
                 case SLOW1:
                 case SLOW2:
                 case SLOW3:
-                    view.eFuelPulses.send(2);
+                    view.sFuelPulses.send(2);
                 }
             });
             try { Thread.sleep(200); } catch (InterruptedException e) {}

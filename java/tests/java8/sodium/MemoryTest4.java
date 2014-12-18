@@ -24,7 +24,7 @@ public class MemoryTest4
         EventSink<Integer> et = new EventSink<Integer>();
         EventSink<Integer> eChange = new EventSink<Integer>();
         Behavior<Event<Integer>> oout = eChange.map(x -> (Event<Integer>)et).hold((Event<Integer>)et);
-        Event<Integer> out = Behavior.switchE(oout);
+        Event<Integer> out = Behavior.switchS(oout);
         Listener l = out.listen(tt -> {
             System.out.println(tt);
         });

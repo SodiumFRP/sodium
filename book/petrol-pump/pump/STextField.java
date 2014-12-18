@@ -10,7 +10,7 @@ public class STextField extends JTextField
     public STextField(String initText, int width)
     {
         super(initText, width);
-        BehaviorSink<String> text = new BehaviorSink<String>(initText);
+        CellSink<String> text = new CellSink<String>(initText);
         this.text = text;
 
         getDocument().addDocumentListener(new DocumentListener() {
@@ -30,6 +30,6 @@ public class STextField extends JTextField
         });
     }
 
-    public final Behavior<String> text;
+    public final Cell<String> text;
 }
 

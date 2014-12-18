@@ -5,46 +5,46 @@ import sodium.*;
 import java.util.Optional;
 
 public class LifeCycle {
-    public Event<Fuel> eStart;
-    public Behavior<Optional<Fuel>> fillActive;
-    public Event<End> eEnd;
+    public Stream<Fuel> sStart;
+    public Cell<Optional<Fuel>> fillActive;
+    public Stream<End> eEnd;
 
     public enum End { END }
 
-    private static Event<Fuel> whenLifted(Event<UpDown> eNozzle,
+    private static Stream<Fuel> whenLifted(Stream<UpDown> sNozzle,
                                           Fuel nozzleFuel) {
-        return eNozzle.filter(u -> u == UpDown.UP)
+        return sNozzle.filter(u -> u == UpDown.UP)
                       .map(u -> nozzleFuel);
     }
 
-    private static Event<End> whenSetDown(Event<UpDown> eNozzle,
+    private static Stream<End> whenSetDown(Stream<UpDown> sNozzle,
                 Fuel nozzleFuel,
-                Behavior<Optional<Fuel>> fillActive) {
-        return Event.<End>filterOptional(
-            eNozzle.snapshot(fillActive,
+                Cell<Optional<Fuel>> fillActive) {
+        return Stream.<End>filterOptional(
+            sNozzle.snapshot(fillActive,
                 (u,f) -> u == UpDown.DOWN &&
                          f.equals(Optional.of(nozzleFuel))
                                        ? Optional.of(End.END)
                                        : Optional.empty()));
     }
 
-    public LifeCycle(Event<UpDown> eNozzle1,
-                     Event<UpDown> eNozzle2,
-                     Event<UpDown> eNozzle3) {
-        Event<Fuel> eLiftNozzle = whenLifted(eNozzle1, Fuel.ONE).merge(
-                                  whenLifted(eNozzle2, Fuel.TWO).merge(
-                                  whenLifted(eNozzle3, Fuel.THREE)));
-        BehaviorLoop<Optional<Fuel>> fillActive = new BehaviorLoop<>();
+    public LifeCycle(Stream<UpDown> sNozzle1,
+                     Stream<UpDown> sNozzle2,
+                     Stream<UpDown> sNozzle3) {
+        Stream<Fuel> eLiftNozzle = whenLifted(sNozzle1, Fuel.ONE).merge(
+                                  whenLifted(sNozzle2, Fuel.TWO).merge(
+                                  whenLifted(sNozzle3, Fuel.THREE)));
+        CellLoop<Optional<Fuel>> fillActive = new CellLoop<>();
         this.fillActive = fillActive;
-        this.eStart = Event.filterOptional(
+        this.sStart = Stream.filterOptional(
             eLiftNozzle.snapshot(fillActive, (newFuel, fillActive_) ->
                 fillActive_.isPresent() ? Optional.empty()
                                         : Optional.of(newFuel)));
-        this.eEnd = whenSetDown(eNozzle1, Fuel.ONE, fillActive).merge(
-                    whenSetDown(eNozzle2, Fuel.TWO, fillActive).merge(
-                    whenSetDown(eNozzle3, Fuel.THREE, fillActive)));
+        this.eEnd = whenSetDown(sNozzle1, Fuel.ONE, fillActive).merge(
+                    whenSetDown(sNozzle2, Fuel.TWO, fillActive).merge(
+                    whenSetDown(sNozzle3, Fuel.THREE, fillActive)));
         fillActive.loop(
-            eStart.map(f -> Optional.of(f))
+            sStart.map(f -> Optional.of(f))
                   .merge(eEnd.map(e -> Optional.empty()))
                   .hold(Optional.empty())
         );

@@ -6,9 +6,9 @@ import java.util.Optional;
 
 public class LifeCyclePump implements Pump {
     public Outputs create(Inputs inputs) {
-        LifeCycle lc = new LifeCycle(inputs.eNozzle1,
-                                     inputs.eNozzle2,
-                                     inputs.eNozzle3);
+        LifeCycle lc = new LifeCycle(inputs.sNozzle1,
+                                     inputs.sNozzle2,
+                                     inputs.sNozzle3);
         return new Outputs()
             .setDelivery(lc.fillActive.map(
                 of ->

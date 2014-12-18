@@ -1,7 +1,7 @@
 package sodium;
 
-class LazyBehavior<A> extends Behavior<A> {
-    LazyBehavior(final Event<A> event, final Lambda0<A> lazyInitValue) {
+class LazyCell<A> extends Cell<A> {
+    LazyCell(final Stream<A> event, final Lambda0<A> lazyInitValue) {
         super(event, null);
         this.lazyInitValue = lazyInitValue;
     }
