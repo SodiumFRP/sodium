@@ -25,7 +25,7 @@ public class MemoryTest3
         Behavior<Integer> t = et.hold(0);
         EventSink<Integer> eChange = new EventSink<Integer>();
         Behavior<Behavior<Integer>> oout = eChange.map(x -> t).hold(t);
-        Behavior<Integer> out = Behavior.switchB(oout);
+        Behavior<Integer> out = Behavior.switchC(oout);
         Listener l = out.value().listen(tt -> {
             //System.out.println(tt)
         });

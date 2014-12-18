@@ -322,15 +322,15 @@ public class PetrolPump extends JFrame
                     )
                 );
 
-                delivery = Cell.switchB(outputs.map(o -> o.delivery));
-                Cell<String> presetLCD = Cell.switchB(outputs.map(o -> o.presetLCD));
-                Cell<String> saleCostLCD = Cell.switchB(outputs.map(o -> o.saleCostLCD));
-                Cell<String> saleQuantityLCD = Cell.switchB(outputs.map(o -> o.saleQuantityLCD));
-                Cell<String> priceLCD1 = Cell.switchB(outputs.map(o -> o.priceLCD1));
-                Cell<String> priceLCD2 = Cell.switchB(outputs.map(o -> o.priceLCD2));
-                Cell<String> priceLCD3 = Cell.switchB(outputs.map(o -> o.priceLCD3));
-                Stream<Unit> sBeep = Cell.switchE(outputs.map(o -> o.sBeep));
-                Stream<Sale> sSaleComplete = Cell.switchE(outputs.map(o -> o.sSaleComplete));
+                delivery = Cell.switchC(outputs.map(o -> o.delivery));
+                Cell<String> presetLCD = Cell.switchC(outputs.map(o -> o.presetLCD));
+                Cell<String> saleCostLCD = Cell.switchC(outputs.map(o -> o.saleCostLCD));
+                Cell<String> saleQuantityLCD = Cell.switchC(outputs.map(o -> o.saleQuantityLCD));
+                Cell<String> priceLCD1 = Cell.switchC(outputs.map(o -> o.priceLCD1));
+                Cell<String> priceLCD2 = Cell.switchC(outputs.map(o -> o.priceLCD2));
+                Cell<String> priceLCD3 = Cell.switchC(outputs.map(o -> o.priceLCD3));
+                Stream<Unit> sBeep = Cell.switchS(outputs.map(o -> o.sBeep));
+                Stream<Sale> sSaleComplete = Cell.switchS(outputs.map(o -> o.sSaleComplete));
 
                 AudioClip beepClip = Applet.newAudioClip(new URL(rootURL, "sounds/beep.wav"));
                 l = l.append(sBeep.listen(u -> {

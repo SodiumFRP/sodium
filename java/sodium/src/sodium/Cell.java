@@ -253,7 +253,7 @@ public class Cell<A> {
 	/**
 	 * Unwrap a behavior inside another behavior to give a time-varying behavior implementation.
 	 */
-	public static <A> Cell<A> switchB(final Cell<Cell<A>> bba)
+	public static <A> Cell<A> switchC(final Cell<Cell<A>> bba)
 	{
 	    Lambda0<A> za = () -> bba.sampleNoTrans().sampleNoTrans();
 	    final StreamSink<A> out = new StreamSink<A>();
@@ -289,16 +289,16 @@ public class Cell<A> {
 	/**
 	 * Unwrap an event inside a behavior to give a time-varying event implementation.
 	 */
-	public static <A> Stream<A> switchE(final Cell<Stream<A>> bea)
+	public static <A> Stream<A> switchS(final Cell<Stream<A>> bea)
 	{
         return Transaction.apply(new Lambda1<Transaction, Stream<A>>() {
         	public Stream<A> apply(final Transaction trans) {
-                return switchE(trans, bea);
+                return switchS(trans, bea);
         	}
         });
     }
 
-	private static <A> Stream<A> switchE(final Transaction trans1, final Cell<Stream<A>> bea)
+	private static <A> Stream<A> switchS(final Transaction trans1, final Cell<Stream<A>> bea)
 	{
         final StreamSink<A> out = new StreamSink<A>();
         final TransactionHandler<A> h2 = new TransactionHandler<A>() {
