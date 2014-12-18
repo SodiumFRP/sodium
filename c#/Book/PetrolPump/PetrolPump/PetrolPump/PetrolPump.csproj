@@ -77,7 +77,11 @@
     <Compile Include="Pump\IPump.cs" />
     <Compile Include="Pump\Key.cs" />
     <Compile Include="Pump\Outputs.cs" />
+    <Compile Include="Pump\PetrolPump.cs" />
     <Compile Include="Pump\Sale.cs" />
+    <Compile Include="Pump\SButton.cs" />
+    <Compile Include="Pump\SComboBox.cs" />
+    <Compile Include="Pump\STextBox.cs" />
     <Compile Include="Pump\UpDown.cs" />
     <Page Include="MainWindow.xaml">
       <Generator>MSBuild:Compile</Generator>
