@@ -6,16 +6,16 @@ import sodium.*;
 import java.util.Optional;
 
 public class Preset {
-    public final Behavior<Delivery> delivery;
-    public final Behavior<Boolean> keypadActive;
+    public final Cell<Delivery> delivery;
+    public final Cell<Boolean> keypadActive;
 
     public enum Speed { FAST, SLOW, STOPPED };
 
-    public Preset(Behavior<Integer> presetDollars,
+    public Preset(Cell<Integer> presetDollars,
                   Fill fi,
-                  Behavior<Optional<Fuel>> fuelFlowing,
-                  Behavior<Boolean> fillActive) {
-        Behavior<Speed> speed = Behavior.lift(
+                  Cell<Optional<Fuel>> fuelFlowing,
+                  Cell<Boolean> fillActive) {
+        Cell<Speed> speed = Cell.lift(
             (presetDollars_, price, dollarsDelivered, litersDelivered) -> {
                 if (presetDollars_ == 0)
                     return Speed.FAST;
@@ -32,7 +32,7 @@ public class Preset {
             },
             presetDollars, fi.price, fi.dollarsDelivered,
                                      fi.litersDelivered);
-        delivery = Behavior.lift(
+        delivery = Cell.lift(
             (of, speed_) ->
                 speed_ == Speed.FAST ? (
                     of.equals(Optional.of(Fuel.ONE))   ? Delivery.FAST1 :
@@ -48,7 +48,7 @@ public class Preset {
                 ) :
                 Delivery.OFF,
             fuelFlowing, speed);
-        keypadActive = Behavior.lift(
+        keypadActive = Cell.lift(
             (of, speed_) ->
                 !of.isPresent() || speed_ == Speed.FAST,
             fuelFlowing, speed);

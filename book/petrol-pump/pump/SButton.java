@@ -10,14 +10,14 @@ public class SButton extends JButton
     public SButton(String label)
     {
         super(label);
-        EventSink<Unit> eClickedSink = new EventSink<>();
-        this.eClicked = eClickedSink;
+        StreamSink<Unit> sClickedSink = new StreamSink<>();
+        this.sClicked = sClickedSink;
         addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e) {
-                eClickedSink.send(Unit.UNIT);
+                sClickedSink.send(Unit.UNIT);
             }
         });
     }
 
-    public final Event<Unit> eClicked;
+    public final Stream<Unit> sClicked;
 }

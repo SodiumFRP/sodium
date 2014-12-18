@@ -7,12 +7,12 @@ import java.util.Optional;
 
 public class AccumulatePulsesPump implements Pump {
     public Outputs create(Inputs inputs) {
-        LifeCycle lc = new LifeCycle(inputs.eNozzle1,
-                                     inputs.eNozzle2,
-                                     inputs.eNozzle3);
-        Behavior<Double> litersDelivered =
-                accumulate(lc.eStart.map(u -> Unit.UNIT),
-                           inputs.eFuelPulses,
+        LifeCycle lc = new LifeCycle(inputs.sNozzle1,
+                                     inputs.sNozzle2,
+                                     inputs.sNozzle3);
+        Cell<Double> litersDelivered =
+                accumulate(lc.sStart.map(u -> Unit.UNIT),
+                           inputs.sFuelPulses,
                            inputs.calibration);
         return new Outputs()
             .setDelivery(lc.fillActive.map(
@@ -25,16 +25,16 @@ public class AccumulatePulsesPump implements Pump {
                     q -> Formatters.formatSaleQuantity(q)));
     }
 
-    public static Behavior<Double> accumulate(
-            Event<Unit> eClearAccumulator,
-            Event<Integer> ePulses,
-            Behavior<Double> calibration) {
-        BehaviorLoop<Integer> total = new BehaviorLoop<>();
-        total.loop(ePulses.snapshot(total,
+    public static Cell<Double> accumulate(
+            Stream<Unit> sClearAccumulator,
+            Stream<Integer> sPulses,
+            Cell<Double> calibration) {
+        CellLoop<Integer> total = new CellLoop<>();
+        total.loop(sPulses.snapshot(total,
             (pulses_, total_) -> pulses_ + total_)
-               .merge(eClearAccumulator.map(f -> 0))
+               .merge(sClearAccumulator.map(f -> 0))
                .hold(0));
-        return Behavior.lift(
+        return Cell.lift(
             (total_, calibration_) -> total_ * calibration_,
             total, calibration);
     }

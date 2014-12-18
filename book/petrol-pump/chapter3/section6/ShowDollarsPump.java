@@ -7,13 +7,13 @@ import java.util.Optional;
 
 public class ShowDollarsPump implements Pump {
     public Outputs create(Inputs inputs) {
-        LifeCycle lc = new LifeCycle(inputs.eNozzle1,
-                                     inputs.eNozzle2,
-                                     inputs.eNozzle3);
-        Fill fi = new Fill(lc.eStart.map(u -> Unit.UNIT),
-                           inputs.eFuelPulses, inputs.calibration,
+        LifeCycle lc = new LifeCycle(inputs.sNozzle1,
+                                     inputs.sNozzle2,
+                                     inputs.sNozzle3);
+        Fill fi = new Fill(lc.sStart.map(u -> Unit.UNIT),
+                           inputs.sFuelPulses, inputs.calibration,
                            inputs.price1, inputs.price2, inputs.price3,
-                           lc.eStart);
+                           lc.sStart);
         return new Outputs()
             .setDelivery(lc.fillActive.map(
                 of ->
@@ -33,19 +33,19 @@ public class ShowDollarsPump implements Pump {
                 inputs));
     }
 
-    public static Behavior<String> priceLCD(
-            Behavior<Optional<Fuel>> fillActive,
-            Behavior<Double> fillPrice,
+    public static Cell<String> priceLCD(
+            Cell<Optional<Fuel>> fillActive,
+            Cell<Double> fillPrice,
             Fuel fuel,
             Inputs inputs) {
-        Behavior<Double> idlePrice;
+        Cell<Double> idlePrice;
         switch (fuel) {
             case ONE:   idlePrice = inputs.price1; break;
             case TWO:   idlePrice = inputs.price2; break;
             case THREE: idlePrice = inputs.price3; break;
             default:    idlePrice = null;
         }
-        return Behavior.lift((oFuelSelected, fillPrice_, idlePrice_) ->
+        return Cell.lift((oFuelSelected, fillPrice_, idlePrice_) ->
             oFuelSelected.isPresent()
                 ? oFuelSelected.get() == fuel
                                       ? Formatters.formatPrice(fillPrice_)

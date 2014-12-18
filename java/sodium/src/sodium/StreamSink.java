@@ -2,8 +2,8 @@ package sodium;
 
 import java.util.List;
 
-public class EventSink<A> extends Event<A> {
-    public EventSink() {}
+public class StreamSink<A> extends Stream<A> {
+    public StreamSink() {}
 
 	public void send(final A a) {
 		Transaction.run(new Handler<Transaction>() {

@@ -6,38 +6,38 @@ import sodium.*;
 import java.util.Optional;
 
 public class Fill {
-    public final Behavior<Double> price;
-    public final Behavior<Double> dollarsDelivered;
-    public final Behavior<Double> litersDelivered;
+    public final Cell<Double> price;
+    public final Cell<Double> dollarsDelivered;
+    public final Cell<Double> litersDelivered;
 
     public Fill(
-            Event<Unit> eClearAccumulator, Event<Integer> eFuelPulses,
-            Behavior<Double> calibration, Behavior<Double> price1,
-            Behavior<Double> price2, Behavior<Double> price3,
-            Event<Fuel> eStart) {
-        price = capturePrice(eStart, price1, price2, price3);
+            Stream<Unit> sClearAccumulator, Stream<Integer> sFuelPulses,
+            Cell<Double> calibration, Cell<Double> price1,
+            Cell<Double> price2, Cell<Double> price3,
+            Stream<Fuel> sStart) {
+        price = capturePrice(sStart, price1, price2, price3);
         litersDelivered = AccumulatePulsesPump.accumulate(
-                eClearAccumulator, eFuelPulses, calibration);
-        dollarsDelivered = Behavior.lift(
+                sClearAccumulator, sFuelPulses, calibration);
+        dollarsDelivered = Cell.lift(
                 (liters, price_) -> liters * price_,
                 litersDelivered, price);
     }
 
-    public static Behavior<Double> capturePrice(
-            Event<Fuel> eStart,
-            Behavior<Double> price1, Behavior<Double> price2,
-            Behavior<Double> price3) {
-        Event<Optional<Double>> ePrice1 = eStart.snapshot(price1,
+    public static Cell<Double> capturePrice(
+            Stream<Fuel> sStart,
+            Cell<Double> price1, Cell<Double> price2,
+            Cell<Double> price3) {
+        Stream<Optional<Double>> ePrice1 = sStart.snapshot(price1,
             (f, p) -> f == Fuel.ONE ? Optional.of(p)
                                     : Optional.empty());
-        Event<Optional<Double>> ePrice2 = eStart.snapshot(price2,
+        Stream<Optional<Double>> ePrice2 = sStart.snapshot(price2,
             (f, p) -> f == Fuel.TWO ? Optional.of(p)
                                     : Optional.empty());
-        Event<Optional<Double>> ePrice3 = eStart.snapshot(price3,
+        Stream<Optional<Double>> ePrice3 = sStart.snapshot(price3,
             (f, p) -> f == Fuel.THREE ? Optional.of(p)
                                       : Optional.empty());
 
-        return Event.filterOptional(
+        return Stream.filterOptional(
             ePrice1.merge(ePrice2.merge(ePrice3))
         ).hold(0.0);
     }

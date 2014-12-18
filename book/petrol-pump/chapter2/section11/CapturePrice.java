@@ -7,16 +7,16 @@ public class CapturePrice implements Pump
 {
     public Outputs create(Inputs inputs) {
         return new Outputs()
-            .setPriceLCD1(perFuel(inputs.eNozzle1, inputs.price1))
-            .setPriceLCD2(perFuel(inputs.eNozzle2, inputs.price2))
-            .setPriceLCD3(perFuel(inputs.eNozzle3, inputs.price3));
+            .setPriceLCD1(perFuel(inputs.sNozzle1, inputs.price1))
+            .setPriceLCD2(perFuel(inputs.sNozzle2, inputs.price2))
+            .setPriceLCD3(perFuel(inputs.sNozzle3, inputs.price3));
     }
 
-    private static Behavior<String> perFuel(
-                Event<UpDown> eNozzle, Behavior<Double> price) {
-        Behavior<Double> capPrice = eNozzle.snapshot(price).hold(0.0);
-        Behavior<UpDown> nozzle = eNozzle.hold(UpDown.DOWN);
-        return Behavior.lift(
+    private static Cell<String> perFuel(
+                Stream<UpDown> sNozzle, Cell<Double> price) {
+        Cell<Double> capPrice = sNozzle.snapshot(price).hold(0.0);
+        Cell<UpDown> nozzle = sNozzle.hold(UpDown.DOWN);
+        return Cell.lift(
             (u, price_) ->
                 u.equals(UpDown.UP) ? Formatters.formatPrice(price_)
                                     : "",
