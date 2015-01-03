@@ -221,3 +221,6 @@ info.plist
  
 183 # Microsoft Fakes 
 184 FakesAssemblies/ 
+
+# Scala
+target/
