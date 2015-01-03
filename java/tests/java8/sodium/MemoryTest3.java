@@ -21,11 +21,11 @@ public class MemoryTest3
             }
         }.start();
 
-        EventSink<Integer> et = new EventSink<Integer>();
-        Behavior<Integer> t = et.hold(0);
-        EventSink<Integer> eChange = new EventSink<Integer>();
-        Behavior<Behavior<Integer>> oout = eChange.map(x -> t).hold(t);
-        Behavior<Integer> out = Behavior.switchC(oout);
+        StreamSink<Integer> et = new StreamSink<Integer>();
+        Cell<Integer> t = et.hold(0);
+        StreamSink<Integer> eChange = new StreamSink<Integer>();
+        Cell<Cell<Integer>> oout = eChange.map(x -> t).hold(t);
+        Cell<Integer> out = Cell.switchC(oout);
         Listener l = out.value().listen(tt -> {
             //System.out.println(tt)
         });

@@ -14,9 +14,9 @@ public class EventTester extends TestCase {
 		Thread.sleep(100);
 	}
 
-	public void testSendEvent()
+	public void testSendStream()
     {
-        EventSink<Integer> e = new EventSink();
+        StreamSink<Integer> e = new StreamSink();
         List<Integer> out = new ArrayList();
         Listener l = e.listen(x -> { out.add(x); });
         e.send(5);
@@ -28,8 +28,8 @@ public class EventTester extends TestCase {
 
 	public void testMap()
     {
-        EventSink<Integer> e = new EventSink();
-        Event<String> m = e.map(x -> Integer.toString(x));
+        StreamSink<Integer> e = new StreamSink();
+        Stream<String> m = e.map(x -> Integer.toString(x));
         List<String> out = new ArrayList();
         Listener l = m.listen((String x) -> { out.add(x); });
         e.send(5);
@@ -39,8 +39,8 @@ public class EventTester extends TestCase {
 
     public void testMergeNonSimultaneous()
     {
-        EventSink<Integer> e1 = new EventSink();
-        EventSink<Integer> e2 = new EventSink();
+        StreamSink<Integer> e1 = new StreamSink();
+        StreamSink<Integer> e2 = new StreamSink();
         List<Integer> out = new ArrayList();
         Listener l = e1.merge(e2).listen(x -> { out.add(x); });
         e1.send(7);
@@ -52,7 +52,7 @@ public class EventTester extends TestCase {
 
     public void testMergeSimultaneous()
     {
-        EventSink<Integer> e = new EventSink();
+        StreamSink<Integer> e = new StreamSink();
         List<Integer> out = new ArrayList();
         Listener l = e.merge(e).listen(x -> { out.add(x); });
         e.send(7);
@@ -63,8 +63,8 @@ public class EventTester extends TestCase {
 
     public void testMergeLeftBias()
     {
-        EventSink<String> e1 = new EventSink();
-        EventSink<String> e2 = new EventSink();
+        StreamSink<String> e1 = new StreamSink();
+        StreamSink<String> e2 = new StreamSink();
         List<String> out = new ArrayList();
         Listener l = e1.merge(e2).listen(x -> { out.add(x); });
         Transaction.runVoid(() -> {
@@ -90,8 +90,8 @@ public class EventTester extends TestCase {
 
     public void testCoalesce()
     {
-        EventSink<Integer> e1 = new EventSink();
-        EventSink<Integer> e2 = new EventSink();
+        StreamSink<Integer> e1 = new StreamSink();
+        StreamSink<Integer> e2 = new StreamSink();
         List<Integer> out = new ArrayList();
         Listener l =
              e1.merge(e1.map(x -> x * 100).merge(e2))
@@ -106,7 +106,7 @@ public class EventTester extends TestCase {
     
     public void testFilter()
     {
-        EventSink<Character> e = new EventSink();
+        StreamSink<Character> e = new StreamSink();
         List<Character> out = new ArrayList();
         Listener l = e.filter((Character c) -> Character.isUpperCase(c)).listen((Character c) -> { out.add(c); });
         e.send('H');
@@ -118,7 +118,7 @@ public class EventTester extends TestCase {
 
     public void testFilterNotNull()
     {
-        EventSink<String> e = new EventSink();
+        StreamSink<String> e = new StreamSink();
         List<String> out = new ArrayList();
         Listener l = e.filterNotNull().listen(s -> { out.add(s); });
         e.send("tomato");
@@ -130,9 +130,9 @@ public class EventTester extends TestCase {
 
     public void testFilterOptional()
     {
-        EventSink<Optional<String>> e = new EventSink();
+        StreamSink<Optional<String>> e = new StreamSink();
         List<String> out = new ArrayList();
-        Listener l = Event.filterOptional(e).listen(s -> { out.add(s); });
+        Listener l = Stream.filterOptional(e).listen(s -> { out.add(s); });
         e.send(Optional.of("tomato"));
         e.send(Optional.empty());
         e.send(Optional.of("peach"));
@@ -140,13 +140,13 @@ public class EventTester extends TestCase {
         assertEquals(Arrays.asList("tomato","peach"), out);
     }
 
-    public void testLoopEvent()
+    public void testLoopStream()
     {
-        final EventSink<Integer> ea = new EventSink();
-        Event<Integer> ec = Transaction.<Event<Integer>>run(() -> {
-            EventLoop<Integer> eb = new EventLoop<Integer>();
-            Event<Integer> ec_ = ea.map(x -> x % 10).merge(eb, (x, y) -> x+y);
-            Event<Integer> eb_out = ea.map(x -> x / 10).filter(x -> x != 0);
+        final StreamSink<Integer> ea = new StreamSink();
+        Stream<Integer> ec = Transaction.<Stream<Integer>>run(() -> {
+            StreamLoop<Integer> eb = new StreamLoop<Integer>();
+            Stream<Integer> ec_ = ea.map(x -> x % 10).merge(eb, (x, y) -> x+y);
+            Stream<Integer> eb_out = ea.map(x -> x / 10).filter(x -> x != 0);
             eb.loop(eb_out);
             return ec_;
         });
@@ -160,8 +160,8 @@ public class EventTester extends TestCase {
 
     public void testGate()
     {
-        EventSink<Character> ec = new EventSink();
-        BehaviorSink<Boolean> epred = new BehaviorSink(true);
+        StreamSink<Character> ec = new StreamSink();
+        CellSink<Boolean> epred = new CellSink(true);
         List<Character> out = new ArrayList();
         Listener l = ec.gate(epred).listen(x -> { out.add(x); });
         ec.send('H');
@@ -175,9 +175,9 @@ public class EventTester extends TestCase {
 
     public void testCollect()
     {
-        EventSink<Integer> ea = new EventSink();
+        StreamSink<Integer> ea = new StreamSink();
         List<Integer> out = new ArrayList();
-        Event<Integer> sum = ea.collect(100,
+        Stream<Integer> sum = ea.collect(100,
             //(a,s) -> new Tuple2(a+s, a+s)
             new Lambda2<Integer, Integer, Tuple2<Integer,Integer>>() {
                 public Tuple2<Integer,Integer> apply(Integer a, Integer s) {
@@ -197,9 +197,9 @@ public class EventTester extends TestCase {
 
     public void testAccum()
     {
-        EventSink<Integer> ea = new EventSink();
+        StreamSink<Integer> ea = new StreamSink();
         List<Integer> out = new ArrayList();
-        Behavior<Integer> sum = ea.accum(100, (a,s)->a+s);
+        Cell<Integer> sum = ea.accum(100, (a,s)->a+s);
         Listener l = sum.updates().listen((x) -> { out.add(x); });
         ea.send(5);
         ea.send(7);
@@ -212,7 +212,7 @@ public class EventTester extends TestCase {
 
     public void testOnce()
     {
-        EventSink<Character> e = new EventSink();
+        StreamSink<Character> e = new StreamSink();
         List<Character> out = new ArrayList();
         Listener l = e.once().listen((x) -> { out.add(x); });
         e.send('A');
@@ -224,8 +224,8 @@ public class EventTester extends TestCase {
 
     public void testDelay()
     {
-        EventSink<Character> e = new EventSink();
-        Behavior<Character> b = e.hold(' ');
+        StreamSink<Character> e = new StreamSink();
+        Cell<Character> b = e.hold(' ');
         List<Character> out = new ArrayList();
         Listener l = e.delay().snapshot(b).listen((x) -> { out.add(x); });
         e.send('C');

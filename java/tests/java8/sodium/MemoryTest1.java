@@ -21,15 +21,15 @@ public class MemoryTest1
             }
         }.start();
 
-        EventSink<Integer> et = new EventSink<Integer>();
-        Behavior<Integer> t = et.hold(0);
-        Event<Integer> etens = et.map(x -> x/10);
-        Event<Integer> changeTens = et.snapshot(t, (neu, old) ->
+        StreamSink<Integer> et = new StreamSink<Integer>();
+        Cell<Integer> t = et.hold(0);
+        Stream<Integer> etens = et.map(x -> x/10);
+        Stream<Integer> changeTens = et.snapshot(t, (neu, old) ->
             neu.equals(old) ? null : neu).filterNotNull();
-        Behavior<Behavior<Tuple2<Integer,Integer>>> oout =
+        Cell<Cell<Tuple2<Integer,Integer>>> oout =
             changeTens.map(tens -> t.map(tt -> new Tuple2<Integer,Integer>(tens, tt))).
             hold(t.map(tt -> new Tuple2<Integer,Integer>(0, tt)));
-        Behavior<Tuple2<Integer,Integer>> out = Behavior.switchC(oout);
+        Cell<Tuple2<Integer,Integer>> out = Cell.switchC(oout);
         Listener l = out.value().listen(tu -> {
             //System.out.println(tu.a+","+tu.b);
         });
