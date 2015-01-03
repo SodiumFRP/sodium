@@ -5,9 +5,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import junit.framework.TestCase;
-import junit.framework.TestSuite;
 
-public class BehaviorTester extends TestCase {
+public class CellTester extends TestCase {
 	@Override
 	protected void tearDown() throws Exception {
 		System.gc();

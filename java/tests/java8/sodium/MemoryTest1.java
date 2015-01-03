@@ -1,7 +1,5 @@
 package sodium;
 
-import sodium.*;
-
 public class MemoryTest1
 {
     public static void main(String[] args)

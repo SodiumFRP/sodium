@@ -51,6 +51,7 @@
         <junit printsummary="yes" showoutput="yes">
             <formatter type="plain" />
             <classpath>
+                <path refid="test.classpath"/>
                 <pathelement location="sodium/sodium.jar"/>
                 <pathelement location="build/tests/java8"/>
             </classpath>
