@@ -19,12 +19,12 @@ object MemoryTest1 {
     val t = et.hold(0)
     val etens = et.map(x => x / 10)
     val changeTens = et.snapshot[Int, Int](t, (neu, old) =>
-      if (neu.equals(old)) None else Some(neu)).flatten
+      if (neu.equals(old)) null else neu).filterNotNull
     val oout =
-      changeTens.map(tens -> t.map(tt -> (tens, tt))).
-        hold(t.map(tt -> (0, tt)))
+      changeTens.map(
+        tens => t.map(tt => (tens, tt))).hold(t.map(tt => (0, tt)))
     val out = Cell.switchC(oout)
-    val l = out.value().listen(tu -> {
+    val l = out.value().listen(tu => {
       //System.out.println(tu.a+","+tu.b)
     })
     var i = 0

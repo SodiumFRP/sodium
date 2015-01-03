@@ -18,8 +18,8 @@ object MemoryTest4 {
     val et = new StreamSink[Int]()
     val eChange = new StreamSink[Int]()
     val oout = eChange.map(x => et).hold(et)
-    val out = Cell.switchS(oout)
-    val l = out.listen(tt -> {
+    val out = Cell.switchS[Int](oout)
+    val l = out.listen(tt => {
       System.out.println(tt)
     })
     var i = 0

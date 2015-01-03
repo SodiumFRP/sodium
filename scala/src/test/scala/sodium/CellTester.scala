@@ -355,9 +355,9 @@ class CellTester extends TestCase {
       a.loop(new Cell[String]("cheese"))
       value_
     })
-    val eTick = new StreamSink()
+    val eTick = new StreamSink[Int]()
     val l = eTick.snapshot(value).listen(out.add(_))
-    eTick.send(Unit.UNIT)
+    eTick.send(0)
     l.unlisten()
     assertEquals(Arrays.asList("cheese"), out)
   }

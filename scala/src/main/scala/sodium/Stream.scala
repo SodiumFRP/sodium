@@ -56,10 +56,7 @@ class Stream[A] {
     val ev = this
     val out = new StreamSink[B]() {
       protected override def sampleNow(): IndexedSeq[B] =
-        {
-          val oi = ev.sampleNow()
-          oi.map(x => f.apply(x))
-        }
+          ev.sampleNow().map(x => f.apply(x))
     }
     val l = listen_(out.node, new TransactionHandler[A]() {
       def run(trans2: Transaction, a: A) {
@@ -224,10 +221,9 @@ class Stream[A] {
    */
   final def collect[B, S](initState: S, f: (A, S) => (B, S)): Stream[B] =
     Transaction.run[Stream[B]](() => {
-      val ea = this
       val es = new StreamLoop[S]()
       val s = es.hold(initState)
-      val ebs = ea.snapshot(s, f)
+      val ebs = this.snapshot(s, f)
       val eb = ebs.map(bs => bs._1)
       val es_out = ebs.map(bs => bs._2)
       es.loop(es_out)
@@ -239,10 +235,9 @@ class Stream[A] {
    */
   final def accum[S](initState: S, f: (A, S) => S): Cell[S] =
     Transaction.run[Cell[S]](() => {
-      val ea = this
       val es = new StreamLoop[S]()
       val s = es.hold(initState)
-      val es_out = ea.snapshot(s, f)
+      val es_out = this.snapshot(s, f)
       es.loop(es_out)
       es_out.hold(initState)
     })
@@ -258,15 +253,11 @@ class Stream[A] {
     val out = new StreamSink[A]() {
       protected override def sampleNow(): IndexedSeq[A] = {
         val oi = ev.sampleNow()
-        var oo = oi
-        if (oo != null) {
-          if (oo.length > 1)
-            oo = IndexedSeq(oi(0))
-          if (la(0) != null) {
+        val oo = if (oi.size > 0) IndexedSeq(oi.head) else IndexedSeq()
+         if (oi.size > 0 && la(0) != null) {
             la(0).unlisten()
             la(0) = null
           }
-        }
         oo
       }
     }

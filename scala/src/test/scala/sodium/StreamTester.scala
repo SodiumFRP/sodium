@@ -61,13 +61,13 @@ class StreamTester extends TestCase {
     val e2 = new StreamSink[String]()
     val out = new ArrayList[String]()
     val l = e1.merge(e2).listen(x => out.add(x))
-    Transaction.rundef(() => {
+    Transaction.doTransaction(_ => {
       e1.send("left1a")
       e1.send("left1b")
       e2.send("right1a")
       e2.send("right1b")
     })
-    Transaction.rundef(() => {
+    Transaction.doTransaction(_ => {
       e2.send("right2a")
       e2.send("right2b")
       e1.send("left2a")

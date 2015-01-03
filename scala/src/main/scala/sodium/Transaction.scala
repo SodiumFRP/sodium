@@ -79,7 +79,7 @@ object Transaction {
 
   var currentTransaction: Option[Transaction] = None
 
-  private def doTransaction[A, B](f: Transaction => B): B = {
+  def doTransaction[B](f: Transaction => B): B = {
     transactionLock.synchronized {
       // If we are already inside a transaction (which must be on the same
       // thread otherwise we wouldn't have acquired transactionLock), then
@@ -108,37 +108,14 @@ object Transaction {
   def run[A](code: () => A): A =
     doTransaction(_ => code.apply())
 
-  /**
-   * Run the specified code inside a single transaction, with the contained
-   * code returning a value of the parameter type A.
-   *
-   * In most cases this is not needed, because all APIs will create their own
-   * transaction automatically. It is useful where you want to run multiple
-   * reactive operations atomically.
-   */
   def run(code: Transaction => Unit) {
     doTransaction(transaction => code(transaction))
   }
 
-  /**
-   * Run the specified code inside a single transaction, with the contained
-   * code returning a value of the parameter type A.
-   *
-   * In most cases this is not needed, because all APIs will create their own
-   * transaction automatically. It is useful where you want to run multiple
-   * reactive operations atomically.
-   */
   def apply[A](code: Transaction => A): A = {
     doTransaction(transaction => code.apply(transaction))
   }
 
-  /**
-   * Run the specified code inside a single transaction.
-   *
-   * In most cases this is not needed, because all APIs will create their own
-   * transaction automatically. It is useful where you want to run multiple
-   * reactive operations atomically.
-   */
   def rundef(code: Runnable) {
     doTransaction(_ => code.run())
   }
