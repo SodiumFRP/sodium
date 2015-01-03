@@ -15,14 +15,14 @@ class StreamLoop[A] extends Stream[A] {
 
   // TO DO: Copy & paste from StreamSink. Can we improve this?
   private def send(trans: Transaction, a: A) {
-    if (firings.isEmpty())
+    if (firings.size == 0)
       trans.last(new Runnable() {
-        def run() { firings.clear() }
+        def run() { firings = List() }
       })
-    firings.add(a)
+    firings = firings ++ List(a)
 
     try {
-      this.listeners.clone().asInstanceOf[List[(Transaction, A) => ()]].foreach(_.run(trans, a))
+      listeners.foreach(_.run(trans, a))
     } catch {
       case t: Throwable => t.printStackTrace()
     }

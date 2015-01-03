@@ -20,8 +20,8 @@ class Cell[A](protected val event: Stream[A], var value: Option[A]) {
     // note before this was only called from the main constructor
     // not the secondary constructor
 
-	Transaction.run(new Handler[Transaction]() {
-		def run(trans1: Transaction) {
+	Transaction.run({
+	  trans1 =>
     		Cell.this.cleanup = Some(event.listen(Node.NULL, trans1, new TransactionHandler[A]() {
     			def run(trans2: Transaction, a: A) {
 		    		if (Cell.this.valueUpdate.isEmpty) {
@@ -36,8 +36,7 @@ class Cell[A](protected val event: Stream[A], var value: Option[A]) {
 		    		Cell.this.valueUpdate = Some(a)
 		    	}
     		}, false))
-		}
-	})
+		})
 
     /**
      * @return The value including any updates that have happened in this transaction.
@@ -89,10 +88,7 @@ class Cell[A](protected val event: Stream[A], var value: Option[A]) {
         out.addCleanup(l)
             .lastFiringOnly(trans1)
     	case None =>
-	        Transaction.apply(new Lambda1[Transaction, Stream[A]]() {
-	        	def apply(trans: Transaction): Stream[A] =
-	        		value(Some(trans))
-	        })
+	        Transaction.apply(trans => value(Some(trans)))
     }
 
     /**
@@ -104,9 +100,9 @@ class Cell[A](protected val event: Stream[A], var value: Option[A]) {
 	/**
 	 * Lift a binary function into behaviors.
 	 */
-	final def lift[B,C](f: Lambda2[A,B,C] f, b: Cell[B]): Cell[C] =
+	final def lift[B,C](f: (A, B) => C, b: Cell[B]): Cell[C] =
 	{
-		 val ffa: Lambda1[A, Lambda1[B,C]] = new Lambda1[A, Lambda1[B,C]]() {
+		 def ffa: Lambda1[A, Lambda1[B,C]] = new Lambda1[A, Lambda1[B,C]]() {
 			def apply(aa: A): Lambda1[B,C] = {
 				new Lambda1[B,C]() {
 					def apply(bb: B): C {
@@ -122,14 +118,14 @@ class Cell[A](protected val event: Stream[A], var value: Option[A]) {
 	/**
 	 * Lift a ternary function into behaviors.
 	 */
-	public final <B,C,D> Cell<D> lift(final Lambda3<A,B,C,D> f, Cell<B> b, Cell<C> c)
+	 final <B,C,D> Cell<D> lift(final Lambda3<A,B,C,D> f, Cell<B> b, Cell<C> c)
 	{
 		Lambda1<A, Lambda1<B, Lambda1<C,D>>> ffa = new Lambda1<A, Lambda1<B, Lambda1<C,D>>>() {
-			public Lambda1<B, Lambda1<C,D>> apply(final A aa) {
+			 Lambda1<B, Lambda1<C,D>> apply(final A aa) {
 				return new Lambda1<B, Lambda1<C,D>>() {
-					public Lambda1<C,D> apply(final B bb) {
+					 Lambda1<C,D> apply(final B bb) {
 						return new Lambda1<C,D>() {
-							public D apply(C cc) {
+							 D apply(C cc) {
 								return f.apply(aa,bb,cc)
 							}
 						}
@@ -144,16 +140,16 @@ class Cell[A](protected val event: Stream[A], var value: Option[A]) {
 	/**
 	 * Lift a quaternary function into behaviors.
 	 */
-	public final <B,C,D,E> Cell<E> lift(final Lambda4<A,B,C,D,E> f, Cell<B> b, Cell<C> c, Cell<D> d)
+	 final <B,C,D,E> Cell<E> lift(final Lambda4<A,B,C,D,E> f, Cell<B> b, Cell<C> c, Cell<D> d)
 	{
 		Lambda1<A, Lambda1<B, Lambda1<C, Lambda1<D,E>>>> ffa = new Lambda1<A, Lambda1<B, Lambda1<C, Lambda1<D,E>>>>() {
-			public Lambda1<B, Lambda1<C, Lambda1<D,E>>> apply(final A aa) {
+			 Lambda1<B, Lambda1<C, Lambda1<D,E>>> apply(final A aa) {
 				return new Lambda1<B, Lambda1<C, Lambda1<D,E>>>() {
-					public Lambda1<C, Lambda1<D, E>> apply(final B bb) {
+					 Lambda1<C, Lambda1<D, E>> apply(final B bb) {
 						return new Lambda1<C, Lambda1<D,E>>() {
-							public Lambda1<D,E> apply(final C cc) {
+							 Lambda1<D,E> apply(final C cc) {
                                 return new Lambda1<D, E>() {
-                                    public E apply(D dd) {
+                                     E apply(D dd) {
                                         return f.apply(aa,bb,cc,dd)
                                     }
                                 }
@@ -171,33 +167,32 @@ class Cell[A](protected val event: Stream[A], var value: Option[A]) {
      * Transform a behavior with a generalized state loop (a mealy machine). The function
      * is passed the input and the old state and returns the new state and output value.
      */
-    public final <B,S> Cell<B> collect(final S initState, final Lambda2<A, S, Tuple2<B, S>> f)
+    final <B,S> Cell<B> collect(final S initState, final Lambda2<A, S, Tuple2<B, S>> f)
     {
         return Transaction.<Cell<B>>run(() -> {
             final Stream<A> ea = updates().coalesce(new Lambda2<A,A,A>() {
-                public A apply(A fst, A snd) { return snd }
+                 A apply(A fst, A snd) { return snd }
             })
             final Lambda0<Tuple2<B, S>> zbs = () -> f.apply(sampleNoTrans(), initState)
             StreamLoop<Tuple2<B,S>> ebs = new StreamLoop<Tuple2<B,S>>()
             Cell<Tuple2<B,S>> bbs = ebs.holdLazy(zbs)
             Cell<S> bs = bbs.map(new Lambda1<Tuple2<B,S>,S>() {
-                public S apply(Tuple2<B,S> x) {
+                 S apply(Tuple2<B,S> x) {
                     return x.b
                 }
             })
             Stream<Tuple2<B,S>> ebs_out = ea.snapshot(bs, f)
             ebs.loop(ebs_out)
             return bbs.map(new Lambda1<Tuple2<B,S>,B>() {
-                public B apply(Tuple2<B,S> x) {
+                 B apply(Tuple2<B,S> x) {
                     return x.a
                 }
             })
         })
     }
 
-	@Override
-	protected void finalize() throws Throwable {
-	    if (cleanup != null)
+	protected override def finalize() {
+	    if (cleanup.isDefined)
             cleanup.unlisten()
 	}
 }
@@ -207,52 +202,49 @@ object Cell {
 	/**
 	 * Lift a binary function into behaviors.
 	 */
-	final def lift[A,B,C](f: Lambda2[A,B,C], a: Cell[A], b: Cell[B]): Cell[C] = 
+	final def lift[A,B,C](f: (A, B) => C, a: Cell[A], b: Cell[B]): Cell[C] = 
 		a.lift(f, b)
 	
 	/**
 	 * Lift a ternary function into behaviors.
 	 */
-	final def lift[A,B,C,D](f: Lambda3[A,B,C,D], a: Cell[A], b: Cell[B], c: Cell[C]): Cell[D] =
+	final def lift[A,B,C,D](f: (A, B, C) => D, a: Cell[A], b: Cell[B], c: Cell[C]): Cell[D] =
 		a.lift(f, b, c)
 		
    /**
 	 * Lift a quaternary function into behaviors.
 	 */
-	final def lift[A,B,C,D,E](f: Lambda4[A,B,C,D,E], a: Cell[A], b: Cell[B], c: Cell[C], d: Cell[D]): Cell[E] = 
+	final def lift[A,B,C,D,E](f: (A, B, C, D) => E, a: Cell[A], b: Cell[B], c: Cell[C], d: Cell[D]): Cell[E] = 
 		a.lift(f, b, c, d)
 	
 			/**
 	 * Apply a value inside a behavior to a function inside a behavior. This is the
 	 * primitive for all function lifting.
 	 */
-	def apply[A,B](bf: Cell[Lambda1[A,B]], ba: Cell[A]): Cell[B] = {
+	def apply[A,B](bf: Cell[A => B], ba: Cell[A]): Cell[B] = {
 		val out = new StreamSink[B]()
 
-        val h = new Handler[Transaction]() {
-            var fired = false			
-            override def run(trans1: Transaction) {
+		var fired = false
+        def h(trans1: Transaction) {
                 if (fired) 
                     return
 
                 fired = true
-                trans1.prioritized(out.node, new Handler[Transaction]() {
-                	def run(trans2: Transaction) {
+                trans1.prioritized(out.node, {
+                  trans2 =>
                         out.send(trans2, bf.newValue().apply(ba.newValue()))
                         fired = false
-                    }
             	})
-            }
         }
 
-        val l1 = bf.updates().listen_(out.node, new TransactionHandler[Lambda1[A,B]]() {
-        	def run(trans1: Transaction, f: Lambda1[A,B]) {
-                h.run(trans1)
+        val l1 = bf.updates().listen_(out.node, new TransactionHandler[A => B]() {
+        	def run(trans1: Transaction, f: A => B) {
+                h(trans1)
             }
         })
         val l2 = ba.updates().listen_(out.node, new TransactionHandler[A]() {
         	def run(trans1: Transaction, a: A) {
-	            h.run(trans1)
+	            h(trans1)
 	        }
         })
         return out.addCleanup(l1).addCleanup(l2).holdLazy(() -> bf.sampleNoTrans().apply(ba.sampleNoTrans()))

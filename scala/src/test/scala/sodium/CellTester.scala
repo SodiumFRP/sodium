@@ -62,7 +62,7 @@ import java.util.ArrayList
 	 def testValuesThenMap() {
 		val b = new CellSink[Integer](9)
 		val out = new CellSink[Integer]()
-		val l = b.value().map(x => x+100).listen(x => { out.add(x) })
+		val l = b.value().map(x => x+100).listen(x => out.add(x))
 		List(2,7).foreach(b.send(_))
 		l.unlisten()
 		assertEquals(Arrays.asList(109,102,107), out)
@@ -71,7 +71,7 @@ import java.util.ArrayList
 	 def testValuesTwiceThenMap() {
 		val b = new CellSink[Integer](9)
 		val out = new CellSink[Integer]()
-		val l = doubleUp(b.value()).map(x => x+100).listen(x => { out.add(x) })
+		val l = doubleUp(b.value()).map(x => x+100).listen(x => out.add(x))
 		List(2,7).foreach(b.send(_))
 		l.unlisten()
 		assertEquals(Arrays.asList(109,109,102,102,107,107), out)
@@ -80,7 +80,7 @@ import java.util.ArrayList
 	 def testValuesThenCoalesce() {
 		val b = new CellSink[Integer](9)
 		val out = new CellSink[Integer]()
-		val l = b.value().coalesce((fst, snd) => snd).listen(x => { out.add(x) })
+		val l = b.value().coalesce((fst, snd) => snd).listen(x => out.add(x))
 		List(2,7).foreach(b.send(_))
 		l.unlisten()
 		assertEquals(Arrays.asList(9,2,7), out)
@@ -89,7 +89,7 @@ import java.util.ArrayList
 	 def testValuesTwiceThenCoalesce() {
 		val b = new CellSink[Integer](9)
 		val out = new CellSink[Integer]()
-		val l = doubleUp(b.value()).coalesce((fst, snd) => fst+snd).listen(x => { out.add(x) })
+		val l = doubleUp(b.value()).coalesce((fst, snd) => fst+snd).listen(x => out.add(x))
 		List(2,7).foreach(b.send(_))
 		l.unlisten()
 		assertEquals(Arrays.asList(18,4,14), out)
@@ -99,7 +99,7 @@ import java.util.ArrayList
 		val bi = new CellSink[Integer](9)
 		val bc = new CellSink[Character]('a')
 		val out = new ArrayList[Character]()
-		val l = bi.value().snapshot(bc).listen(x -> { out.add(x) })
+		val l = bi.value().snapshot(bc).listen(x -> out.add(x))
 		bc.send('b')
 		bi.send(2)
 		bc.send('c')
@@ -112,7 +112,7 @@ import java.util.ArrayList
 		val bi = new CellSink[Integer](9)
 		val bc = new CellSink[Character]('a')
 		val out = new ArrayList[Character]()
-		val l = doubleUp(bi.value()).snapshot(bc).listen(x -> { out.add(x) })
+		val l = doubleUp(bi.value()).snapshot(bc).listen(x -> out.add(x))
 		bc.send('b')
 		bi.send(2)
 		bc.send('c')
@@ -126,7 +126,7 @@ import java.util.ArrayList
 		val bj = new CellSink[Integer](2)
 		val out = new CellSink[Integer]()
 		val l = bi.value().merge(bj.value(), (x, y) => x+y)
-		    .listen(x => { out.add(x) })
+		    .listen(x => out.add(x))
 		bi.send(1)
 		bj.send(4)
 		l.unlisten()
@@ -136,7 +136,7 @@ import java.util.ArrayList
 	 def testValuesThenFilter() {
 		val b = new CellSink[Integer](9)
 		val out = new CellSink[Integer]()
-		val l = b.value().filter(a => true).listen(x => { out.add(x) })
+		val l = b.value().filter(a => true).listen(x => out.add(x))
 				List(2,7).foreach(b.send(_))
 		l.unlisten()
 		assertEquals(Arrays.asList(9,2,7), out)
@@ -145,7 +145,7 @@ import java.util.ArrayList
 	 def testValuesTwiceThenFilter() {
 		val b = new CellSink[Integer](9)
 		val out = new CellSink[Integer]()
-		val l = doubleUp(b.value()).filter(a => true).listen(x => { out.add(x) })
+		val l = doubleUp(b.value()).filter(a => true).listen(x => out.add(x))
 		List(2,7).foreach(b.send(_))
 		l.unlisten()
 		assertEquals(Arrays.asList(9,9,2,2,7,7), out)
@@ -344,9 +344,9 @@ import java.util.ArrayList
 
      def testAccum()
     {
-        val ea = new StreamSink()
+        val ea = new StreamSink[Integer]()
         val out = new ArrayList()
-        val sum = ea.accum(100, (a,s)=>a+s)
+        val sum = ea.accum(100, (a,s) => a+s)
         val l = sum.value().listen((x) => { out.add(x) })
         ea.send(5)
         ea.send(7)
@@ -363,7 +363,7 @@ import java.util.ArrayList
         val eSnap = Transaction.run[Stream[String]](() => {
             val a = new Cell("lettuce")
             val b = new CellLoop()
-            val eSnap_ = a.value().snapshot(b, (String aa, String bb) -> aa + " " + bb)
+            val eSnap_ = a.value().snapshot(b, (aa, bb) => aa + " " + bb)
             b.loop(new Cell[String]("cheese"))
             return eSnap_
         })

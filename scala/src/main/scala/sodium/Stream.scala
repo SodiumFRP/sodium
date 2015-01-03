@@ -17,10 +17,10 @@ package sodium
 	 * Listen for firings of this event. The returned Listener has an unlisten()
 	 * method to cause the listener to be removed. This is the observer pattern.
      */
-	 final def listen(action : Handler[A]): Listener = {
+	 final def listen(action : A => Unit): Listener = {
 		return listen_(Node.NullNode, new TransactionHandler[A]() {
 			 def run(trans2: Transaction, a: A) {
-				action.run(a)
+				action(a)
 			}
 		})
 	}
@@ -38,8 +38,8 @@ package sodium
             // TODO this is inefficient ..
             listeners = listeners ++ List(action)
         }
-        trans.prioritized(target, new Handler[Transaction]() {
-             def run(trans2: Transaction) {
+        trans.prioritized(target, {
+          trans2 =>
                 val aNow = sampleNow()
                 aNow.foreach(a => action.run(trans, a))
                 if (!suppressEarlierFirings) {
@@ -47,7 +47,6 @@ package sodium
                     // there's no order dependency between send and listen.
                     firings.foreach(b => action.run(trans, b))
                 }
-            }
         })
 		return new ListenerImplementation[A](this, action, target)
 	}

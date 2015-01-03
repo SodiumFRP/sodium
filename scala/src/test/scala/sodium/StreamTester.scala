@@ -108,7 +108,7 @@ import junit.framework.TestCase
         val e= new StreamSink[Char]()
         val out = new ArrayList()
         val l= e.filter(c => Character.isUpperCase(c)).listen(c => { out.add(c) })
-        List('H','o','I).foreach(e.send(_))
+        List('H','o','I').foreach(e.send(_))
         l.unlisten()
         assertEquals(Arrays.asList('H','I'), out)
     }
@@ -135,13 +135,13 @@ import junit.framework.TestCase
 
      def testLoopStream()
     {
-        val ea = new StreamSink()
+        val ea = new StreamSink[Integer]()
         val ec = Transaction.run[Stream[Integer]](() => {
             val eb = new StreamLoop[Integer]()
             val ec_ = ea.map(x => x % 10).merge(eb, (x, y) => x+y)
             val eb_out = ea.map(x => x / 10).filter(x => x != 0)
             eb.loop(eb_out)
-            return ec_
+            ec_
         })
         val out= new ArrayList()
         val l= ec.listen(x => { out.add(x) })

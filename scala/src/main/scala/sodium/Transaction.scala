@@ -17,7 +17,7 @@ final class Transaction {
   private var lastQ: List[Runnable] = List()
   private var postQ: List[Runnable] = List()
 
-  def prioritized(rank: Node, action: Handler[Transaction]) {
+  def prioritized(rank: Node, action: Transaction => Unit) {
     val e = new Entry(rank, action)
     prioritizedQ.add(e)
     entries.add(e)
@@ -60,7 +60,7 @@ final class Transaction {
       } else {
         val e = prioritizedQ.remove()
         entries.remove(e)
-        e.action.run(this)
+        e.action(this)
       }
     }
     lastQ.foreach(_.run())
@@ -119,8 +119,8 @@ object Transaction {
    * transaction automatically. It is useful where you want to run multiple
    * reactive operations atomically.
    */
-  def run(code: Handler[Transaction]) {
-    doTransaction(transaction => code.run(transaction))
+  def run(code: Transaction => Unit) {
+    doTransaction(transaction => code(transaction))
   }
 
   /**
@@ -158,7 +158,7 @@ object Transaction {
     private val nextSeq = new AtomicLong(0)
   }
 
-  private class Entry(val rank: Node, val action: Handler[Transaction])
+  private class Entry(val rank: Node, val action: Transaction => Unit)
     extends Comparable[Entry] {
     import Entry._
     private val seq = nextSeq.getAndIncrement()
