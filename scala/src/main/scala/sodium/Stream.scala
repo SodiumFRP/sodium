@@ -55,7 +55,7 @@ class Stream[A] {
   final def map[B](f: A => B): Stream[B] = {
     val ev = this
     val out = new StreamSink[B]() {
-      protected override def sampleNow(): IndexedSeq[B] =
+      override def sampleNow(): IndexedSeq[B] =
           ev.sampleNow().map(x => f.apply(x))
     }
     val l = listen_(out.node, new TransactionHandler[A]() {
@@ -92,7 +92,7 @@ class Stream[A] {
   final def snapshot[B, C](b: Cell[B], f: (A, B) => C): Stream[C] = {
       val ev = this
       val out = new StreamSink[C]() {
-        protected override def sampleNow(): IndexedSeq[C] =
+        override def sampleNow(): IndexedSeq[C] =
           ev.sampleNow().map(x => f.apply(x, b.sampleNoTrans()))
       }
       val l = listen_(out.node, new TransactionHandler[A]() {
@@ -153,7 +153,7 @@ class Stream[A] {
     {
       val ev = this
       val out = new StreamSink[A]() {
-        protected override def sampleNow(): IndexedSeq[A] = {
+        override def sampleNow(): IndexedSeq[A] = {
           val oi = ev.sampleNow()
           if (oi.isEmpty) {
             IndexedSeq()
@@ -191,7 +191,7 @@ class Stream[A] {
     {
       val ev = this
       val out = new StreamSink[A]() {
-        protected def sampleNow(): IndexedSeq[A] = ev.sampleNow().filter(f)
+        override def sampleNow(): IndexedSeq[A] = ev.sampleNow().filter(f)
       }
       val l = listen_(out.node, new TransactionHandler[A]() {
         def run(trans2: Transaction, a: A) {
@@ -213,7 +213,7 @@ class Stream[A] {
    * that is, no state changes from the current transaction are taken into account.
    */
   final def gate(bPred: Cell[Boolean]): Stream[A] =
-    snapshot[Boolean, A](bPred, (a, pred) => if (pred) a else null).filterNotNull()
+    flatten(snapshot[Boolean, Option[A]](bPred, (a, pred) => if (pred) Some(a) else None))
 
   /**
    * Transform an event with a generalized state loop (a mealy machine). The function
@@ -251,7 +251,7 @@ class Stream[A] {
     val ev = this
     val la = new Array[Listener](1)
     val out = new StreamSink[A]() {
-      protected override def sampleNow(): IndexedSeq[A] = {
+      override def sampleNow(): IndexedSeq[A] = {
         val oi = ev.sampleNow()
         val oo = if (oi.size > 0) IndexedSeq(oi.head) else IndexedSeq()
          if (oi.size > 0 && la(0) != null) {
@@ -278,8 +278,7 @@ class Stream[A] {
     this
   }
 
-  @Override
-  protected def finalize() {
+  protected override def finalize() {
     finalizers.foreach(_.unlisten)
   }
 }
@@ -295,17 +294,20 @@ object Stream {
      * the Listener, so that the finalizer doesn't get triggered.
      */
 
-    def unlisten() {
+    override def unlisten() {
       Transaction.listenersLock.synchronized {
         event.listeners -= action
         event.node.unlinkTo(target)
       }
     }
 
-    protected def finalize() {
+    override protected def finalize() {
       unlisten()
     }
   }
+
+  def flatten[A](xs: Stream[Option[A]]): Stream[A] =
+    xs.filter(a => a.isDefined).map({ case Some(x) => x })
 
   /**
    * Merge two streams of events of the same type.
@@ -319,7 +321,7 @@ object Stream {
   private def merge[A](ea: Stream[A], eb: Stream[A]): Stream[A] =
     {
       val out = new StreamSink[A]() {
-        protected override def sampleNow(): IndexedSeq[A] =
+        override def sampleNow(): IndexedSeq[A] =
           ea.sampleNow() ++ eb.sampleNow()
       }
       val h = new TransactionHandler[A]() {
@@ -342,7 +344,7 @@ object Stream {
   final def filterOption[A](ev: Stream[Option[A]]): Stream[A] =
     {
       val out = new StreamSink[A]() {
-        protected override def sampleNow(): IndexedSeq[A] =
+        override def sampleNow(): IndexedSeq[A] =
           ev.sampleNow().flatten
       }
       val l = ev.listen_(out.node, new TransactionHandler[Option[A]]() {

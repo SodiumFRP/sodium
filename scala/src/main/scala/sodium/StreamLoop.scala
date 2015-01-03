@@ -7,7 +7,7 @@ class StreamLoop[A] extends Stream[A] {
   if (Transaction.getCurrentTransaction() == null)
     throw new RuntimeException("StreamLoop/CellLoop must be used within an explicit transaction")
 
-  protected def sampleNow(): IndexedSeq[A] = {
+  override def sampleNow(): IndexedSeq[A] = {
     if (ea_out.isEmpty)
       throw new RuntimeException("StreamLoop sampled before it was looped")
     ea_out.get.sampleNow()

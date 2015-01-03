@@ -11,7 +11,7 @@ class Listener {
   final def append(two: Listener): Listener = {
     val one = this
     new Listener() {
-      def unlisten() {
+      override def unlisten() {
         one.unlisten()
         two.unlisten()
       }

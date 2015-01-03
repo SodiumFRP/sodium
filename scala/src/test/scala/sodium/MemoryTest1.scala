@@ -3,7 +3,7 @@ package sodium
 object MemoryTest1 {
   def main(args: Array[String]) {
     new Thread() {
-      def run() {
+      override def run() {
         try {
           while (true) {
             println("memory " + Runtime.getRuntime().totalMemory())
@@ -18,8 +18,8 @@ object MemoryTest1 {
     val et = new StreamSink[Int]()
     val t = et.hold(0)
     val etens = et.map(x => x / 10)
-    val changeTens = et.snapshot[Int, Int](t, (neu, old) =>
-      if (neu.equals(old)) null else neu).filterNotNull
+    val changeTens = Stream.flatten(et.snapshot[Int, Option[Int]](t, (neu, old) =>
+      if (neu.equals(old)) None else Some(neu)))
     val oout =
       changeTens.map(
         tens => t.map(tt => (tens, tt))).hold(t.map(tt => (0, tt)))

@@ -3,7 +3,7 @@ package sodium
 object MemoryTest4 {
   def main(args: Array[String]) {
     new Thread() {
-      def run() {
+      override def run() {
         try {
           while (true) {
             println("memory " + Runtime.getRuntime().totalMemory())
@@ -15,7 +15,7 @@ object MemoryTest4 {
       }
     }.start()
 
-    val et = new StreamSink[Int]()
+    val et = new Stream[Int]()
     val eChange = new StreamSink[Int]()
     val oout = eChange.map(x => et).hold(et)
     val out = Cell.switchS[Int](oout)

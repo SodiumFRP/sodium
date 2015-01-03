@@ -73,7 +73,7 @@ class Cell[A](
     trans1 match {
       case Some(trans1) =>
         val out: StreamSink[A] = new StreamSink[A]() {
-          protected override def sampleNow(): IndexedSeq[A] =
+          override def sampleNow(): IndexedSeq[A] =
             IndexedSeq(sampleNoTrans())
         }
         val l: Listener = event.listen(out.node, trans1,
@@ -230,8 +230,8 @@ object Cell {
   /**
    * Unwrap an event inside a behavior to give a time-varying event implementation.
    */
-  def switchS[A](bea: Cell[_ <: Stream[A]]): Stream[A] = {
-    def switchS[A](trans1: Transaction, bea: Cell[_ <: Stream[A]]): Stream[A] =
+  def switchS[A](bea: Cell[Stream[A]]): Stream[A] = {
+    def switchS[A](trans1: Transaction, bea: Cell[Stream[A]]): Stream[A] =
       {
         val out = new StreamSink[A]()
         val h2 = new TransactionHandler[A]() {

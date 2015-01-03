@@ -7,8 +7,7 @@ import junit.framework.Assert._
 import junit.framework.TestCase
 
 class StreamTester extends TestCase {
-  @Override
-  protected def tearDown() {
+  protected override def tearDown() {
     System.gc()
     Thread.sleep(100)
   }
@@ -117,7 +116,7 @@ class StreamTester extends TestCase {
   def testFilterOptional() {
     val e = new StreamSink[Option[String]]()
     val out = new ArrayList[String]()
-    val l = Stream.filterOptional(e).listen(s => out.add(s))
+    val l = Stream.filterOption(e).listen(s => out.add(s))
     List(Some("tomato"), None, Some("peach")).foreach(e.send(_))
     l.unlisten()
     assertEquals(Arrays.asList("tomato", "peach"), out)

@@ -3,7 +3,7 @@ package sodium
 object MemoryTest3 {
   def main(args: Array[String]) {
     new Thread() {
-      def run() {
+      override def run() {
         try {
           while (true) {
             println("memory " + Runtime.getRuntime().totalMemory())

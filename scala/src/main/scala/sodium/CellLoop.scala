@@ -7,10 +7,10 @@ final class CellLoop[A] extends Cell[A](None, new StreamLoop[A]()) {
     value = Some(a_out.sample())
   }
 
-  protected override def sampleNoTrans(): Option[A] = {
+  override def sampleNoTrans(): A = {
     if (value.isEmpty)
       throw new RuntimeException("CellLoop sampled before it was looped")
-    value
+    value.get
   }
 }
 

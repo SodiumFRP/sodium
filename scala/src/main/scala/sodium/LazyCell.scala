@@ -5,12 +5,12 @@ class LazyCell[A](
   event: Stream[A] = new Stream[A]())
   extends Cell[A](None, event) {
 
-  protected override def sampleNoTrans(): Option[A] =
+  override def sampleNoTrans(): A =
     value match {
       case None =>
         value = Some(lazyInitValue.get())
-        value
-      case _ => value
+        value.get
+      case _ => value.get
     }
 
 }
