@@ -1,15 +1,14 @@
 package sodium
 
-/**
- * An event that never fires.
- */
+import scala.collection.mutable.ListBuffer
+
  class Stream[A] {
 	import Stream._
 
-	protected var listeners: List[TransactionHandler[A]] = List()
-	protected var finalizers: List[Listener] = List()
-	var node = new Node(0L)
-	protected var firings: List[A] = List()
+	protected val listeners: ListBuffer[TransactionHandler[A]] = ListBuffer()
+	protected val finalizers: ListBuffer[Listener] = ListBuffer()
+	val node = new Node(0L)
+	protected val firings: ListBuffer[A] = ListBuffer()
 
 	protected def sampleNow(): IndexedSeq[A] = IndexedSeq()
 
@@ -35,8 +34,7 @@ package sodium
 		 Transaction.listenersLock.synchronized {
             if (node.linkTo(target))
                 trans.toRegen = true
-            // TODO this is inefficient ..
-            listeners = listeners ++ List(action)
+            listeners += action
         }
         trans.prioritized(target, {
           trans2 =>
@@ -57,13 +55,10 @@ package sodium
 	 final def map[B](f: A => B): Stream[B] = {
 	    val ev = this
 	    val out = new StreamSink[B]() {
-			protected override def sampleNow(): IndexedSeq[A] =
+			protected override def sampleNow(): IndexedSeq[B] =
             {
                 val oi = ev.sampleNow()
-                if (oi != null) {
-                    oi.map (x => f.apply(x))
-                }
-                else null
+                 oi.map (x => f.apply(x))
             }
 	    }
         val l = listen_(out.node, new TransactionHandler[A]() {
@@ -342,7 +337,7 @@ object Stream {
 
 		 def unlisten() {
 			 Transaction.listenersLock.synchronized {
-                event.listeners.remove(action)
+			   event.listeners -= action
                 event.node.unlinkTo(target)
             }
 		}
@@ -375,12 +370,8 @@ object Stream {
         val l1 = ea.listen_(out.node, h)
         val l2 = eb.listen_(out.node, new TransactionHandler[A]() {
         	 def run(trans1: Transaction, a: A) {
-                trans1.prioritized(out.node, new Handler[Transaction]() {
-                     def run(trans2: Transaction) {
-                        out.send(trans2, a)
-                    }
-                })
-	        }
+                trans1.prioritized(out.node, trans2 => out.send(trans2, a))
+                }
         })
         out.addCleanup(l1).addCleanup(l2)
 	}
@@ -388,14 +379,14 @@ object Stream {
     /**
      * Filter the empty values out, and strip the Optional wrapper from the present ones.
      */
-     final def filterOptional(ev: Stream[Option[A]]): Stream[A] =
+     final def filterOptional[A](ev: Stream[Option[A]]): Stream[A] =
     {
         val out = new StreamSink[A]() {
             protected override def sampleNow(): IndexedSeq[A] = {
                 val oi = ev.sampleNow()
                 if (oi != null) {
-                    Object[] oo = new Object[oi.length]
-                    int j = 0
+                    val oo = new Object[oi.length]
+                    var j = 0
                     for (int i = 0 i < oi.length i++) {
                         Optional<A> oa = (Optional<A>)oi[i]
                         if (oa.isPresent())

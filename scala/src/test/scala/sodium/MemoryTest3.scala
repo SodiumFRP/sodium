@@ -6,7 +6,7 @@ object MemoryTest3 {
       def run() {
         try {
           while (true) {
-            System.out.println("memory " + Runtime.getRuntime().totalMemory())
+            println("memory " + Runtime.getRuntime().totalMemory())
             Thread.sleep(5000)
           }
         } catch {

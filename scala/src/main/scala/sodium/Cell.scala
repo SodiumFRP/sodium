@@ -1,22 +1,13 @@
 package sodium
 
-class Cell[A](protected val event: Stream[A], var value: Option[A]) {
-	
+class Cell[A](
+    var value: Option[A], 
+    protected val event: Stream[A] = new Stream[A]()) {
+
 	var valueUpdate: Option[A] = None 
 	private var cleanup: Option[Listener] = None
     protected var lazyInitValue: Option[() => A] = None   // Used by LazyCell
-
-	/**
-	 * A behavior with a constant value.
-	 */
-    def this(value: Option[A]) {
-	    this(new Stream[A](), value)
-    }
-	
-	def this(value: A) {
-	  this(new Stream[A](), Some(value))
-	}
-
+    
     // note before this was only called from the main constructor
     // not the secondary constructor
 
@@ -38,6 +29,11 @@ class Cell[A](protected val event: Stream[A], var value: Option[A]) {
     		}, false))
 		})
 
+		def this(initValue: A, event: Stream[A] = new Stream[A]()) {
+      this(Some(initValue), event)
+    }
+  
+		
     /**
      * @return The value including any updates that have happened in this transaction.
      */
@@ -111,14 +107,14 @@ class Cell[A](protected val event: Stream[A], var value: Option[A]) {
 				}
 			}
 		}
-		val bf: Cell[Lambda1[B,C]] = map(ffa)
+		val bf = map(ffa)
 		apply(bf, b)
 	}
 
 	/**
 	 * Lift a ternary function into behaviors.
 	 */
-	 final <B,C,D> Cell<D> lift(final Lambda3<A,B,C,D> f, Cell<B> b, Cell<C> c)
+	 final def lift[B,C,D](f: (A, B, C) => D, b: Cell[B], c: Cell[C]): Cell[D] =
 	{
 		Lambda1<A, Lambda1<B, Lambda1<C,D>>> ffa = new Lambda1<A, Lambda1<B, Lambda1<C,D>>>() {
 			 Lambda1<B, Lambda1<C,D>> apply(final A aa) {
@@ -133,14 +129,14 @@ class Cell[A](protected val event: Stream[A], var value: Option[A]) {
 				}
 			}
 		}
-		Cell<Lambda1<B, Lambda1<C, D>>> bf = map(ffa)
+		val bf = map(ffa)
 		return apply(apply(bf, b), c)
 	}
 
 	/**
 	 * Lift a quaternary function into behaviors.
 	 */
-	 final <B,C,D,E> Cell<E> lift(final Lambda4<A,B,C,D,E> f, Cell<B> b, Cell<C> c, Cell<D> d)
+	 final def lift[B,C,D,E](f: (A, B, C, D) => E, b: Cell[B], c: Cell[C], d: Cell[D]): Cell[E] = 
 	{
 		Lambda1<A, Lambda1<B, Lambda1<C, Lambda1<D,E>>>> ffa = new Lambda1<A, Lambda1<B, Lambda1<C, Lambda1<D,E>>>>() {
 			 Lambda1<B, Lambda1<C, Lambda1<D,E>>> apply(final A aa) {
@@ -159,7 +155,7 @@ class Cell[A](protected val event: Stream[A], var value: Option[A]) {
 				}
 			}
 		}
-		Cell<Lambda1<B, Lambda1<C, Lambda1<D, E>>>> bf = map(ffa)
+		val bf = map(ffa)
 		return apply(apply(apply(bf, b), c), d)
 	}
 
@@ -167,21 +163,21 @@ class Cell[A](protected val event: Stream[A], var value: Option[A]) {
      * Transform a behavior with a generalized state loop (a mealy machine). The function
      * is passed the input and the old state and returns the new state and output value.
      */
-    final <B,S> Cell<B> collect(final S initState, final Lambda2<A, S, Tuple2<B, S>> f)
+    final def collect[B,S](initState: S, f: (A, S) => (B, S)): Cell[B] =
     {
-        return Transaction.<Cell<B>>run(() -> {
-            final Stream<A> ea = updates().coalesce(new Lambda2<A,A,A>() {
+        return Transaction.run[Cell[B]](() => {
+            val ea = updates().coalesce(new Lambda2<A,A,A>() {
                  A apply(A fst, A snd) { return snd }
             })
-            final Lambda0<Tuple2<B, S>> zbs = () -> f.apply(sampleNoTrans(), initState)
-            StreamLoop<Tuple2<B,S>> ebs = new StreamLoop<Tuple2<B,S>>()
-            Cell<Tuple2<B,S>> bbs = ebs.holdLazy(zbs)
-            Cell<S> bs = bbs.map(new Lambda1<Tuple2<B,S>,S>() {
+            val zbs = () -> f.apply(sampleNoTrans(), initState)
+            val ebs = new StreamLoop[(B,S)]()
+            val bbs = ebs.holdLazy(zbs)
+            val bs = bbs.map(new Lambda1<Tuple2<B,S>,S>() {
                  S apply(Tuple2<B,S> x) {
                     return x.b
                 }
             })
-            Stream<Tuple2<B,S>> ebs_out = ea.snapshot(bs, f)
+            val ebs_out = ea.snapshot(bs, f)
             ebs.loop(ebs_out)
             return bbs.map(new Lambda1<Tuple2<B,S>,B>() {
                  B apply(Tuple2<B,S> x) {
@@ -287,15 +283,8 @@ object Cell {
 	/**
 	 * Unwrap an event inside a behavior to give a time-varying event implementation.
 	 */
-	def switchS[A](bea: Cell[Stream[A]]): Stream[A] = 
-	{
-        return Transaction.apply(new Lambda1[Transaction, Stream[A]]() {
-        	def apply(trans: Transaction): Stream[A] = 
-                switchS(trans, bea)
-        })
-    }
-
-	private def switchS[A](trans1: Transaction, bea: Cell[Stream[A]]): Stream[A] = 
+	def switchS[A](bea: Cell[Stream[A]]): Stream[A] = {
+	  def switchS[A](trans1: Transaction, bea: Cell[Stream[A]]): Stream[A] = 
 	{
         val out = new StreamSink[A]()
         val h2 = new TransactionHandler[A]() {
@@ -324,4 +313,7 @@ object Cell {
         val l1 = bea.updates().listen(out.node, trans1, h1, false)
         return out.addCleanup(l1)
 	}
+	  
+        Transaction.apply(trans => switchS(trans, bea))
+    }
 }

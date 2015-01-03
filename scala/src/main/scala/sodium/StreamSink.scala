@@ -9,10 +9,9 @@ class StreamSink[A] extends Stream[A] {
   def send(trans: Transaction, a: A) {
     if (firings.isEmpty)
       trans.last(new Runnable() {
-        def run() { firings = List() }
+        def run() { firings.clear() }
       })
-    // TODO inefficent
-    firings = firings ++ List(a)
+    firings += a
 
     // todo shouldn't need to clone here ...
 

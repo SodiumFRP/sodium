@@ -1,74 +1,71 @@
 package sodium
 
-import java.util.PriorityQueue
+import scala.collection.mutable.PriorityQueue
+import java.util.concurrent.atomic.AtomicLong
 
 import scala.collection.mutable.HashSet
-
-import java.util.concurrent.atomic.AtomicLong
+import scala.collection.mutable.ListBuffer
 
 final class Transaction {
   import Transaction._
 
   // True if we need to re-generate the priority queue.
-  var toRegen = false
+  private [sodium] var toRegen = false
 
   private val prioritizedQ = new PriorityQueue[Entry]()
   private val entries = new HashSet[Entry]()
-  private var lastQ: List[Runnable] = List()
-  private var postQ: List[Runnable] = List()
+  private val lastQ: ListBuffer[Runnable] = ListBuffer()
+  private val postQ: ListBuffer[Runnable] = ListBuffer()
 
   def prioritized(rank: Node, action: Transaction => Unit) {
     val e = new Entry(rank, action)
-    prioritizedQ.add(e)
-    entries.add(e)
+    prioritizedQ += e
+    entries += e
   }
 
   /**
    * Add an action to run after all prioritized() actions.
    */
   def last(action: Runnable) {
-    // TODO this is expensive, better way?
-    lastQ = lastQ ++ List(action)
+    lastQ += action
   }
 
   /**
    * Add an action to run after all last() actions.
    */
   def post(action: Runnable) {
-    // TODO this is expensive, better way?
-    postQ = postQ ++ List(action)
-  }
-
-  /**
-   * If the priority queue has entries in it when we modify any of the nodes'
-   * ranks, then we need to re-generate it to make sure it's up-to-date.
-   */
-  private def checkRegen() {
-    if (toRegen) {
-      toRegen = false
-      prioritizedQ.clear()
-      entries.foreach(e => prioritizedQ.add(e))
-    }
+    postQ += action
   }
 
   def close() {
+
+    /**
+     * If the priority queue has entries in it when we modify any of the nodes'
+     * ranks, then we need to re-generate it to make sure it's up-to-date.
+     */
+    def checkRegen() {
+      if (toRegen) {
+        toRegen = false
+        prioritizedQ.clear()
+        prioritizedQ ++= entries
+      }
+    }
+
     var finished = false
     while (!finished) {
       checkRegen()
-      if (prioritizedQ.isEmpty()) {
+      if (prioritizedQ.size == 0) {
         finished = true
       } else {
-        val e = prioritizedQ.remove()
+        val e = prioritizedQ.dequeue()
         entries.remove(e)
         e.action(this)
       }
     }
     lastQ.foreach(_.run())
-    lastQ = List()
-    if (!postQ.isEmpty) {
-      postQ.foreach(_.run())
-      postQ = List()
-    }
+    lastQ.clear()
+    postQ.foreach(_.run())
+    postQ.clear()
   }
 }
 
@@ -76,7 +73,7 @@ object Transaction {
 
   // Coarse-grained lock that's held during the whole transaction.
   val transactionLock = new Object()
-  
+
   // Fine-grained lock that protects listeners and nodes.
   val listenersLock = new Object()
 
