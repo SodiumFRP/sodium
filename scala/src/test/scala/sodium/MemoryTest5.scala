@@ -15,7 +15,7 @@ object MemoryTest5 {
       }
     }.start()
 
-    val eChange = new StreamSink[Integer]()
+    val eChange = new StreamSink[Int]()
     val out = eChange.hold(0)
     val l = out.value().listen(tt => {
       //System.out.println(tt)

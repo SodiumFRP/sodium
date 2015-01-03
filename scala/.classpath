@@ -1,0 +1,12 @@
+<classpath>
+  <classpathentry output="target/scala-2.11/classes" kind="src" path="src/main/scala"/>
+  <classpathentry output="target/scala-2.11/classes" kind="src" path="src/main/java"/>
+  <classpathentry output="target/scala-2.11/test-classes" kind="src" path="src/test/scala"/>
+  <classpathentry output="target/scala-2.11/test-classes" kind="src" path="src/test/java"/>
+  <classpathentry kind="con" path="org.scala-ide.sdt.launching.SCALA_CONTAINER"/>
+  <classpathentry kind="lib" path="/home/mark/.ivy2/cache/com.novocode/junit-interface/jars/junit-interface-0.8.jar"/>
+  <classpathentry kind="lib" path="/home/mark/.ivy2/cache/junit/junit/jars/junit-4.8.2.jar"/>
+  <classpathentry kind="lib" path="/home/mark/.ivy2/cache/org.scala-tools.testing/test-interface/jars/test-interface-0.5.jar"/>
+  <classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
+  <classpathentry kind="output" path="bin"/>
+</classpath>

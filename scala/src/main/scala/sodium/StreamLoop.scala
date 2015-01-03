@@ -1,7 +1,7 @@
 package sodium
 
 class StreamLoop[A] extends Stream[A] {
-  
+
   private var ea_out: Option[Stream[A]] = None
 
   if (Transaction.getCurrentTransaction() == null)
@@ -33,7 +33,11 @@ class StreamLoop[A] extends Stream[A] {
       throw new RuntimeException("StreamLoop looped more than once")
     this.ea_out = Some(ea_out)
     val me = this
-    addCleanup(ea_out.listen_(this.node, (trans, a) => me.send(trans, a))
+    addCleanup(ea_out.listen_(this.node, new TransactionHandler[A]() {
+      override def run(trans: Transaction, a: A) {
+        me.send(trans, a)
+      }
+    }))
   }
 }
 

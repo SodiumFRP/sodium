@@ -13,8 +13,6 @@ class StreamSink[A] extends Stream[A] {
       })
     firings += a
 
-    // todo shouldn't need to clone here ...
-
     try {
       listeners.foreach(_.run(trans, a))
     } catch {
