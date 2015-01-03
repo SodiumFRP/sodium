@@ -389,10 +389,10 @@ object Stream {
     /**
      * Filter the empty values out, and strip the Optional wrapper from the present ones.
      */
-     final def filterOptional(ev: Stream[Optional[A]]): Stream[A] =
+     final def filterOptional(ev: Stream[Option[A]]): Stream[A] =
     {
-        val out = new StreamSink<A>() {
-            protected override sampleNow(): IndexedSeq[A] = {
+        val out = new StreamSink[A]() {
+            protected override def sampleNow(): IndexedSeq[A] = {
                 val oi = ev.sampleNow()
                 if (oi != null) {
                     Object[] oo = new Object[oi.length]
@@ -417,7 +417,7 @@ object Stream {
                     return null
             }
         }
-        val l = ev.listen_(out.node, new TransactionHandler<Optional<A>>() {
+        val l = ev.listen_(out.node, new TransactionHandler[Option[A]]() {
         	 def run(trans2: Transaction, oa: Option[A]) {
 	            oa.foreach(x => out.send(trans2, x))
 	        }

@@ -12,6 +12,10 @@ class Cell[A](protected val event: Stream[A], var value: Option[A]) {
     def this(value: Option[A]) {
 	    this(new Stream[A](), value)
     }
+	
+	def this(value: A) {
+	  this(new Stream[A](), Some(value))
+	}
 
     // note before this was only called from the main constructor
     // not the secondary constructor
