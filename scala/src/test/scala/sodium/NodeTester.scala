@@ -1,9 +1,10 @@
 package sodium
 
-import junit.framework.Assert.assertTrue
-import junit.framework.TestCase
+import org.junit.Assert.assertTrue
+import org.junit.Test
 
-class NodeTester extends TestCase {
+class NodeTester {
+  @Test
   def testNode() {
     val a = new Node(0)
     val b = new Node(1)

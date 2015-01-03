@@ -2,16 +2,19 @@ package sodium
 
 import java.util.ArrayList
 import java.util.Arrays
-import junit.framework.Assert._
 
-import junit.framework.TestCase
+import org.junit.After
+import org.junit.Assert.assertEquals
+import org.junit.Test
 
-class StreamTester extends TestCase {
-  protected override def tearDown() {
+class StreamTester {
+  @After
+  def tearDown() {
     System.gc()
     Thread.sleep(100)
   }
 
+  @Test
   def testSendStream() {
     val e = new StreamSink[Int]()
     val out = new ArrayList[Int]()
@@ -23,6 +26,7 @@ class StreamTester extends TestCase {
     assertEquals(Arrays.asList(5), out)
   }
 
+  @Test
   def testMap() {
     val e = new StreamSink[Int]()
     val m = e.map(x => x.toString)
@@ -33,6 +37,7 @@ class StreamTester extends TestCase {
     assertEquals(Arrays.asList("5"), out)
   }
 
+  @Test
   def testMergeNonSimultaneous() {
     val e1 = new StreamSink[Int]()
     val e2 = new StreamSink[Int]()
@@ -45,6 +50,7 @@ class StreamTester extends TestCase {
     assertEquals(Arrays.asList(7, 9, 8), out)
   }
 
+  @Test
   def testMergeSimultaneous() {
     val e = new StreamSink[Int]()
     val out = new ArrayList[Int]()
@@ -55,6 +61,7 @@ class StreamTester extends TestCase {
     assertEquals(Arrays.asList(7, 7, 9, 9), out)
   }
 
+  @Test
   def testMergeLeftBias() {
     val e1 = new StreamSink[String]()
     val e2 = new StreamSink[String]()
@@ -80,6 +87,7 @@ class StreamTester extends TestCase {
       "right2a", "right2b"), out)
   }
 
+  @Test
   def testCoalesce() {
     val e1 = new StreamSink[Int]()
     val e2 = new StreamSink[Int]()
@@ -95,6 +103,7 @@ class StreamTester extends TestCase {
     assertEquals(Arrays.asList(202, 808, 40), out)
   }
 
+  @Test
   def testFilter() {
     val e = new StreamSink[Char]()
     val out = new ArrayList[Char]()
@@ -104,6 +113,7 @@ class StreamTester extends TestCase {
     assertEquals(Arrays.asList('H', 'I'), out)
   }
 
+  @Test
   def testFilterNotNull() {
     val e = new StreamSink[String]()
     val out = new ArrayList[String]()
@@ -113,6 +123,7 @@ class StreamTester extends TestCase {
     assertEquals(Arrays.asList("tomato", "peach"), out)
   }
 
+  @Test
   def testFilterOptional() {
     val e = new StreamSink[Option[String]]()
     val out = new ArrayList[String]()
@@ -122,6 +133,7 @@ class StreamTester extends TestCase {
     assertEquals(Arrays.asList("tomato", "peach"), out)
   }
 
+  @Test
   def testLoopStream() {
     val ea = new StreamSink[Int]()
     val ec = Transaction.run[Stream[Int]](() => {
@@ -139,6 +151,7 @@ class StreamTester extends TestCase {
     assertEquals(Arrays.asList(2, 7), out)
   }
 
+  @Test
   def testGate() {
     val ec = new StreamSink[Char]()
     val epred = new CellSink(true)
@@ -153,6 +166,7 @@ class StreamTester extends TestCase {
     assertEquals(Arrays.asList('H', 'I'), out)
   }
 
+  @Test
   def testCollect() {
     val ea = new StreamSink[Int]()
     val out = new ArrayList[Int]()
@@ -163,6 +177,7 @@ class StreamTester extends TestCase {
     assertEquals(Arrays.asList(105, 112, 113, 115, 118), out)
   }
 
+  @Test
   def testAccum() {
     val ea = new StreamSink[Int]()
     val out = new ArrayList[Int]()
@@ -173,6 +188,7 @@ class StreamTester extends TestCase {
     assertEquals(Arrays.asList(105, 112, 113, 115, 118), out)
   }
 
+  @Test
   def testOnce() {
     val e = new StreamSink[Char]()
     val out = new ArrayList[Char]()
@@ -182,6 +198,7 @@ class StreamTester extends TestCase {
     assertEquals(Arrays.asList('A'), out)
   }
 
+  @Test
   def testDelay() {
     val e = new StreamSink[Char]()
     val b = e.hold(' ')

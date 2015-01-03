@@ -16,13 +16,12 @@ class Stream[A] {
    * Listen for firings of this event. The returned Listener has an unlisten()
    * method to cause the listener to be removed. This is the observer pattern.
    */
-  final def listen(action: A => Unit): Listener = {
-    return listen_(Node.NullNode, new TransactionHandler[A]() {
+  final def listen(action: A => Unit): Listener = 
+    listen_(Node.NullNode, new TransactionHandler[A]() {
       def run(trans2: Transaction, a: A) {
         action(a)
       }
     })
-  }
 
   final def listen_(target: Node, action: TransactionHandler[A]): Listener =
     Transaction.apply(trans1 => listen(target, trans1, action, false))
@@ -46,7 +45,7 @@ class Stream[A] {
           firings.foreach(b => action.run(trans, b))
         }
     })
-    return new ListenerImplementation[A](this, action, target)
+    new ListenerImplementation[A](this, action, target)
   }
 
   /**
@@ -324,12 +323,11 @@ object Stream {
         override def sampleNow(): IndexedSeq[A] =
           ea.sampleNow() ++ eb.sampleNow()
       }
-      val h = new TransactionHandler[A]() {
+      val l1 = ea.listen_(out.node, new TransactionHandler[A]() {
         def run(trans: Transaction, a: A) {
           out.send(trans, a)
         }
-      }
-      val l1 = ea.listen_(out.node, h)
+      })
       val l2 = eb.listen_(out.node, new TransactionHandler[A]() {
         def run(trans1: Transaction, a: A) {
           trans1.prioritized(out.node, trans2 => out.send(trans2, a))

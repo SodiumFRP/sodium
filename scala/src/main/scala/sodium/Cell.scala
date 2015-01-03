@@ -33,7 +33,7 @@ class Cell[A](
   def this(initValue: A, event: Stream[A]) {
     this(Some(initValue), event)
   }
-  
+
   def this(initValue: A) {
     this(Some(initValue), new Stream[A]())
   }
@@ -123,7 +123,7 @@ class Cell[A](
    */
   final def collect[B, S](initState: S, f: (A, S) => (B, S)): Cell[B] =
     {
-      return Transaction.run[Cell[B]](() => {
+      Transaction.run[Cell[B]](() => {
         val ea = updates().coalesce((fst, snd) => snd)
         val zbs = () => f.apply(sampleNoTrans(), initState)
         val ebs = new StreamLoop[(B, S)]()
@@ -131,7 +131,7 @@ class Cell[A](
         val bs = bbs.map(x => x._2)
         val ebs_out = ea.snapshot(bs, f)
         ebs.loop(ebs_out)
-        return bbs.map(x => x._1)
+        bbs.map(x => x._1)
       })
     }
 
@@ -169,15 +169,14 @@ object Cell {
 
     var fired = false
     def h(trans1: Transaction) {
-      if (fired)
-        return
-
-      fired = true
-      trans1.prioritized(out.node, {
-        trans2 =>
-          out.send(trans2, bf.newValue().apply(ba.newValue()))
-          fired = false
-      })
+      if (!fired) {
+        fired = true
+        trans1.prioritized(out.node, {
+          trans2 =>
+            out.send(trans2, bf.newValue().apply(ba.newValue()))
+            fired = false
+        })
+      }
     }
 
     val l1 = bf.updates().listen_(out.node, new TransactionHandler[A => B]() {
@@ -190,7 +189,7 @@ object Cell {
         h(trans1)
       }
     })
-    return out.addCleanup(l1).addCleanup(l2).holdLazy(() => bf.sampleNoTrans().apply(ba.sampleNoTrans()))
+    out.addCleanup(l1).addCleanup(l2).holdLazy(() => bf.sampleNoTrans().apply(ba.sampleNoTrans()))
   }
 
   /**
@@ -224,7 +223,7 @@ object Cell {
         }
       }
       val l1 = bba.value().listen_(out.node, h)
-      return out.addCleanup(l1).holdLazy(za)
+      out.addCleanup(l1).holdLazy(za)
     }
 
   /**
@@ -258,7 +257,7 @@ object Cell {
           }
         }
         val l1 = bea.updates().listen(out.node, trans1, h1, false)
-        return out.addCleanup(l1)
+        out.addCleanup(l1)
       }
 
     Transaction.apply(trans => switchS(trans, bea))
