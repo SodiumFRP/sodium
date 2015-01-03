@@ -5,9 +5,8 @@ import java.util.Arrays;
 import java.util.List;
 
 import junit.framework.TestCase;
-import junit.framework.TestSuite;
 
-public class BehaviorTester extends TestCase {
+public class CellTester extends TestCase {
 	@Override
 	protected void tearDown() throws Exception {
 		System.gc();
@@ -16,8 +15,8 @@ public class BehaviorTester extends TestCase {
 	
 	public void testHold()
     {
-        EventSink<Integer> e = new EventSink<Integer>();
-        Behavior<Integer> b = e.hold(0);
+        StreamSink<Integer> e = new StreamSink<Integer>();
+        Cell<Integer> b = e.hold(0);
         List<Integer> out = new ArrayList<Integer>();
         Listener l = b.updates().listen(x -> { out.add(x); });
         e.send(2);
@@ -28,8 +27,8 @@ public class BehaviorTester extends TestCase {
 
 	public void testSnapshot()
     {
-        BehaviorSink<Integer> b = new BehaviorSink<Integer>(0);
-        EventSink<Long> trigger = new EventSink<Long>();
+        CellSink<Integer> b = new CellSink<Integer>(0);
+        StreamSink<Long> trigger = new StreamSink<Long>();
         List<String> out = new ArrayList<String>();
         Listener l = trigger.snapshot(b, (x, y) -> x + " " + y)
             .listen(x -> { out.add(x); });
@@ -44,7 +43,7 @@ public class BehaviorTester extends TestCase {
     }
 	
 	public void testValues() {
-		BehaviorSink<Integer> b = new BehaviorSink<Integer>(9);
+		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
 		Listener l = b.value().listen(x -> { out.add(x); });
 		b.send(2);
@@ -54,7 +53,7 @@ public class BehaviorTester extends TestCase {
 	}
 	
 	public void testConstantBehavior() {
-	    Behavior<Integer> b = new Behavior<Integer>(12);
+	    Cell<Integer> b = new Cell<Integer>(12);
 	    List<Integer> out = new ArrayList();
 	    Listener l = b.value().listen(x -> { out.add(x); });
 	    l.unlisten();
@@ -62,7 +61,7 @@ public class BehaviorTester extends TestCase {
 	}
 
 	public void testValuesThenMap() {
-		BehaviorSink<Integer> b = new BehaviorSink<Integer>(9);
+		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
 		Listener l = b.value().map(x -> x+100).listen(x -> { out.add(x); });
 		b.send(2);
@@ -77,13 +76,13 @@ public class BehaviorTester extends TestCase {
 	 * This needs testing separately, because the code must be done carefully to achieve
 	 * this.
 	 */
-	private static Event<Integer> doubleUp(Event<Integer> ev)
+	private static Stream<Integer> doubleUp(Stream<Integer> ev)
 	{
 	    return ev.merge(ev);
 	}
 
 	public void testValuesTwiceThenMap() {
-		BehaviorSink<Integer> b = new BehaviorSink<Integer>(9);
+		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
 		Listener l = doubleUp(b.value()).map(x -> x+100).listen(x -> { out.add(x); });
 		b.send(2);
@@ -93,7 +92,7 @@ public class BehaviorTester extends TestCase {
 	}
 
 	public void testValuesThenCoalesce() {
-		BehaviorSink<Integer> b = new BehaviorSink<Integer>(9);
+		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
 		Listener l = b.value().coalesce((fst, snd) -> snd).listen(x -> { out.add(x); });
 		b.send(2);
@@ -103,7 +102,7 @@ public class BehaviorTester extends TestCase {
 	}
 
 	public void testValuesTwiceThenCoalesce() {
-		BehaviorSink<Integer> b = new BehaviorSink<Integer>(9);
+		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
 		Listener l = doubleUp(b.value()).coalesce((fst, snd) -> fst+snd).listen(x -> { out.add(x); });
 		b.send(2);
@@ -113,8 +112,8 @@ public class BehaviorTester extends TestCase {
 	}
 
 	public void testValuesThenSnapshot() {
-		BehaviorSink<Integer> bi = new BehaviorSink<Integer>(9);
-		BehaviorSink<Character> bc = new BehaviorSink<Character>('a');
+		CellSink<Integer> bi = new CellSink<Integer>(9);
+		CellSink<Character> bc = new CellSink<Character>('a');
 		List<Character> out = new ArrayList<Character>();
 		Listener l = bi.value().snapshot(bc).listen(x -> { out.add(x); });
 		bc.send('b');
@@ -126,8 +125,8 @@ public class BehaviorTester extends TestCase {
 	}
 
 	public void testValuesTwiceThenSnapshot() {
-		BehaviorSink<Integer> bi = new BehaviorSink<Integer>(9);
-		BehaviorSink<Character> bc = new BehaviorSink<Character>('a');
+		CellSink<Integer> bi = new CellSink<Integer>(9);
+		CellSink<Character> bc = new CellSink<Character>('a');
 		List<Character> out = new ArrayList<Character>();
 		Listener l = doubleUp(bi.value()).snapshot(bc).listen(x -> { out.add(x); });
 		bc.send('b');
@@ -139,8 +138,8 @@ public class BehaviorTester extends TestCase {
 	}
 
 	public void testValuesThenMerge() {
-		BehaviorSink<Integer> bi = new BehaviorSink<Integer>(9);
-		BehaviorSink<Integer> bj = new BehaviorSink<Integer>(2);
+		CellSink<Integer> bi = new CellSink<Integer>(9);
+		CellSink<Integer> bj = new CellSink<Integer>(2);
 		List<Integer> out = new ArrayList<Integer>();
 		Listener l = bi.value().merge(bj.value(), (x, y) -> x+y)
 		    .listen(x -> { out.add(x); });
@@ -151,7 +150,7 @@ public class BehaviorTester extends TestCase {
 	}
 
 	public void testValuesThenFilter() {
-		BehaviorSink<Integer> b = new BehaviorSink<Integer>(9);
+		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
 		Listener l = b.value().filter(a -> true).listen(x -> { out.add(x); });
 		b.send(2);
@@ -161,7 +160,7 @@ public class BehaviorTester extends TestCase {
 	}
 
 	public void testValuesTwiceThenFilter() {
-		BehaviorSink<Integer> b = new BehaviorSink<Integer>(9);
+		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
 		Listener l = doubleUp(b.value()).filter(a -> true).listen(x -> { out.add(x); });
 		b.send(2);
@@ -171,7 +170,7 @@ public class BehaviorTester extends TestCase {
 	}
 
 	public void testValuesThenOnce() {
-		BehaviorSink<Integer> b = new BehaviorSink<Integer>(9);
+		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
 		Listener l = b.value().once().listen(x -> { out.add(x); });
 		b.send(2);
@@ -181,7 +180,7 @@ public class BehaviorTester extends TestCase {
 	}
 
 	public void testValuesTwiceThenOnce() {
-		BehaviorSink<Integer> b = new BehaviorSink<Integer>(9);
+		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
 		Listener l = doubleUp(b.value()).once().listen(x -> { out.add(x); });
 		b.send(2);
@@ -191,9 +190,9 @@ public class BehaviorTester extends TestCase {
 	}
 
 	public void testValuesLateListen() {
-		BehaviorSink<Integer> b = new BehaviorSink<Integer>(9);
+		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
-		Event<Integer> value = b.value();
+		Stream<Integer> value = b.value();
 		b.send(8);
 		Listener l = value.listen(x -> { out.add(x); });
 		b.send(2);
@@ -202,7 +201,7 @@ public class BehaviorTester extends TestCase {
 	}
 	
 	public void testMapB() {
-		BehaviorSink<Integer> b = new BehaviorSink<Integer>(6);
+		CellSink<Integer> b = new CellSink<Integer>(6);
 		List<String> out = new ArrayList<String>();
 		Listener l = b.map(x -> x.toString())
 				.value().listen(x -> { out.add(x); });
@@ -212,9 +211,9 @@ public class BehaviorTester extends TestCase {
 	}
 	
 	public void testMapBLateListen() {
-		BehaviorSink<Integer> b = new BehaviorSink<Integer>(6);
+		CellSink<Integer> b = new CellSink<Integer>(6);
 		List<String> out = new ArrayList<String>();
-		Behavior<String> bm = b.map(x -> x.toString());
+		Cell<String> bm = b.map(x -> x.toString());
 		b.send(2);
 		Listener l = bm.value().listen(x -> { out.add(x); });
 		b.send(8);
@@ -231,11 +230,11 @@ public class BehaviorTester extends TestCase {
 	}
 
 	public void testApply() {
-		BehaviorSink<Lambda1<Long, String>> bf = new BehaviorSink<Lambda1<Long, String>>(
+		CellSink<Lambda1<Long, String>> bf = new CellSink<Lambda1<Long, String>>(
 				(Long b) -> "1 "+b);
-		BehaviorSink<Long> ba = new BehaviorSink<Long>(5L);
+		CellSink<Long> ba = new CellSink<Long>(5L);
 		List<String> out = new ArrayList<String>();
-		Listener l = Behavior.apply(bf,ba).value().listen(x -> { out.add(x); });
+		Listener l = Cell.apply(bf,ba).value().listen(x -> { out.add(x); });
 		bf.send((Long b) -> "12 "+b);
 		ba.send(6L);
         l.unlisten();
@@ -243,10 +242,10 @@ public class BehaviorTester extends TestCase {
 	}
 
 	public void testLift() {
-		BehaviorSink<Integer> a = new BehaviorSink<Integer>(1);
-		BehaviorSink<Long> b = new BehaviorSink<Long>(5L);
+		CellSink<Integer> a = new CellSink<Integer>(1);
+		CellSink<Long> b = new CellSink<Long>(5L);
 		List<String> out = new ArrayList<String>();
-		Listener l = Behavior.lift(
+		Listener l = Cell.lift(
 			(x, y) -> x + " " + y,
 			a,
 			b
@@ -258,10 +257,10 @@ public class BehaviorTester extends TestCase {
 	}
 	
 	public void testLiftGlitch() {
-		BehaviorSink<Integer> a = new BehaviorSink<Integer>(1);
-		Behavior<Integer> a3 = a.map((Integer x) -> x * 3);
-		Behavior<Integer> a5 = a.map((Integer x) -> x * 5);
-		Behavior<String> b = Behavior.lift((x, y) -> x + " " + y, a3, a5);
+		CellSink<Integer> a = new CellSink<Integer>(1);
+		Cell<Integer> a3 = a.map((Integer x) -> x * 3);
+		Cell<Integer> a5 = a.map((Integer x) -> x * 5);
+		Cell<String> b = Cell.lift((x, y) -> x + " " + y, a3, a5);
 		List<String> out = new ArrayList<String>();
 		Listener l = b.value().listen((String x) -> { out.add(x); });
 		a.send(2);
@@ -270,9 +269,9 @@ public class BehaviorTester extends TestCase {
 	}
 
 	public void testHoldIsDelayed() {
-	    EventSink<Integer> e = new EventSink<Integer>();
-	    Behavior<Integer> h = e.hold(0);
-	    Event<String> pair = e.snapshot(h, (a, b) -> a + " " + b);
+	    StreamSink<Integer> e = new StreamSink<Integer>();
+	    Cell<Integer> h = e.hold(0);
+	    Stream<String> pair = e.snapshot(h, (a, b) -> a + " " + b);
 		List<String> out = new ArrayList<String>();
 		Listener l = pair.listen((String x) -> { out.add(x); });
 		e.send(2);
@@ -283,7 +282,7 @@ public class BehaviorTester extends TestCase {
 
 	static class SB
 	{
-	    SB(Character a, Character b, Behavior<Character> sw)
+	    SB(Character a, Character b, Cell<Character> sw)
 	    {
 	        this.a = a;
 	        this.b = b;
@@ -291,18 +290,18 @@ public class BehaviorTester extends TestCase {
 	    }
 	    Character a;
 	    Character b;
-	    Behavior<Character> sw;
+	    Cell<Character> sw;
 	}
 
 	public void testSwitchB()
 	{
-	    EventSink<SB> esb = new EventSink();
+	    StreamSink<SB> esb = new StreamSink();
 	    // Split each field out of SB so we can update multiple behaviours in a
 	    // single transaction.
-	    Behavior<Character> ba = esb.map(s -> s.a).filterNotNull().hold('A');
-	    Behavior<Character> bb = esb.map(s -> s.b).filterNotNull().hold('a');
-	    Behavior<Behavior<Character>> bsw = esb.map(s -> s.sw).filterNotNull().hold(ba);
-	    Behavior<Character> bo = Behavior.switchC(bsw);
+	    Cell<Character> ba = esb.map(s -> s.a).filterNotNull().hold('A');
+	    Cell<Character> bb = esb.map(s -> s.b).filterNotNull().hold('a');
+	    Cell<Cell<Character>> bsw = esb.map(s -> s.sw).filterNotNull().hold(ba);
+	    Cell<Character> bo = Cell.switchC(bsw);
 		List<Character> out = new ArrayList<Character>();
 	    Listener l = bo.value().listen(c -> { out.add(c); });
 	    esb.send(new SB('B','b',null));
@@ -321,7 +320,7 @@ public class BehaviorTester extends TestCase {
 
 	static class SE
 	{
-	    SE(Character a, Character b, Event<Character> sw)
+	    SE(Character a, Character b, Stream<Character> sw)
 	    {
 	        this.a = a;
 	        this.b = b;
@@ -329,17 +328,17 @@ public class BehaviorTester extends TestCase {
 	    }
 	    Character a;
 	    Character b;
-	    Event<Character> sw;
+	    Stream<Character> sw;
 	}
 
     public void testSwitchE()
     {
-        EventSink<SE> ese = new EventSink();
-        Event<Character> ea = ese.map(s -> s.a).filterNotNull();
-        Event<Character> eb = ese.map(s -> s.b).filterNotNull();
-        Behavior<Event<Character>> bsw = ese.map(s -> s.sw).filterNotNull().hold(ea);
+        StreamSink<SE> ese = new StreamSink();
+        Stream<Character> ea = ese.map(s -> s.a).filterNotNull();
+        Stream<Character> eb = ese.map(s -> s.b).filterNotNull();
+        Cell<Stream<Character>> bsw = ese.map(s -> s.sw).filterNotNull().hold(ea);
         List<Character> out = new ArrayList();
-        Event<Character> eo = Behavior.switchS(bsw);
+        Stream<Character> eo = Cell.switchS(bsw);
 	    Listener l = eo.listen(c -> { out.add(c); });
 	    ese.send(new SE('A','a',null));
 	    ese.send(new SE('B','b',null));
@@ -356,10 +355,10 @@ public class BehaviorTester extends TestCase {
 
     public void testLoopBehavior()
     {
-        final EventSink<Integer> ea = new EventSink();
-        Behavior<Integer> sum_out = Transaction.<Behavior<Integer>>run(() -> {
-            BehaviorLoop<Integer> sum = new BehaviorLoop<Integer>();
-            Behavior<Integer> sum_out_ = ea.snapshot(sum, (x, y) -> x+y).hold(0);
+        final StreamSink<Integer> ea = new StreamSink();
+        Cell<Integer> sum_out = Transaction.<Cell<Integer>>run(() -> {
+            CellLoop<Integer> sum = new CellLoop<Integer>();
+            Cell<Integer> sum_out_ = ea.snapshot(sum, (x, y) -> x+y).hold(0);
             sum.loop(sum_out_);
             return sum_out_;
         });
@@ -375,9 +374,9 @@ public class BehaviorTester extends TestCase {
 
     public void testCollect()
     {
-        EventSink<Integer> ea = new EventSink();
+        StreamSink<Integer> ea = new StreamSink();
         List<Integer> out = new ArrayList();
-        Behavior<Integer> sum = ea.hold(100).collect(0,
+        Cell<Integer> sum = ea.hold(100).collect(0,
             //(a,s) -> new Tuple2(a+s, a+s)
             new Lambda2<Integer, Integer, Tuple2<Integer,Integer>>() {
                 public Tuple2<Integer,Integer> apply(Integer a, Integer s) {
@@ -397,9 +396,9 @@ public class BehaviorTester extends TestCase {
 
     public void testAccum()
     {
-        EventSink<Integer> ea = new EventSink();
+        StreamSink<Integer> ea = new StreamSink();
         List<Integer> out = new ArrayList();
-        Behavior<Integer> sum = ea.accum(100, (a,s)->a+s);
+        Cell<Integer> sum = ea.accum(100, (a,s)->a+s);
         Listener l = sum.value().listen((x) -> { out.add(x); });
         ea.send(5);
         ea.send(7);
@@ -413,11 +412,11 @@ public class BehaviorTester extends TestCase {
     public void testLoopValueSnapshot()
     {
         List<String> out = new ArrayList();
-        Event<String> eSnap = Transaction.<Event<String>>run(() -> {
-            Behavior<String> a = new Behavior("lettuce");
-            BehaviorLoop<String> b = new BehaviorLoop();
-            Event<String> eSnap_ = a.value().snapshot(b, (String aa, String bb) -> aa + " " + bb);
-            b.loop(new Behavior<String>("cheese"));
+        Stream<String> eSnap = Transaction.<Stream<String>>run(() -> {
+            Cell<String> a = new Cell("lettuce");
+            CellLoop<String> b = new CellLoop();
+            Stream<String> eSnap_ = a.value().snapshot(b, (String aa, String bb) -> aa + " " + bb);
+            b.loop(new Cell<String>("cheese"));
             return eSnap_;
         });
         Listener l = eSnap.listen((x) -> { out.add(x); });
@@ -428,13 +427,13 @@ public class BehaviorTester extends TestCase {
     public void testLoopValueHold()
     {
         List<String> out = new ArrayList();
-        Behavior<String> value = Transaction.<Behavior<String>>run(() -> {
-            BehaviorLoop<String> a = new BehaviorLoop();
-            Behavior<String> value_ = a.value().hold("onion");
-            a.loop(new Behavior<String>("cheese"));
+        Cell<String> value = Transaction.<Cell<String>>run(() -> {
+            CellLoop<String> a = new CellLoop();
+            Cell<String> value_ = a.value().hold("onion");
+            a.loop(new Cell<String>("cheese"));
             return value_;
         });
-        EventSink<Unit> eTick = new EventSink();
+        StreamSink<Unit> eTick = new StreamSink();
         Listener l = eTick.snapshot(value).listen((x) -> { out.add(x); });
         eTick.send(Unit.UNIT);
         l.unlisten();
@@ -444,13 +443,13 @@ public class BehaviorTester extends TestCase {
     public void testLiftLoop()
     {
         List<String> out = new ArrayList();
-        BehaviorSink<String> b = new BehaviorSink("kettle");
-        Behavior<String> c = Transaction.<Behavior<String>>run(() -> {
-            BehaviorLoop<String> a = new BehaviorLoop();
-            Behavior<String> c_ = Behavior.lift(
+        CellSink<String> b = new CellSink("kettle");
+        Cell<String> c = Transaction.<Cell<String>>run(() -> {
+            CellLoop<String> a = new CellLoop();
+            Cell<String> c_ = Cell.lift(
                 (aa, bb) -> aa + " " + bb,
                 a, b);
-            a.loop(new Behavior<String>("tea"));
+            a.loop(new Cell<String>("tea"));
             return c_;
         });
         Listener l = c.value().listen((x) -> { out.add(x); });

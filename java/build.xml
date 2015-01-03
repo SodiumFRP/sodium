@@ -1,4 +1,13 @@
-<project default="jar">
+<project default="jar" xmlns:ivy="antlib:org.apache.ivy.ant">
+
+    <target name="resolve" description="Retrieve dependencies with Ivy.">
+      <ivy:resolve log="download-only"/>
+      <ivy:cachepath conf="build" pathid="build.classpath"/>
+      <ivy:cachepath conf="default" pathid="runtime.classpath"/>
+      <ivy:cachefileset conf="default" setid="runtime.fileset"/>
+      <ivy:cachepath conf="test" pathid="test.classpath"/>
+      <ivy:cachepath conf="analysis" pathid="analysis.classpath"/>
+    </target>
 
     <target name="clean">
         <delete dir="build"/>
@@ -11,7 +20,7 @@
     <target name="compile">
         <mkdir dir="build/src" />
         <!-- <javac debug="true" srcdir="sodium/src" destdir="build/src" source="1.5" target="1.5"/> -->
-        <javac debug="true" srcdir="sodium/src" destdir="build/src" source="1.8" target="1.8"/>
+        <javac includeantruntime="false" debug="true" srcdir="sodium/src" destdir="build/src" source="1.8" target="1.8"/>
     </target>
 
     <target name="jar" depends="compile">
@@ -27,10 +36,11 @@
         <java jar="sodium/sodium.jar" fork="true" />
     </target>
 
-    <target name="tests-java8-classes" depends="jar">
+    <target name="tests-java8-classes" depends="jar,resolve">
         <mkdir dir="build/tests/java8"/>
-        <javac debug="true" srcdir="tests/java8" destdir="build/tests/java8">
+        <javac includeantruntime="false" debug="true" srcdir="tests/java8" destdir="build/tests/java8">
             <classpath>
+                <path refid="test.classpath"/>
                 <pathelement location="sodium/sodium.jar"/>
                 <pathelement location="build/java8"/>
             </classpath>
@@ -41,6 +51,7 @@
         <junit printsummary="yes" showoutput="yes">
             <formatter type="plain" />
             <classpath>
+                <path refid="test.classpath"/>
                 <pathelement location="sodium/sodium.jar"/>
                 <pathelement location="build/tests/java8"/>
             </classpath>

@@ -1,7 +1,5 @@
 package sodium;
 
-import sodium.*;
-
 public class MemoryTest4
 {
     public static void main(String[] args)
@@ -21,10 +19,10 @@ public class MemoryTest4
             }
         }.start();
 
-        EventSink<Integer> et = new EventSink<Integer>();
-        EventSink<Integer> eChange = new EventSink<Integer>();
-        Behavior<Event<Integer>> oout = eChange.map(x -> (Event<Integer>)et).hold((Event<Integer>)et);
-        Event<Integer> out = Behavior.switchS(oout);
+        StreamSink<Integer> et = new StreamSink<Integer>();
+        StreamSink<Integer> eChange = new StreamSink<Integer>();
+        Cell<Stream<Integer>> oout = eChange.map(x -> (Stream<Integer>)et).hold((Stream<Integer>)et);
+        Stream<Integer> out = Cell.switchS(oout);
         Listener l = out.listen(tt -> {
             System.out.println(tt);
         });
