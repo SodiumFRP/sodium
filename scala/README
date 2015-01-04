@@ -1,1 +1,12 @@
-# Sodium for Scala
+Sodium for Scala
+
+Currently a prototype, five tests are failing:
+
+StreamTester.testCoalesce
+StreamTester.testLoopStream
+
+CellTester.testValuesTwiceThenCoalesce
+CellTester.testLiftGlitch
+CellTester.testSwitchB
+
+

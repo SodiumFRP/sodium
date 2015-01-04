@@ -11,6 +11,7 @@ Status:
   C# - complete
   Embedded-C - just an experiment
   Rust - got nowhere with it yet
+  Scala - Translation of the Java code. Currently failing 5 tests.
  
 Drop by our blog at 
   http://reactiveprogramming.org/
