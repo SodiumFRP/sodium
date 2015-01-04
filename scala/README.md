@@ -1,4 +1,4 @@
-Sodium for Scala
+# Sodium for Scala
 
 To compile
 
