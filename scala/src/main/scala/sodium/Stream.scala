@@ -227,7 +227,7 @@ class Stream[A] {
    * is passed the input and the old state and returns the new state and output value.
    */
   final def collect[B, S](initState: S, f: (A, S) => (B, S)): Stream[B] =
-    Transaction.apply[Stream[B]](() => {
+    Transaction.apply[Stream[B]](_ => {
       val es = new StreamLoop[S]()
       val s = es.hold(initState)
       val ebs = this.snapshot(s, f)
@@ -241,7 +241,7 @@ class Stream[A] {
    * Accumulate on input event, outputting the new state each time.
    */
   final def accum[S](initState: S, f: (A, S) => S): Cell[S] =
-    Transaction.apply[Cell[S]](() => {
+    Transaction.apply[Cell[S]](_ => {
       val es = new StreamLoop[S]()
       val s = es.hold(initState)
       val es_out = this.snapshot(s, f)

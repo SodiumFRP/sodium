@@ -115,7 +115,7 @@ class Cell[A](protected var currentValue: Option[A], protected val event: Stream
    */
   final def collect[B, S](initState: S, f: (A, S) => (B, S)): Cell[B] =
     {
-      Transaction.apply[Cell[B]](() => {
+      Transaction.apply[Cell[B]](_ => {
         val ea = updates().coalesce((fst, snd) => snd)
         val ebs = new StreamLoop[(B, S)]()
         val bbs = ebs.holdLazy(() => f.apply(sampleNoTrans(), initState))

@@ -87,7 +87,7 @@ object Transaction {
    * transaction automatically. It is useful where you want to run multiple
    * reactive operations atomically.
    */
-  def doTransaction[B](f: Transaction => B): B = {
+  def apply[B](f: Transaction => B): B = {
     transactionLock.synchronized {
       // If we are already inside a transaction (which must be on the same
       // thread otherwise we wouldn't have acquired transactionLock), then
@@ -105,16 +105,8 @@ object Transaction {
     }
   }
 
-
-  def apply[A](f: () => A): A =
-    doTransaction(t => f())
-
   def run(f: Transaction => Unit) {
-    doTransaction(t => f(t))
-  }
-
-  def apply[A](f: Transaction => A): A = {
-    doTransaction(t => f(t))
+    apply(t => f(t))
   }
 
   /**
@@ -129,10 +121,8 @@ object Transaction {
     private val nextSeq = new AtomicLong(0)
   }
 
-  private class Entry(val rank: Node, val action: Transaction => Unit)
-    extends Comparable[Entry] {
-    import Entry._
-    private val seq = nextSeq.getAndIncrement()
+  private class Entry(val rank: Node, val action: Transaction => Unit) extends Comparable[Entry] {
+    private val seq = Entry.nextSeq.getAndIncrement()
 
     override def compareTo(o: Entry): Int = {
       val answer = rank.compareTo(o.rank)

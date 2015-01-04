@@ -322,7 +322,7 @@ class CellTester {
   @Test
   def testLoopBehavior() {
     val ea = new StreamSink[Int]()
-    val sum_out = Transaction.apply[Cell[Int]](() => {
+    val sum_out = Transaction.apply[Cell[Int]](_ => {
       val sum = new CellLoop[Int]()
       val sum_out_ = ea.snapshot[Int, Int](sum, (x, y) => x + y).hold(0)
       sum.loop(sum_out_)
@@ -361,7 +361,7 @@ class CellTester {
   @Test
   def testLoopValueSnapshot() {
     val out = new ArrayList[String]()
-    val eSnap = Transaction.apply[Stream[String]](() => {
+    val eSnap = Transaction.apply[Stream[String]](_ => {
       val a = new Cell("lettuce")
       val b = new CellLoop[String]()
       val eSnap_ = a.value().snapshot[String, String](b, (aa, bb) => aa + " " + bb)
@@ -376,7 +376,7 @@ class CellTester {
   @Test
   def testLoopValueHold() {
     val out = new ArrayList[String]()
-    val value = Transaction.apply[Cell[String]](() => {
+    val value = Transaction.apply[Cell[String]](_ => {
       val a = new CellLoop[String]()
       val value_ = a.value().hold("onion")
       a.loop(new Cell[String]("cheese"))
@@ -393,7 +393,7 @@ class CellTester {
   def testLiftLoop() {
     val out = new ArrayList[String]()
     val b = new CellSink("kettle")
-    val c = Transaction.apply[Cell[String]](() => {
+    val c = Transaction.apply[Cell[String]](_ => {
       val a = new CellLoop[String]()
       val c_ = Cell.lift[String, String, String]((aa, bb) => aa + " " + bb, a, b)
       a.loop(new Cell[String]("tea"))
