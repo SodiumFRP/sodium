@@ -5,10 +5,10 @@ import scala.collection.mutable.ListBuffer
 class Stream[A] {
   import Stream._
 
-  protected val listeners: ListBuffer[TransactionHandler[A]] = ListBuffer()
-  protected val finalizers: ListBuffer[Listener] = ListBuffer()
+  protected val listeners = ListBuffer[TransactionHandler[A]]()
+  protected val finalizers = ListBuffer[Listener]()
   val node = new Node(0L)
-  protected val firings: ListBuffer[A] = ListBuffer()
+  protected val firings = ListBuffer[A]()
 
   def sampleNow(): IndexedSeq[A] = IndexedSeq()
 
@@ -154,7 +154,7 @@ class Stream[A] {
           if (oi.isEmpty) {
             IndexedSeq()
           } else {
-            IndexedSeq(oi.reduce((acc, o) => f(acc, o)))
+            IndexedSeq(oi.reduce(f(_, _)))
           }
         }
       }
@@ -162,8 +162,9 @@ class Stream[A] {
       val l = listen(out.node, trans, new TransactionHandler[A]() {
         override def run(trans1: Transaction, a: A) {
           acc match {
-            case Some(b) => acc = Some(f(b, a))
-            case _ =>
+            case Some(b) => 
+              acc = Some(f(b, a))
+            case None =>
               trans1.prioritized(out.node, {
                   trans2 =>
                   	out.send(trans2, acc.get)

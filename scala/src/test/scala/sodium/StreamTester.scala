@@ -145,8 +145,7 @@ class StreamTester {
     })
     val out = new ArrayList[Int]()
     val l = ec.listen(out.add(_))
-    ea.send(2)
-    ea.send(52)
+    List(2, 52).foreach(ea.send(_))
     l.unlisten()
     assertEquals(Arrays.asList(2, 7), out)
   }

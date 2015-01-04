@@ -14,8 +14,8 @@ final class Transaction {
 
   private val prioritizedQ = new PriorityQueue[Entry]()
   private val entries = new HashSet[Entry]()
-  private val lastQ: ListBuffer[Runnable] = ListBuffer()
-  private val postQ: ListBuffer[Runnable] = ListBuffer()
+  private val lastQ = ListBuffer[Runnable]()
+  private val postQ = ListBuffer[Runnable]()
 
   def prioritized(rank: Node, action: Transaction => Unit) {
     val e = new Entry(rank, action)
