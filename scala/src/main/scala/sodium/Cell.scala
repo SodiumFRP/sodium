@@ -50,7 +50,7 @@ class Cell[A](protected var currentValue: Option[A], protected val event: Stream
    * b.updates().listen(..) will capture the current value and any updates without risk
    * of missing any in between.
    */
-  def sample(): A = Transaction.apply(_ => sampleNoTrans())
+  def sample(): A = Transaction(_ => sampleNoTrans())
 
   def sampleNoTrans(): A = currentValue.get
 
@@ -65,7 +65,7 @@ class Cell[A](protected var currentValue: Option[A], protected val event: Stream
    * the current value of the behavior, and thereafter behaves like updates(),
    * firing for each update to the behavior's value.
    */
-  final def value(): Stream[A] = Transaction.apply(trans => value(trans))
+  final def value(): Stream[A] = Transaction(trans => value(trans))
 
   final def value(trans1: Transaction): Stream[A] = {
     val out: StreamSink[A] = new StreamSink[A]() {
@@ -83,13 +83,13 @@ class Cell[A](protected var currentValue: Option[A], protected val event: Stream
    * Transform the behavior's value according to the supplied function.
    */
   final def map[B](f: A => B): Cell[B] =
-    updates().map(f).holdLazy(() => f.apply(sampleNoTrans()))
+    updates().map(f).holdLazy(() => f(sampleNoTrans()))
 
   /**
    * Lift a binary function into behaviors.
    */
   final def lift[B, C](f: (A, B) => C, b: Cell[B]): Cell[C] = {
-    def ffa(aa: A)(bb: B) = f.apply(aa, bb)
+    def ffa(aa: A)(bb: B) = f(aa, bb)
     apply(map(ffa), b)
   }
 
@@ -97,7 +97,7 @@ class Cell[A](protected var currentValue: Option[A], protected val event: Stream
    * Lift a ternary function into behaviors.
    */
   final def lift[B, C, D](f: (A, B, C) => D, b: Cell[B], c: Cell[C]): Cell[D] = {
-    def ffa(aa: A)(bb: B)(cc: C) = f.apply(aa, bb, cc)
+    def ffa(aa: A)(bb: B)(cc: C) = f(aa, bb, cc)
     apply(apply(map(ffa), b), c)
   }
 
@@ -105,7 +105,7 @@ class Cell[A](protected var currentValue: Option[A], protected val event: Stream
    * Lift a quaternary function into behaviors.
    */
   final def lift[B, C, D, E](f: (A, B, C, D) => E, b: Cell[B], c: Cell[C], d: Cell[D]): Cell[E] = {
-    def ffa(aa: A)(bb: B)(cc: C)(dd: D) = f.apply(aa, bb, cc, dd)
+    def ffa(aa: A)(bb: B)(cc: C)(dd: D) = f(aa, bb, cc, dd)
     apply(apply(apply(map(ffa), b), c), d)
   }
 
@@ -115,10 +115,10 @@ class Cell[A](protected var currentValue: Option[A], protected val event: Stream
    */
   final def collect[B, S](initState: S, f: (A, S) => (B, S)): Cell[B] =
     {
-      Transaction.apply[Cell[B]](_ => {
+      Transaction[Cell[B]](_ => {
         val ea = updates().coalesce((fst, snd) => snd)
         val ebs = new StreamLoop[(B, S)]()
-        val bbs = ebs.holdLazy(() => f.apply(sampleNoTrans(), initState))
+        val bbs = ebs.holdLazy(() => f(sampleNoTrans(), initState))
         val bs = bbs.map(x => x._2)
         val ebs_out = ea.snapshot(bs, f)
         ebs.loop(ebs_out)
@@ -247,6 +247,6 @@ object Cell {
         out.addCleanup(l1)
       }
 
-    Transaction.apply(trans => switchS(trans, bea))
+    Transaction(trans => switchS(trans, bea))
   }
 }

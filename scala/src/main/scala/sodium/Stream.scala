@@ -24,7 +24,7 @@ class Stream[A] {
     })
 
   final def listen_(target: Node, action: TransactionHandler[A]): Listener = 
-    Transaction.apply(trans1 => listen(target, trans1, action, false))
+    Transaction(trans1 => listen(target, trans1, action, false))
   
   def listen(target: Node, trans: Transaction, action: TransactionHandler[A], suppressEarlierFirings: Boolean): Listener = {
     Transaction.listenersLock.synchronized {
@@ -52,11 +52,11 @@ class Stream[A] {
     val ev = this
     val out = new StreamSink[B]() {
       override def sampleNow(): IndexedSeq[B] =
-          ev.sampleNow().map(x => f.apply(x))
+          ev.sampleNow().map(f(_))
     }
     val l = listen_(out.node, new TransactionHandler[A]() {
       override def run(trans: Transaction, a: A) {
-        out.send(trans, f.apply(a))
+        out.send(trans, f(a))
       }
     })
     out.addCleanup(l)
@@ -70,10 +70,10 @@ class Stream[A] {
    * the transaction.
    */
   final def hold(initValue: A): Cell[A] =
-    Transaction.apply(trans => new Cell[A](initValue, lastFiringOnly(trans)))
+    Transaction(trans => new Cell[A](initValue, lastFiringOnly(trans)))
 
   final def holdLazy(initValue: () => A): Cell[A] =
-    Transaction.apply(trans => new LazyCell[A](initValue, lastFiringOnly(trans)))
+    Transaction(trans => new LazyCell[A](initValue, lastFiringOnly(trans)))
 
   /**
    * Variant of snapshot that throws away the event's value and captures the behavior's.
@@ -89,11 +89,11 @@ class Stream[A] {
       val ev = this
       val out = new StreamSink[C]() {
         override def sampleNow(): IndexedSeq[C] =
-          ev.sampleNow().map(f.apply(_, b.sampleNoTrans()))
+          ev.sampleNow().map(a => f.apply(a, b.sampleNoTrans()))
       }
       val l = listen_(out.node, new TransactionHandler[A]() {
         def run(trans: Transaction, a: A) {
-          out.send(trans, f.apply(a, b.sampleNoTrans()))
+          out.send(trans, f(a, b.sampleNoTrans()))
         }
       })
       out.addCleanup(l)
@@ -143,7 +143,7 @@ class Stream[A] {
    * ideally be commutative.
    */
   final def coalesce(f: (A, A) => A): Stream[A] =
-    Transaction.apply(trans => coalesce(trans, f))
+    Transaction(trans => coalesce(trans, f))
 
   final def coalesce(trans: Transaction, f: (A, A) => A): Stream[A] =
     {
@@ -154,7 +154,7 @@ class Stream[A] {
           if (oi.isEmpty) {
             IndexedSeq()
           } else {
-            IndexedSeq(oi.reduce((acc, o) => f.apply(acc, o)))
+            IndexedSeq(oi.reduce((acc, o) => f(acc, o)))
           }
         }
       }
@@ -162,7 +162,7 @@ class Stream[A] {
       val l = listen(out.node, trans, new TransactionHandler[A]() {
         override def run(trans1: Transaction, a: A) {
           acc match {
-            case Some(b) => acc = Some(f.apply(b, a))
+            case Some(b) => acc = Some(f(b, a))
             case _ =>
               trans1.prioritized(out.node, {
                   trans2 =>
@@ -203,7 +203,7 @@ class Stream[A] {
       }
       val l = listen_(out.node, new TransactionHandler[A]() {
         def run(trans: Transaction, a: A) {
-          if (f.apply(a)) out.send(trans, a)
+          if (f(a)) out.send(trans, a)
         }
       })
       out.addCleanup(l)
@@ -227,7 +227,7 @@ class Stream[A] {
    * is passed the input and the old state and returns the new state and output value.
    */
   final def collect[B, S](initState: S, f: (A, S) => (B, S)): Stream[B] =
-    Transaction.apply[Stream[B]](_ => {
+    Transaction(_ => {
       val es = new StreamLoop[S]()
       val s = es.hold(initState)
       val ebs = this.snapshot(s, f)
@@ -241,7 +241,7 @@ class Stream[A] {
    * Accumulate on input event, outputting the new state each time.
    */
   final def accum[S](initState: S, f: (A, S) => S): Cell[S] =
-    Transaction.apply[Cell[S]](_ => {
+    Transaction(_ => {
       val es = new StreamLoop[S]()
       val s = es.hold(initState)
       val es_out = this.snapshot(s, f)
