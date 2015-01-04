@@ -18,7 +18,7 @@ class StreamTester {
   def testSendStream() {
     val e = new StreamSink[Int]()
     val out = new ArrayList[Int]()
-    val l = e.listen(x => out.add(x))
+    val l = e.listen(out.add(_))
     e.send(5)
     l.unlisten()
     assertEquals(Arrays.asList(5), out)
@@ -31,7 +31,7 @@ class StreamTester {
     val e = new StreamSink[Int]()
     val m = e.map(x => x.toString)
     val out = new ArrayList[String]()
-    val l = m.listen(x => out.add(x))
+    val l = m.listen(out.add(_))
     e.send(5)
     l.unlisten()
     assertEquals(Arrays.asList("5"), out)
@@ -42,7 +42,7 @@ class StreamTester {
     val e1 = new StreamSink[Int]()
     val e2 = new StreamSink[Int]()
     val out = new ArrayList[Int]()
-    val l = e1.merge(e2).listen(x => out.add(x))
+    val l = e1.merge(e2).listen(out.add(_))
     e1.send(7)
     e2.send(9)
     e1.send(8)
@@ -54,7 +54,7 @@ class StreamTester {
   def testMergeSimultaneous() {
     val e = new StreamSink[Int]()
     val out = new ArrayList[Int]()
-    val l = e.merge(e).listen(x => out.add(x))
+    val l = e.merge(e).listen(out.add(_))
     e.send(7)
     e.send(9)
     l.unlisten()
@@ -66,7 +66,7 @@ class StreamTester {
     val e1 = new StreamSink[String]()
     val e2 = new StreamSink[String]()
     val out = new ArrayList[String]()
-    val l = e1.merge(e2).listen(x => out.add(x))
+    val l = e1.merge(e2).listen(out.add(_))
     Transaction.doTransaction(_ => {
       e1.send("left1a")
       e1.send("left1b")
@@ -95,7 +95,7 @@ class StreamTester {
     val l =
       e1.merge(e1.map(x => x * 100).merge(e2))
         .coalesce((a, b) => a + b)
-        .listen((x) => { out.add(x) })
+        .listen(out.add(_))
     e1.send(2)
     e1.send(8)
     e2.send(40)
@@ -136,7 +136,7 @@ class StreamTester {
   @Test
   def testLoopStream() {
     val ea = new StreamSink[Int]()
-    val ec = Transaction.run[Stream[Int]](() => {
+    val ec = Transaction.apply[Stream[Int]](() => {
       val eb = new StreamLoop[Int]()
       val ec_ = ea.map(x => x % 10).merge(eb, (x, y) => x + y)
       val eb_out = ea.map(x => x / 10).filter(x => x != 0)
@@ -144,7 +144,7 @@ class StreamTester {
       ec_
     })
     val out = new ArrayList[Int]()
-    val l = ec.listen(x => out.add(x))
+    val l = ec.listen(out.add(_))
     ea.send(2)
     ea.send(52)
     l.unlisten()
@@ -156,7 +156,7 @@ class StreamTester {
     val ec = new StreamSink[Char]()
     val epred = new CellSink(true)
     val out = new ArrayList[Char]()
-    val l = ec.gate(epred).listen(x => out.add(x))
+    val l = ec.gate(epred).listen(out.add(_))
     ec.send('H')
     epred.send(false)
     ec.send('O')
@@ -171,7 +171,7 @@ class StreamTester {
     val ea = new StreamSink[Int]()
     val out = new ArrayList[Int]()
     val sum = ea.collect[Int, Int](100, (a, s) => (a + s, a + s))
-    val l = sum.listen(x => out.add(x))
+    val l = sum.listen(out.add(_))
     List(5, 7, 1, 2, 3).foreach(ea.send(_))
     l.unlisten()
     assertEquals(Arrays.asList(105, 112, 113, 115, 118), out)
@@ -182,7 +182,7 @@ class StreamTester {
     val ea = new StreamSink[Int]()
     val out = new ArrayList[Int]()
     val sum = ea.accum[Int](100, (a, s) => a + s)
-    val l = sum.updates().listen(x => out.add(x))
+    val l = sum.updates().listen(out.add(_))
     List(5, 7, 1, 2, 3).foreach(ea.send(_))
     l.unlisten()
     assertEquals(Arrays.asList(105, 112, 113, 115, 118), out)
@@ -192,7 +192,7 @@ class StreamTester {
   def testOnce() {
     val e = new StreamSink[Char]()
     val out = new ArrayList[Char]()
-    val l = e.once().listen(x => out.add(x))
+    val l = e.once().listen(out.add(_))
     List('A', 'B', 'C').foreach(e.send(_))
     l.unlisten()
     assertEquals(Arrays.asList('A'), out)
@@ -203,7 +203,7 @@ class StreamTester {
     val e = new StreamSink[Char]()
     val b = e.hold(' ')
     val out = new ArrayList[Char]()
-    val l = e.delay().snapshot(b).listen(x => out.add(x))
+    val l = e.delay().snapshot(b).listen(out.add(_))
     List('C', 'B', 'A').foreach(e.send(_))
     l.unlisten()
     assertEquals(Arrays.asList('C', 'B', 'A'), out)

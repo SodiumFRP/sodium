@@ -6,11 +6,11 @@ class LazyCell[A](
   extends Cell[A](None, event) {
 
   override def sampleNoTrans(): A =
-    value match {
+    currentValue match {
       case None =>
-        value = Some(lazyInitValue.get())
-        value.get
-      case _ => value.get
+        currentValue = Some(lazyInitValueFunction())
+        currentValue.get
+      case _ => currentValue.get
     }
 
 }

@@ -217,11 +217,9 @@ class CellTester {
 
   @Test
   def testTransaction() {
-    val calledBack = new Array[Boolean](1)
-    Transaction.run((trans: Transaction) => {
-      trans.prioritized(Node.NullNode, trans2 => { calledBack(0) = true })
-    })
-    assertEquals(true, calledBack(0))
+    var calledBack = false
+    Transaction.run(trans => trans.prioritized(Node.NullNode, trans2 => calledBack = true))
+    assertEquals(true, calledBack)
   }
 
   @Test
@@ -324,7 +322,7 @@ class CellTester {
   @Test
   def testLoopBehavior() {
     val ea = new StreamSink[Int]()
-    val sum_out = Transaction.run[Cell[Int]](() => {
+    val sum_out = Transaction.apply[Cell[Int]](() => {
       val sum = new CellLoop[Int]()
       val sum_out_ = ea.snapshot[Int, Int](sum, (x, y) => x + y).hold(0)
       sum.loop(sum_out_)
@@ -363,14 +361,14 @@ class CellTester {
   @Test
   def testLoopValueSnapshot() {
     val out = new ArrayList[String]()
-    val eSnap = Transaction.run[Stream[String]](() => {
+    val eSnap = Transaction.apply[Stream[String]](() => {
       val a = new Cell("lettuce")
       val b = new CellLoop[String]()
       val eSnap_ = a.value().snapshot[String, String](b, (aa, bb) => aa + " " + bb)
       b.loop(new Cell[String]("cheese"))
       eSnap_
     })
-    val l = eSnap.listen((x) => { out.add(x) })
+    val l = eSnap.listen(out.add(_))
     l.unlisten()
     assertEquals(Arrays.asList("lettuce cheese"), out)
   }
@@ -378,7 +376,7 @@ class CellTester {
   @Test
   def testLoopValueHold() {
     val out = new ArrayList[String]()
-    val value = Transaction.run[Cell[String]](() => {
+    val value = Transaction.apply[Cell[String]](() => {
       val a = new CellLoop[String]()
       val value_ = a.value().hold("onion")
       a.loop(new Cell[String]("cheese"))
@@ -395,7 +393,7 @@ class CellTester {
   def testLiftLoop() {
     val out = new ArrayList[String]()
     val b = new CellSink("kettle")
-    val c = Transaction.run[Cell[String]](() => {
+    val c = Transaction.apply[Cell[String]](() => {
       val a = new CellLoop[String]()
       val c_ = Cell.lift[String, String, String]((aa, bb) => aa + " " + bb, a, b)
       a.loop(new Cell[String]("tea"))
@@ -410,6 +408,10 @@ class CellTester {
 
 object CellTester {
 
+  case class SB(val a: Character, val b: Character, val sw: Cell[Character])
+
+  case class SE(val a: Character, val b: Character, val sw: Stream[Character])
+
   /**
    * This is used for tests where value() produces a single initial value on listen,
    * and then we double that up by causing that single initial event to be repeated.
@@ -417,9 +419,5 @@ object CellTester {
    * this.
    */
   private def doubleUp(ev: Stream[Int]): Stream[Int] = ev.merge(ev)
-
-  case class SB(val a: Character, val b: Character, val sw: Cell[Character])
-
-  case class SE(val a: Character, val b: Character, val sw: Stream[Character])
 }
 

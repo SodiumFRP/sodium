@@ -30,7 +30,7 @@ class Node(var rank: Long) extends Comparable[Node] {
     } else {
       val accVisited = Set(this) ++ visited
       rank = limit + 1
-      listeners.forall(_.ensureBiggerThan(rank, visited))
+      listeners.forall(_.ensureBiggerThan(rank, accVisited))
     }
   }
 

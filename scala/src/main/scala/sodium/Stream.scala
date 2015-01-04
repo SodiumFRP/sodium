@@ -58,7 +58,7 @@ class Stream[A] {
           ev.sampleNow().map(x => f.apply(x))
     }
     val l = listen_(out.node, new TransactionHandler[A]() {
-      def run(trans2: Transaction, a: A) {
+      override def run(trans2: Transaction, a: A) {
         out.send(trans2, f.apply(a))
       }
     })
@@ -212,14 +212,14 @@ class Stream[A] {
    * that is, no state changes from the current transaction are taken into account.
    */
   final def gate(bPred: Cell[Boolean]): Stream[A] =
-    flatten(snapshot[Boolean, Option[A]](bPred, (a, pred) => if (pred) Some(a) else None))
+    filterOption(snapshot[Boolean, Option[A]](bPred, (a, pred) => if (pred) Some(a) else None))
 
   /**
    * Transform an event with a generalized state loop (a mealy machine). The function
    * is passed the input and the old state and returns the new state and output value.
    */
   final def collect[B, S](initState: S, f: (A, S) => (B, S)): Stream[B] =
-    Transaction.run[Stream[B]](() => {
+    Transaction.apply[Stream[B]](() => {
       val es = new StreamLoop[S]()
       val s = es.hold(initState)
       val ebs = this.snapshot(s, f)
@@ -233,7 +233,7 @@ class Stream[A] {
    * Accumulate on input event, outputting the new state each time.
    */
   final def accum[S](initState: S, f: (A, S) => S): Cell[S] =
-    Transaction.run[Cell[S]](() => {
+    Transaction.apply[Cell[S]](() => {
       val es = new StreamLoop[S]()
       val s = es.hold(initState)
       val es_out = this.snapshot(s, f)
@@ -304,9 +304,6 @@ object Stream {
       unlisten()
     }
   }
-
-  def flatten[A](xs: Stream[Option[A]]): Stream[A] =
-    xs.filter(a => a.isDefined).map({ case Some(x) => x })
 
   /**
    * Merge two streams of events of the same type.

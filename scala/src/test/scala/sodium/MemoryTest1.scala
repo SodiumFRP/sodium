@@ -18,7 +18,7 @@ object MemoryTest1 {
     val et = new StreamSink[Int]()
     val t = et.hold(0)
     val etens = et.map(x => x / 10)
-    val changeTens = Stream.flatten(et.snapshot[Int, Option[Int]](t, (neu, old) =>
+    val changeTens = Stream.filterOption(et.snapshot[Int, Option[Int]](t, (neu, old) =>
       if (neu.equals(old)) None else Some(neu)))
     val oout =
       changeTens.map(

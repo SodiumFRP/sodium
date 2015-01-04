@@ -4,7 +4,7 @@ class StreamLoop[A] extends Stream[A] {
 
   private var ea_out: Option[Stream[A]] = None
 
-  if (Transaction.getCurrentTransaction() == null)
+  if (Transaction.getCurrentTransaction() == None)
     throw new RuntimeException("StreamLoop/CellLoop must be used within an explicit transaction")
 
   override def sampleNow(): IndexedSeq[A] = {

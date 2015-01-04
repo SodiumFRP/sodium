@@ -1,10 +1,10 @@
 package sodium
 
-import scala.collection.mutable.PriorityQueue
 import java.util.concurrent.atomic.AtomicLong
 
 import scala.collection.mutable.HashSet
 import scala.collection.mutable.ListBuffer
+import scala.collection.mutable.PriorityQueue
 
 final class Transaction {
   import Transaction._
@@ -79,6 +79,14 @@ object Transaction {
 
   var currentTransaction: Option[Transaction] = None
 
+  /**
+   * Run the specified code inside a single transaction, with the contained
+   * code returning a value of the parameter type A.
+   *
+   * In most cases this is not needed, because all APIs will create their own
+   * transaction automatically. It is useful where you want to run multiple
+   * reactive operations atomically.
+   */
   def doTransaction[B](f: Transaction => B): B = {
     transactionLock.synchronized {
       // If we are already inside a transaction (which must be on the same
@@ -97,27 +105,16 @@ object Transaction {
     }
   }
 
-  /**
-   * Run the specified code inside a single transaction, with the contained
-   * code returning a value of the parameter type A.
-   *
-   * In most cases this is not needed, because all APIs will create their own
-   * transaction automatically. It is useful where you want to run multiple
-   * reactive operations atomically.
-   */
-  def run[A](code: () => A): A =
-    doTransaction(_ => code.apply())
 
-  def run(code: Transaction => Unit) {
-    doTransaction(transaction => code(transaction))
+  def apply[A](f: () => A): A =
+    doTransaction(t => f.apply())
+
+  def run(f: Transaction => Unit) {
+    doTransaction(t => f(t))
   }
 
-  def apply[A](code: Transaction => A): A = {
-    doTransaction(transaction => code.apply(transaction))
-  }
-
-  def rundef(code: Runnable) {
-    doTransaction(_ => code.run())
+  def apply[A](f: Transaction => A): A = {
+    doTransaction(t => f.apply(t))
   }
 
   /**
@@ -139,10 +136,7 @@ object Transaction {
 
     override def compareTo(o: Entry): Int = {
       val answer = rank.compareTo(o.rank)
-      // Same rank: preserve chronological sequence.
-      if (answer == 0 && seq < o.seq) -1
-      else if (answer == 0 && seq > o.seq) 1
-      else answer
+      if (answer == 0) -seq.compareTo(o.seq) else answer
     }
   }
 }

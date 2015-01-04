@@ -1,7 +1,7 @@
 package sodium
 
 class Cell[A](
-  var value: Option[A],
+  var currentValue: Option[A],
   protected val event: Stream[A] = new Stream[A]()) {
   import Cell._
 
@@ -9,23 +9,21 @@ class Cell[A](
   private var cleanup: Option[Listener] = None
   protected var lazyInitValue: Option[() => A] = None // Used by LazyCell
 
-  // note before this was only called from the main constructor
-  // not the secondary constructor
-
   Transaction.run({
     trans1 =>
-      Cell.this.cleanup = Some(event.listen(Node.NullNode, trans1, new TransactionHandler[A]() {
+      val parent = this
+      cleanup = Some(event.listen(Node.NullNode, trans1, new TransactionHandler[A]() {
         def run(trans2: Transaction, a: A) {
-          if (Cell.this.valueUpdate.isEmpty) {
+          if (parent.valueUpdate.isEmpty) {
             trans2.last(new Runnable() {
               def run() {
-                Cell.this.value = Cell.this.valueUpdate
-                Cell.this.lazyInitValue = None
-                Cell.this.valueUpdate = None
+                parent.currentValue = parent.valueUpdate
+                parent.lazyInitValue = None
+                parent.valueUpdate = None
               }
             })
           }
-          Cell.this.valueUpdate = Some(a)
+          valueUpdate = Some(a)
         }
       }, false))
   })
@@ -56,7 +54,7 @@ class Cell[A](
    */
   def sample(): A = Transaction.apply(_ => sampleNoTrans())
 
-  def sampleNoTrans(): A = value.get
+  def sampleNoTrans(): A = currentValue.get
 
   /**
    * An event that gives the updates for the behavior. If this behavior was created
@@ -69,23 +67,19 @@ class Cell[A](
    * the current value of the behavior, and thereafter behaves like updates(),
    * firing for each update to the behavior's value.
    */
-  final def value(trans1: Option[Transaction] = None): Stream[A] =
-    trans1 match {
-      case Some(trans1) =>
-        val out: StreamSink[A] = new StreamSink[A]() {
-          override def sampleNow(): IndexedSeq[A] =
-            IndexedSeq(sampleNoTrans())
-        }
-        val l: Listener = event.listen(out.node, trans1,
-          new TransactionHandler[A]() {
-            def run(trans2: Transaction, a: A) { out.send(trans2, a) }
-          }, false)
-        // Needed in case of an initial value and an update in the same transaction.
-        out.addCleanup(l)
-          .lastFiringOnly(trans1)
-      case None =>
-        Transaction.apply(trans => value(Some(trans)))
+  final def value(): Stream[A] = Transaction.apply(trans => value(trans))
+
+  final def value(trans1: Transaction): Stream[A] = {
+    val out: StreamSink[A] = new StreamSink[A]() {
+      override def sampleNow(): IndexedSeq[A] = IndexedSeq(sampleNoTrans())
     }
+    val l: Listener = event.listen(out.node, trans1,
+      new TransactionHandler[A]() {
+        def run(trans2: Transaction, a: A) { out.send(trans2, a) }
+      }, false)
+    // Needed in case of an initial value and an update in the same transaction.
+    out.addCleanup(l).lastFiringOnly(trans1)
+  }
 
   /**
    * Transform the behavior's value according to the supplied function.
@@ -123,11 +117,10 @@ class Cell[A](
    */
   final def collect[B, S](initState: S, f: (A, S) => (B, S)): Cell[B] =
     {
-      Transaction.run[Cell[B]](() => {
+      Transaction.apply[Cell[B]](() => {
         val ea = updates().coalesce((fst, snd) => snd)
-        val zbs = () => f.apply(sampleNoTrans(), initState)
         val ebs = new StreamLoop[(B, S)]()
-        val bbs = ebs.holdLazy(zbs)
+        val bbs = ebs.holdLazy(() => f.apply(sampleNoTrans(), initState))
         val bs = bbs.map(x => x._2)
         val ebs_out = ea.snapshot(bs, f)
         ebs.loop(ebs_out)
@@ -210,7 +203,7 @@ object Cell {
           // that might have happened during this transaction will be suppressed.
           if (currentListener != null)
             currentListener.unlisten()
-          currentListener = ba.value(Some(trans2)).listen(out.node, trans2, new TransactionHandler[A]() {
+          currentListener = ba.value(trans2).listen(out.node, trans2, new TransactionHandler[A]() {
             def run(trans3: Transaction, a: A) {
               out.send(trans3, a)
             }
