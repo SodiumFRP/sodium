@@ -10,7 +10,7 @@ final class Transaction {
   import Transaction._
 
   // True if we need to re-generate the priority queue.
-  private [sodium] var toRegen = false
+  private[sodium] var toRegen = false
 
   private val prioritizedQ = new PriorityQueue[Entry]()
   private val entries = new HashSet[Entry]()
@@ -51,16 +51,11 @@ final class Transaction {
       }
     }
 
-    var finished = false
-    while (!finished) {
+    while (!prioritizedQ.isEmpty) {
       checkRegen()
-      if (prioritizedQ.size == 0) {
-        finished = true
-      } else {
-        val e = prioritizedQ.dequeue()
-        entries.remove(e)
-        e.action(this)
-      }
+      val e = prioritizedQ.dequeue()
+      entries.remove(e)
+      e.action(this)
     }
     lastQ.foreach(_.run())
     lastQ.clear()
