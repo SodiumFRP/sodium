@@ -4,8 +4,7 @@ import java.util.concurrent.atomic.AtomicLong
 
 import scala.collection.mutable.HashSet
 import scala.collection.mutable.ListBuffer
-import java.util.PriorityQueue
-//import scala.collection.mutable.PriorityQueue
+import scala.collection.mutable.PriorityQueue
 
 final class Transaction {
   import Transaction._
@@ -13,15 +12,14 @@ final class Transaction {
   // True if we need to re-generate the priority queue.
   private[sodium] var toRegen = false
 
-  private val prioritizedQ = new PriorityQueue[Entry]()
+  private val prioritizedQ = new PriorityQueue[Entry]()(EntryOrdering)
   private val entries = new HashSet[Entry]()
   private val lastQ = ListBuffer[Runnable]()
   private val postQ = ListBuffer[Runnable]()
 
   def prioritized(rank: Node, action: Transaction => Unit) {
     val e = new Entry(rank, action)
-    //prioritizedQ += e
-    prioritizedQ.add(e)
+    prioritizedQ.enqueue(e)
     entries += e
   }
 
@@ -49,14 +47,13 @@ final class Transaction {
       if (toRegen) {
         toRegen = false
         prioritizedQ.clear()
-        entries.foreach(prioritizedQ.add(_))
-//        prioritizedQ ++= entries
+        prioritizedQ.enqueue(entries.toSeq:_ *)
       }
     }
 
     while (!prioritizedQ.isEmpty) {
       checkRegen()
-      val e = prioritizedQ.remove() //prioritizedQ.dequeue()
+      val e = prioritizedQ.dequeue()
       entries.remove(e)
       e.action(this)
     }
@@ -114,18 +111,21 @@ object Transaction {
     transactionLock.synchronized {
       currentTransaction
     }
-
+  
   private object Entry {
     private val nextSeq = new AtomicLong(0)
   }
 
-  private class Entry(val rank: Node, val action: Transaction => Unit) extends Comparable[Entry] {
-    private val seq = Entry.nextSeq.getAndIncrement()
-
-    override def compareTo(o: Entry): Int = {
-      val answer = rank.compareTo(o.rank)
-      //if (answer == 0) o.seq.compareTo(seq) else answer
-      if (answer == 0) seq.compareTo(o.seq) else answer
+  private case class Entry(val rank: Node, val action: Transaction => Unit) {
+    val seq = Entry.nextSeq.getAndIncrement()
+  }
+  
+  private object EntryOrdering extends Ordering[Entry] {
+    def compare(x: Entry, y: Entry): Int = { 
+      val answer = y.rank.compareTo(x.rank)
+      if (answer == 0) y.seq.compareTo(x.seq) else answer
     }
   }
 }
+
+
