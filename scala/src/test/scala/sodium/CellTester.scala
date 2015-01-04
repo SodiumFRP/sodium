@@ -18,9 +18,8 @@ class CellTester {
   @Test
   def testHold() {
     val e = new StreamSink[Int]()
-    val b = e.hold(0)
     val out = new ArrayList[Int]()
-    val l = b.updates().listen(out.add(_))
+    val l = e.hold(0).updates().listen(out.add(_))
     List(2, 9).foreach(e.send(_))
     l.unlisten()
     assertEquals(Arrays.asList(2, 9), out)
@@ -134,8 +133,7 @@ class CellTester {
     val bi = new CellSink[Int](9)
     val bj = new CellSink[Int](2)
     val out = new ArrayList[Int]()
-    val l = bi.value().merge(bj.value(), (x, y) => x + y)
-      .listen(out.add(_))
+    val l = bi.value().merge(bj.value(), (x, y) => x + y).listen(out.add(_))
     bi.send(1)
     bj.send(4)
     l.unlisten()
@@ -251,9 +249,8 @@ class CellTester {
     val a = new CellSink[Int](1)
     val a3 = a.map(x => x * 3)
     val a5 = a.map(x => x * 5)
-    val b = Cell.lift[Int, Int, String]((x, y) => x + " " + y, a3, a5)
     val out = new ArrayList[String]()
-    val l = b.value().listen(out.add(_))
+    val l = Cell.lift[Int, Int, String]((x, y) => x + " " + y, a3, a5).value().listen(out.add(_))
     a.send(2)
     l.unlisten()
     assertEquals(Arrays.asList("3 5", "6 10"), out)
@@ -263,11 +260,9 @@ class CellTester {
   def testHoldIsDelayed() {
     val e = new StreamSink[Int]()
     val h = e.hold(0)
-    val pair = e.snapshot[Int, String](h, (a, b) => a + " " + b)
     val out = new ArrayList[String]()
-    val l = pair.listen(out.add(_))
-    e.send(2)
-    e.send(3)
+    val l = e.snapshot[Int, String](h, (a, b) => a + " " + b).listen(out.add(_))
+    List(2, 3).foreach(e.send(_))
     l.unlisten()
     assertEquals(Arrays.asList("2 0", "3 2"), out)
   }
@@ -283,16 +278,17 @@ class CellTester {
     val bo = Cell.switchC(bsw)
     val out = new ArrayList[Character]()
     val l = bo.value().listen(out.add(_))
-    esb.send(new SB('B', 'b', null))
-    esb.send(new SB('C', 'c', bb))
-    esb.send(new SB('D', 'd', null))
-    esb.send(new SB('E', 'e', ba))
-    esb.send(new SB('F', 'f', null))
-    esb.send(new SB(null, null, bb))
-    esb.send(new SB(null, null, ba))
-    esb.send(new SB('G', 'g', bb))
-    esb.send(new SB('H', 'h', ba))
-    esb.send(new SB('I', 'i', ba))
+    List(
+      new SB('B', 'b', null),
+      new SB('C', 'c', bb),
+      new SB('D', 'd', null),
+      new SB('E', 'e', ba),
+      new SB('F', 'f', null),
+      new SB(null, null, bb),
+      new SB(null, null, ba),
+      new SB('G', 'g', bb),
+      new SB('H', 'h', ba),
+      new SB('I', 'i', ba)).foreach(esb.send(_))
     l.unlisten()
     assertEquals(Arrays.asList('A', 'B', 'c', 'd', 'E', 'F', 'f', 'F', 'g', 'H', 'I'), out)
   }
@@ -306,15 +302,16 @@ class CellTester {
     val out = new ArrayList[Char]()
     val eo = Cell.switchS(bsw)
     val l = eo.listen(out.add(_))
-    ese.send(new SE('A', 'a', null))
-    ese.send(new SE('B', 'b', null))
-    ese.send(new SE('C', 'c', eb))
-    ese.send(new SE('D', 'd', null))
-    ese.send(new SE('E', 'e', ea))
-    ese.send(new SE('F', 'f', null))
-    ese.send(new SE('G', 'g', eb))
-    ese.send(new SE('H', 'h', ea))
-    ese.send(new SE('I', 'i', ea))
+    List(
+      new SE('A', 'a', null),
+      new SE('B', 'b', null),
+      new SE('C', 'c', eb),
+      new SE('D', 'd', null),
+      new SE('E', 'e', ea),
+      new SE('F', 'f', null),
+      new SE('G', 'g', eb),
+      new SE('H', 'h', ea),
+      new SE('I', 'i', ea)).foreach(ese.send(_))
     l.unlisten()
     assertEquals(Arrays.asList('A', 'B', 'C', 'd', 'e', 'F', 'G', 'h', 'I'), out)
   }
