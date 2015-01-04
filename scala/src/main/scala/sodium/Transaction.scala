@@ -4,7 +4,8 @@ import java.util.concurrent.atomic.AtomicLong
 
 import scala.collection.mutable.HashSet
 import scala.collection.mutable.ListBuffer
-import scala.collection.mutable.PriorityQueue
+import java.util.PriorityQueue
+//import scala.collection.mutable.PriorityQueue
 
 final class Transaction {
   import Transaction._
@@ -19,7 +20,8 @@ final class Transaction {
 
   def prioritized(rank: Node, action: Transaction => Unit) {
     val e = new Entry(rank, action)
-    prioritizedQ += e
+    //prioritizedQ += e
+    prioritizedQ.add(e)
     entries += e
   }
 
@@ -47,13 +49,14 @@ final class Transaction {
       if (toRegen) {
         toRegen = false
         prioritizedQ.clear()
-        prioritizedQ ++= entries
+        entries.foreach(prioritizedQ.add(_))
+//        prioritizedQ ++= entries
       }
     }
 
     while (!prioritizedQ.isEmpty) {
       checkRegen()
-      val e = prioritizedQ.dequeue()
+      val e = prioritizedQ.remove() //prioritizedQ.dequeue()
       entries.remove(e)
       e.action(this)
     }
@@ -121,7 +124,8 @@ object Transaction {
 
     override def compareTo(o: Entry): Int = {
       val answer = rank.compareTo(o.rank)
-      if (answer == 0) o.seq.compareTo(seq) else answer
+      //if (answer == 0) o.seq.compareTo(seq) else answer
+      if (answer == 0) seq.compareTo(o.seq) else answer
     }
   }
 }
