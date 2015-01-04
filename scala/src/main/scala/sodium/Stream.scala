@@ -256,28 +256,28 @@ class Stream[A] {
     // This is a bit long-winded but it's efficient because it deregisters
     // the listener.
     val ev = this
-    var la: Listener = null
+    var la: Option[Listener] = None
     val out = new StreamSink[A]() {
       override def sampleNow(): IndexedSeq[A] = {
         val oi = ev.sampleNow()
         val oo = if (oi.size > 0) IndexedSeq(oi.head) else IndexedSeq()
-         if (oi.size > 0 && la != null) {
-            la.unlisten()
-            la = null
+         if (oi.size > 0) {
+           la.foreach(_.unlisten())
+           la = None
           }
         oo
       }
     }
-    la = ev.listen_(out.node, new TransactionHandler[A]() {
+    la = Some(ev.listen_(out.node, new TransactionHandler[A]() {
       def run(trans: Transaction, a: A) {
         out.send(trans, a)
-        if (la != null) {
-          la.unlisten()
-          la = null
+        if (la.isDefined) {
+           la.foreach(_.unlisten())
+           la = None
         }
       }
-    })
-    out.addCleanup(la)
+    }))
+    out.addCleanup(la.get)
   }
 
   def addCleanup(cleanup: Listener): Stream[A] = {
