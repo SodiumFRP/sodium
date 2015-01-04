@@ -23,10 +23,13 @@ class Stream[A] {
       }
     })
 
-  final def listen_(target: Node, action: TransactionHandler[A]): Listener =
+  final def listen_(
+      target: Node, 
+      action: TransactionHandler[A]): Listener =
     Transaction.apply(trans1 => listen(target, trans1, action, false))
 
-  def listen(target: Node,
+  def listen(
+    target: Node,
     trans: Transaction,
     action: TransactionHandler[A],
     suppressEarlierFirings: Boolean): Listener = {
@@ -203,8 +206,7 @@ class Stream[A] {
   /**
    * Filter out any event occurrences whose value is a Java null pointer.
    */
-  final def filterNotNull(): Stream[A] =
-    filter(a => a != null)
+  final def filterNotNull(): Stream[A] = filter(_ != null)
 
   /**
    * Let event occurrences through only when the behavior's value is True.
@@ -328,6 +330,7 @@ object Stream {
       val l2 = eb.listen_(out.node, new TransactionHandler[A]() {
         def run(trans1: Transaction, a: A) {
           trans1.prioritized(out.node, trans2 => out.send(trans2, a))
+          //out.send(trans1, a)
         }
       })
       out.addCleanup(l1).addCleanup(l2)

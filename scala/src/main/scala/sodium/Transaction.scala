@@ -136,7 +136,7 @@ object Transaction {
 
     override def compareTo(o: Entry): Int = {
       val answer = rank.compareTo(o.rank)
-      if (answer == 0) -seq.compareTo(o.seq) else answer
+      if (answer == 0) o.seq.compareTo(seq) else answer
     }
   }
 }

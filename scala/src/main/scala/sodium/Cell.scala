@@ -2,7 +2,7 @@ package sodium
 
 class Cell[A](
   var currentValue: Option[A],
-  protected val event: Stream[A] = new Stream[A]()) {
+  protected val event: Stream[A]) {
   import Cell._
 
   var valueUpdate: Option[A] = None
