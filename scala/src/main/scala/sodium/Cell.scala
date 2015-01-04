@@ -9,15 +9,15 @@ class Cell[A](protected var currentValue: Option[A], protected val event: Stream
 
   Transaction.run({
     trans1 =>
-      val parent = this
+      val ev = this
       cleanup = Some(event.listen(Node.NullNode, trans1, new TransactionHandler[A]() {
         def run(trans2: Transaction, a: A) {
-          if (parent.valueUpdate.isEmpty) {
+          if (ev.valueUpdate.isEmpty) {
             trans2.last(new Runnable() {
               def run() {
-                parent.currentValue = parent.valueUpdate
-                parent.lazyInitValue = None
-                parent.valueUpdate = None
+                ev.currentValue = ev.valueUpdate
+                ev.lazyInitValue = None
+                ev.valueUpdate = None
               }
             })
           }
@@ -68,8 +68,8 @@ class Cell[A](protected var currentValue: Option[A], protected val event: Stream
   final def value(): Stream[A] = Transaction(trans => value(trans))
 
   final def value(trans1: Transaction): Stream[A] = {
-    val out: StreamSink[A] = new StreamSink[A]() {
-      override def sampleNow(): IndexedSeq[A] = IndexedSeq(sampleNoTrans())
+    val out = new StreamSink[A]() {
+      override def sampleNow() = IndexedSeq(sampleNoTrans())
     }
     val l: Listener = event.listen(out.node, trans1,
       new TransactionHandler[A]() {
@@ -114,7 +114,6 @@ class Cell[A](protected var currentValue: Option[A], protected val event: Stream
    * is passed the input and the old state and returns the new state and output value.
    */
   final def collect[B, S](initState: S, f: (A, S) => (B, S)): Cell[B] =
-    {
       Transaction[Cell[B]](_ => {
         val ea = updates().coalesce((fst, snd) => snd)
         val ebs = new StreamLoop[(B, S)]()
@@ -124,7 +123,6 @@ class Cell[A](protected var currentValue: Option[A], protected val event: Stream
         ebs.loop(ebs_out)
         bbs.map(x => x._1)
       })
-    }
 
   protected override def finalize() {
     cleanup.foreach(_.unlisten())

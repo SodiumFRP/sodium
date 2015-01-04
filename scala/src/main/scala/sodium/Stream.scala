@@ -26,7 +26,8 @@ class Stream[A] {
   final def listen_(target: Node, action: TransactionHandler[A]): Listener = 
     Transaction(trans1 => listen(target, trans1, action, false))
   
-  def listen(target: Node, trans: Transaction, action: TransactionHandler[A], suppressEarlierFirings: Boolean): Listener = {
+  def listen(target: Node, trans: Transaction, action: TransactionHandler[A], 
+      suppressEarlierFirings: Boolean): Listener = {
     Transaction.listenersLock.synchronized {
       if (node.linkTo(target))
         trans.toRegen = true
@@ -51,8 +52,7 @@ class Stream[A] {
   final def map[B](f: A => B): Stream[B] = {
     val ev = this
     val out = new StreamSink[B]() {
-      override def sampleNow(): IndexedSeq[B] =
-          ev.sampleNow().map(f(_))
+      override def sampleNow() = ev.sampleNow().map(f(_))
     }
     val l = listen_(out.node, new TransactionHandler[A]() {
       override def run(trans: Transaction, a: A) {
@@ -88,8 +88,7 @@ class Stream[A] {
   final def snapshot[B, C](b: Cell[B], f: (A, B) => C): Stream[C] = {
       val ev = this
       val out = new StreamSink[C]() {
-        override def sampleNow(): IndexedSeq[C] =
-          ev.sampleNow().map(a => f.apply(a, b.sampleNoTrans()))
+        override def sampleNow() = ev.sampleNow().map(a => f.apply(a, b.sampleNoTrans()))
       }
       val l = listen_(out.node, new TransactionHandler[A]() {
         def run(trans: Transaction, a: A) {
@@ -149,7 +148,7 @@ class Stream[A] {
     {
       val ev = this
       val out = new StreamSink[A]() {
-        override def sampleNow(): IndexedSeq[A] = {
+        override def sampleNow() = {
           val oi = ev.sampleNow()
           if (oi.isEmpty) {
             IndexedSeq()
@@ -200,7 +199,7 @@ class Stream[A] {
   def filter(f: A => Boolean): Stream[A] = {
       val ev = this
       val out = new StreamSink[A]() {
-        override def sampleNow(): IndexedSeq[A] = ev.sampleNow().filter(f)
+        override def sampleNow() = ev.sampleNow().filter(f)
       }
       val l = listen_(out.node, new TransactionHandler[A]() {
         def run(trans: Transaction, a: A) {
@@ -259,7 +258,7 @@ class Stream[A] {
     val ev = this
     var la: Option[Listener] = None
     val out = new StreamSink[A]() {
-      override def sampleNow(): IndexedSeq[A] = {
+      override def sampleNow() = {
         val oi = ev.sampleNow()
          if (oi.size > 0) {
            la.foreach(_.unlisten())
@@ -325,7 +324,7 @@ object Stream {
   private def merge[A](ea: Stream[A], eb: Stream[A]): Stream[A] =
     {
       val out = new StreamSink[A]() {
-        override def sampleNow(): IndexedSeq[A] = ea.sampleNow() ++ eb.sampleNow()
+        override def sampleNow() = ea.sampleNow() ++ eb.sampleNow()
       }
       val l1 = ea.listen_(out.node, new TransactionHandler[A]() {
         def run(trans: Transaction, a: A) {
@@ -346,7 +345,7 @@ object Stream {
   final def filterOption[A](ev: Stream[Option[A]]): Stream[A] =
     {
       val out = new StreamSink[A]() {
-        override def sampleNow(): IndexedSeq[A] = ev.sampleNow().flatten
+        override def sampleNow() = ev.sampleNow().flatten
       }
       val l = ev.listen_(out.node, new TransactionHandler[Option[A]]() {
         def run(trans: Transaction, oa: Option[A]) {

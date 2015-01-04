@@ -408,10 +408,6 @@ class CellTester {
 
 object CellTester {
 
-  case class SB(val a: Character, val b: Character, val sw: Cell[Character])
-
-  case class SE(val a: Character, val b: Character, val sw: Stream[Character])
-
   /**
    * This is used for tests where value() produces a single initial value on listen,
    * and then we double that up by causing that single initial event to be repeated.
@@ -420,4 +416,8 @@ object CellTester {
    */
   private def doubleUp(ev: Stream[Int]): Stream[Int] = ev.merge(ev)
 }
+
+case class SB(val a: Character, val b: Character, val sw: Cell[Character])
+
+case class SE(val a: Character, val b: Character, val sw: Stream[Character])
 
