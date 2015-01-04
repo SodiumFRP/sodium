@@ -1,5 +1,7 @@
 package sodium
 
+import scala.IndexedSeq
+
 class Cell[A](protected var currentValue: Option[A], protected val event: Stream[A]) {
   import Cell._
 
@@ -114,15 +116,15 @@ class Cell[A](protected var currentValue: Option[A], protected val event: Stream
    * is passed the input and the old state and returns the new state and output value.
    */
   final def collect[B, S](initState: S, f: (A, S) => (B, S)): Cell[B] =
-      Transaction[Cell[B]](_ => {
-        val ea = updates().coalesce((fst, snd) => snd)
-        val ebs = new StreamLoop[(B, S)]()
-        val bbs = ebs.holdLazy(() => f(sampleNoTrans(), initState))
-        val bs = bbs.map(x => x._2)
-        val ebs_out = ea.snapshot(bs, f)
-        ebs.loop(ebs_out)
-        bbs.map(x => x._1)
-      })
+    Transaction[Cell[B]](_ => {
+      val ea = updates().coalesce((fst, snd) => snd)
+      val ebs = new StreamLoop[(B, S)]()
+      val bbs = ebs.holdLazy(() => f(sampleNoTrans(), initState))
+      val bs = bbs.map(x => x._2)
+      val ebs_out = ea.snapshot(bs, f)
+      ebs.loop(ebs_out)
+      bbs.map(x => x._1)
+    })
 
   protected override def finalize() {
     cleanup.foreach(_.unlisten())

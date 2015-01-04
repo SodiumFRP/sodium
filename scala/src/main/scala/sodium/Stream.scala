@@ -1,5 +1,6 @@
 package sodium
 
+import scala.IndexedSeq
 import scala.collection.mutable.ListBuffer
 
 class Stream[A] {
@@ -16,18 +17,18 @@ class Stream[A] {
    * Listen for firings of this event. The returned Listener has an unlisten()
    * method to cause the listener to be removed. This is the observer pattern.
    */
-  final def listen(action: A => Unit): Listener = 
+  final def listen(action: A => Unit): Listener =
     listen_(Node.NullNode, new TransactionHandler[A]() {
       def run(trans2: Transaction, a: A) {
         action(a)
       }
     })
 
-  final def listen_(target: Node, action: TransactionHandler[A]): Listener = 
+  final def listen_(target: Node, action: TransactionHandler[A]): Listener =
     Transaction(trans1 => listen(target, trans1, action, false))
-  
-  def listen(target: Node, trans: Transaction, action: TransactionHandler[A], 
-      suppressEarlierFirings: Boolean): Listener = {
+
+  def listen(target: Node, trans: Transaction, action: TransactionHandler[A],
+    suppressEarlierFirings: Boolean): Listener = {
     Transaction.listenersLock.synchronized {
       if (node.linkTo(target))
         trans.toRegen = true
@@ -86,17 +87,17 @@ class Stream[A] {
    * before any state changes of the current transaction are applied through 'hold's.
    */
   final def snapshot[B, C](b: Cell[B], f: (A, B) => C): Stream[C] = {
-      val ev = this
-      val out = new StreamSink[C]() {
-        override def sampleNow() = ev.sampleNow().map(a => f.apply(a, b.sampleNoTrans()))
-      }
-      val l = listen_(out.node, new TransactionHandler[A]() {
-        def run(trans: Transaction, a: A) {
-          out.send(trans, f(a, b.sampleNoTrans()))
-        }
-      })
-      out.addCleanup(l)
+    val ev = this
+    val out = new StreamSink[C]() {
+      override def sampleNow() = ev.sampleNow().map(a => f.apply(a, b.sampleNoTrans()))
     }
+    val l = listen_(out.node, new TransactionHandler[A]() {
+      def run(trans: Transaction, a: A) {
+        out.send(trans, f(a, b.sampleNoTrans()))
+      }
+    })
+    out.addCleanup(l)
+  }
 
   /**
    * Merge two streams of events of the same type.
@@ -161,14 +162,14 @@ class Stream[A] {
       val l = listen(out.node, trans, new TransactionHandler[A]() {
         override def run(trans1: Transaction, a: A) {
           acc match {
-            case Some(b) => 
+            case Some(b) =>
               acc = Some(f(b, a))
             case None =>
               trans1.prioritized(out.node, {
-                  trans2 =>
-                  	out.send(trans2, acc.get)
-                    acc = None
-                })
+                trans2 =>
+                  out.send(trans2, acc.get)
+                  acc = None
+              })
               acc = Some(a)
           }
         }
@@ -197,17 +198,17 @@ class Stream[A] {
    * Only keep event occurrences for which the predicate returns true.
    */
   def filter(f: A => Boolean): Stream[A] = {
-      val ev = this
-      val out = new StreamSink[A]() {
-        override def sampleNow() = ev.sampleNow().filter(f)
-      }
-      val l = listen_(out.node, new TransactionHandler[A]() {
-        def run(trans: Transaction, a: A) {
-          if (f(a)) out.send(trans, a)
-        }
-      })
-      out.addCleanup(l)
+    val ev = this
+    val out = new StreamSink[A]() {
+      override def sampleNow() = ev.sampleNow().filter(f)
     }
+    val l = listen_(out.node, new TransactionHandler[A]() {
+      def run(trans: Transaction, a: A) {
+        if (f(a)) out.send(trans, a)
+      }
+    })
+    out.addCleanup(l)
+  }
 
   /**
    * Filter out any event occurrences whose value is a Java null pointer.
@@ -260,10 +261,10 @@ class Stream[A] {
     val out = new StreamSink[A]() {
       override def sampleNow() = {
         val oi = ev.sampleNow()
-         if (oi.size > 0) {
-           la.foreach(_.unlisten())
-           la = None
-          }
+        if (oi.size > 0) {
+          la.foreach(_.unlisten())
+          la = None
+        }
         if (oi.size > 0) IndexedSeq(oi.head) else IndexedSeq()
       }
     }
@@ -271,8 +272,8 @@ class Stream[A] {
       def run(trans: Transaction, a: A) {
         out.send(trans, a)
         if (la.isDefined) {
-           la.foreach(_.unlisten())
-           la = None
+          la.foreach(_.unlisten())
+          la = None
         }
       }
     }))

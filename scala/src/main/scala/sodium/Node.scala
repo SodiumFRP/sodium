@@ -24,7 +24,7 @@ class Node(private var rank: Long) extends Comparable[Node] {
       listeners.remove(target)
   }
 
-  private def ensureBiggerThan(limit: Long, visited: Set[Node]): Boolean = 
+  private def ensureBiggerThan(limit: Long, visited: Set[Node]): Boolean =
     if (rank > limit || visited.contains(this)) {
       false
     } else {
