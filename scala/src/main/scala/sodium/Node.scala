@@ -2,10 +2,10 @@ package sodium
 
 import scala.collection.mutable.HashSet
 
-class Node(var rank: Long) extends Comparable[Node] {
+class Node(private var rank: Long) extends Comparable[Node] {
   import Node._
 
-  val listeners: HashSet[Node] = HashSet()
+  private val listeners: HashSet[Node] = HashSet()
 
   /**
    * @return true if any changes were made.
@@ -30,14 +30,12 @@ class Node(var rank: Long) extends Comparable[Node] {
     } else {
       val accVisited = Set(this) ++ visited
       rank = limit + 1
-      listeners.forall(_.ensureBiggerThan(rank, accVisited))
+      listeners.foreach(_.ensureBiggerThan(rank, accVisited))
+      true
     }
   }
 
-  override def compareTo(o: Node): Int =
-    if (rank < o.rank) -1
-    else if (rank > o.rank) 1
-    else 0
+  override def compareTo(o: Node): Int = rank.compareTo(o.rank)
 }
 
 object Node {

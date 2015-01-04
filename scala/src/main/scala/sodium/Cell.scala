@@ -161,10 +161,10 @@ object Cell {
     val out = new StreamSink[B]()
 
     var fired = false
-    def h(trans1: Transaction) {
+    def h(trans: Transaction) {
       if (!fired) {
         fired = true
-        trans1.prioritized(out.node, {
+        trans.prioritized(out.node, {
           trans2 =>
             out.send(trans2, bf.newValue().apply(ba.newValue()))
             fired = false
@@ -173,13 +173,13 @@ object Cell {
     }
 
     val l1 = bf.updates().listen_(out.node, new TransactionHandler[A => B]() {
-      def run(trans1: Transaction, f: A => B) {
-        h(trans1)
+      def run(trans: Transaction, f: A => B) {
+        h(trans)
       }
     })
     val l2 = ba.updates().listen_(out.node, new TransactionHandler[A]() {
-      def run(trans1: Transaction, a: A) {
-        h(trans1)
+      def run(trans: Transaction, a: A) {
+        h(trans)
       }
     })
     out.addCleanup(l1).addCleanup(l2).holdLazy(() => bf.sampleNoTrans().apply(ba.sampleNoTrans()))
@@ -193,26 +193,24 @@ object Cell {
       def za = () => bba.sampleNoTrans().sampleNoTrans
       val out = new StreamSink[A]()
       val h = new TransactionHandler[Cell[A]]() {
-        private var currentListener: Listener = _
-        override def run(trans2: Transaction, ba: Cell[A]) {
+        private var currentListener: Option[Listener] = None
+        override def run(trans: Transaction, ba: Cell[A]) {
           // Note: If any switch takes place during a transaction, then the
           // value().listen will always cause a sample to be fetched from the
           // one we just switched to. The caller will be fetching our output
           // using value().listen, and value() throws away all firings except
           // for the last one. Therefore, anything from the old input behaviour
           // that might have happened during this transaction will be suppressed.
-          if (currentListener != null)
-            currentListener.unlisten()
-          currentListener = ba.value(trans2).listen(out.node, trans2, new TransactionHandler[A]() {
+          currentListener.foreach(_.unlisten())
+          currentListener = Some(ba.value(trans).listen(out.node, trans, new TransactionHandler[A]() {
             def run(trans3: Transaction, a: A) {
               out.send(trans3, a)
             }
-          }, false)
+          }, false))
         }
 
         override def finalize() {
-          if (currentListener != null)
-            currentListener.unlisten()
+          currentListener.foreach(_.unlisten())
         }
       }
       val l1 = bba.value().listen_(out.node, h)
@@ -232,21 +230,19 @@ object Cell {
           }
         }
         val h1 = new TransactionHandler[Stream[A]]() {
-          private var currentListener = bea.sampleNoTrans().listen(out.node, trans1, h2, false)
+          private var currentListener = Some(bea.sampleNoTrans().listen(out.node, trans1, h2, false))
 
           override def run(trans2: Transaction, ea: Stream[A]) {
             trans2.last(new Runnable() {
               def run() {
-                if (currentListener != null)
-                  currentListener.unlisten()
-                currentListener = ea.listen(out.node, trans2, h2, true)
+                currentListener.foreach(_.unlisten())
+                currentListener = Some(ea.listen(out.node, trans2, h2, true))
               }
             })
           }
 
           override def finalize() {
-            if (currentListener != null)
-              currentListener.unlisten()
+            currentListener.foreach(_.unlisten())
           }
         }
         val l1 = bea.updates().listen(out.node, trans1, h1, false)
