@@ -36,8 +36,7 @@ class Stream[A] {
     }
     trans.prioritized(target, {
       trans2 =>
-        val aNow = sampleNow()
-        aNow.foreach(action.run(trans, _))
+        sampleNow().foreach(action.run(trans, _))
         if (!suppressEarlierFirings) {
           // Anything sent already in this transaction must be sent now so that
           // there's no order dependency between send and listen.
@@ -158,8 +157,8 @@ class Stream[A] {
           }
         }
       }
-      var acc: Option[A] = None
       val l = listen(out.node, trans, new TransactionHandler[A]() {
+        private var acc: Option[A] = None
         override def run(trans1: Transaction, a: A) {
           acc match {
             case Some(b) =>

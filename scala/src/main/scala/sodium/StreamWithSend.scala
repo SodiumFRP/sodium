@@ -10,7 +10,7 @@ class StreamWithSend[A] extends Stream[A] {
     firings += a
 
     try {
-      listeners.foreach(_.run(trans, a))
+      listeners.clone.foreach(_.run(trans, a))
     } catch {
       case t: Throwable => t.printStackTrace()
     }

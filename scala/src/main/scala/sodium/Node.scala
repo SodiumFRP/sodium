@@ -5,7 +5,7 @@ import scala.collection.mutable.HashSet
 class Node(private var rank: Long) extends Comparable[Node] {
   import Node._
 
-  private val listeners: HashSet[Node] = HashSet()
+  private val listeners = HashSet[Node]()
 
   /**
    * @return true if any changes were made.
