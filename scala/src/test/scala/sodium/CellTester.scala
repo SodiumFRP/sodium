@@ -27,7 +27,7 @@ class CellTester {
 
   @Test
   def testSnapshot() {
-    val b = new CellSink[Int](0)
+    val b = new CellSink(0)
     val trigger = new StreamSink[Long]()
     val out = new ArrayList[String]()
     val l = trigger.snapshot[Int, String](b, (x, y) => x + " " + y).listen(out.add(_))
@@ -43,7 +43,7 @@ class CellTester {
 
   @Test
   def testValues() {
-    val b = new CellSink[Int](9)
+    val b = new CellSink(9)
     val out = new ArrayList[Int]()
     val l = b.value().listen(out.add(_))
     List(2, 7).foreach(b.send(_))
@@ -53,7 +53,7 @@ class CellTester {
 
   @Test
   def testConstantBehavior() {
-    val b = new Cell[Int](12)
+    val b = new Cell(12)
     val out = new ArrayList[Int]()
     val l = b.value().listen(out.add(_))
     l.unlisten()
@@ -62,7 +62,7 @@ class CellTester {
 
   @Test
   def testValuesThenMap() {
-    val b = new CellSink[Int](9)
+    val b = new CellSink(9)
     val out = new ArrayList[Int]()
     val l = b.value().map(x => x + 100).listen(out.add(_))
     List(2, 7).foreach(b.send(_))
@@ -72,7 +72,7 @@ class CellTester {
 
   @Test
   def testValuesTwiceThenMap() {
-    val b = new CellSink[Int](9)
+    val b = new CellSink(9)
     val out = new ArrayList[Int]()
     val l = doubleUp(b.value()).map(x => x + 100).listen(out.add(_))
     List(2, 7).foreach(b.send(_))
@@ -82,7 +82,7 @@ class CellTester {
 
   @Test
   def testValuesThenCoalesce() {
-    val b = new CellSink[Int](9)
+    val b = new CellSink(9)
     val out = new ArrayList[Int]()
     val l = b.value().coalesce((fst, snd) => snd).listen(out.add(_))
     List(2, 7).foreach(b.send(_))
@@ -92,7 +92,7 @@ class CellTester {
 
   @Test
   def testValuesTwiceThenCoalesce() {
-    val b = new CellSink[Int](9)
+    val b = new CellSink(9)
     val out = new ArrayList[Int]()
     val l = doubleUp(b.value()).coalesce((fst, snd) => fst + snd).listen(out.add(_))
     List(2, 7).foreach(b.send(_))
@@ -102,8 +102,8 @@ class CellTester {
 
   @Test
   def testValuesThenSnapshot() {
-    val bi = new CellSink[Int](9)
-    val bc = new CellSink[Character]('a')
+    val bi = new CellSink(9)
+    val bc = new CellSink('a')
     val out = new ArrayList[Character]()
     val l = bi.value().snapshot(bc).listen(out.add(_))
     bc.send('b')
@@ -116,8 +116,8 @@ class CellTester {
 
   @Test
   def testValuesTwiceThenSnapshot() {
-    val bi = new CellSink[Int](9)
-    val bc = new CellSink[Character]('a')
+    val bi = new CellSink(9)
+    val bc = new CellSink('a')
     val out = new ArrayList[Character]()
     val l = doubleUp(bi.value()).snapshot(bc).listen(out.add(_))
     bc.send('b')
@@ -130,8 +130,8 @@ class CellTester {
 
   @Test
   def testValuesThenMerge() {
-    val bi = new CellSink[Int](9)
-    val bj = new CellSink[Int](2)
+    val bi = new CellSink(9)
+    val bj = new CellSink(2)
     val out = new ArrayList[Int]()
     val l = bi.value().merge(bj.value(), (x, y) => x + y).listen(out.add(_))
     bi.send(1)
@@ -142,7 +142,7 @@ class CellTester {
 
   @Test
   def testValuesThenFilter() {
-    val b = new CellSink[Int](9)
+    val b = new CellSink(9)
     val out = new ArrayList[Int]()
     val l = b.value().filter(a => true).listen(out.add(_))
     List(2, 7).foreach(b.send(_))
@@ -152,7 +152,7 @@ class CellTester {
 
   @Test
   def testValuesTwiceThenFilter() {
-    val b = new CellSink[Int](9)
+    val b = new CellSink(9)
     val out = new ArrayList[Int]()
     val l = doubleUp(b.value()).filter(a => true).listen(out.add(_))
     List(2, 7).foreach(b.send(_))
@@ -162,7 +162,7 @@ class CellTester {
 
   @Test
   def testValuesThenOnce() {
-    val b = new CellSink[Int](9)
+    val b = new CellSink(9)
     val out = new ArrayList[Int]()
     val l = b.value().once().listen(out.add(_))
     List(2, 7).foreach(b.send(_))
@@ -172,7 +172,7 @@ class CellTester {
 
   @Test
   def testValuesTwiceThenOnce() {
-    val b = new CellSink[Int](9)
+    val b = new CellSink(9)
     val out = new ArrayList[Int]()
     val l = doubleUp(b.value()).once().listen(out.add(_))
     List(2, 7).foreach(b.send(_))
@@ -182,7 +182,7 @@ class CellTester {
 
   @Test
   def testValuesLateListen() {
-    val b = new CellSink[Int](9)
+    val b = new CellSink(9)
     val out = new ArrayList[Int]()
     val value = b.value()
     b.send(8)
@@ -194,7 +194,7 @@ class CellTester {
 
   @Test
   def testMapB() {
-    val b = new CellSink[Int](6)
+    val b = new CellSink(6)
     val out = new ArrayList[String]()
     val l = b.map(x => x.toString()).value().listen(out.add(_))
     b.send(8)
@@ -203,7 +203,7 @@ class CellTester {
   }
 
   def testMapBLateListen() {
-    val b = new CellSink[Int](6)
+    val b = new CellSink(6)
     val out = new ArrayList[String]()
     val bm = b.map(x => x.toString())
     b.send(2)
@@ -223,7 +223,7 @@ class CellTester {
   @Test
   def testApply() {
     val bf = new CellSink[Long => String](b => "1 " + b)
-    val ba = new CellSink[Long](5L)
+    val ba = new CellSink(5L)
     val out = new ArrayList[String]()
     val l = Cell(bf, ba).value().listen(x => out.add(x))
     bf.send(b => "12 " + b)
@@ -234,8 +234,8 @@ class CellTester {
 
   @Test
   def testLift() {
-    val a = new CellSink[Int](1)
-    val b = new CellSink[Long](5L)
+    val a = new CellSink(1)
+    val b = new CellSink(5L)
     val out = new ArrayList[String]()
     val l = Cell.lift[Int, Long, String]((x, y) => x + " " + y, a, b).value().listen(out.add(_))
     a.send(12)
@@ -246,7 +246,7 @@ class CellTester {
 
   @Test
   def testLiftGlitch() {
-    val a = new CellSink[Int](1)
+    val a = new CellSink(1)
     val a3 = a.map(x => x * 3)
     val a5 = a.map(x => x * 5)
     val out = new ArrayList[String]()
