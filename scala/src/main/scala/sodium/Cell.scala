@@ -11,15 +11,14 @@ class Cell[A](protected var currentValue: Option[A], protected val event: Stream
 
   Transaction.run({
     trans1 =>
-      val ev = this
       cleanup = Some(event.listen(Node.NullNode, trans1, new TransactionHandler[A]() {
         def run(trans2: Transaction, a: A) {
-          if (ev.valueUpdate.isEmpty) {
+          if (Cell.this.valueUpdate.isEmpty) {
             trans2.last(new Runnable() {
               def run() {
-                ev.currentValue = ev.valueUpdate
-                ev.lazyInitValue = None
-                ev.valueUpdate = None
+                Cell.this.currentValue = Cell.this.valueUpdate
+                Cell.this.lazyInitValue = None
+                Cell.this.valueUpdate = None
               }
             })
           }

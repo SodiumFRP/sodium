@@ -17,10 +17,9 @@ class StreamLoop[A] extends StreamWithSend[A] {
     if (ea_out.isDefined)
       throw new RuntimeException("StreamLoop looped more than once")
     ea_out = Some(initStream)
-    val ev = this
     addCleanup(initStream.listen_(this.node, new TransactionHandler[A]() {
       override def run(trans: Transaction, a: A) {
-        ev.send(trans, a)
+        StreamLoop.this.send(trans, a)
       }
     }))
   }

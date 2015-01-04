@@ -231,7 +231,7 @@ class Stream[A] {
     Transaction(_ => {
       val es = new StreamLoop[S]()
       val s = es.hold(initState)
-      val ebs = this.snapshot(s, f)
+      val ebs = snapshot(s, f)
       val eb = ebs.map(bs => bs._1)
       val es_out = ebs.map(bs => bs._2)
       es.loop(es_out)
@@ -245,7 +245,7 @@ class Stream[A] {
     Transaction(_ => {
       val es = new StreamLoop[S]()
       val s = es.hold(initState)
-      val es_out = this.snapshot(s, f)
+      val es_out = snapshot(s, f)
       es.loop(es_out)
       es_out.hold(initState)
     })
