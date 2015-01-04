@@ -260,12 +260,11 @@ class Stream[A] {
     val out = new StreamSink[A]() {
       override def sampleNow(): IndexedSeq[A] = {
         val oi = ev.sampleNow()
-        val oo = if (oi.size > 0) IndexedSeq(oi.head) else IndexedSeq()
          if (oi.size > 0) {
            la.foreach(_.unlisten())
            la = None
           }
-        oo
+        if (oi.size > 0) IndexedSeq(oi.head) else IndexedSeq()
       }
     }
     la = Some(ev.listen_(out.node, new TransactionHandler[A]() {

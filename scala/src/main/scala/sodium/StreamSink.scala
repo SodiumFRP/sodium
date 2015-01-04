@@ -1,22 +1,8 @@
 package sodium
 
-class StreamSink[A] extends Stream[A] {
+class StreamSink[A] extends StreamWithSend[A] {
 
   def send(a: A) {
     Transaction.run(trans => send(trans, a))
-  }
-
-  def send(trans: Transaction, a: A) {
-    if (firings.isEmpty)
-      trans.last(new Runnable() {
-        def run() { firings.clear() }
-      })
-    firings += a
-
-    try {
-      listeners.foreach(_.run(trans, a))
-    } catch {
-      case t: Throwable => t.printStackTrace()
-    }
   }
 }

@@ -1,11 +1,9 @@
 package sodium
 
-class Cell[A](
-  var currentValue: Option[A],
-  protected val event: Stream[A]) {
+class Cell[A](protected var currentValue: Option[A], protected val event: Stream[A]) {
   import Cell._
 
-  var valueUpdate: Option[A] = None
+  private var valueUpdate: Option[A] = None
   private var cleanup: Option[Listener] = None
   protected var lazyInitValue: Option[() => A] = None // Used by LazyCell
 
@@ -213,8 +211,8 @@ object Cell {
           currentListener.foreach(_.unlisten())
         }
       }
-      val l1 = bba.value().listen_(out.node, h)
-      out.addCleanup(l1).holdLazy(za)
+      val l = bba.value().listen_(out.node, h)
+      out.addCleanup(l).holdLazy(za)
     }
 
   /**
@@ -230,19 +228,19 @@ object Cell {
           }
         }
         val h1 = new TransactionHandler[Stream[A]]() {
-          private var currentListener = Some(bea.sampleNoTrans().listen(out.node, trans1, h2, false))
+          private var currentListener = bea.sampleNoTrans().listen(out.node, trans1, h2, false)
 
           override def run(trans2: Transaction, ea: Stream[A]) {
             trans2.last(new Runnable() {
               def run() {
-                currentListener.foreach(_.unlisten())
-                currentListener = Some(ea.listen(out.node, trans2, h2, true))
+                currentListener.unlisten()
+                currentListener = ea.listen(out.node, trans2, h2, true)
               }
             })
           }
 
           override def finalize() {
-            currentListener.foreach(_.unlisten())
+            currentListener.unlisten()
           }
         }
         val l1 = bea.updates().listen(out.node, trans1, h1, false)

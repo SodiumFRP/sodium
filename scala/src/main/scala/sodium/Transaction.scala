@@ -107,14 +107,14 @@ object Transaction {
 
 
   def apply[A](f: () => A): A =
-    doTransaction(t => f.apply())
+    doTransaction(t => f())
 
   def run(f: Transaction => Unit) {
     doTransaction(t => f(t))
   }
 
   def apply[A](f: Transaction => A): A = {
-    doTransaction(t => f.apply(t))
+    doTransaction(t => f(t))
   }
 
   /**

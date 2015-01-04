@@ -1,6 +1,6 @@
 package sodium
 
-class StreamLoop[A] extends Stream[A] {
+class StreamLoop[A] extends StreamWithSend[A] {
 
   private var ea_out: Option[Stream[A]] = None
 
@@ -13,29 +13,14 @@ class StreamLoop[A] extends Stream[A] {
     ea_out.get.sampleNow()
   }
 
-  // TODO: Copy & paste from StreamSink. Can we improve this?
-  private def send(trans: Transaction, a: A) {
-    if (firings.size == 0)
-      trans.last(new Runnable() {
-        def run() { firings.clear() }
-      })
-    firings += a
-
-    try {
-      listeners.foreach(_.run(trans, a))
-    } catch {
-      case t: Throwable => t.printStackTrace()
-    }
-  }
-
-  def loop(ea_out: Stream[A]) {
-    if (this.ea_out.isDefined)
+  def loop(initStream: Stream[A]) {
+    if (ea_out.isDefined)
       throw new RuntimeException("StreamLoop looped more than once")
-    this.ea_out = Some(ea_out)
-    val me = this
-    addCleanup(ea_out.listen_(this.node, new TransactionHandler[A]() {
+    ea_out = Some(initStream)
+    val ev = this
+    addCleanup(initStream.listen_(this.node, new TransactionHandler[A]() {
       override def run(trans: Transaction, a: A) {
-        me.send(trans, a)
+        ev.send(trans, a)
       }
     }))
   }
