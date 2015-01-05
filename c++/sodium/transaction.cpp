@@ -221,14 +221,20 @@ namespace sodium {
 
         bool node::ensure_bigger_than(std::set<node*>& visited, rank_t limit)
         {
-            if (rank > limit || visited.find(this) != visited.end())
+            if (rank > limit)
                 return false;
+            else
+            if (visited.find(this) != visited.end()) {
+                printf("cycle! %p\n", this);  // ###
+                return false;
+            }
             else {
                 visited.insert(this);
                 rank = limit + 1;
                 for (SODIUM_FORWARD_LIST<node::target>::iterator it = targets.begin(); it != targets.end(); ++it)
                     if (it->n)
                         it->n->ensure_bigger_than(visited, rank);
+                //visited.erase(this);
                 return true;
             }
         }
