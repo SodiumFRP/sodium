@@ -53,16 +53,12 @@ namespace sodium {
 
         behavior_ event_::hold_(transaction_impl* trans, const light_ptr& initA) const
         {
-            return behavior_(
-                SODIUM_SHARED_PTR<impl::behavior_impl>(impl::hold(trans, initA, *this))
-            );
+            return behavior_(impl::hold(trans, initA, *this));
         }
 
         behavior_ event_::hold_lazy_(transaction_impl* trans, const std::function<light_ptr()>& initA) const
         {
-            return behavior_(
-                SODIUM_SHARED_PTR<impl::behavior_impl>(impl::hold_lazy(trans, initA, *this))
-            );
+            return behavior_(impl::hold_lazy(trans, initA, *this));
         }
 
 #if defined(SODIUM_NO_CXX11)
@@ -511,7 +507,7 @@ namespace sodium {
 
         behavior_impl::behavior_impl(
             const event_& updates,
-            const SODIUM_SHARED_PTR<behavior_impl>& parent)
+            const brainy_ptr<behavior_impl>& parent)
             : updates(updates), kill(NULL), parent(parent)
         {
         }
@@ -734,16 +730,16 @@ namespace sodium {
         };
 #endif
 
-        SODIUM_SHARED_PTR<behavior_impl> hold(transaction_impl* trans0, const light_ptr& initValue, const event_& input)
+        brainy_ptr<behavior_impl> hold(transaction_impl* trans0, const light_ptr& initValue, const event_& input)
         {
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
             if (input.is_never())
-                return SODIUM_SHARED_PTR<behavior_impl>(new behavior_impl_constant(initValue));
+                return brainy_ptr<behavior_impl>(new behavior_impl_constant(initValue));
             else {
 #endif
                 behavior_state state(initValue);
-                SODIUM_SHARED_PTR<behavior_impl_concrete<behavior_state> > impl(
-                    new behavior_impl_concrete<behavior_state>(input, state, std::shared_ptr<behavior_impl>())
+                brainy_ptr<behavior_impl_concrete<behavior_state> > impl(
+                    new behavior_impl_concrete<behavior_state>(input, state, brainy_ptr<behavior_impl>())
                 );
                 impl->kill =
                     input.listen_raw(trans0, SODIUM_SHARED_PTR<node>(new node(SODIUM_IMPL_RANK_T_MAX)),
@@ -768,11 +764,11 @@ namespace sodium {
 #endif
         }
 
-        SODIUM_SHARED_PTR<behavior_impl> hold_lazy(transaction_impl* trans0, const std::function<light_ptr()>& initValue, const event_& input)
+        brainy_ptr<behavior_impl> hold_lazy(transaction_impl* trans0, const std::function<light_ptr()>& initValue, const event_& input)
         {
             behavior_state_lazy state(initValue);
-            SODIUM_SHARED_PTR<behavior_impl_concrete<behavior_state_lazy> > impl(
-                new behavior_impl_concrete<behavior_state_lazy>(input, state, std::shared_ptr<behavior_impl>())
+            brainy_ptr<behavior_impl_concrete<behavior_state_lazy> > impl(
+                new behavior_impl_concrete<behavior_state_lazy>(input, state, brainy_ptr<behavior_impl>())
             );
             impl->kill =
                 input.listen_raw(trans0, SODIUM_SHARED_PTR<node>(new node(SODIUM_IMPL_RANK_T_MAX)),
@@ -803,7 +799,7 @@ namespace sodium {
         {
         }
 
-        behavior_::behavior_(const SODIUM_SHARED_PTR<behavior_impl>& impl)
+        behavior_::behavior_(const brainy_ptr<behavior_impl>& impl)
             : impl(impl)
         {
         }

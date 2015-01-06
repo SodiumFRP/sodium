@@ -836,7 +836,6 @@ void test_sodium::switch_e1()
     CPPUNIT_ASSERT_EQUAL(string("ABCdeFGhI"), *out);
 }
 
-// NOTE! Currently this leaks memory.
 void test_sodium::loop_behavior()
 {
     event_sink<int> ea;

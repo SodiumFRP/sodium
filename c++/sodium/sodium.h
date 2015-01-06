@@ -7,6 +7,7 @@
 #ifndef _SODIUM_SODIUM_H_
 #define _SODIUM_SODIUM_H_
 
+#include <sodium/brainy_ptr.h>
 #include <sodium/light_ptr.h>
 #include <sodium/transaction.h>
 #include <functional>
@@ -59,8 +60,8 @@ namespace sodium {
         template <class A, class P> friend class sodium::event_loop;
         template <class A, class P> friend class sodium::behavior;
         friend behavior_ switch_b(transaction_impl* trans, const behavior_& bba);
-        friend SODIUM_SHARED_PTR<behavior_impl> hold(transaction_impl* trans0, const light_ptr& initValue, const event_& input);
-        friend SODIUM_SHARED_PTR<behavior_impl> hold_lazy(transaction_impl* trans0, const std::function<light_ptr()>& initValue, const event_& input);
+        friend brainy_ptr<behavior_impl> hold(transaction_impl* trans0, const light_ptr& initValue, const event_& input);
+        friend brainy_ptr<behavior_impl> hold_lazy(transaction_impl* trans0, const std::function<light_ptr()>& initValue, const event_& input);
         template <class A, class B, class P>
 #if defined(SODIUM_NO_CXX11)
         friend behavior<B, P> sodium::apply(const behavior<lambda1<B, const A&>, P>& bf, const behavior<A, P>& ba);
@@ -313,11 +314,11 @@ namespace sodium {
                 SODIUM_SHARED_PTR<node>
             > unsafe_new_event(event_::sample_now_func* sample_now_func = NULL);
 
-        struct behavior_impl {
+        struct behavior_impl : brainy::dependents {
             behavior_impl();
             behavior_impl(
                 const event_& updates,
-                const SODIUM_SHARED_PTR<behavior_impl>& parent);
+                const brainy_ptr<behavior_impl>& parent);
             virtual ~behavior_impl();
 
             virtual const light_ptr& sample() const = 0;
@@ -332,7 +333,7 @@ namespace sodium {
 #else
             std::function<void()>* kill;
 #endif
-            SODIUM_SHARED_PTR<behavior_impl> parent;
+            brainy_ptr<behavior_impl> parent;
 
 #if defined(SODIUM_NO_CXX11)
             lambda3<lambda0<void>, transaction_impl*, const SODIUM_SHARED_PTR<node>&,
@@ -341,12 +342,15 @@ namespace sodium {
             std::function<std::function<void()>(transaction_impl*, const SODIUM_SHARED_PTR<node>&,
                              const std::function<void(transaction_impl*, const light_ptr&)>&)> listen_value_raw() const;
 #endif
+            virtual bool traverse_dependents(brainy::visitor& v) {
+                return v.visit(parent.untyped);
+            }
         };
 
-        SODIUM_SHARED_PTR<behavior_impl> hold(transaction_impl* trans0,
+        brainy_ptr<behavior_impl> hold(transaction_impl* trans0,
                             const light_ptr& initValue,
                             const event_& input);
-        SODIUM_SHARED_PTR<behavior_impl> hold_lazy(transaction_impl* trans0,
+        brainy_ptr<behavior_impl> hold_lazy(transaction_impl* trans0,
                             const std::function<light_ptr()>& initValue,
                             const event_& input);
 
@@ -362,7 +366,7 @@ namespace sodium {
             behavior_impl_concrete(
                 const event_& updates,
                 const state_t& state,
-                const SODIUM_SHARED_PTR<behavior_impl>& parent)
+                const brainy_ptr<behavior_impl>& parent)
             : behavior_impl(updates, parent),
               state(state)
             {
@@ -371,26 +375,33 @@ namespace sodium {
 
             virtual const light_ptr& sample() const { return state.sample(); }
             virtual const light_ptr& newValue() const { return state.newValue(); }
+            virtual bool traverse_dependents(brainy::visitor& v) { return true; }
         };
 
         struct behavior_impl_loop : behavior_impl {
             behavior_impl_loop(
                 const event_& updates,
-                const SODIUM_SHARED_PTR<SODIUM_SHARED_PTR<behavior_impl> >& pLooped,
-                const SODIUM_SHARED_PTR<behavior_impl>& parent)
+                const SODIUM_SHARED_PTR<brainy_ptr<behavior_impl> >& pLooped,
+                const brainy_ptr<behavior_impl>& parent)
             : behavior_impl(updates, parent),
               pLooped(pLooped)
             {
             }
-            SODIUM_SHARED_PTR<SODIUM_SHARED_PTR<behavior_impl> > pLooped;
+            SODIUM_SHARED_PTR<brainy_ptr<behavior_impl> > pLooped;
 
             void assertLooped() const {
-                if (!*pLooped)
+                if ((*pLooped).is_null())
                     throw std::runtime_error("behavior_loop sampled before it was looped");
             }
 
             virtual const light_ptr& sample() const { assertLooped(); return (*pLooped)->sample(); }
             virtual const light_ptr& newValue() const { assertLooped(); return (*pLooped)->newValue(); }
+            virtual bool traverse_dependents(brainy::visitor& v) {
+                if ((*pLooped).is_null())
+                    return true;
+                else
+                    return v.visit((*pLooped).untyped);
+            }
         };
 
         struct behavior_state {
@@ -431,9 +442,9 @@ namespace sodium {
             public:
                 behavior_();
                 behavior_(behavior_impl* impl);
-                behavior_(const SODIUM_SHARED_PTR<behavior_impl>& impl);
+                behavior_(const brainy_ptr<behavior_impl>& impl);
                 behavior_(const light_ptr& a);
-                SODIUM_SHARED_PTR<impl::behavior_impl> impl;
+                brainy_ptr<impl::behavior_impl> impl;
 
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
                 /*!
@@ -541,7 +552,7 @@ namespace sodium {
             }
 
             std::function<A()> sample_lazy() const {
-                const SODIUM_SHARED_PTR<impl::behavior_impl>& impl(this->impl);
+                const brainy_ptr<impl::behavior_impl>& impl(this->impl);
                 return [impl] () -> A {
                     transaction<P> trans;
                     return *impl->sample().template cast_ptr<A>(NULL);
@@ -1314,7 +1325,7 @@ namespace sodium {
             behavior_sink(const A& initA)
             {
                 transaction<P> trans;
-                this->impl = SODIUM_SHARED_PTR<impl::behavior_impl>(hold(trans.impl(), light_ptr::create<A>(initA), e));
+                this->impl = hold(trans.impl(), light_ptr::create<A>(initA), e);
             }
 
             void send(const A& a) const
@@ -1529,17 +1540,17 @@ namespace sodium {
     {
         private:
             event_loop<A, P> elp;
-            SODIUM_SHARED_PTR<SODIUM_SHARED_PTR<impl::behavior_impl> > pLooped;
+            SODIUM_SHARED_PTR<brainy_ptr<impl::behavior_impl> > pLooped;
 
         public:
             behavior_loop()
                 : behavior<A, P>(impl::behavior_()),
-                  pLooped(new SODIUM_SHARED_PTR<impl::behavior_impl>)
+                  pLooped(new brainy_ptr<impl::behavior_impl>)
             {
-                this->impl = SODIUM_SHARED_PTR<impl::behavior_impl>(new impl::behavior_impl_loop(
+                this->impl = brainy_ptr<impl::behavior_impl>(new impl::behavior_impl_loop(
                     elp,
                     pLooped,
-                    SODIUM_SHARED_PTR<impl::behavior_impl>()));
+                    brainy_ptr<impl::behavior_impl>()));
             }
 
             void loop(const behavior<A, P>& b)
