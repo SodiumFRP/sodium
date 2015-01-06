@@ -50,7 +50,7 @@ namespace sodium {
     /*!
      * A behavior that always has the current clock time.
      */
-    template <class P, class T>
+    template <class P EQ_DEF_PART, class T>
     behavior<typename T::time,P> clock(const T& t)
     {
         return behavior<typename T::time,P>(SODIUM_SHARED_PTR<impl::behavior_impl>(
