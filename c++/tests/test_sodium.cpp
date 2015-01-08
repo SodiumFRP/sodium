@@ -442,8 +442,10 @@ void test_sodium::snapshot1()
 void test_sodium::value1()
 {
     behavior_sink<int> b(9);
+    transaction<> trans;
     auto out = std::make_shared<vector<int>>();
     auto unlisten = b.value().listen([out] (const int& x) { out->push_back(x); });
+    trans.close();
     b.send(2);
     b.send(7);
     unlisten();
@@ -454,7 +456,9 @@ void test_sodium::value_const()
 {
     behavior<int> b(9);
     auto out = std::make_shared<vector<int>>();
+    transaction<> trans;
     auto unlisten = b.value().listen([out] (const int& x) { out->push_back(x); });
+    trans.close();
     unlisten();
     CPPUNIT_ASSERT(vector<int>({ 9 }) == *out);
 }
@@ -463,7 +467,9 @@ void test_sodium::constant_behavior()
 {
     behavior_sink<int> b(12);
     auto out = std::make_shared<vector<int>>();
+    transaction<> trans;
     auto unlisten = b.value().listen([out] (const int& x) { out->push_back(x); });
+    trans.close();
     unlisten();
     CPPUNIT_ASSERT(vector<int>({ 12 }) == *out);
 }
@@ -472,8 +478,10 @@ void test_sodium::value_then_map()
 {
     behavior_sink<int> b(9);
     auto out = std::make_shared<vector<int>>();
+    transaction<> trans;
     auto unlisten = b.value().map<int>([] (const int& x) { return x + 100; })
         .listen([out] (const int& x) { out->push_back(x); });
+    trans.close();
     b.send(2);
     b.send(7);
     unlisten();
@@ -496,8 +504,10 @@ void test_sodium::value_twice_then_map()
 {
     behavior_sink<int> b(9);
     auto out = std::make_shared<vector<int>>();
+    transaction<> trans;
     auto unlisten = doubleUp<int>(b.value()).map<int>([] (const int& x) { return x + 100; })
         .listen([out] (const int& x) { out->push_back(x); });
+    trans.close();
     b.send(2);
     b.send(7);
     unlisten();
@@ -508,8 +518,10 @@ void test_sodium::value_then_coalesce()
 {
     behavior_sink<int> b(9);
     auto out = std::make_shared<vector<int>>();
+    transaction<> trans;
     auto unlisten = b.value().coalesce([] (const int& fst, const int& snd) -> int { return snd; })
         .listen([out] (const int& x) { out->push_back(x); });
+    trans.close();
     b.send(2);
     b.send(7);
     unlisten();
@@ -520,8 +532,10 @@ void test_sodium::value_twice_then_coalesce()
 {
     behavior_sink<int> b(9);
     auto out = std::make_shared<vector<int>>();
+    transaction<> trans;
     auto unlisten = doubleUp(b.value()).coalesce([] (const int& fst, const int& snd) -> int { return fst + snd; })
         .listen([out] (const int& x) { out->push_back(x); });
+    trans.close();
     b.send(2);
     b.send(7);
     unlisten();
@@ -533,7 +547,9 @@ void test_sodium::value_then_snapshot()
     behavior_sink<int> bi(9);
     behavior_sink<char> bc('a');
     auto out = std::make_shared<string>();
+    transaction<> trans;
     auto unlisten = bi.value().snapshot(bc).listen([out] (const char& c) { *out += c; });
+    trans.close();
     bc.send('b');
     bi.send(2);
     bc.send('c');
@@ -547,7 +563,9 @@ void test_sodium::value_twice_then_snapshot()
     behavior_sink<int> bi(9);
     behavior_sink<char> bc('a');
     auto out = std::make_shared<string>();
+    transaction<> trans;
     auto unlisten = doubleUp(bi.value()).snapshot(bc).listen([out] (const char& c) { *out += c; });
+    trans.close();
     bc.send('b');
     bi.send(2);
     bc.send('c');
@@ -561,8 +579,10 @@ void test_sodium::value_then_merge()
     behavior_sink<int> bi(9);
     behavior_sink<int> bj(2);
     auto out = std::make_shared<vector<int>>();
+    transaction<> trans;
     auto unlisten = bi.value().merge(bj.value(), [] (const int& x, const int& y) -> int { return x+y; })
         .listen([out] (const int& z) { out->push_back(z); });
+    trans.close();
     bi.send(1);
     bj.send(4);
     unlisten();
@@ -573,8 +593,10 @@ void test_sodium::value_then_filter1()
 {
     behavior_sink<int> b(9);
     auto out = std::make_shared<vector<int>>();
+    transaction<> trans;
     auto unlisten = b.value().filter([] (const int& x) { return true; })
         .listen([out] (const int& x) { out->push_back(x); });
+    trans.close();
     b.send(2);
     b.send(7);
     unlisten();
@@ -585,8 +607,10 @@ void test_sodium::value_then_filter2a()
 {
     behavior_sink<optional<int>> b = behavior_sink<optional<int>>(optional<int>(9));
     auto out = std::make_shared<vector<int>>();
+    transaction<> trans;
     auto unlisten = filter_optional(b.value())
         .listen([out] (const int& x) { out->push_back(x); });
+    trans.close();
     b.send(optional<int>());
     b.send(optional<int>(7));
     unlisten();
@@ -597,8 +621,10 @@ void test_sodium::value_then_filter2b()
 {
     behavior_sink<optional<int>> b = behavior_sink<optional<int>>(optional<int>());
     auto out = std::make_shared<vector<int>>();
+    transaction<> trans;
     auto unlisten = filter_optional(b.value())
         .listen([out] (const int& x) { out->push_back(x); });
+    trans.close();
     b.send(optional<int>());
     b.send(optional<int>(7));
     unlisten();
@@ -609,8 +635,10 @@ void test_sodium::value_twice_then_filter()
 {
     behavior_sink<int> b(9);
     auto out = std::make_shared<vector<int>>();
+    transaction<> trans;
     auto unlisten = doubleUp(b.value()).filter([] (const int& x) { return true; })
         .listen([out] (const int& x) { out->push_back(x); });
+    trans.close();
     b.send(2);
     b.send(7);
     unlisten();
@@ -621,8 +649,10 @@ void test_sodium::value_then_once()
 {
     behavior_sink<int> b(9);
     auto out = std::make_shared<vector<int>>();
+    transaction<> trans;
     auto unlisten = b.value().once()
         .listen([out] (const int& x) { out->push_back(x); });
+    trans.close();
     b.send(2);
     b.send(7);
     unlisten();
@@ -633,8 +663,10 @@ void test_sodium::value_twice_then_once()
 {
     behavior_sink<int> b(9);
     auto out = std::make_shared<vector<int>>();
+    transaction<> trans;
     auto unlisten = doubleUp(b.value()).once()
         .listen([out] (const int& x) { out->push_back(x); });
+    trans.close();
     b.send(2);
     b.send(7);
     unlisten();
@@ -646,7 +678,9 @@ void test_sodium::value_late_listen()
     behavior_sink<int> b(9);
     b.send(8);
     auto out = std::make_shared<vector<int>>();
+    transaction<> trans;
     auto unlisten = b.value().listen([out] (const int& x) { out->push_back(x); });
+    trans.close();
     b.send(2);
     unlisten();
     CPPUNIT_ASSERT(vector<int>({ 8, 2 }) == *out);
@@ -681,11 +715,13 @@ void test_sodium::mapB1()
 {
     behavior_sink<int> b(6);
     auto out = std::make_shared<vector<string>>();
+    transaction<> trans;
     auto unlisten = b.map<string>([] (const int& x) {
         char buf[128];
         sprintf(buf, "%d", x);
         return string(buf);
     }).value().listen([out] (const string& x) { out->push_back(x); });
+    trans.close();
     b.send(8);
     unlisten();
     CPPUNIT_ASSERT(vector<string>({ string("6"), string("8") }) == *out);
@@ -696,11 +732,13 @@ void test_sodium::mapB_late_listen()
     behavior_sink<int> b(6);
     auto out = std::make_shared<vector<string>>();
     b.send(2);
+    transaction<> trans;
     auto unlisten = b.map<string>([] (const int& x) {
         char buf[128];
         sprintf(buf, "%d", x);
         return string(buf);
     }).value().listen([out] (const string& x) { out->push_back(x); });
+    trans.close();
     b.send(8);
     unlisten();
     CPPUNIT_ASSERT(vector<string>({ string("2"), string("8") }) == *out);
@@ -719,9 +757,11 @@ void test_sodium::apply1()
     });
     behavior_sink<int> ba(5);
     auto out = std::make_shared<vector<string>>();
+    transaction<> trans;
     auto unlisten = apply<int, string>(bf, ba).value().listen([out] (const string& x) {
         out->push_back(x);
     });
+    trans.close();
     bf.send([] (const int& b) { return string("12 ")+fmtInt(b); });
     ba.send(6);
     unlisten();
@@ -733,11 +773,13 @@ void test_sodium::lift1()
     behavior_sink<int> a(1);
     behavior_sink<int> b(5);
     auto out = std::make_shared<vector<string>>();
+    transaction<> trans;
     auto unlisten = lift<int,int,string>([] (const int& a, const int& b) {
         return fmtInt(a)+" "+fmtInt(b);
     }, a, b).value().listen([out] (const string& x) {
         out->push_back(x);
     });
+    trans.close();
     a.send(12);
     b.send(6);
     unlisten();
@@ -746,6 +788,7 @@ void test_sodium::lift1()
 
 void test_sodium::lift_glitch()
 {
+    transaction<> trans;
     behavior_sink<int> a(1);
     behavior<int> a3 = a.map<int>([] (const int& x) { return x * 3; });
     behavior<int> a5 = a.map<int>([] (const int& x) { return x * 5; });
@@ -754,6 +797,7 @@ void test_sodium::lift_glitch()
     }, a3, a5);
     auto out = std::make_shared<vector<string>>();
     auto unlisten = b.value().listen([out] (const string& s) { out->push_back(s); });
+    trans.close();
     a.send(2);
     unlisten();
     CPPUNIT_ASSERT(vector<string>({ string("3 5"), string("6 10") }) == *out);
@@ -782,6 +826,7 @@ struct SB
 
 void test_sodium::switch_b1()
 {
+    transaction<> trans;
     event_sink<SB> esb;
     // Split each field out of SB so we can update multiple behaviours in a
     // single transaction.
@@ -791,6 +836,7 @@ void test_sodium::switch_b1()
     behavior<char> bo = switch_b(bsw);
     auto out = std::make_shared<string>();
     auto unlisten = bo.value().listen([out] (const char& c) { *out += c; });
+    trans.close();
     esb.send(SB(optional<char>('B'),optional<char>('b'),optional<behavior<char>>()));
     esb.send(SB(optional<char>('C'),optional<char>('c'),optional<behavior<char>>(bb)));
     esb.send(SB(optional<char>('D'),optional<char>('d'),optional<behavior<char>>()));
@@ -842,10 +888,10 @@ void test_sodium::loop_behavior()
     transaction<> trans;
     behavior_loop<int> sum;
     sum.loop(ea.snapshot<int,int>(sum, [] (const int& x, const int& y) { return x+y; }).hold(0));
-    trans.close();
-
     auto out = std::make_shared<vector<int>>();
     auto unlisten = sum.value().listen([out] (const int& x) { out->push_back(x); });
+    trans.close();
+
     ea.send(2);
     ea.send(3);
     ea.send(1);
@@ -875,10 +921,12 @@ void test_sodium::collect2()
 {
     event_sink<int> ea;
     auto out = std::make_shared<vector<int>>();
+    transaction<> trans;
     behavior<int> sum = ea.hold(100).collect<int, int>(0, [] (const int& a, const int& s) {
         return tuple<int, int>(a+s, a+s);
     });
     auto unlisten = sum.value().listen([out] (const int& x) { out->push_back(x); });
+    trans.close();
     ea.send(5);
     ea.send(7);
     ea.send(1);
@@ -988,8 +1036,8 @@ void test_sodium::constant_value()
     transaction<> trans; 
     behavior<string> a("cheese");
     auto eValue = a.value();
-    trans.close();
     eValue.listen([out] (const string& x) { out->push_back(x); });
+    trans.close();
     CPPUNIT_ASSERT(vector<string>({ string("cheese") }) == *out);
 }
 
@@ -1000,8 +1048,8 @@ void test_sodium::loop_value()
     behavior_loop<string> a;
     auto eValue = a.value();
     a.loop(behavior<string>("cheese"));
-    trans.close();
     eValue.listen([out] (const string& x) { out->push_back(x); });
+    trans.close();
     CPPUNIT_ASSERT(vector<string>({ string("cheese") }) == *out);
 }
 
@@ -1015,8 +1063,8 @@ void test_sodium::loop_value_snapshot()
         return a + " " + b;
     });
     b.loop(behavior<string>("cheese"));
-    trans.close();
     auto unlisten = eSnap.listen([out] (const string& x) { out->push_back(x); });
+    trans.close();
     unlisten();
     CPPUNIT_ASSERT(vector<string>({ string("lettuce cheese") }) == *out);
 }
