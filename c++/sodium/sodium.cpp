@@ -152,7 +152,8 @@ namespace sodium {
             SODIUM_SHARED_PTR<impl::node> left(new impl::node);
             const SODIUM_SHARED_PTR<impl::node>& right = SODIUM_TUPLE_GET<1>(p);
             char* h = new char;
-            if (left->link(h, right))
+            bool cycle_detected;
+            if (left->link(h, right, cycle_detected))
                 trans->to_regen = true;
             // defer right side to make sure merge is left-biased
 #if defined(SODIUM_NO_CXX11)
@@ -283,19 +284,32 @@ namespace sodium {
             ) const
         {
             SODIUM_TUPLE<impl::event_,SODIUM_SHARED_PTR<impl::node> > p = impl::unsafe_new_event();
+            event_ eOut(SODIUM_TUPLE_GET<0>(p));
+            SODIUM_SHARED_PTR<node> nOut = SODIUM_TUPLE_GET<1>(p);
+            boost::intrusive_ptr<listen_impl_func<H_EVENT> > li = beh.impl->updates.p_listen_impl;
+            std::function<void()>* unlink = NULL;
+            if (li) {
+                SODIUM_SHARED_PTR<node> nBeh = li->n_weak.lock();
+                if (nBeh) {
+                    nBeh->link_beh(nOut);
+                    unlink = new std::function<void()>([nBeh, nOut] () {
+                            nBeh->unlink_beh(nOut);
+                        });
+                }
+            }
 #if defined(SODIUM_NO_CXX11)
-            lambda0<void>* kill = listen_raw(trans, SODIUM_TUPLE_GET<1>(p),
+            lambda0<void>* kill = listen_raw(trans, nOut,
                 new lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, transaction_impl*, const light_ptr&>(
                     new snapshot_listen(beh, combine)
                 ), false);
 #else
-            auto kill = listen_raw(trans, SODIUM_TUPLE_GET<1>(p),
+            auto kill = listen_raw(trans, nOut,
                     new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(
                         [beh, combine] (const std::shared_ptr<impl::node>& target, impl::transaction_impl* trans, const light_ptr& a) {
                         send(target, trans, combine(a, beh.impl->sample()));
                     }), false);
 #endif
-            return SODIUM_TUPLE_GET<0>(p).unsafe_add_cleanup(kill);
+            return eOut.unsafe_add_cleanup(kill, unlink);
         }
 
 #if defined(SODIUM_NO_CXX11)
@@ -483,8 +497,12 @@ namespace sodium {
 #if !defined(SODIUM_SINGLE_THREADED)
                         trans->part->mx.lock();
 #endif
-                        if (n->link(h.get(), target))
+                        bool cycle_detected;
+                        if (n->link(h.get(), target, cycle_detected))
                             trans->to_regen = true;
+                        if (cycle_detected) {
+                            printf("!!\n");
+                        }
 #if !defined(SODIUM_SINGLE_THREADED)
                         trans->part->mx.unlock();
 #endif
@@ -509,7 +527,7 @@ namespace sodium {
                     }
                     else
                         return NULL;
-                }))
+                }), n_weak)
             );
 #endif
             n->listen_impl = boost::intrusive_ptr<listen_impl_func<H_NODE> >(
@@ -732,7 +750,8 @@ namespace sodium {
                     SODIUM_TUPLE<impl::event_,SODIUM_SHARED_PTR<impl::node> > p = impl::unsafe_new_event();
                     const SODIUM_SHARED_PTR<impl::node>& out_target = SODIUM_TUPLE_GET<1>(p);
                     char* h = new char;
-                    if (in_target->link(h, out_target))
+                    bool cycle_detected;
+                    if (in_target->link(h, out_target, cycle_detected))
                         trans0->to_regen = true;
 #if defined(SODIUM_NO_CXX11)
    *** // TO DO

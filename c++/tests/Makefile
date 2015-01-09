@@ -1,5 +1,5 @@
 ifeq ($(NO_CXX11),)
-all: test_sodium memory/release-sink-machinery memory/switch-memory
+all: test_sodium memory/release-sink-machinery memory/switch-memory memory/loop-memory
 else
 all: test_sodium
 endif
@@ -15,7 +15,8 @@ OBJECT_FILES= \
     ../sodium/lock_pool.o \
     ../sodium/light_ptr.o \
     ../sodium/transaction.o \
-    ../sodium/sodium.o
+    ../sodium/sodium.o \
+    ../sodium/brainy_ptr.o
 
 SODIUM_HEADERS=../sodium/sodium.h ../sodium/transaction.h ../sodium/light_ptr.h ../sodium/count_set.h ../sodium/lock_pool.h
 
@@ -34,6 +35,9 @@ memory/release-sink-machinery: $(OBJECT_FILES) memory/release-sink-machinery.o
 
 memory/switch-memory: $(OBJECT_FILES) memory/switch-memory.o
 	$(CXX) -o $@ $(OBJECT_FILES) memory/switch-memory.o -lpthread
+
+memory/loop-memory: $(OBJECT_FILES) memory/loop-memory.o
+	$(CXX) -o $@ $(OBJECT_FILES) memory/loop-memory.o -lpthread
 
 clean:
 	rm -f $(OBJECT_FILES) \

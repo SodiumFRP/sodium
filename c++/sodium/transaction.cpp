@@ -174,7 +174,44 @@ namespace sodium {
             }
         }
 
-        bool node::link(void* holder, const SODIUM_SHARED_PTR<node>& targ)
+        void dump(const node* n, int indent, bool b, set<const node*>& visited)
+        {
+            bool v = visited.find(n) != visited.end();
+            for (int i = 0; i < indent; i++)
+                printf("  ");
+            printf("%s%p%s\n", b?"B":"E", n, v ? "*":"");
+            if (!v) {
+                visited.insert(n);
+                for (auto it = n->targets.begin(); it != n->targets.end(); ++it)
+                    dump(it->n.get(), indent+1, false, visited);
+                for (auto it = n->target_behs.begin(); it != n->target_behs.end(); ++it)
+                    dump(it->get(), indent+1, true, visited);
+            }
+            /*
+            for (auto it = n->source_nodes.begin(); it != n->source_nodes.end(); ++it)
+                dump(*it, indent+1);
+                */
+        }
+
+        bool has_cycle(const node* n, set<const node*>& visited)
+        {
+            bool v = visited.find(n) != visited.end();
+            if (!v) {
+                visited.insert(n);
+                for (auto it = n->targets.begin(); it != n->targets.end(); ++it)
+                    if (has_cycle(it->n.get(), visited))
+                        return true;
+                for (auto it = n->target_behs.begin(); it != n->target_behs.end(); ++it)
+                    if (has_cycle(it->get(), visited))
+                        return true;
+                return false;
+            }
+            else
+                return true;
+        }
+
+#define VERBOSE
+        bool node::link(void* holder, const SODIUM_SHARED_PTR<node>& targ, bool& cycle_detected)
         {
             bool changed;
             if (targ) {
@@ -187,6 +224,15 @@ namespace sodium {
             else
                 changed = false;
             targets.push_front(target(holder, targ));
+#if defined(VERBOSE)
+            {
+                printf("LINK %p -> %p\n", this, targ.get());
+                set<const node*> visited;
+                dump(this, 1, false, visited);
+            }
+#endif
+            set<const node*> visited;
+            cycle_detected = has_cycle(this, visited);
             return changed;
         }
 
@@ -204,6 +250,9 @@ namespace sodium {
 #endif
                 if (this_it->h == holder) {
                     SODIUM_SHARED_PTR<node> targ = this_it->n;
+#if defined(VERBOSE)
+                    printf("UNLINK %p -> %p\n", targ.get(), this);
+#endif
 #if defined(SODIUM_NO_CXX11)
                     targets.erase(this_it);
 #else
@@ -217,6 +266,24 @@ namespace sodium {
                     break;
                 }
             }
+        }
+
+        void node::link_beh(const SODIUM_SHARED_PTR<node>& targ)
+        {
+            target_behs.push_front(targ);
+#if defined(VERBOSE)
+            printf("LINK_BEH %p -> %p\n", this, targ.get());
+            set<const node*> visited;
+            dump(this, 1, true, visited);
+#endif
+        }
+
+        void node::unlink_beh(const SODIUM_SHARED_PTR<node>& targ)
+        {
+#if defined(VERBOSE)
+            printf("UNLINK_BEH %p -> %p\n", this, targ.get());
+#endif
+            target_behs.remove(targ);
         }
 
         bool node::ensure_bigger_than(std::set<node*>& visited, rank_t limit)

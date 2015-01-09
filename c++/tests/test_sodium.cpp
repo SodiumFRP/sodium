@@ -1139,7 +1139,7 @@ void test_sodium::detach_sink()
 
 int main(int argc, char* argv[])
 {
-    for (int i = 0; i < 100; i++) {
+    for (int i = 0; i < 1; i++) {
         CppUnit::TextUi::TestRunner runner;
         runner.addTest( test_sodium::suite() );
         runner.run();

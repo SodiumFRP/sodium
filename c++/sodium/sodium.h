@@ -1190,6 +1190,8 @@ namespace sodium {
                 transaction<P> trans;
                 impl.send(trans.impl(), light_ptr::create<A>(a));
             }
+
+            const SODIUM_SHARED_PTR<impl::node>& target() const { return impl.target; }
     };
 
 #if defined(SODIUM_NO_CXX11)

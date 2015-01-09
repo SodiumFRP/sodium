@@ -196,14 +196,15 @@ namespace sodium {
                 const SODIUM_SHARED_PTR<holder>&,
                 bool)> closure;
 #endif
-            listen_impl_func(closure* func)
-                : func(func) {}
+            listen_impl_func(closure* func, const SODIUM_WEAK_PTR<node>& n_weak)
+                : func(func), n_weak(n_weak) {}
             ~listen_impl_func()
             {
                 assert(cleanups.begin() == cleanups.end() && func == NULL);
             }
             count_set counts;
             closure* func;
+            SODIUM_WEAK_PTR<node> n_weak;
 #if defined(SODIUM_NO_CXX11)
             SODIUM_FORWARD_LIST<lambda0<void>*> cleanups;
 #else
@@ -298,12 +299,15 @@ namespace sodium {
 
                 rank_t rank;
                 SODIUM_FORWARD_LIST<node::target> targets;
+                SODIUM_FORWARD_LIST<SODIUM_SHARED_PTR<node>> target_behs;
                 SODIUM_FORWARD_LIST<light_ptr> firings;
                 SODIUM_FORWARD_LIST<boost::intrusive_ptr<listen_impl_func<H_EVENT> > > sources;
                 boost::intrusive_ptr<listen_impl_func<H_NODE> > listen_impl;
 
-                bool link(void* holder, const SODIUM_SHARED_PTR<node>& target);
+                bool link(void* holder, const SODIUM_SHARED_PTR<node>& target, bool& cycle_detected);
                 void unlink(void* holder);
+                void link_beh(const SODIUM_SHARED_PTR<node>& targ);
+                void unlink_beh(const SODIUM_SHARED_PTR<node>& targ);
 
             private:
                 bool ensure_bigger_than(std::set<node*>& visited, rank_t limit);
