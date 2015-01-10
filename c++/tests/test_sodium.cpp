@@ -1125,7 +1125,7 @@ void test_sodium::detach_sink()
     // Check that holding the sink doesn't prevent a cleanup added to an event
     // from working.
     event_sink<int>* esnk = new event_sink<int>;
-    shared_ptr<bool> cleanedUp(new bool(false));
+    SODIUM_SHARED_PTR<bool> cleanedUp(new bool(false));
     event<int>* e(new event<int>(esnk->add_cleanup([cleanedUp] () {
         *cleanedUp = true;
     })));
@@ -1133,6 +1133,29 @@ void test_sodium::detach_sink()
     delete e;
     CPPUNIT_ASSERT(*cleanedUp == true);
     delete esnk;
+}
+
+void test_sodium::move_semantics()
+{
+    behavior<unique_ptr<int>> pointer(unique_ptr<int>(new int(625)));
+    int v = 0;
+    auto value = pointer.map<int>([&](const unique_ptr<int>& pInt) {
+        return pInt ? *pInt : 0;
+    });
+    CPPUNIT_ASSERT(value.sample() == 625);
+}
+
+void test_sodium::move_semantics_sink()
+{
+    behavior_sink<unique_ptr<int>> bs(unique_ptr<int>(new int(1)));
+
+    int newValue = 0;
+    bs.updates().listen([&](const unique_ptr<int>& pInt) {
+        newValue = pInt ? *pInt : 0;
+    });
+
+    bs.send(unique_ptr<int>(new int(2)));
+    CPPUNIT_ASSERT(newValue == 2);
 }
 
 #endif

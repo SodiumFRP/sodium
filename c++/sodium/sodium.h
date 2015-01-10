@@ -513,6 +513,11 @@ namespace sodium {
             {
             }
 
+            behavior(A&& a)
+                : impl::behavior_(light_ptr::create<A>(std::move(a)))
+            {
+            }
+
             /*!
              * Sample the value of this behavior.
              */
@@ -1190,6 +1195,11 @@ namespace sodium {
                 transaction<P> trans;
                 impl.send(trans.impl(), light_ptr::create<A>(a));
             }
+
+            void send(A&& a) const {
+                transaction<P> trans;
+                impl.send(trans.impl(), light_ptr::create<A>(std::move(a)));
+            }
     };
 
 #if defined(SODIUM_NO_CXX11)
@@ -1298,9 +1308,20 @@ namespace sodium {
                 this->impl = SODIUM_SHARED_PTR<impl::behavior_impl>(hold(trans.impl(), light_ptr::create<A>(initA), e));
             }
 
+            behavior_sink(A&& initA)
+            {
+                transaction<P> trans;
+                this->impl = SODIUM_SHARED_PTR<impl::behavior_impl>(hold(trans.impl(), light_ptr::create<A>(std::move(initA)), e));
+            }
+
             void send(const A& a) const
             {
                 e.send(a);
+            }
+
+            void send(A&& a) const
+            {
+                e.send(std::move(a));
             }
     };
 
