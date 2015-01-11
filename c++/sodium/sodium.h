@@ -513,6 +513,11 @@ namespace sodium {
             {
             }
 
+            behavior(A&& a)
+                : impl::behavior_(light_ptr::create<A>(std::move(a)))
+            {
+            }
+
             /*!
              * Sample the value of this behavior.
              */
@@ -937,6 +942,12 @@ namespace sodium {
                 return behavior<A, P>(hold_(trans.impl(), light_ptr::create<A>(initA)));
             }
 
+            behavior<A, P> hold(A&& initA) const
+            {
+                transaction<P> trans;
+                return behavior<A, P>(hold_(trans.impl(), light_ptr::create<A>(std::move(initA))));
+            }
+
             behavior<A, P> hold_lazy(const std::function<A()>& initA) const
             {
                 transaction<P> trans;
@@ -1191,6 +1202,11 @@ namespace sodium {
                 impl.send(trans.impl(), light_ptr::create<A>(a));
             }
 
+            void send(A&& a) const {
+                transaction<P> trans;
+                impl.send(trans.impl(), light_ptr::create<A>(std::move(a)));
+            }
+
             const SODIUM_SHARED_PTR<impl::node>& target() const { return impl.target; }
     };
 
@@ -1300,9 +1316,20 @@ namespace sodium {
                 this->impl = SODIUM_SHARED_PTR<impl::behavior_impl>(hold(trans.impl(), light_ptr::create<A>(initA), e));
             }
 
+            behavior_sink(A&& initA)
+            {
+                transaction<P> trans;
+                this->impl = SODIUM_SHARED_PTR<impl::behavior_impl>(hold(trans.impl(), light_ptr::create<A>(std::move(initA)), e));
+            }
+
             void send(const A& a) const
             {
                 e.send(a);
+            }
+
+            void send(A&& a) const
+            {
+                e.send(std::move(a));
             }
     };
 
