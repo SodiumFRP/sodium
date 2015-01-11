@@ -284,12 +284,25 @@ namespace sodium {
                 struct target {
                     target(
                         void* h,
-                        const SODIUM_SHARED_PTR<node>& n
+                        const SODIUM_SHARED_PTR<node>& n_strong,
+                        const SODIUM_WEAK_PTR<node>& n_weak
                     ) : h(h),
-                        n(n) {}
+                        n_strong(n_strong),
+                        n_weak(n_weak) {}
 
                     void* h;
-                    SODIUM_SHARED_PTR<node> n;
+                    SODIUM_SHARED_PTR<node> n_strong;
+                    SODIUM_WEAK_PTR<node> n_weak;
+                    SODIUM_SHARED_PTR<node> get_node() const {
+                        if (n_strong) return n_strong; else
+                                      return n_weak.lock();
+                    }
+                    node* get_node_ptr() const {
+                        if (n_strong) return n_strong.get(); else {
+                            SODIUM_SHARED_PTR<node> n = n_weak.lock();
+                            return n.get();
+                        }
+                    }
                 };
 
             public:

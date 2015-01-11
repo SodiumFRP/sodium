@@ -1460,8 +1460,8 @@ namespace sodium {
             {
                 if (!i->looped) {
                     transaction<P> trans;
-                    SODIUM_SHARED_PTR<impl::node> target(i->target);
-                    *i->pKill = e.listen_raw(trans.impl(), target, NULL, false);
+                    *i->pKill = e.listen_raw(trans.impl(), i->target, NULL, false);
+                    i->target.reset();
                     i->looped = true;
                 }
                 else {

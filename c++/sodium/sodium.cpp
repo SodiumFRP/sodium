@@ -297,16 +297,17 @@ namespace sodium {
                         });
                 }
             }
+            SODIUM_SHARED_PTR<impl::behavior_impl> impl(beh.impl);
 #if defined(SODIUM_NO_CXX11)
             lambda0<void>* kill = listen_raw(trans, nOut,
                 new lambda3<void, const SODIUM_SHARED_PTR<impl::node>&, transaction_impl*, const light_ptr&>(
-                    new snapshot_listen(beh, combine)
+                    new snapshot_listen(impl, combine)
                 ), false);
 #else
             auto kill = listen_raw(trans, nOut,
                     new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(
-                        [beh, combine] (const std::shared_ptr<impl::node>& target, impl::transaction_impl* trans, const light_ptr& a) {
-                        send(target, trans, combine(a, beh.impl->sample()));
+                        [impl, combine] (const std::shared_ptr<impl::node>& target, impl::transaction_impl* trans, const light_ptr& a) {
+                        send(target, trans, combine(a, impl->sample()));
                     }), false);
 #endif
             return eOut.unsafe_add_cleanup(kill, unlink);
@@ -407,8 +408,8 @@ namespace sodium {
             SODIUM_FORWARD_LIST<node::target>::iterator it = n->targets.begin();
             while (it != n->targets.end()) {
                 node::target* f = &*it;
-                trans->prioritized(f->n, [f, a] (transaction_impl* trans) {
-                    ((holder*)f->h)->handle(f->n, trans, a);
+                trans->prioritized(f->get_node(), [f, a] (transaction_impl* trans) {
+                    ((holder*)f->h)->handle(f->get_node(), trans, a);
                 });
                 it++;
             }
@@ -501,7 +502,7 @@ namespace sodium {
                         if (n->link(h.get(), target, cycle_detected))
                             trans->to_regen = true;
                         if (cycle_detected) {
-                            printf("!!\n");
+                            printf("!! %p %ld\n", target.get(), target.use_count());
                         }
 #if !defined(SODIUM_SINGLE_THREADED)
                         trans->part->mx.unlock();

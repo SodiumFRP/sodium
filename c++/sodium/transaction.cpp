@@ -165,7 +165,7 @@ namespace sodium {
         node::~node()
         {
             for (SODIUM_FORWARD_LIST<node::target>::iterator it = targets.begin(); it != targets.end(); it++) {
-                SODIUM_SHARED_PTR<node> targ = it->n;
+                SODIUM_SHARED_PTR<node> targ = it->get_node();
                 if (targ) {
                     boost::intrusive_ptr<listen_impl_func<H_EVENT> > li(
                         reinterpret_cast<listen_impl_func<H_EVENT>*>(listen_impl.get()));
@@ -183,7 +183,7 @@ namespace sodium {
             if (!v) {
                 visited.insert(n);
                 for (auto it = n->targets.begin(); it != n->targets.end(); ++it)
-                    dump(it->n.get(), indent+1, false, visited);
+                    dump(it->get_node_ptr(), indent+1, false, visited);
                 for (auto it = n->target_behs.begin(); it != n->target_behs.end(); ++it)
                     dump(it->get(), indent+1, true, visited);
             }
@@ -193,21 +193,20 @@ namespace sodium {
                 */
         }
 
-        bool has_cycle(const node* n, set<const node*>& visited)
+        bool references_me(const node* n, set<const node*>& visited, const node* me)
         {
+            if (n == me) return true;
             bool v = visited.find(n) != visited.end();
             if (!v) {
                 visited.insert(n);
                 for (auto it = n->targets.begin(); it != n->targets.end(); ++it)
-                    if (has_cycle(it->n.get(), visited))
+                    if (references_me(it->get_node_ptr(), visited, me))
                         return true;
                 for (auto it = n->target_behs.begin(); it != n->target_behs.end(); ++it)
-                    if (has_cycle(it->get(), visited))
+                    if (references_me(it->get(), visited, me))
                         return true;
-                return false;
             }
-            else
-                return true;
+            return false;
         }
 
 #define VERBOSE
@@ -223,7 +222,18 @@ namespace sodium {
             }
             else
                 changed = false;
-            targets.push_front(target(holder, targ));
+            {
+                set<const node*> visited;
+                cycle_detected = references_me(targ.get(), visited, this);
+            }
+            if (cycle_detected) {
+                SODIUM_SHARED_PTR<node> nullStrong;
+                targets.push_front(target(holder, nullStrong, targ));
+            }
+            else {
+                SODIUM_WEAK_PTR<node> nullWeak;
+                targets.push_front(target(holder, targ, nullWeak));
+            }
 #if defined(VERBOSE)
             {
                 printf("LINK %p -> %p\n", this, targ.get());
@@ -231,8 +241,6 @@ namespace sodium {
                 dump(this, 1, false, visited);
             }
 #endif
-            set<const node*> visited;
-            cycle_detected = has_cycle(this, visited);
             return changed;
         }
 
@@ -249,7 +257,7 @@ namespace sodium {
                     break;
 #endif
                 if (this_it->h == holder) {
-                    SODIUM_SHARED_PTR<node> targ = this_it->n;
+                    SODIUM_SHARED_PTR<node> targ = this_it->get_node();
 #if defined(VERBOSE)
                     printf("UNLINK %p -> %p\n", targ.get(), this);
 #endif
@@ -294,8 +302,8 @@ namespace sodium {
                 visited.insert(this);
                 rank = limit + 1;
                 for (SODIUM_FORWARD_LIST<node::target>::iterator it = targets.begin(); it != targets.end(); ++it)
-                    if (it->n)
-                        it->n->ensure_bigger_than(visited, rank);
+                    if (it->get_node())
+                        it->get_node()->ensure_bigger_than(visited, rank);
                 return true;
             }
         }
