@@ -942,6 +942,12 @@ namespace sodium {
                 return behavior<A, P>(hold_(trans.impl(), light_ptr::create<A>(initA)));
             }
 
+            behavior<A, P> hold(A&& initA) const
+            {
+                transaction<P> trans;
+                return behavior<A, P>(hold_(trans.impl(), light_ptr::create<A>(std::move(initA))));
+            }
+
             behavior<A, P> hold_lazy(const std::function<A()>& initA) const
             {
                 transaction<P> trans;

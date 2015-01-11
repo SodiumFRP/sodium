@@ -1158,6 +1158,16 @@ void test_sodium::move_semantics_sink()
     CPPUNIT_ASSERT(newValue == 2);
 }
 
+void test_sodium::move_semantics_hold()
+{
+    event<unique_ptr<int>> e;
+    auto b = e.hold(unique_ptr<int>(new int(345)));
+    auto val = b.map<int>([](const unique_ptr<int>& pInt) {
+        return pInt ? *pInt : 0;
+    });
+    CPPUNIT_ASSERT(val.sample() == 345);
+}
+
 #endif
 
 int main(int argc, char* argv[])
