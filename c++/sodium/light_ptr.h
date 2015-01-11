@@ -7,6 +7,8 @@
 #ifndef _SODIUM_LIGHTPTR_H_
 #define _SODIUM_LIGHTPTR_H_
 
+#include <utility>
+
 namespace sodium {
     template <class A>
     void deleter(void* a0)
@@ -37,6 +39,9 @@ namespace sodium {
             name(const name& other); \
             template <class A> static inline name create(const A& a) { \
                 return name(new A(a), deleter<A>); \
+            } \
+            template <class A> static inline name create(A&& a) { \
+                return name(new A(std::move(a)), deleter<A>); \
             } \
             name(void* value, impl::deleter del); \
             ~name(); \

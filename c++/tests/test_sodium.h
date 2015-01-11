@@ -73,6 +73,9 @@ class test_sodium : public CppUnit::TestFixture {
     CPPUNIT_TEST(lift_loop);
     CPPUNIT_TEST(loop_switch_e);
     CPPUNIT_TEST(detach_sink);
+    CPPUNIT_TEST(move_semantics);
+    CPPUNIT_TEST(move_semantics_sink);
+    CPPUNIT_TEST(move_semantics_hold);
 #endif
     CPPUNIT_TEST_SUITE_END();
 
@@ -140,6 +143,9 @@ class test_sodium : public CppUnit::TestFixture {
     void lift_loop();
     void loop_switch_e();
     void detach_sink();
+    void move_semantics();
+    void move_semantics_sink();
+    void move_semantics_hold();
 #endif
 };
 
