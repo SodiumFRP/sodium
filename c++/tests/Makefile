@@ -26,6 +26,7 @@ SODIUM_HEADERS=../sodium/sodium.h ../sodium/transaction.h ../sodium/light_ptr.h 
 test_sodium.o:                   $(SODIUM_HEADERS) test_sodium.h
 memory/release-sink-machinery.o: $(SODIUM_HEADERS)
 memory/switch-memory.o:          $(SODIUM_HEADERS)
+memory/loop-memory.o:            $(SODIUM_HEADERS)
 
 test_sodium: $(OBJECT_FILES) test_sodium.o
 	$(CXX) -o $@ $(OBJECT_FILES) test_sodium.o -lpthread -lcppunit
@@ -42,4 +43,6 @@ memory/loop-memory: $(OBJECT_FILES) memory/loop-memory.o
 clean:
 	rm -f $(OBJECT_FILES) \
             test_sodium test_sodium.o \
-            memory/release-sink-machinery memory/release-sink-machinery.o
+            memory/release-sink-machinery memory/release-sink-machinery.o \
+            memory/switch-memory memory/switch-memory.o \
+            memory/loop-memory memory/loop-memory.o

@@ -289,11 +289,14 @@ namespace sodium {
             boost::intrusive_ptr<listen_impl_func<H_EVENT> > li = beh.impl->updates.p_listen_impl;
             std::function<void()>* unlink = NULL;
             if (li) {
-                SODIUM_SHARED_PTR<node> nBeh = li->n_weak.lock();
+                SODIUM_WEAK_PTR<node> nBehWeak = li->n_weak;
+                SODIUM_SHARED_PTR<node> nBeh = nBehWeak.lock();
                 if (nBeh) {
                     nBeh->link_beh(nOut);
-                    unlink = new std::function<void()>([nBeh, nOut] () {
-                            nBeh->unlink_beh(nOut);
+                    unlink = new std::function<void()>([nBehWeak, nOut] () {
+                            SODIUM_SHARED_PTR<node> nBeh = nBehWeak.lock();
+                            if (nBeh)
+                                nBeh->unlink_beh(nOut);
                         });
                 }
             }
@@ -501,9 +504,6 @@ namespace sodium {
                         bool cycle_detected;
                         if (n->link(h.get(), target, cycle_detected))
                             trans->to_regen = true;
-                        if (cycle_detected) {
-                            printf("!! %p %ld\n", target.get(), target.use_count());
-                        }
 #if !defined(SODIUM_SINGLE_THREADED)
                         trans->part->mx.unlock();
 #endif
@@ -604,6 +604,7 @@ namespace sodium {
                 SODIUM_SHARED_PTR<behavior_impl_concrete<behavior_state> > impl(
                     new behavior_impl_concrete<behavior_state>(input, state, std::shared_ptr<behavior_impl>())
                 );
+                SODIUM_WEAK_PTR<behavior_impl_concrete<behavior_state> > weakImpl(impl);
                 impl->kill =
                     input.listen_raw(trans0, SODIUM_SHARED_PTR<node>(new node(SODIUM_IMPL_RANK_T_MAX)),
 #if defined(SODIUM_NO_CXX11)
@@ -612,12 +613,15 @@ namespace sodium {
                     )
 #else
                     new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(
-                        [impl] (const std::shared_ptr<impl::node>& target, transaction_impl* trans, const light_ptr& ptr) {
-                            bool first = !impl->state.update;
-                            impl->state.update = boost::optional<light_ptr>(ptr);
-                            if (first)
-                                trans->last([impl] () { impl->state.finalize(); });
-                            send(target, trans, ptr);
+                        [weakImpl] (const std::shared_ptr<impl::node>& target, transaction_impl* trans, const light_ptr& ptr) {
+                            SODIUM_SHARED_PTR<behavior_impl_concrete<behavior_state> > impl = weakImpl.lock();
+                            if (impl) {
+                                bool first = impl->state.update;
+                                impl->state.update = boost::optional<light_ptr>(ptr);
+                                if (first)
+                                    trans->last([impl] () { impl->state.finalize(); });
+                                send(target, trans, ptr);
+                            }
                         })
 #endif
                     , false);

@@ -1487,6 +1487,7 @@ namespace sodium {
             {
                 if (!i->looped) {
                     transaction<P> trans;
+                    delete *i->pKill;
                     *i->pKill = e.listen_raw(trans.impl(), i->target, NULL, false);
                     i->target.reset();
                     i->looped = true;

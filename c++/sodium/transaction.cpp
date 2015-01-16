@@ -174,25 +174,6 @@ namespace sodium {
             }
         }
 
-        void dump(const node* n, int indent, bool b, set<const node*>& visited)
-        {
-            bool v = visited.find(n) != visited.end();
-            for (int i = 0; i < indent; i++)
-                printf("  ");
-            printf("%s%p%s\n", b?"B":"E", n, v ? "*":"");
-            if (!v) {
-                visited.insert(n);
-                for (auto it = n->targets.begin(); it != n->targets.end(); ++it)
-                    dump(it->get_node_ptr(), indent+1, false, visited);
-                for (auto it = n->target_behs.begin(); it != n->target_behs.end(); ++it)
-                    dump(it->get(), indent+1, true, visited);
-            }
-            /*
-            for (auto it = n->source_nodes.begin(); it != n->source_nodes.end(); ++it)
-                dump(*it, indent+1);
-                */
-        }
-
         bool references_me(const node* n, set<const node*>& visited, const node* me)
         {
             if (n == me) return true;
@@ -209,7 +190,35 @@ namespace sodium {
             return false;
         }
 
-#define VERBOSE
+//#define VERBOSE
+#if defined(VERBOSE)
+        void dump(const node* n, int indent, bool b, set<const node*>& visited)
+        {
+            bool v = visited.find(n) != visited.end();
+            for (int i = 0; i < indent; i++)
+                printf("  ");
+            printf("%s%p%s\n", b?"B":"E", n, v ? "*":"");
+            if (!v) {
+                visited.insert(n);
+                for (auto it = n->targets.begin(); it != n->targets.end(); ++it) {
+                    if (it->n_strong)
+                        printf("strong %ld\n", it->n_strong.use_count());
+                    else {
+                        auto p = it->n_weak.lock();
+                        printf("weak %ld\n", p.use_count());
+                    }
+                    dump(it->get_node_ptr(), indent+1, false, visited);
+                }
+                for (auto it = n->target_behs.begin(); it != n->target_behs.end(); ++it)
+                    dump(it->get(), indent+1, true, visited);
+            }
+            /*
+            for (auto it = n->source_nodes.begin(); it != n->source_nodes.end(); ++it)
+                dump(*it, indent+1);
+                */
+        }
+#endif
+
         bool node::link(void* holder, const SODIUM_SHARED_PTR<node>& targ, bool& cycle_detected)
         {
             bool changed;
