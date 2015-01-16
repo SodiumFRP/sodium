@@ -27,18 +27,18 @@ public class Fill {
             Stream<Fuel> sStart,
             Cell<Double> price1, Cell<Double> price2,
             Cell<Double> price3) {
-        Stream<Optional<Double>> ePrice1 = sStart.snapshot(price1,
+        Stream<Optional<Double>> sPrice1 = sStart.snapshot(price1,
             (f, p) -> f == Fuel.ONE ? Optional.of(p)
                                     : Optional.empty());
-        Stream<Optional<Double>> ePrice2 = sStart.snapshot(price2,
+        Stream<Optional<Double>> sPrice2 = sStart.snapshot(price2,
             (f, p) -> f == Fuel.TWO ? Optional.of(p)
                                     : Optional.empty());
-        Stream<Optional<Double>> ePrice3 = sStart.snapshot(price3,
+        Stream<Optional<Double>> sPrice3 = sStart.snapshot(price3,
             (f, p) -> f == Fuel.THREE ? Optional.of(p)
                                       : Optional.empty());
 
         return Stream.filterOptional(
-            ePrice1.merge(ePrice2.merge(ePrice3))
+            sPrice1.merge(sPrice2.merge(sPrice3))
         ).hold(0.0);
     }
 }
