@@ -9,12 +9,12 @@ public class Keypad {
     public final Stream<Unit> sBeep;
 
     public Keypad(Stream<Key> sKeypad,
-                  Stream<Unit> eClear,
+                  Stream<Unit> sClear,
                   Cell<Boolean> active) {
-        this(sKeypad.gate(active), eClear);
+        this(sKeypad.gate(active), sClear);
     }
 
-    public Keypad(Stream<Key> sKeypad, Stream<Unit> eClear) {
+    public Keypad(Stream<Key> sKeypad, Stream<Unit> sClear) {
         CellLoop<Integer> value = new CellLoop<>();
         this.value = value;
         Stream<Integer> sKeyUpdate = Stream.filterOptional(
@@ -42,7 +42,7 @@ public class Keypad {
                 }
             )
         );
-        value.loop(sKeyUpdate.merge(eClear.map(u -> 0))
+        value.loop(sKeyUpdate.merge(sClear.map(u -> 0))
                              .hold(0));
         sBeep = sKeyUpdate.map(k -> Unit.UNIT);
     }
