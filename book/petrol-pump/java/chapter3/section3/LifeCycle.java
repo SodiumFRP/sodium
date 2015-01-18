@@ -7,7 +7,7 @@ import java.util.Optional;
 public class LifeCycle {
     public Stream<Fuel> sStart;
     public Cell<Optional<Fuel>> fillActive;
-    public Stream<End> eEnd;
+    public Stream<End> sEnd;
 
     public enum End { END }
 
@@ -40,12 +40,12 @@ public class LifeCycle {
             eLiftNozzle.snapshot(fillActive, (newFuel, fillActive_) ->
                 fillActive_.isPresent() ? Optional.empty()
                                         : Optional.of(newFuel)));
-        this.eEnd = whenSetDown(sNozzle1, Fuel.ONE, fillActive).merge(
+        this.sEnd = whenSetDown(sNozzle1, Fuel.ONE, fillActive).merge(
                     whenSetDown(sNozzle2, Fuel.TWO, fillActive).merge(
                     whenSetDown(sNozzle3, Fuel.THREE, fillActive)));
         fillActive.loop(
             sStart.map(f -> Optional.of(f))
-                  .merge(eEnd.map(e -> Optional.empty()))
+                  .merge(sEnd.map(e -> Optional.empty()))
                   .hold(Optional.empty())
         );
     }
