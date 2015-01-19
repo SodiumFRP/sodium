@@ -616,7 +616,7 @@ namespace sodium {
                         [weakImpl] (const std::shared_ptr<impl::node>& target, transaction_impl* trans, const light_ptr& ptr) {
                             SODIUM_SHARED_PTR<behavior_impl_concrete<behavior_state> > impl = weakImpl.lock();
                             if (impl) {
-                                bool first = impl->state.update;
+                                bool first = !impl->state.update;
                                 impl->state.update = boost::optional<light_ptr>(ptr);
                                 if (first)
                                     trans->last([impl] () { impl->state.finalize(); });

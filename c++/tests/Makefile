@@ -15,8 +15,7 @@ OBJECT_FILES= \
     ../sodium/lock_pool.o \
     ../sodium/light_ptr.o \
     ../sodium/transaction.o \
-    ../sodium/sodium.o \
-    ../sodium/brainy_ptr.o
+    ../sodium/sodium.o
 
 SODIUM_HEADERS=../sodium/sodium.h ../sodium/transaction.h ../sodium/light_ptr.h ../sodium/count_set.h ../sodium/lock_pool.h
 
