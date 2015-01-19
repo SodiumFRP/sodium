@@ -152,8 +152,7 @@ namespace sodium {
             SODIUM_SHARED_PTR<impl::node> left(new impl::node);
             const SODIUM_SHARED_PTR<impl::node>& right = SODIUM_TUPLE_GET<1>(p);
             char* h = new char;
-            bool cycle_detected;
-            if (left->link(h, right, cycle_detected))
+            if (left->link(h, right))
                 trans->to_regen = true;
             // defer right side to make sure merge is left-biased
 #if defined(SODIUM_NO_CXX11)
@@ -369,10 +368,8 @@ namespace sodium {
         {
         }
 
-        behavior_impl::behavior_impl(
-            const event_& updates,
-            const SODIUM_SHARED_PTR<behavior_impl>& parent)
-            : updates(updates), kill(NULL), parent(parent)
+        behavior_impl::behavior_impl(const event_& updates)
+            : updates(updates), kill(NULL)
         {
         }
 
@@ -501,8 +498,7 @@ namespace sodium {
 #if !defined(SODIUM_SINGLE_THREADED)
                         trans->part->mx.lock();
 #endif
-                        bool cycle_detected;
-                        if (n->link(h.get(), target, cycle_detected))
+                        if (n->link(h.get(), target))
                             trans->to_regen = true;
 #if !defined(SODIUM_SINGLE_THREADED)
                         trans->part->mx.unlock();
@@ -602,7 +598,7 @@ namespace sodium {
 #endif
                 behavior_state state(initValue);
                 SODIUM_SHARED_PTR<behavior_impl_concrete<behavior_state> > impl(
-                    new behavior_impl_concrete<behavior_state>(input, state, std::shared_ptr<behavior_impl>())
+                    new behavior_impl_concrete<behavior_state>(input, state)
                 );
                 SODIUM_WEAK_PTR<behavior_impl_concrete<behavior_state> > weakImpl(impl);
                 impl->kill =
@@ -635,7 +631,7 @@ namespace sodium {
         {
             behavior_state_lazy state(initValue);
             SODIUM_SHARED_PTR<behavior_impl_concrete<behavior_state_lazy> > impl(
-                new behavior_impl_concrete<behavior_state_lazy>(input, state, std::shared_ptr<behavior_impl>())
+                new behavior_impl_concrete<behavior_state_lazy>(input, state)
             );
             impl->kill =
                 input.listen_raw(trans0, SODIUM_SHARED_PTR<node>(new node(SODIUM_IMPL_RANK_T_MAX)),
@@ -755,8 +751,7 @@ namespace sodium {
                     SODIUM_TUPLE<impl::event_,SODIUM_SHARED_PTR<impl::node> > p = impl::unsafe_new_event();
                     const SODIUM_SHARED_PTR<impl::node>& out_target = SODIUM_TUPLE_GET<1>(p);
                     char* h = new char;
-                    bool cycle_detected;
-                    if (in_target->link(h, out_target, cycle_detected))
+                    if (in_target->link(h, out_target))
                         trans0->to_regen = true;
 #if defined(SODIUM_NO_CXX11)
    *** // TO DO

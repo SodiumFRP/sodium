@@ -30,7 +30,6 @@ int main(int argc, char* argv[])
     //event<unit> eTick2 = eTick.map<unit>([] (const unit& u) { return u; });
     behavior<int> ticks0 = mkCount(eTick);
     
-    #if 0
     behavior_sink<behavior<int>> tickss(ticks0);
     auto kill = switch_b<int>(tickss).updates().listen([] (const int& i) { printf("%d\n", i); });
     while (true) {
@@ -42,7 +41,6 @@ int main(int argc, char* argv[])
         tickss.send(eTick.accum<int>(0, [] (const unit&, const int& i) -> int { return i+1; }));
     }
     kill();
-    #endif
     return 0;
 }
 

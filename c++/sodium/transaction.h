@@ -317,7 +317,7 @@ namespace sodium {
                 SODIUM_FORWARD_LIST<boost::intrusive_ptr<listen_impl_func<H_EVENT> > > sources;
                 boost::intrusive_ptr<listen_impl_func<H_NODE> > listen_impl;
 
-                bool link(void* holder, const SODIUM_SHARED_PTR<node>& target, bool& cycle_detected);
+                bool link(void* holder, const SODIUM_SHARED_PTR<node>& target);
                 void unlink(void* holder);
                 void link_beh(const SODIUM_SHARED_PTR<node>& targ);
                 void unlink_beh(const SODIUM_SHARED_PTR<node>& targ);
@@ -375,8 +375,10 @@ namespace sodium {
             std::map<entryID, prioritized_entry> entries;
             std::multiset<std::pair<rank_t, entryID>> prioritizedQ;
 #if defined(SODIUM_NO_CXX11)
+            std::list<lambda0<void> > prelastQ;
             std::list<lambda0<void> > lastQ;
 #else
+            std::list<std::function<void()>> prelastQ;
             std::list<std::function<void()>> lastQ;
 #endif
             bool to_regen;
@@ -384,9 +386,11 @@ namespace sodium {
             void prioritized(const SODIUM_SHARED_PTR<impl::node>& target,
 #if defined(SODIUM_NO_CXX11)
                              const lambda1<void, impl::transaction_impl*>& action);
+            void prelast(const lambda0<void>& action);
             void last(const lambda0<void>& action);
 #else
                              const std::function<void(impl::transaction_impl*)>& action);
+            void prelast(const std::function<void()>& action);
             void last(const std::function<void()>& action);
 #endif
 

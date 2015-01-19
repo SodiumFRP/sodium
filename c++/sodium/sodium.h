@@ -23,10 +23,6 @@
 
 #define SODIUM_CONSTANT_OPTIMIZATION
 
-// TO DO:
-// the sample_lazy() mechanism is not correct yet. The lazy value needs to be
-// fixed at the end of the transaction.
-
 namespace sodium {
     template <class A, class P> class event;
     template <class A, class P> class behavior;
@@ -97,6 +93,8 @@ namespace sodium {
             event_();
             event_(const boost::intrusive_ptr<listen_impl_func<H_EVENT> >& p_listen_impl)
                 : p_listen_impl(p_listen_impl) {}
+
+            void* test_pointer() const { return p_listen_impl.get(); }
 
 #if defined(SODIUM_CONSTANT_OPTIMIZATION)
             bool is_never() const { return !impl::alive(p_listen_impl); }
@@ -296,9 +294,7 @@ namespace sodium {
 
         struct behavior_impl {
             behavior_impl();
-            behavior_impl(
-                const event_& updates,
-                const SODIUM_SHARED_PTR<behavior_impl>& parent);
+            behavior_impl(const event_& updates);
             virtual ~behavior_impl();
 
             virtual const light_ptr& sample() const = 0;
@@ -313,7 +309,6 @@ namespace sodium {
 #else
             std::function<void()>* kill;
 #endif
-            SODIUM_SHARED_PTR<behavior_impl> parent;
 
 #if defined(SODIUM_NO_CXX11)
             lambda3<lambda0<void>, transaction_impl*, const SODIUM_SHARED_PTR<node>&,
@@ -342,9 +337,8 @@ namespace sodium {
         struct behavior_impl_concrete : behavior_impl {
             behavior_impl_concrete(
                 const event_& updates,
-                const state_t& state,
-                const SODIUM_SHARED_PTR<behavior_impl>& parent)
-            : behavior_impl(updates, parent),
+                const state_t& state)
+            : behavior_impl(updates),
               state(state)
             {
             }
@@ -356,22 +350,19 @@ namespace sodium {
 
         struct behavior_impl_loop : behavior_impl {
             behavior_impl_loop(
-                const event_& updates,
-                const SODIUM_SHARED_PTR<SODIUM_SHARED_PTR<behavior_impl> >& pLooped,
-                const SODIUM_SHARED_PTR<behavior_impl>& parent)
-            : behavior_impl(updates, parent),
-              pLooped(pLooped)
+                const event_& updates)
+            : behavior_impl(updates)
             {
             }
-            SODIUM_SHARED_PTR<SODIUM_SHARED_PTR<behavior_impl> > pLooped;
+            SODIUM_SHARED_PTR<behavior_impl> impl;
 
             void assertLooped() const {
-                if (!*pLooped)
+                if (!impl)
                     throw std::runtime_error("behavior_loop sampled before it was looped");
             }
 
-            virtual const light_ptr& sample() const { assertLooped(); return (*pLooped)->sample(); }
-            virtual const light_ptr& newValue() const { assertLooped(); return (*pLooped)->newValue(); }
+            virtual const light_ptr& sample() const { assertLooped(); return impl->sample(); }
+            virtual const light_ptr& newValue() const { assertLooped(); return impl->newValue(); }
         };
 
         struct behavior_state {
@@ -473,6 +464,30 @@ namespace sodium {
     template <class A, class P>
     class event;
 
+    namespace impl {
+        template <class A, class P>
+        struct lazy_value {
+            lazy_value(const SODIUM_SHARED_PTR<impl::behavior_impl>& impl) : impl(impl) {}
+            SODIUM_SHARED_PTR<impl::behavior_impl> impl;
+            boost::optional<A> value;
+
+            // Fix the value at the end of the transaction
+            void fix()
+            {
+                value = boost::optional<A>(*impl->sample().template cast_ptr<A>(NULL));
+            }
+
+            A get() const {
+                if (value)
+                    return value.get();
+                else {
+                    transaction<P> trans;
+                    return *impl->sample().template cast_ptr<A>(NULL);
+                }
+            }
+        };
+    }
+
     /*!
      * A like an event, but it tracks the input event's current value and causes it
      * always to be output once at the beginning for each listener.
@@ -527,11 +542,13 @@ namespace sodium {
             }
 
             std::function<A()> sample_lazy() const {
-                const SODIUM_SHARED_PTR<impl::behavior_impl>& impl(this->impl);
-                return [impl] () -> A {
-                    transaction<P> trans;
-                    return *impl->sample().template cast_ptr<A>(NULL);
-                };
+                SODIUM_SHARED_PTR<impl::lazy_value<A,P>> value(new impl::lazy_value<A,P>(impl));
+                transaction<P> trans;
+                // Fix the lazy value before processing hold updates for this transaction.
+                trans.impl()->prelast([value] () {
+                    value->fix();
+                });
+                return [value] () -> A { return value->get(); };
             }
 
             /*!
@@ -1414,8 +1431,6 @@ namespace sodium {
      *   event_loop<A> ea;
      *   auto ea_out = do_something(ea);
      *   ea.loop(ea_out);  // ea is now the same as ea_out
-     *
-     * TO DO: Loops do not yet get deallocated properly.
      */
     template <class A, class P EQ_DEF_PART>
     class event_loop : public event<A, P>
@@ -1524,8 +1539,6 @@ namespace sodium {
      *   behavior_loop<A> ba;
      *   auto ba_out = do_something(ea);
      *   ea.loop(ba_out);  // ba is now the same as ba_out
-     *
-     * TO DO: Loops do not yet get deallocated properly.
      */
     template <class A, class P EQ_DEF_PART>
     class behavior_loop : public behavior<A, P>
@@ -1536,22 +1549,15 @@ namespace sodium {
 
         public:
             behavior_loop()
-                : behavior<A, P>(impl::behavior_()),
-                  pLooped(new SODIUM_SHARED_PTR<impl::behavior_impl>)
+                : behavior<A, P>(impl::behavior_())
             {
-                this->impl = SODIUM_SHARED_PTR<impl::behavior_impl>(new impl::behavior_impl_loop(
-                    elp,
-                    pLooped,
-                    SODIUM_SHARED_PTR<impl::behavior_impl>()));
+                this->impl = SODIUM_SHARED_PTR<impl::behavior_impl>(new impl::behavior_impl_loop(elp));
             }
 
             void loop(const behavior<A, P>& b)
             {
                 elp.loop(b.updates());
-                *pLooped = b.impl;
-                // TO DO: This keeps the memory allocated in a loop. Figure out how to
-                // break the loop.
-                this->impl->parent = b.impl;
+                static_cast<impl::behavior_impl_loop*>(this->impl.get())->impl = b.impl;
             }
     };
 

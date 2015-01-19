@@ -219,7 +219,7 @@ namespace sodium {
         }
 #endif
 
-        bool node::link(void* holder, const SODIUM_SHARED_PTR<node>& targ, bool& cycle_detected)
+        bool node::link(void* holder, const SODIUM_SHARED_PTR<node>& targ)
         {
             bool changed;
             if (targ) {
@@ -231,6 +231,7 @@ namespace sodium {
             }
             else
                 changed = false;
+            bool cycle_detected;
             {
                 set<const node*> visited;
                 cycle_detected = references_me(targ.get(), visited, this);
@@ -361,6 +362,10 @@ namespace sodium {
                 entries.erase(eit);
                 action(this);
             }
+            while (prelastQ.begin() != prelastQ.end()) {
+                (*prelastQ.begin())();
+                prelastQ.erase(prelastQ.begin());
+            }
             while (lastQ.begin() != lastQ.end()) {
                 (*lastQ.begin())();
                 lastQ.erase(lastQ.begin());
@@ -378,6 +383,15 @@ namespace sodium {
             next_entry_id = next_entry_id.succ();
             entries.insert(pair<entryID, prioritized_entry>(id, prioritized_entry(target, f)));
             prioritizedQ.insert(pair<rank_t, entryID>(rankOf(target), id));
+        }
+
+#if defined(SODIUM_NO_CXX11)
+        void transaction_impl::prelast(const lambda0<void>& action)
+#else
+        void transaction_impl::prelast(const std::function<void()>& action)
+#endif
+        {
+            prelastQ.push_back(action);
         }
 
 #if defined(SODIUM_NO_CXX11)
