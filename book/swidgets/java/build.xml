@@ -1,0 +1,49 @@
+<project default="compile">
+
+    <target name="clean">
+        <delete dir="swidgets/build"/>
+        <delete file="swidgets/swidgets.jar"/>
+        <delete>
+            <fileset dir="examples" includes="*.class"/>
+        </delete>
+    </target>
+
+    <target name="compile">
+        <subant buildpath="../../../java"/>
+        <mkdir dir="swidgets/build/src"/>
+        <javac debug="true" srcdir="swidgets/src" destdir="swidgets/build/src" source="1.8" target="1.8">
+            <classpath>
+                <pathelement path="../../../java/sodium/sodium.jar"/>
+            </classpath>
+        </javac>
+    </target>
+
+    <target name="jar" depends="compile">
+        <mkdir dir="swidgets/build/jar" />
+        <jar destfile="swidgets/swidgets.jar" basedir="swidgets/build/src">
+            <manifest>
+                <attribute name="Main-Class" value="oata.HelloWorld" />
+            </manifest>
+        </jar>
+    </target>
+
+    <target name="compile-examples" depends="jar">
+        <javac debug="true" srcdir="examples" destdir="examples" source="1.8" target="1.8">
+            <classpath>
+                <pathelement path="swidgets/swidgets.jar"/>
+                <pathelement path="../../../java/sodium/sodium.jar"/>
+            </classpath>
+        </javac>
+    </target>
+
+    <target name="example1" depends="compile-examples">
+        <java classname="Example1" fork="true">
+            <classpath>
+                <pathelement path="examples"/>
+                <pathelement path="swidgets/swidgets.jar"/>
+                <pathelement path="../../../java/sodium/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
+</project>
