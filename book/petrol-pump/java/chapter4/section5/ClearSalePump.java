@@ -1,9 +1,9 @@
-package chapter3.section7;
+package chapter4.section5;
 
 import pump.*;
-import chapter3.section3.LifeCycle;
-import chapter3.section6.Fill;
-import chapter3.section6.ShowDollarsPump;
+import chapter4.section1.LifeCycle;
+import chapter4.section4.Fill;
+import chapter4.section4.ShowDollarsPump;
 import sodium.*;
 import java.util.Optional;
 

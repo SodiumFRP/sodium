@@ -3,15 +3,24 @@ import java.awt.*;
 import swidgets.*;
 import sodium.*;
 
-public class SSpinner extends JComponent
-{
-    SSpinner()
-    {
-        StreamLoop<String> sSetText = new StreamLoop<>();
-        STextField textField = new STextField("0", sSetText, 5);
-        this.text = textField.text;
-        SButton up = new SButton("+");
-        SButton down = new SButton("-");
+public class SSpinner extends JComponent {
+    SSpinner(int initialValue) {
+        StreamLoop<Integer> sSetValue = new StreamLoop<>();
+        STextField textField = new STextField(
+            sSetValue.map(v -> Integer.toString(v)),
+            Integer.toString(initialValue),
+            5
+        );
+        this.value = textField.text.map(txt -> {
+            try {
+                return Integer.parseInt(txt);
+            }
+            catch (NumberFormatException e) {
+                return 0;
+            }
+        });
+        SButton plus = new SButton("+");
+        SButton minus = new SButton("-");
 
         GridBagLayout gridbag = new GridBagLayout();
         setLayout(gridbag);
@@ -28,32 +37,23 @@ public class SSpinner extends JComponent
         c.gridheight = 1;
         c.gridx = 1;
         c.gridy = 0;
-        gridbag.setConstraints(up, c);
-        add(up);
+        gridbag.setConstraints(plus, c);
+        add(plus);
         c.gridx = 1;
         c.gridy = 1;
-        gridbag.setConstraints(down, c);
-        add(down);
+        gridbag.setConstraints(minus, c);
+        add(minus);
 
-        Stream<Integer> sUpDelta = up.sClicked.map(u -> 1);
-        Stream<Integer> sDownDelta = down.sClicked.map(u -> -1);
-        Stream<Integer> sDelta = sUpDelta.merge(sDownDelta);
-        sSetText.loop(
+        Stream<Integer> sPlusDelta = plus.sClicked.map(u -> 1);
+        Stream<Integer> sMinusDelta = minus.sClicked.map(u -> -1);
+        Stream<Integer> sDelta = sPlusDelta.merge(sMinusDelta);
+        sSetValue.loop(
             sDelta.snapshot(
-                textField.text,
-                (delta, txt) -> {
-                    try {
-                        return Integer.toString(Integer.parseInt(txt) + delta);
-                    }
-                    catch (NumberFormatException e) {
-                        System.err.println("can't parse "+txt);
-                        return txt;
-                    }
-                }
-            )
-        );
+                this.value,
+                (delta, value) -> delta + value
+            ));
     }
 
-    public final Cell<String> text;
+    public final Cell<Integer> value;
 }
 

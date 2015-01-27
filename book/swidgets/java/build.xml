@@ -36,8 +36,38 @@
         </javac>
     </target>
 
-    <target name="example1" depends="compile-examples">
-        <java classname="Example1" fork="true">
+    <target name="ClearField" depends="compile-examples">
+        <java classname="ClearField" fork="true">
+            <classpath>
+                <pathelement path="examples"/>
+                <pathelement path="swidgets/swidgets.jar"/>
+                <pathelement path="../../../java/sodium/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="Translate" depends="compile-examples">
+        <java classname="Translate" fork="true">
+            <classpath>
+                <pathelement path="examples"/>
+                <pathelement path="swidgets/swidgets.jar"/>
+                <pathelement path="../../../java/sodium/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="SpinMe" depends="compile-examples">
+        <java classname="SpinMe" fork="true">
+            <classpath>
+                <pathelement path="examples"/>
+                <pathelement path="swidgets/swidgets.jar"/>
+                <pathelement path="../../../java/sodium/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="FormValidation" depends="compile-examples">
+        <java classname="FormValidation" fork="true">
             <classpath>
                 <pathelement path="examples"/>
                 <pathelement path="swidgets/swidgets.jar"/>

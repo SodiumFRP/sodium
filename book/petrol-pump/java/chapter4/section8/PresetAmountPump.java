@@ -1,13 +1,13 @@
-package chapter3.section10;
+package chapter4.section8;
 
 import pump.*;
-import chapter3.section3.LifeCycle;
-import chapter3.section3.LifeCycle.End;
-import chapter3.section5.AccumulatePulsesPump;
-import chapter3.section6.Fill;
-import chapter3.section6.ShowDollarsPump;
-import chapter3.section7.NotifyPointOfSale;
-import chapter3.section8.Keypad;
+import chapter4.section1.LifeCycle;
+import chapter4.section1.LifeCycle.End;
+import chapter4.section3.AccumulatePulsesPump;
+import chapter4.section4.Fill;
+import chapter4.section4.ShowDollarsPump;
+import chapter4.section5.NotifyPointOfSale;
+import chapter4.section6.Keypad;
 import sodium.*;
 import java.util.Optional;
 

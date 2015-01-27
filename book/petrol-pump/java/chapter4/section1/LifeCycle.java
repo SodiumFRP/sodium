@@ -1,4 +1,4 @@
-package chapter3.section3;
+package chapter4.section1;
 
 import pump.*;
 import sodium.*;
@@ -32,8 +32,8 @@ public class LifeCycle {
                      Stream<UpDown> sNozzle2,
                      Stream<UpDown> sNozzle3) {
         Stream<Fuel> eLiftNozzle = whenLifted(sNozzle1, Fuel.ONE).merge(
-                                  whenLifted(sNozzle2, Fuel.TWO).merge(
-                                  whenLifted(sNozzle3, Fuel.THREE)));
+                                   whenLifted(sNozzle2, Fuel.TWO).merge(
+                                   whenLifted(sNozzle3, Fuel.THREE)));
         CellLoop<Optional<Fuel>> fillActive = new CellLoop<>();
         this.fillActive = fillActive;
         this.sStart = Stream.filterOptional(
