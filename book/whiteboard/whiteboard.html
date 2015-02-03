@@ -1,0 +1,80 @@
+<html>
+<head><title>Whiteboard</title></head>
+<script src="rx.all.min.js"></script>
+</head>
+<body>
+<h1>Whiteboard</h1>
+<div><button id="clear">Clear</button></div>
+<canvas style="border-style: solid; border-width: 1px" id="myCanvas" width="600" height="400">
+  Your browser does not support the HTML5 canvas tag.
+</canvas>
+<script type="text/javascript">
+
+function whiteboard(canvas, mouseDown, mouseMove, mouseUp) {
+    var emptyPic = [];
+    function newStroke(color, xy) {
+        return { color: color, points: [xy] };
+    }
+    function addPointToStroke(stroke, xy) {
+        stroke.points.push(xy);
+    }
+    var startStroke = mouseDown.map(function(xy) {
+            return function(pic) {
+                pic = pic.slice();
+                pic.push(newStroke('#ff0000', xy));
+                return pic;
+            };
+        });
+    var drawing = mouseDown.map(function(e) { return true; }).merge(
+                  mouseUp.map(function(e) { return false; }));
+    var continueStroke = mouseMove.combineLatest(drawing,
+            function(xy, drawing) {
+                if (drawing)
+                    return function(pic) {
+                        pic = pic.slice();
+                        addPointToStroke(pic[pic.length-1], xy);
+                        return pic;
+                    };
+                else
+                    return null;
+            }
+        ).filter(function(pic) { return pic !== null; });
+    var clearPic = clear.map(function(e) {
+            return function(pic) {
+                return emptyPic;
+            };
+        })
+    var changes = startStroke.merge(continueStroke)
+                             .merge(clearPic);
+    return changes.scan(emptyPic,
+                        function(pic, f) { return f(pic); });
+}
+
+var clearButton = document.getElementById("clear");
+var clear = Rx.Observable.fromEvent(clearButton, 'click');
+
+var canvas = document.getElementById("myCanvas");
+var getXY = function(e) { return { x : e.pageX - canvas.offsetLeft,
+                                   y : e.pageY - canvas.offsetTop }; };
+var mouseDown = Rx.Observable.fromEvent(canvas, 'mousedown').map(getXY);
+var mouseMove = Rx.Observable.fromEvent(canvas, 'mousemove').map(getXY); 
+var mouseUp = Rx.Observable.fromEvent(canvas, 'mouseup').map(getXY);
+
+var pic = whiteboard(clear, mouseDown, mouseMove, mouseUp);
+
+var subscription = pic.subscribe(function (pic) {
+        var ctx=canvas.getContext("2d");
+        ctx.clearRect(0, 0, canvas.width, canvas.height);
+        for (var i = 0; i < pic.length; i++) {
+            ctx.beginPath();
+            var points = pic[i].points;
+            ctx.moveTo(points[0].x, points[0].y);
+            for (var j = 1; j < points.length; j++)
+                ctx.lineTo(points[j].x, points[j].y);
+            ctx.strokeStyle = pic[i].color;
+            ctx.stroke();
+        }
+    });
+
+</script>
+</body>
