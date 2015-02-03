@@ -10,8 +10,9 @@
 </canvas>
 <script type="text/javascript">
 
+var emptyPic = [];
+
 function whiteboard(canvas, mouseDown, mouseMove, mouseUp) {
-    var emptyPic = [];
     function newStroke(color, xy) {
         return { color: color, points: [xy] };
     }

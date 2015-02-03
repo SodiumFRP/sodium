@@ -48,11 +48,8 @@ function whiteboard(canvas, mouseDown, mouseMove, mouseUp) {
         })
     var changes = startStroke.merge(continueStroke)
                              .merge(clearPic);
-    var pic = changes.scan(emptyPic,
+    return changes.scan(emptyPic,
                         function(pic, f) { return f(pic); });
-    var picSub = new Rx.BehaviorSubject(emptyPic);
-    pic.subscribe(picSub);
-    return picSub;
 }
 
 function remoteWhiteboard(localPic) {
@@ -66,6 +63,7 @@ function remoteWhiteboard(localPic) {
         );
 
     var pic = Rx.Observable.create(function (observer) {
+            observer.onNext(emptyPic);
             connection = new WebSocket('ws://127.0.0.1:1433');
     
             connection.onopen = function () {
@@ -89,10 +87,7 @@ function remoteWhiteboard(localPic) {
                 status.innerHTML = "failed to connect";
             };
         }).publish();
-    pic.connect();
-    var picSub = new Rx.BehaviorSubject([]);
-    pic.subscribe(picSub);
-    return picSub;
+    return pic.refCount();
 }
 
 var clearButton = document.getElementById("clear");
