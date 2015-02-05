@@ -6,16 +6,13 @@ import sodium.*;
 
 public class Translate {
     public static void main(String[] args) {
-        JFrame view = new JFrame("Translate") {
-            public Dimension getPreferredSize() {
-                return new Dimension(400, 160);
-            }
-        };
+        JFrame view = new JFrame("Translate");
         view.setLayout(new FlowLayout());
 
         Transaction.runVoid(() -> {
             StreamLoop<String> sTranslate = new StreamLoop<>();
-            STextField text = new STextField(sTranslate, "I like FRP", 15);
+            STextField text = new STextField(sTranslate,
+                "I like FRP", 15);
             SButton translate = new SButton("Translate");
             sTranslate.loop(
                 translate.sClicked.snapshot(text.text, (u, txt) ->
@@ -31,7 +28,7 @@ public class Translate {
                 System.exit(0);
             }
         });
-        view.pack();
+        view.setSize(400, 160);
         view.setVisible(true);
     }
 }

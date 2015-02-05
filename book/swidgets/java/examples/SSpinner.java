@@ -3,7 +3,7 @@ import java.awt.*;
 import swidgets.*;
 import sodium.*;
 
-public class SSpinner extends JComponent {
+public class SSpinner extends JPanel {
     SSpinner(int initialValue) {
         StreamLoop<Integer> sSetValue = new StreamLoop<>();
         STextField textField = new STextField(
@@ -31,18 +31,15 @@ public class SSpinner extends JComponent {
         c.gridy = 0;
         c.gridwidth = 1;
         c.gridheight = 2;
-        gridbag.setConstraints(textField, c);
-        add(textField);
+        add(textField, c);
         c.gridwidth = 1;
         c.gridheight = 1;
         c.gridx = 1;
         c.gridy = 0;
-        gridbag.setConstraints(plus, c);
-        add(plus);
+        add(plus, c);
         c.gridx = 1;
         c.gridy = 1;
-        gridbag.setConstraints(minus, c);
-        add(minus);
+        add(minus, c);
 
         Stream<Integer> sPlusDelta = plus.sClicked.map(u -> 1);
         Stream<Integer> sMinusDelta = minus.sClicked.map(u -> -1);

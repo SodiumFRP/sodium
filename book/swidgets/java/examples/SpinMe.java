@@ -6,11 +6,7 @@ import sodium.*;
 
 public class SpinMe {
     public static void main(String[] args) {
-        JFrame view = new JFrame("SpinMe") {
-            public Dimension getPreferredSize() {
-                return new Dimension(400, 160);
-            }
-        };
+        JFrame view = new JFrame("SpinMe");
         view.setLayout(new FlowLayout());
 
         Transaction.runVoid(() -> {
@@ -23,7 +19,7 @@ public class SpinMe {
                 System.exit(0);
             }
         });
-        view.pack();
+        view.setSize(400, 160);
         view.setVisible(true);
     }
 }
