@@ -1,0 +1,122 @@
+<html>
+  <head><title>Net whiteboard</title></head>
+  <script src="rx.all.min.js"></script>
+</head>
+<body>
+<div>Net whiteboard
+     <button id="clear">Clear local</button>
+     Server connection status: <span id="status"/></div>
+<canvas style="border-style: solid; border-width: 1px"
+           id="myCanvas" width="500" height="200">
+  Your browser does not support the HTML5 canvas tag.
+</canvas>
+<script type="text/javascript">
+  var emptyPic = [];
+  function whiteboard(canvas, mouseDown, mouseMove, mouseUp) {
+    function newStroke(color, xy) {
+      return { color: color, points: [xy] };
+    }
+    function addPointToStroke(stroke, xy) {
+      stroke.points.push(xy);
+    }
+    var startStroke = mouseDown.map(function(xy) {
+        return function(pic) {
+          pic = pic.slice();
+          pic.push(newStroke('#ff0000', xy));
+          return pic;
+        };
+      });
+    var isDown = mouseDown.map(function(e) { return true; }).merge(
+                 mouseUp.map(function(e) { return false; }));
+    var continueStroke = mouseMove.withLatestFrom(isDown,
+        function(xy, isDown) {
+          if (isDown)
+            return function(pic) {
+              pic = pic.slice();
+              addPointToStroke(pic[pic.length-1], xy);
+              return pic;
+            };
+          else
+            return null;
+        }
+      ).filter(function(pic) { return pic !== null; });
+    var clearPic = clear.map(function(e) {
+        return function(pic) {
+          return emptyPic;
+        };
+      })
+    var changes = startStroke.merge(continueStroke)
+                             .merge(clearPic);
+    var pic = changes.scan(emptyPic,
+                        function(pic, f) { return f(pic); });
+    var picSub = new Rx.BehaviorSubject([]);
+    pic.subscribe(picSub);
+    return picSub;
+  }
+
+  function remoteWhiteboard(localPic) {
+    var connection = null;
+    var status = document.getElementById("status");
+    localPic.subscribe(function (pic) {
+        if (connection !== null)
+          connection.send(JSON.stringify(pic));
+      });
+    var pic = Rx.Observable.create(function (observer) {
+        connection = new WebSocket('ws://127.0.0.1:1433');
+        connection.onopen = function () {
+          status.innerHTML = "connected";
+          connection.onmessage = function (message) {
+            var pic;
+            try {
+              pic = JSON.parse(message.data);
+            } catch (e) {
+              console.log("Can't parse JSON: "+message.data);
+              return;
+            }
+            observer.onNext(pic);
+          };
+          connection.onclose = function(code, reason) {
+            status.innerHTML = "closed (server was terminated?)";
+          };
+        };
+        connection.onerror = function (error) {
+          status.innerHTML = "failed to connect";
+        };
+      }).publish();
+    pic.connect();
+    var picSub = new Rx.BehaviorSubject([]);
+    pic.subscribe(picSub);
+    return picSub;
+  }
+
+  var clearButton = document.getElementById("clear");
+  var clear = Rx.Observable.fromEvent(clearButton, 'click');
+  var canvas = document.getElementById("myCanvas");
+  var getXY = function(e) { return { x : e.pageX - canvas.offsetLeft,
+                                     y : e.pageY - canvas.offsetTop }; };
+  var mouseDown = Rx.Observable.fromEvent(canvas, 'mousedown').map(getXY);
+  var mouseMove = Rx.Observable.fromEvent(canvas, 'mousemove').map(getXY); 
+  var mouseUp = Rx.Observable.fromEvent(canvas, 'mouseup').map(getXY);
+  var localPic = whiteboard(clear, mouseDown, mouseMove, mouseUp);
+  var remotePic = remoteWhiteboard(localPic);
+  var pic = localPic.combineLatest(remotePic, function(loc, rem) {
+      rem = rem.slice();
+      for (var i = 0; i < rem.length; i++)
+        rem[i].color = '#0000ff';
+      return loc.concat(rem);
+    });
+  pic.subscribe(function (pic) {
+      var ctx=canvas.getContext("2d");
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      for (var i = 0; i < pic.length; i++) {
+        ctx.beginPath();
+        var points = pic[i].points;
+        ctx.moveTo(points[0].x, points[0].y);
+        for (var j = 1; j < points.length; j++)
+          ctx.lineTo(points[j].x, points[j].y);
+        ctx.strokeStyle = pic[i].color;
+        ctx.stroke();
+      }
+    });
+</script>
+</body>
