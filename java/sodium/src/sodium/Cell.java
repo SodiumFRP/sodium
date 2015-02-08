@@ -363,4 +363,16 @@ public class Cell<A> {
 	    if (cleanup != null)
             cleanup.unlisten();
 	}
+
+	/**
+	 * Listen for firings of this event. The returned Listener has an unlisten()
+	 * method to cause the listener to be removed. This is the observer pattern.
+     */
+	public final Listener listen(final Handler<A> action) {
+        //return Transaction.apply(new Lambda1<Transaction, Listener>() {
+        	//public Listener apply(final Transaction trans) {
+                return value().listen(action);
+			//}
+		//});
+	}
 }

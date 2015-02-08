@@ -45,7 +45,7 @@ public class CellTester extends TestCase {
 	public void testValues() {
 		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
-		Listener l = b.value().listen(x -> { out.add(x); });
+		Listener l = b.listen(x -> { out.add(x); });
 		b.send(2);
 		b.send(7);
 		l.unlisten();
@@ -55,7 +55,7 @@ public class CellTester extends TestCase {
 	public void testConstantBehavior() {
 	    Cell<Integer> b = new Cell<Integer>(12);
 	    List<Integer> out = new ArrayList();
-	    Listener l = b.value().listen(x -> { out.add(x); });
+	    Listener l = b.listen(x -> { out.add(x); });
 	    l.unlisten();
 	    assertEquals(Arrays.asList(12), out);
 	}
@@ -204,7 +204,7 @@ public class CellTester extends TestCase {
 		CellSink<Integer> b = new CellSink<Integer>(6);
 		List<String> out = new ArrayList<String>();
 		Listener l = b.map(x -> x.toString())
-				.value().listen(x -> { out.add(x); });
+				      .listen(x -> { out.add(x); });
 		b.send(8);
 		l.unlisten();
 		assertEquals(Arrays.asList("6", "8"), out);
@@ -215,7 +215,7 @@ public class CellTester extends TestCase {
 		List<String> out = new ArrayList<String>();
 		Cell<String> bm = b.map(x -> x.toString());
 		b.send(2);
-		Listener l = bm.value().listen(x -> { out.add(x); });
+		Listener l = bm.listen(x -> { out.add(x); });
 		b.send(8);
 		l.unlisten();
 		assertEquals(Arrays.asList("2", "8"), out);
@@ -234,7 +234,7 @@ public class CellTester extends TestCase {
 				(Long b) -> "1 "+b);
 		CellSink<Long> ba = new CellSink<Long>(5L);
 		List<String> out = new ArrayList<String>();
-		Listener l = Cell.apply(bf,ba).value().listen(x -> { out.add(x); });
+		Listener l = Cell.apply(bf,ba).listen(x -> { out.add(x); });
 		bf.send((Long b) -> "12 "+b);
 		ba.send(6L);
         l.unlisten();
@@ -249,7 +249,7 @@ public class CellTester extends TestCase {
 			(x, y) -> x + " " + y,
 			a,
 			b
-		).value().listen((String x) -> { out.add(x); });
+		).listen((String x) -> { out.add(x); });
 		a.send(12);
 		b.send(6L);
         l.unlisten();
@@ -262,7 +262,7 @@ public class CellTester extends TestCase {
 		Cell<Integer> a5 = a.map((Integer x) -> x * 5);
 		Cell<String> b = Cell.lift((x, y) -> x + " " + y, a3, a5);
 		List<String> out = new ArrayList<String>();
-		Listener l = b.value().listen((String x) -> { out.add(x); });
+		Listener l = b.listen((String x) -> { out.add(x); });
 		a.send(2);
 		l.unlisten();
 		assertEquals(Arrays.asList("3 5", "6 10"), out);
@@ -303,7 +303,7 @@ public class CellTester extends TestCase {
 	    Cell<Cell<Character>> bsw = esb.map(s -> s.sw).filterNotNull().hold(ba);
 	    Cell<Character> bo = Cell.switchC(bsw);
 		List<Character> out = new ArrayList<Character>();
-	    Listener l = bo.value().listen(c -> { out.add(c); });
+	    Listener l = bo.listen(c -> { out.add(c); });
 	    esb.send(new SB('B','b',null));
 	    esb.send(new SB('C','c',bb));
 	    esb.send(new SB('D','d',null));
@@ -363,7 +363,7 @@ public class CellTester extends TestCase {
             return sum_out_;
         });
         List<Integer> out = new ArrayList();
-        Listener l = sum_out.value().listen(x -> { out.add(x); });
+        Listener l = sum_out.listen(x -> { out.add(x); });
         ea.send(2);
         ea.send(3);
         ea.send(1);
@@ -384,7 +384,7 @@ public class CellTester extends TestCase {
                 }
             }
         );
-        Listener l = sum.value().listen((x) -> { out.add(x); });
+        Listener l = sum.listen((x) -> { out.add(x); });
         ea.send(5);
         ea.send(7);
         ea.send(1);
@@ -399,7 +399,7 @@ public class CellTester extends TestCase {
         StreamSink<Integer> ea = new StreamSink();
         List<Integer> out = new ArrayList();
         Cell<Integer> sum = ea.accum(100, (a,s)->a+s);
-        Listener l = sum.value().listen((x) -> { out.add(x); });
+        Listener l = sum.listen((x) -> { out.add(x); });
         ea.send(5);
         ea.send(7);
         ea.send(1);
@@ -452,7 +452,7 @@ public class CellTester extends TestCase {
             a.loop(new Cell<String>("tea"));
             return c_;
         });
-        Listener l = c.value().listen((x) -> { out.add(x); });
+        Listener l = c.listen((x) -> { out.add(x); });
         b.send("caddy");
         l.unlisten();
         assertEquals(Arrays.asList("tea kettle", "tea caddy"), out);

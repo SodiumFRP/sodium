@@ -28,7 +28,7 @@ public class MemoryTest1
             changeTens.map(tens -> t.map(tt -> new Tuple2<Integer,Integer>(tens, tt))).
             hold(t.map(tt -> new Tuple2<Integer,Integer>(0, tt)));
         Cell<Tuple2<Integer,Integer>> out = Cell.switchC(oout);
-        Listener l = out.value().listen(tu -> {
+        Listener l = out.listen(tu -> {
             //System.out.println(tu.a+","+tu.b);
         });
         int i = 0;

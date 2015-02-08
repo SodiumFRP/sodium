@@ -24,7 +24,7 @@ public class MemoryTest3
         StreamSink<Integer> eChange = new StreamSink<Integer>();
         Cell<Cell<Integer>> oout = eChange.map(x -> t).hold(t);
         Cell<Integer> out = Cell.switchC(oout);
-        Listener l = out.value().listen(tt -> {
+        Listener l = out.listen(tt -> {
             //System.out.println(tt)
         });
         int i = 0;
