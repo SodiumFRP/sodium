@@ -1,32 +1,93 @@
 import java.awt.Point;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import sodium.*;
 
 public class HomoZombicus {
-    public static final double velocity = 80.0;
+    public HomoZombicus(
+        World world,
+        int self,
+        double tInit,
+        Point posInit,
+        Cell<Double> clock,
+        Stream<Unit> sTick,
+        Cell<List<Character>> others)
+    {
+        CellLoop<State> state = new CellLoop<>();
+        List<Character> initOthers = new ArrayList<Character>(0);
+        Cell<All> all = Cell.lift((st, t, o) -> new All(st, t, o),
+            state, clock, others);
+        Stream<State> sChange = Stream.filterOptional(
+            sTick.snapshot(all,
+                (u, a) ->
+                    a.t - a.state.t0 >= 0.2
+                      ? Optional.of(new State(a.t, a.state.positionAt(a.t),
+                          self, a.others))
+                      : Optional.<State>empty()
+            )
+        );
+        state.loop(
+            sChange.hold(new State(tInit, posInit, self, initOthers))
+        );
+        character = all.map(a -> new Character(self,
+            CharacterType.ZOMBICUS,
+            a.state.positionAt(a.t), a.state.velocity));
+        sBite = Stream.filterOptional(
+            sTick.snapshot(all,
+                (u, a) -> {
+                    Optional<Character> oVictim = a.state.nearest(self,
+                        a.others, false);
+                    if (oVictim.isPresent()) {
+                        Character victim = oVictim.get();
+                        Point myPos = a.state.positionAt(a.t);
+                        if (Vector.distance(victim.pos, myPos) < 10)
+                            return Optional.<Integer>of(victim.id);
+                    }
+                    return Optional.<Integer>empty();
+                }
+            ));
+    }
+    public final Cell<Character> character;
+    public final Stream<Integer> sBite;
 
-    public static class State {
+    public static final double speed = 50.0;
+    private static class State {
+        final double t0;
+        final Point orig;
+        final Vector velocity;
+
         State(double t0, Point orig, int self, List<Character> others) {
             this.t0 = t0;
             this.orig = orig;
             double bestDist = 0.0;
-            Vector bestVec = null;
-            for (Character o : others)
-                if (o.id != self) {
-                    Vector vec = Vector.subtract(o.pos, orig);
-                    double dist = vec.magnitude();
-                    if (bestVec == null || dist < bestDist) {
+            Optional<Character> oOther = nearest(self, others, true);
+            if (oOther.isPresent()) {
+                Character other = oOther.get();
+                this.velocity = Vector.subtract(other.pos, orig)
+                                      .normalize().mult(
+                    other.type == CharacterType.SAPIEN
+                                       ? speed : -speed
+                );
+            }
+            else
+                this.velocity = new Vector(0,0);
+        }
+
+        Optional<Character> nearest(int self, List<Character> others, boolean allTypes) {
+            double bestDist = 0.0;
+            Optional<Character> best = Optional.empty();
+            for (Character ch : others)
+                if (ch.id != self && (allTypes || ch.type == CharacterType.SAPIEN)) {
+                    double dist = Vector.distance(ch.pos, orig);
+                    if (!best.isPresent() || dist < bestDist) {
                         bestDist = dist;
-                        bestVec = vec;
+                        best = Optional.of(ch);
                     }
                 }
-            this.velocity = bestVec == null ? new Vector(0,0)
-                                            : bestVec.normalize();
+            return best;
         }
-        double t0;
-        Point orig;
-        Vector velocity;
+
         Point positionAt(double t) {
             return velocity.mult(t - t0).add(orig);
         }
@@ -42,28 +103,5 @@ public class HomoZombicus {
         double t;
         List<Character> others;
     };
-
-    public static Cell<Character> create(
-        World world,
-        int self,
-        double tInit,
-        Point posInit,
-        Cell<Double> clock,
-        Stream<Unit> sTick,
-        Cell<List<Character>> others)
-    {
-        CellLoop<State> state = new CellLoop<>();
-        List<Character> initOthers = new ArrayList<Character>(0);
-        Cell<All> all = Cell.lift((st, t, o) -> new All(st, t, o),
-            state, clock, others);
-        state.loop(
-            sTick.snapshot(all,
-                (u, a) -> new State(a.t, a.state.positionAt(a.t), self, a.others)
-            ).hold(new State(tInit, posInit, self, initOthers))
-        );
-        return all.map(a -> new Character(self, CharacterType.ZOMBICUS,
-            a.state.positionAt(a.t),
-            a.state.velocity));
-    }
 }
 

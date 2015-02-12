@@ -1,4 +1,5 @@
 import java.awt.Point;
+import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import sodium.*;
@@ -7,7 +8,51 @@ public class HomoSapien {
     public static final double speed = 80.0;
     public static final double step = 0.02;
 
-    static class State {
+    private static class All {
+        All(State state, double t) {
+            this.state = state;
+            this.t = t;
+        }
+        final State state;
+        final double t;
+    };
+
+    public HomoSapien(
+        World world,
+        int self,
+        double tInit,
+        Point posInit,
+        Cell<Double> clock,
+        Stream<Unit> sTick)
+    {
+        Random rng = new Random();
+        CellLoop<State> state = new CellLoop<>();
+        Cell<All> all = Cell.lift(
+            (st, clk) -> new All(st, clk),
+            state, clock);
+        Stream<Unit> sChange = Stream.filterOptional(
+            sTick.snapshot(all,
+                (u, a) -> {
+                    if (world.hitsObstacle(a.state.positionAt(a.t + step))
+                        || a.t - a.state.t0 >= a.state.period)
+                        return Optional.of(Unit.UNIT);
+                    else
+                        return Optional.<Unit>empty();
+                }));
+        state.loop(
+            sChange.snapshot(all, (u, a) -> {
+                return new State(world, rng, a.t, a.state.positionAt(a.t));
+            }).hold(new State(world, rng, tInit, posInit))
+        );
+        character = all.map(a -> {
+                return new Character(self, CharacterType.SAPIEN,
+                    a.state.positionAt(a.t), a.state.velocity);
+            });
+    }
+
+    public final Cell<Character> character;
+
+    private static class State {
         State(World world, Random rng, double t0, Point orig) {
             this.t0 = t0;
             this.orig = orig;
@@ -27,45 +72,6 @@ public class HomoSapien {
         Point positionAt(double t) {
             return velocity.mult(t - t0).add(orig);
         }
-    }
-
-    public static Cell<Character> create(
-        World world,
-        int self,
-        double tInit,
-        Point posInit,
-        Cell<Double> clock,
-        Stream<Unit> sTick)
-    {
-        Random rng = new Random();
-        CellLoop<State> state = new CellLoop<>();
-        Cell<Tuple2<State, Double>> stateAndClock = Cell.lift(
-            (st, clk) -> new Tuple2<State, Double>(st, clk),
-            state, clock);
-        Stream<Unit> sChange = Stream.filterOptional(
-            sTick.snapshot(stateAndClock,
-                (u, stclk) -> {
-                    State st = stclk.a;
-                    double t = stclk.b;
-                    if (world.hitsObstacle(st.positionAt(t + step))
-                        || t - st.t0 >= st.period)
-                        return Optional.of(Unit.UNIT);
-                    else
-                        return Optional.<Unit>empty();
-                }));
-        state.loop(
-            sChange.snapshot(stateAndClock, (u, stclk) -> {
-                State st = stclk.a;
-                double t = stclk.b;
-                return new State(world, rng, t, st.positionAt(t));
-            }).hold(new State(world, rng, tInit, posInit))
-        );
-        return stateAndClock.map(stclk -> {
-                State st = stclk.a;
-                double t = stclk.b;
-                return new Character(self, CharacterType.SAPIEN,
-                    st.positionAt(t), st.velocity);
-            });
     }
 }
 

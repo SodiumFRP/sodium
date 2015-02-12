@@ -23,4 +23,7 @@ public class Vector
     public static Vector subtract(Point a, Point b) {
         return new Vector(a.x - b.x, a.y - b.y);
     }
+    public static double distance(Point a, Point b) {
+        return Vector.subtract(a, b).magnitude();
+    }
 }
