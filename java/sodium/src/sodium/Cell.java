@@ -231,9 +231,9 @@ public class Cell<A> {
                 trans1.prioritized(out.node, new Handler<Transaction>() {
                 	public void run(Transaction trans2) {
                         out.send(trans2, bf.newValue().apply(ba.newValue()));
-                        fired = false;
                     }
             	});
+            	trans1.last(() -> { fired = false; });
             }
         };
 
