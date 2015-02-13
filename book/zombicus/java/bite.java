@@ -18,11 +18,11 @@ public class bite {
     CellLoop<List<Character>> others = new CellLoop<>();
     StreamLoop<Integer> sBite = new StreamLoop<>();
     int id = 0;
-    for (int x = 100; x < 600; x += 100)
-        for (int y = 150; y < 400; y += 150) {
+    for (int x = 100; x < windowSize.width; x += 80)
+        for (int y = 150; y < windowSize.height; y += 120) {
             Point pos0 = new Point(x, y);
-            if (id != 3) {
-                BitableHomoSapien h = new BitableHomoSapien(world, id,
+            if (id != 3 && id != 21) {
+                BitableHomoSapiens h = new BitableHomoSapiens(world, id,
                     t0, pos0, clock, sTick,
                     sBite, others);
                 chars.add(h.character);
@@ -48,7 +48,7 @@ public class bite {
     }
     Stream<Integer> sBite_ = new Stream<Integer>();
     for (Stream<Integer> sb : sBites)
-        sBite_ = sBite.merge(sb);
+        sBite_ = sBite_.merge(sb);
     sBite.loop(sBite_);
     others.loop(characters.updates().hold(new ArrayList<>()));
     return characters;

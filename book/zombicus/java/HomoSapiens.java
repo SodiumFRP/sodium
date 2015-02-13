@@ -4,7 +4,7 @@ import java.util.Optional;
 import java.util.Random;
 import sodium.*;
 
-public class HomoSapien {
+public class HomoSapiens {
     public static final double speed = 80.0;
     public static final double step = 0.02;
 
@@ -17,7 +17,7 @@ public class HomoSapien {
         final double t;
     };
 
-    public HomoSapien(
+    public HomoSapiens(
         World world,
         int self,
         double tInit,
@@ -45,7 +45,7 @@ public class HomoSapien {
             }).hold(new State(world, rng, tInit, posInit))
         );
         character = all.map(a -> {
-                return new Character(self, CharacterType.SAPIEN,
+                return new Character(self, CharacterType.SAPIENS,
                     a.state.positionAt(a.t), a.state.velocity);
             });
     }

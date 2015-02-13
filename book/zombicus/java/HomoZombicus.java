@@ -51,7 +51,7 @@ public class HomoZombicus {
     public final Cell<Character> character;
     public final Stream<Integer> sBite;
 
-    public static final double speed = 50.0;
+    public static final double speed = 20.0;
     private static class State {
         final double t0;
         final Point orig;
@@ -66,7 +66,7 @@ public class HomoZombicus {
                 Character other = oOther.get();
                 this.velocity = Vector.subtract(other.pos, orig)
                                       .normalize().mult(
-                    other.type == CharacterType.SAPIEN
+                    other.type == CharacterType.SAPIENS
                                        ? speed : -speed
                 );
             }
@@ -74,12 +74,17 @@ public class HomoZombicus {
                 this.velocity = new Vector(0,0);
         }
 
-        Optional<Character> nearest(int self, List<Character> others, boolean allTypes) {
+        Optional<Character> nearest(int self, List<Character> others,
+                                     boolean includeNearZombies) {
             double bestDist = 0.0;
             Optional<Character> best = Optional.empty();
             for (Character ch : others)
-                if (ch.id != self && (allTypes || ch.type == CharacterType.SAPIEN)) {
+                if (ch.id != self &&
+                        (includeNearZombies || ch.type == CharacterType.SAPIENS)) {
                     double dist = Vector.distance(ch.pos, orig);
+                    if (ch.type == CharacterType.ZOMBICUS && dist > 60)
+                        ;
+                    else
                     if (!best.isPresent() || dist < bestDist) {
                         bestDist = dist;
                         best = Optional.of(ch);

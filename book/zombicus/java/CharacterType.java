@@ -1,5 +1,5 @@
 public enum CharacterType {
-    SAPIEN,
+    SAPIENS,
     ZOMBICUS
 }
 

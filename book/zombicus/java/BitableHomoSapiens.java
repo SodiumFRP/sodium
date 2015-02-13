@@ -4,7 +4,7 @@ import java.util.Optional;
 import java.util.Random;
 import sodium.*;
 
-public class BitableHomoSapien {
+public class BitableHomoSapiens {
     private static class All {
         All(Character character, double t) {
             this.character = character;
@@ -13,7 +13,8 @@ public class BitableHomoSapien {
         Character character;
         double t;
     }
-    public BitableHomoSapien(
+
+    public BitableHomoSapiens(
         World world,
         int self,
         double tInit,
@@ -23,7 +24,8 @@ public class BitableHomoSapien {
         Stream<Integer> sBite,
         Cell<List<Character>> others)
     {
-        HomoSapien h = new HomoSapien(world, self, tInit, posInit, clock, sTick);
+        HomoSapiens h = new HomoSapiens(world, self, tInit, posInit,
+            clock, sTick);
         Stream<Integer> sBiteMe = sBite.filter(id -> id == self);
         Cell<All> all = Cell.lift(
             (ch, t) -> new All(ch, t),

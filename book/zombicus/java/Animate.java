@@ -16,7 +16,7 @@ import sodium.*;
 
 public class Animate extends JPanel {
     private final double t0 = 0.0;
-    private final Dimension windowSize = new Dimension(600, 400);
+    private final Dimension windowSize = new Dimension(700, 500);
     private final BufferedImage sapienImgL;
     private final BufferedImage sapienImgR;
     private final BufferedImage zombicusImgL;
@@ -55,7 +55,7 @@ public class Animate extends JPanel {
             chars.sort((a, b) -> a.pos.y == b.pos.y ? 0 :
                                  a.pos.y < b.pos.y ? -1 : 1);
             for (Character c : chars) {
-                if (c.type == CharacterType.SAPIEN)
+                if (c.type == CharacterType.SAPIENS)
                     if (c.velocity.dx < 0)
                         g.drawImage(sapienImgL, c.pos.x-30, c.pos.y-73, null);
                     else

@@ -16,11 +16,11 @@ public class characters {
     List<Cell<Character>> chars = new ArrayList<>();
     CellLoop<List<Character>> others = new CellLoop<>();
     int id = 0;
-    for (int x = 100; x < 600; x += 100)
-        for (int y = 150; y < 400; y += 150) {
+    for (int x = 100; x < windowSize.width; x += 100)
+        for (int y = 150; y < windowSize.height; y += 150) {
             Point pos0 = new Point(x, y);
             if (id != 3 && id != 6 && id != 7) {
-                HomoSapien h = new HomoSapien(world, id, t0, pos0,
+                HomoSapiens h = new HomoSapiens(world, id, t0, pos0,
                     clock, sTick);
                 chars.add(h.character);
             }
