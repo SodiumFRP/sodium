@@ -1,6 +1,6 @@
 package sodium;
 
-import java.util.List;
+import java.util.HashSet;
 
 public class StreamWithSend<A> extends Stream<A> {
 
@@ -13,15 +13,21 @@ public class StreamWithSend<A> extends Stream<A> {
 			});
 		firings.add(a);
 
-		@SuppressWarnings("unchecked")
-		List<TransactionHandler<A>> listeners = (List<TransactionHandler<A>>) this.listeners
-				.clone();
-		for (TransactionHandler<A> action : listeners) {
-			try {
-				action.run(trans, a);
-			} catch (Throwable t) {
-				t.printStackTrace();
-			}
+		HashSet<Node.Target> listeners;
+        synchronized (Transaction.listenersLock) {
+            listeners = new HashSet<Node.Target>(node.listeners);
+        }
+		for (Node.Target target : node.listeners) {
+            trans.prioritized(target.node, new Handler<Transaction>() {
+                public void run(Transaction trans2) {
+                    try {  // Don't allow transactions to interfere with Sodium
+                           // internals.
+                        ((TransactionHandler<A>)target.action).run(trans, a);
+                    } catch (Throwable t) {
+                        t.printStackTrace();
+                    }
+                }
+            });
 		}
 	}
 

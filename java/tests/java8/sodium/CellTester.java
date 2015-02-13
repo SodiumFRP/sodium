@@ -60,10 +60,12 @@ public class CellTester extends TestCase {
 	    assertEquals(Arrays.asList(12), out);
 	}
 
-	public void testValuesThenMap() {
+	public void testValueThenMap() {
 		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
-		Listener l = b.value().map(x -> x+100).listen(x -> { out.add(x); });
+		Listener l = Transaction.run(
+		    () -> b.value().map(x -> x+100).listen(x -> { out.add(x); })
+        );
 		b.send(2);
 		b.send(7);
 		l.unlisten();
@@ -84,7 +86,9 @@ public class CellTester extends TestCase {
 	public void testValuesTwiceThenMap() {
 		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
-		Listener l = doubleUp(b.value()).map(x -> x+100).listen(x -> { out.add(x); });
+		Listener l = Transaction.run(
+		    () -> doubleUp(b.value()).map(x -> x+100).listen(x -> { out.add(x); })
+        );
 		b.send(2);
 		b.send(7);
 		l.unlisten();
@@ -94,7 +98,9 @@ public class CellTester extends TestCase {
 	public void testValuesThenCoalesce() {
 		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
-		Listener l = b.value().coalesce((fst, snd) -> snd).listen(x -> { out.add(x); });
+		Listener l = Transaction.run(
+		    () -> b.value().coalesce((fst, snd) -> snd).listen(x -> { out.add(x); })
+        );
 		b.send(2);
 		b.send(7);
 		l.unlisten();
@@ -104,7 +110,9 @@ public class CellTester extends TestCase {
 	public void testValuesTwiceThenCoalesce() {
 		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
-		Listener l = doubleUp(b.value()).coalesce((fst, snd) -> fst+snd).listen(x -> { out.add(x); });
+		Listener l = Transaction.run(
+		    () -> doubleUp(b.value()).coalesce((fst, snd) -> fst+snd).listen(x -> { out.add(x); })
+        );
 		b.send(2);
 		b.send(7);
 		l.unlisten();
@@ -115,7 +123,9 @@ public class CellTester extends TestCase {
 		CellSink<Integer> bi = new CellSink<Integer>(9);
 		CellSink<Character> bc = new CellSink<Character>('a');
 		List<Character> out = new ArrayList<Character>();
-		Listener l = bi.value().snapshot(bc).listen(x -> { out.add(x); });
+		Listener l = Transaction.run(
+		    () -> bi.value().snapshot(bc).listen(x -> { out.add(x); })
+        );
 		bc.send('b');
 		bi.send(2);
 		bc.send('c');
@@ -128,7 +138,9 @@ public class CellTester extends TestCase {
 		CellSink<Integer> bi = new CellSink<Integer>(9);
 		CellSink<Character> bc = new CellSink<Character>('a');
 		List<Character> out = new ArrayList<Character>();
-		Listener l = doubleUp(bi.value()).snapshot(bc).listen(x -> { out.add(x); });
+		Listener l = Transaction.run(
+		    () -> doubleUp(bi.value()).snapshot(bc).listen(x -> { out.add(x); })
+        );
 		bc.send('b');
 		bi.send(2);
 		bc.send('c');
@@ -141,8 +153,10 @@ public class CellTester extends TestCase {
 		CellSink<Integer> bi = new CellSink<Integer>(9);
 		CellSink<Integer> bj = new CellSink<Integer>(2);
 		List<Integer> out = new ArrayList<Integer>();
-		Listener l = bi.value().merge(bj.value(), (x, y) -> x+y)
-		    .listen(x -> { out.add(x); });
+		Listener l = Transaction.run(
+		    () -> bi.value().merge(bj.value(), (x, y) -> x+y)
+                .listen(x -> { out.add(x); })
+        );
 		bi.send(1);
 		bj.send(4);
 		l.unlisten();
@@ -152,7 +166,9 @@ public class CellTester extends TestCase {
 	public void testValuesThenFilter() {
 		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
-		Listener l = b.value().filter(a -> true).listen(x -> { out.add(x); });
+		Listener l = Transaction.run(
+		    () -> b.value().filter(a -> true).listen(x -> { out.add(x); })
+        );
 		b.send(2);
 		b.send(7);
 		l.unlisten();
@@ -162,7 +178,9 @@ public class CellTester extends TestCase {
 	public void testValuesTwiceThenFilter() {
 		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
-		Listener l = doubleUp(b.value()).filter(a -> true).listen(x -> { out.add(x); });
+		Listener l = Transaction.run(
+		    () -> doubleUp(b.value()).filter(a -> true).listen(x -> { out.add(x); })
+        );
 		b.send(2);
 		b.send(7);
 		l.unlisten();
@@ -172,7 +190,9 @@ public class CellTester extends TestCase {
 	public void testValuesThenOnce() {
 		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
-		Listener l = b.value().once().listen(x -> { out.add(x); });
+		Listener l = Transaction.run(
+		    () -> b.value().once().listen(x -> { out.add(x); })
+        );
 		b.send(2);
 		b.send(7);
 		l.unlisten();
@@ -182,7 +202,9 @@ public class CellTester extends TestCase {
 	public void testValuesTwiceThenOnce() {
 		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
-		Listener l = doubleUp(b.value()).once().listen(x -> { out.add(x); });
+		Listener l = Transaction.run(
+		    () -> doubleUp(b.value()).once().listen(x -> { out.add(x); })
+        );
 		b.send(2);
 		b.send(7);
 		l.unlisten();
@@ -197,7 +219,7 @@ public class CellTester extends TestCase {
 		Listener l = value.listen(x -> { out.add(x); });
 		b.send(2);
 		l.unlisten();
-		assertEquals(Arrays.asList(8,2), out);
+		assertEquals(Arrays.asList(2), out);
 	}
 	
 	public void testMapB() {
@@ -412,14 +434,13 @@ public class CellTester extends TestCase {
     public void testLoopValueSnapshot()
     {
         List<String> out = new ArrayList();
-        Stream<String> eSnap = Transaction.<Stream<String>>run(() -> {
+        Listener l = Transaction.run(() -> {
             Cell<String> a = new Cell("lettuce");
             CellLoop<String> b = new CellLoop();
-            Stream<String> eSnap_ = a.value().snapshot(b, (String aa, String bb) -> aa + " " + bb);
+            Stream<String> eSnap = a.value().snapshot(b, (String aa, String bb) -> aa + " " + bb);
             b.loop(new Cell<String>("cheese"));
-            return eSnap_;
+            return eSnap.listen((x) -> { out.add(x); });
         });
-        Listener l = eSnap.listen((x) -> { out.add(x); });
         l.unlisten();
         assertEquals(Arrays.asList("lettuce cheese"), out);
     }

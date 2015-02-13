@@ -9,12 +9,6 @@ public class StreamLoop<A> extends StreamWithSend<A> {
     	    throw new RuntimeException("StreamLoop/CellLoop must be used within an explicit transaction");
     }
 
-	protected Object[] sampleNow() {
-	    if (ea_out == null)
-            throw new RuntimeException("StreamLoop sampled before it was looped");
-        return ea_out.sampleNow();
-	}
-
     public void loop(Stream<A> ea_out)
     {
         if (this.ea_out != null)

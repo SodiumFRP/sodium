@@ -22,7 +22,6 @@ public class Stream<A> {
 
 		public void unlisten() {
 		    synchronized (Transaction.listenersLock) {
-                event.listeners.remove(action);
                 event.node.unlinkTo(target);
             }
 		}
@@ -32,7 +31,6 @@ public class Stream<A> {
 		}
 	}
 
-	protected final ArrayList<TransactionHandler<A>> listeners = new ArrayList<TransactionHandler<A>>();
 	protected final List<Listener> finalizers = new ArrayList<Listener>();
 	Node node = new Node(0L);
 	protected final List<A> firings = new ArrayList<A>();
@@ -42,8 +40,6 @@ public class Stream<A> {
 	 */
 	public Stream() {
 	}
-
-	protected Object[] sampleNow() { return null; }
 
 	/**
 	 * Listen for firings of this event. The returned Listener has an unlisten()
@@ -68,17 +64,12 @@ public class Stream<A> {
 	@SuppressWarnings("unchecked")
 	final Listener listen(Node target, Transaction trans, TransactionHandler<A> action, boolean suppressEarlierFirings) {
         synchronized (Transaction.listenersLock) {
-            if (node.linkTo(target))
+            if (node.linkTo((TransactionHandler<Unit>)action, target))
                 trans.toRegen = true;
-            listeners.add(action);
         }
+        final List<A> firings = new ArrayList<A>(this.firings);
         trans.prioritized(target, new Handler<Transaction>() {
             public void run(Transaction trans2) {
-                Object[] aNow = sampleNow();
-                if (aNow != null) {    // In cases like value(), we start with an initial value.
-                    for (int i = 0; i < aNow.length; i++)
-                        action.run(trans, (A)aNow[i]);  // <-- unchecked warning is here
-                }
                 if (!suppressEarlierFirings) {
                     // Anything sent already in this transaction must be sent now so that
                     // there's no order dependency between send and listen.
@@ -96,22 +87,7 @@ public class Stream<A> {
 	public final <B> Stream<B> map(final Lambda1<A,B> f)
 	{
 	    final Stream<A> ev = this;
-	    final StreamSink<B> out = new StreamSink<B>() {
-    		@SuppressWarnings("unchecked")
-			@Override
-            protected Object[] sampleNow()
-            {
-                Object[] oi = ev.sampleNow();
-                if (oi != null) {
-                    Object[] oo = new Object[oi.length];
-                    for (int i = 0; i < oo.length; i++)
-                        oo[i] = f.apply((A)oi[i]);
-                    return oo;
-                }
-                else
-                    return null;
-            }
-	    };
+	    final StreamSink<B> out = new StreamSink<B>();
         Listener l = listen_(out.node, new TransactionHandler<A>() {
         	public void run(Transaction trans2, A a) {
 	            out.send(trans2, f.apply(a));
@@ -163,22 +139,7 @@ public class Stream<A> {
 	public final <B,C> Stream<C> snapshot(final Cell<B> b, final Lambda2<A,B,C> f)
 	{
 	    final Stream<A> ev = this;
-		final StreamSink<C> out = new StreamSink<C>() {
-    		@SuppressWarnings("unchecked")
-			@Override
-            protected Object[] sampleNow()
-            {
-                Object[] oi = ev.sampleNow();
-                if (oi != null) {
-                    Object[] oo = new Object[oi.length];
-                    for (int i = 0; i < oo.length; i++)
-                        oo[i] = f.apply((A)oi[i], b.sampleNoTrans());
-                    return oo;
-                }
-                else
-                    return null;
-            }
-		};
+		final StreamSink<C> out = new StreamSink<C>();
         Listener l = listen_(out.node, new TransactionHandler<A>() {
         	public void run(Transaction trans2, A a) {
 	            out.send(trans2, f.apply(a, b.sampleNoTrans()));
@@ -212,42 +173,22 @@ public class Stream<A> {
      */
 	private static <A> Stream<A> merge(final Stream<A> ea, final Stream<A> eb)
 	{
-	    final StreamSink<A> out = new StreamSink<A>() {
-    		@Override
-            protected Object[] sampleNow()
-            {
-                Object[] oa = ea.sampleNow();
-                Object[] ob = eb.sampleNow();
-                if (oa != null && ob != null) {
-                    Object[] oo = new Object[oa.length + ob.length];
-                    int j = 0;
-                    for (int i = 0; i < oa.length; i++) oo[j++] = oa[i];
-                    for (int i = 0; i < ob.length; i++) oo[j++] = ob[i];
-                    return oo;
-                }
-                else
-                if (oa != null)
-                    return oa;
-                else
-                    return ob;
-            }
-	    };
+	    final StreamSink<A> out = new StreamSink<A>();
+        final Node left = new Node(0);
+        final Node right = out.node;
+        left.linkTo(null, right);
         TransactionHandler<A> h = new TransactionHandler<A>() {
         	public void run(Transaction trans, A a) {
 	            out.send(trans, a);
 	        }
         };
-        Listener l1 = ea.listen_(out.node, h);
-        Listener l2 = eb.listen_(out.node, new TransactionHandler<A>() {
-        	public void run(Transaction trans1, A a) {
-                trans1.prioritized(out.node, new Handler<Transaction>() {
-                    public void run(Transaction trans2) {
-                        out.send(trans2, a);
-                    }
-                });
-	        }
+        Listener l1 = ea.listen_(left, h);
+        Listener l2 = eb.listen_(right, h);
+        return out.addCleanup(l1).addCleanup(l2).addCleanup(new Listener() {
+            public void unlisten() {
+                left.unlinkTo(right);
+            }
         });
-        return out.addCleanup(l1).addCleanup(l2);
 	}
 
 	/**
@@ -294,22 +235,7 @@ public class Stream<A> {
 	final Stream<A> coalesce(Transaction trans1, final Lambda2<A,A,A> f)
 	{
 	    final Stream<A> ev = this;
-	    final StreamSink<A> out = new StreamSink<A>() {
-    		@SuppressWarnings("unchecked")
-			@Override
-            protected Object[] sampleNow()
-            {
-                Object[] oi = ev.sampleNow();
-                if (oi != null) {
-					A o = (A)oi[0];
-                    for (int i = 1; i < oi.length; i++)
-                        o = f.apply(o, (A)oi[i]);
-                    return new Object[] { o };
-                }
-                else
-                    return null;
-            }
-	    };
+	    final StreamSink<A> out = new StreamSink<A>();
         TransactionHandler<A> h = new CoalesceHandler<A>(f, out);
         Listener l = listen(out.node, trans1, h, false);
         return out.addCleanup(l);
@@ -344,33 +270,7 @@ public class Stream<A> {
     public final Stream<A> filter(final Lambda1<A,Boolean> f)
     {
         final Stream<A> ev = this;
-        final StreamSink<A> out = new StreamSink<A>() {
-    		@SuppressWarnings("unchecked")
-			@Override
-            protected Object[] sampleNow()
-            {
-                Object[] oi = ev.sampleNow();
-                if (oi != null) {
-                    Object[] oo = new Object[oi.length];
-                    int j = 0;
-                    for (int i = 0; i < oi.length; i++)
-                        if (f.apply((A)oi[i]))
-                            oo[j++] = oi[i];
-                    if (j == 0)
-                        oo = null;
-                    else
-                    if (j < oo.length) {
-                        Object[] oo2 = new Object[j];
-                        for (int i = 0; i < j; i++)
-                            oo2[i] = oo[i];
-                        oo = oo2;
-                    }
-                    return oo;
-                }
-                else
-                    return null;
-            }
-        };
+        final StreamSink<A> out = new StreamSink<A>();
         Listener l = listen_(out.node, new TransactionHandler<A>() {
         	public void run(Transaction trans2, A a) {
 	            if (f.apply(a)) out.send(trans2, a);
@@ -394,35 +294,7 @@ public class Stream<A> {
      */
     public static final <A> Stream<A> filterOptional(final Stream<Optional<A>> ev)
     {
-        final StreamSink<A> out = new StreamSink<A>() {
-    		@SuppressWarnings("unchecked")
-			@Override
-            protected Object[] sampleNow()
-            {
-                Object[] oi = ev.sampleNow();
-                if (oi != null) {
-                    Object[] oo = new Object[oi.length];
-                    int j = 0;
-                    for (int i = 0; i < oi.length; i++) {
-                        Optional<A> oa = (Optional<A>)oi[i];
-                        if (oa.isPresent())
-                            oo[j++] = oa.get();
-                    }
-                    if (j == 0)
-                        oo = null;
-                    else
-                    if (j < oo.length) {
-                        Object[] oo2 = new Object[j];
-                        for (int i = 0; i < j; i++)
-                            oo2[i] = oo[i];
-                        oo = oo2;
-                    }
-                    return oo;
-                }
-                else
-                    return null;
-            }
-        };
+        final StreamSink<A> out = new StreamSink<A>();
         Listener l = ev.listen_(out.node, new TransactionHandler<Optional<A>>() {
         	public void run(Transaction trans2, Optional<A> oa) {
 	            if (oa.isPresent()) out.send(trans2, oa.get());
@@ -489,27 +361,11 @@ public class Stream<A> {
         // the listener.
         final Stream<A> ev = this;
         final Listener[] la = new Listener[1];
-        final StreamSink<A> out = new StreamSink<A>() {
-            @Override
-            protected Object[] sampleNow()
-            {
-                Object[] oi = ev.sampleNow();
-                Object[] oo = oi;
-                if (oo != null) {
-                    if (oo.length > 1)
-                        oo = new Object[] { oi[0] };
-                    if (la[0] != null) {
-                        la[0].unlisten();
-                        la[0] = null;
-                    }
-                }
-                return oo;
-            }
-        };
+        final StreamSink<A> out = new StreamSink<A>();
         la[0] = ev.listen_(out.node, new TransactionHandler<A>() {
         	public void run(Transaction trans, A a) {
-	            out.send(trans, a);
 	            if (la[0] != null) {
+                    out.send(trans, a);
 	                la[0].unlisten();
 	                la[0] = null;
 	            }

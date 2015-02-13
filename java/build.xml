@@ -36,7 +36,7 @@
         <java jar="sodium/sodium.jar" fork="true" />
     </target>
 
-    <target name="tests-java8-classes" depends="jar,resolve">
+    <target name="tests-classes" depends="jar,resolve">
         <mkdir dir="build/tests/java8"/>
         <javac includeantruntime="false" debug="true" srcdir="tests/java8" destdir="build/tests/java8">
             <classpath>
@@ -47,7 +47,7 @@
         </javac>
     </target>
 
-    <target name="tests-java8" depends="jar,tests-java8-classes">
+    <target name="tests" depends="jar,tests-classes">
         <junit printsummary="yes" showoutput="yes">
             <formatter type="plain" />
             <classpath>

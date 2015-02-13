@@ -1,5 +1,7 @@
 package sodium;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.HashSet;
 import java.util.Set;
 
@@ -10,26 +12,33 @@ public class Node implements Comparable<Node> {
 		this.rank = rank;
 	}
 
+	public static class Target {
+	    Target(TransactionHandler<Unit> action, Node node) {
+	        this.action = action;
+	        this.node = node;
+	    }
+	    TransactionHandler<Unit> action;
+	    Node node;
+    }
+
 	private long rank;
-	private Set<Node> listeners = new HashSet<Node>();
+    List<Target> listeners = new ArrayList<>();
 
 	/**
 	 * @return true if any changes were made. 
 	 */
-	boolean linkTo(Node target) {
-		if (target == NULL)
-			return false;
-
+	boolean linkTo(TransactionHandler<Unit> action, Node target) {
 		boolean changed = target.ensureBiggerThan(rank, new HashSet<Node>());
-		listeners.add(target);
+		listeners.add(new Target(action, target));
 		return changed;
 	}
 
 	void unlinkTo(Node target) {
-		if (target == NULL)
-			return;
-
-		listeners.remove(target);
+	    for (int i = 0; i < listeners.size(); i++)
+            if (listeners.get(i).node == target) {
+                listeners.remove(i);
+                break;
+            }
 	}
 
 	private boolean ensureBiggerThan(long limit, Set<Node> visited) {
@@ -38,8 +47,8 @@ public class Node implements Comparable<Node> {
 
 		visited.add(this);
 		rank = limit + 1;
-		for (Node l : listeners)
-			l.ensureBiggerThan(rank, visited);
+		for (Target l : listeners)
+			l.node.ensureBiggerThan(rank, visited);
 		return true;
 	}
 

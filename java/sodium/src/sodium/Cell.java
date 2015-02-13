@@ -98,20 +98,14 @@ public class Cell<A> {
 
     final Stream<A> value(Transaction trans1)
     {
-    	final StreamSink<A> out = new StreamSink<A>() {
-    		@Override
-            protected Object[] sampleNow()
-            {
-                return new Object[] { sampleNoTrans() };
+    	StreamSink<Unit> sSpark = new StreamSink<Unit>();
+        trans1.prioritized(sSpark.node, new Handler<Transaction>() {
+            public void run(Transaction trans2) {
+                sSpark.send(trans2, Unit.UNIT);
             }
-    	};
-        Listener l = event.listen(out.node, trans1,
-    		new TransactionHandler<A>() {
-	        	public void run(Transaction trans2, A a) { out.send(trans2, a); }
-	        }, false);
-        return out.addCleanup(l)
-            .lastFiringOnly(trans1);  // Needed in case of an initial value and an update
-    	                              // in the same transaction.
+        });
+    	Stream<A> sInitial = sSpark.<A>snapshot(this);
+        return sInitial.merge(updates()).lastFiringOnly(trans1);
     }
 
     /**
@@ -218,36 +212,59 @@ public class Cell<A> {
 	 */
 	public static <A,B> Cell<B> apply(final Cell<Lambda1<A,B>> bf, final Cell<A> ba)
 	{
-		final StreamSink<B> out = new StreamSink<B>();
+    	return Transaction.apply(new Lambda1<Transaction, Cell<B>>() {
+    		public Cell<B> apply(Transaction trans0) {
+                final StreamSink<B> out = new StreamSink<B>();
 
-        final Handler<Transaction> h = new Handler<Transaction>() {
-            boolean fired = false;			
-            @Override
-            public void run(Transaction trans1) {
-                if (fired) 
-                    return;
-
-                fired = true;
-                trans1.prioritized(out.node, new Handler<Transaction>() {
-                	public void run(Transaction trans2) {
-                        out.send(trans2, bf.newValue().apply(ba.newValue()));
+                class ApplyHandler implements Handler<Transaction> {
+                    ApplyHandler(Transaction trans0) {
+                        resetFired(trans0);  // We suppress firing during the first transaction
                     }
-            	});
-            	trans1.last(() -> { fired = false; });
-            }
-        };
+                    boolean fired = true;
+                    Lambda1<A,B> f = null;
+                    A a = null;
+                    @Override
+                    public void run(Transaction trans1) {
+                        if (fired) 
+                            return;
 
-        Listener l1 = bf.updates().listen_(out.node, new TransactionHandler<Lambda1<A,B>>() {
-        	public void run(Transaction trans1, Lambda1<A,B> f) {
-                h.run(trans1);
+                        fired = true;
+                        trans1.prioritized(out.node, new Handler<Transaction>() {
+                            public void run(Transaction trans2) {
+                                out.send(trans2, f.apply(a));
+                            }
+                        });
+                        resetFired(trans1);
+                    }
+                    void resetFired(Transaction trans1) {
+                        trans1.last(() -> { fired = false; });
+                    }
+                }
+
+                Node out_target = out.node;
+                Node in_target = new Node(0);
+                in_target.linkTo(null, out_target);
+                final ApplyHandler h = new ApplyHandler(trans0);
+                Listener l1 = bf.value().listen_(in_target, new TransactionHandler<Lambda1<A,B>>() {
+                    public void run(Transaction trans1, Lambda1<A,B> f) {
+                        h.f = f;
+                        h.run(trans1);
+                    }
+                });
+                Listener l2 = ba.value().listen_(in_target, new TransactionHandler<A>() {
+                    public void run(Transaction trans1, A a) {
+                        h.a = a;
+                        h.run(trans1);
+                    }
+                });
+                return out.addCleanup(l1).addCleanup(l2).addCleanup(
+                    new Listener() {
+                        public void unlisten() {
+                            in_target.unlinkTo(out_target);
+                        }
+                    }).holdLazy(() -> bf.sampleNoTrans().apply(ba.sampleNoTrans()));
             }
         });
-        Listener l2 = ba.updates().listen_(out.node, new TransactionHandler<A>() {
-        	public void run(Transaction trans1, A a) {
-	            h.run(trans1);
-	        }
-        });
-        return out.addCleanup(l1).addCleanup(l2).holdLazy(() -> bf.sampleNoTrans().apply(ba.sampleNoTrans()));
 	}
 
 	/**
@@ -255,35 +272,39 @@ public class Cell<A> {
 	 */
 	public static <A> Cell<A> switchC(final Cell<Cell<A>> bba)
 	{
-	    Lambda0<A> za = () -> bba.sampleNoTrans().sampleNoTrans();
-	    final StreamSink<A> out = new StreamSink<A>();
-        TransactionHandler<Cell<A>> h = new TransactionHandler<Cell<A>>() {
-            private Listener currentListener;
-            @Override
-            public void run(Transaction trans2, Cell<A> ba) {
-                // Note: If any switch takes place during a transaction, then the
-                // value().listen will always cause a sample to be fetched from the
-                // one we just switched to. The caller will be fetching our output
-                // using value().listen, and value() throws away all firings except
-                // for the last one. Therefore, anything from the old input behaviour
-                // that might have happened during this transaction will be suppressed.
-                if (currentListener != null)
-                    currentListener.unlisten();
-                currentListener = ba.value(trans2).listen(out.node, trans2, new TransactionHandler<A>() {
-                	public void run(Transaction trans3, A a) {
-	                    out.send(trans3, a);
-	                }
-                }, false);
+	    return Transaction.apply(new Lambda1<Transaction, Cell<A>>() {
+	        public Cell<A> apply(Transaction trans0) {
+                Lambda0<A> za = () -> bba.sampleNoTrans().sampleNoTrans();
+                final StreamSink<A> out = new StreamSink<A>();
+                TransactionHandler<Cell<A>> h = new TransactionHandler<Cell<A>>() {
+                    private Listener currentListener;
+                    @Override
+                    public void run(Transaction trans2, Cell<A> ba) {
+                        // Note: If any switch takes place during a transaction, then the
+                        // value().listen will always cause a sample to be fetched from the
+                        // one we just switched to. The caller will be fetching our output
+                        // using value().listen, and value() throws away all firings except
+                        // for the last one. Therefore, anything from the old input behaviour
+                        // that might have happened during this transaction will be suppressed.
+                        if (currentListener != null)
+                            currentListener.unlisten();
+                        currentListener = ba.value(trans2).listen(out.node, trans2, new TransactionHandler<A>() {
+                            public void run(Transaction trans3, A a) {
+                                out.send(trans3, a);
+                            }
+                        }, false);
+                    }
+        
+                    @Override
+                    protected void finalize() throws Throwable {
+                        if (currentListener != null)
+                            currentListener.unlisten();
+                    }
+                };
+                Listener l1 = bba.value().listen_(out.node, h);
+                return out.addCleanup(l1).holdLazy(za);
             }
-
-            @Override
-            protected void finalize() throws Throwable {
-                if (currentListener != null)
-                    currentListener.unlisten();
-            }
-        };
-        Listener l1 = bba.value().listen_(out.node, h);
-        return out.addCleanup(l1).holdLazy(za);
+        });
 	}
 	
 	/**
@@ -369,10 +390,10 @@ public class Cell<A> {
 	 * method to cause the listener to be removed. This is the observer pattern.
      */
 	public final Listener listen(final Handler<A> action) {
-        //return Transaction.apply(new Lambda1<Transaction, Listener>() {
-        	//public Listener apply(final Transaction trans) {
+        return Transaction.apply(new Lambda1<Transaction, Listener>() {
+        	public Listener apply(final Transaction trans) {
                 return value().listen(action);
-			//}
-		//});
+			}
+		});
 	}
 }
