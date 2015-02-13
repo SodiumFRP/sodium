@@ -1,7 +1,8 @@
 import java.awt.Point;
 
 public class Character {
-    public Character(int id, CharacterType type, Point pos, Vector velocity) {
+    public Character(int id, CharacterType type, Point pos,
+                     Vector velocity) {
         this.id = id;
         this.type = type;
         this.pos = pos;
