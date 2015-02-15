@@ -33,7 +33,7 @@ public class BitableHomoSapiens {
         Stream<HomoZombicus> sBecome = sBiteMe.snapshot(
             all,
             (id, a) -> new HomoZombicus(
-                    world, self,
+                    self,
                     a.t, a.character.pos,
                     clock,
                     sTick, others

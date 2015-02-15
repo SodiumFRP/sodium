@@ -5,18 +5,6 @@ import java.util.Random;
 import sodium.*;
 
 public class HomoSapiens {
-    public static final double speed = 80.0;
-    public static final double step = 0.02;
-
-    private static class All {
-        All(State state, double t) {
-            this.state = state;
-            this.t = t;
-        }
-        final State state;
-        final double t;
-    };
-
     public HomoSapiens(
         World world,
         int self,
@@ -25,6 +13,40 @@ public class HomoSapiens {
         Cell<Double> clock,
         Stream<Unit> sTick)
     {
+        final double speed = 80.0;
+        final double step = 0.02;
+    
+        class State {
+            State(World world, Random rng, double t0, Point orig) {
+                this.t0 = t0;
+                this.orig = orig;
+                this.period = rng.nextDouble() * 1 + 0.5;
+                for (int i = 0; i < 10; i++) {
+                    double angle = rng.nextDouble() * Math.PI * 2;
+                    velocity = new Vector(Math.sin(angle), Math.cos(angle))
+                                .mult(speed);
+                    if (!world.hitsObstacle(positionAt(t0 + step*2)))
+                        break;
+                }
+            }
+            double t0;
+            Point orig;
+            double period;
+            Vector velocity;
+            Point positionAt(double t) {
+                return velocity.mult(t - t0).add(orig);
+            }
+        }
+
+        class All {
+            All(State state, double t) {
+                this.state = state;
+                this.t = t;
+            }
+            final State state;
+            final double t;
+        };
+
         Random rng = new Random();
         CellLoop<State> state = new CellLoop<>();
         Cell<All> all = Cell.lift(
@@ -51,27 +73,5 @@ public class HomoSapiens {
     }
 
     public final Cell<Character> character;
-
-    private static class State {
-        State(World world, Random rng, double t0, Point orig) {
-            this.t0 = t0;
-            this.orig = orig;
-            this.period = rng.nextDouble() * 1 + 0.5;
-            for (int i = 0; i < 10; i++) {
-                double angle = rng.nextDouble() * Math.PI * 2;
-                velocity = new Vector(Math.sin(angle), Math.cos(angle))
-                            .mult(speed);
-                if (!world.hitsObstacle(positionAt(t0 + step*2)))
-                    break;
-            }
-        }
-        double t0;
-        Point orig;
-        double period;
-        Vector velocity;
-        Point positionAt(double t) {
-            return velocity.mult(t - t0).add(orig);
-        }
-    }
 }
 

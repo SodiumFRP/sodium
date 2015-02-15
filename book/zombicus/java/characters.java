@@ -25,7 +25,7 @@ public class characters {
                 chars.add(h.character);
             }
             else {
-                HomoZombicus z = new HomoZombicus(world, id, t0, pos0,
+                HomoZombicus z = new HomoZombicus(id, t0, pos0,
                     clock, sTick, others);
                 chars.add(z.character);
             }
