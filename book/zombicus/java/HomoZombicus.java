@@ -72,7 +72,7 @@ public class HomoZombicus {
         }
 
         CellLoop<State> state = new CellLoop<>();
-        Cell<All> all = Cell.lift((st, t, o) -> new All(st, t, o),
+        Cell<All> all = Cell.lift((st, t, sc) -> new All(st, t, sc),
             state, clock, scene);
         Stream<State> sChange = Stream.filterOptional(
             sTick.snapshot(all,
