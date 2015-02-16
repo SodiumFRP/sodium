@@ -15,7 +15,7 @@ public class bite {
     World world = new World(windowSize);
     List<Cell<Character>> chars = new ArrayList<>();
     List<Stream<Integer>> sBites = new ArrayList<>();
-    CellLoop<List<Character>> others = new CellLoop<>();
+    CellLoop<List<Character>> scene = new CellLoop<>();
     StreamLoop<Integer> sBite = new StreamLoop<>();
     int id = 0;
     for (int x = 100; x < windowSize.width; x += 80)
@@ -24,34 +24,36 @@ public class bite {
             if (id != 3 && id != 21) {
                 BitableHomoSapiens h = new BitableHomoSapiens(world, id,
                     t0, pos0, clock, sTick,
-                    sBite, others);
+                    sBite, scene);
                 chars.add(h.character);
                 sBites.add(h.sBite);
             }
             else {
                 HomoZombicus z = new HomoZombicus(id, t0, pos0,
-                    clock, sTick, others);
+                    clock, sTick, scene);
                 chars.add(z.character);
                 sBites.add(z.sBite);
             }
             id++;
         }
-    Cell<List<Character>> characters = new Cell<>(new ArrayList<Character>());
+    Cell<List<Character>> scene_ = new Cell<>(new ArrayList<Character>());
     for (Cell<Character> c : chars) {
-        characters = Cell.lift(
+        scene_ = Cell.lift(
             (cc, l0) -> {
                 List<Character> l = new ArrayList<Character>(l0);
                 l.add(cc);
                 return l;
             },
-            c, characters);
+            c, scene_);
     }
     Stream<Integer> sBite_ = new Stream<Integer>();
     for (Stream<Integer> sb : sBites)
         sBite_ = sBite_.merge(sb);
     sBite.loop(sBite_);
-    others.loop(characters.updates().hold(new ArrayList<>()));
-    return characters;
+    ArrayList<Character> emptyScene = new ArrayList<>();
+    Cell<List<Character>> fixedScene = scene_.updates().hold(emptyScene);
+    scene.loop(fixedScene);
+    return scene;
 }
 
         );

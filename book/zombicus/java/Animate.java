@@ -22,7 +22,7 @@ public class Animate extends JPanel {
     private final BufferedImage zombicusImgL;
     private final BufferedImage zombicusImgR;
     private final BufferedImage coneImg;
-    private Cell<List<Character>> characters;
+    private Cell<List<Character>> scene;
     private CellSink<Double> clock;
     private StreamSink<Unit> sTick;
 
@@ -44,14 +44,14 @@ public class Animate extends JPanel {
         Transaction.runVoid(() -> {
             clock = new CellSink<Double>(t0);
             sTick = new StreamSink<Unit>();
-            this.characters = animation.create(t0, clock, sTick, windowSize);
+            this.scene = animation.create(t0, clock, sTick, windowSize);
         });
     }
 
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
         Transaction.runVoid(() -> {
-            List<Character> chars = new ArrayList<Character>(characters.sample());
+            List<Character> chars = new ArrayList<Character>(scene.sample());
             chars.sort((a, b) -> a.pos.y == b.pos.y ? 0 :
                                  a.pos.y < b.pos.y ? -1 : 1);
             for (Character c : chars) {

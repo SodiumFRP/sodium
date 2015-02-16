@@ -22,7 +22,7 @@ public class BitableHomoSapiens {
         Cell<Double> clock,
         Stream<Unit> sTick,
         Stream<Integer> sBite,
-        Cell<List<Character>> others)
+        Cell<List<Character>> scene)
     {
         HomoSapiens h = new HomoSapiens(world, self, tInit, posInit,
             clock, sTick);
@@ -36,7 +36,7 @@ public class BitableHomoSapiens {
                     self,
                     a.t, a.character.pos,
                     clock,
-                    sTick, others
+                    sTick, scene 
                 )
         );
         this.character = Cell.switchC(

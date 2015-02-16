@@ -11,17 +11,17 @@ public class HomoZombicus {
         Point posInit,
         Cell<Double> clock,
         Stream<Unit> sTick,
-        Cell<List<Character>> others)
+        Cell<List<Character>> scene)
     {
         final double speed = 20.0;
 
         class State {
             State(double t0, Point orig, int self,
-                                               List<Character> others) {
+                                               List<Character> scene) {
                 this.t0 = t0;
                 this.orig = orig;
                 double bestDist = 0.0;
-                Optional<Character> oOther = nearest(self, others, true);
+                Optional<Character> oOther = nearest(self, scene, true);
                 if (oOther.isPresent()) {
                     Character other = oOther.get();
                     this.velocity = Vector.subtract(other.pos, orig)
@@ -34,11 +34,11 @@ public class HomoZombicus {
                     this.velocity = new Vector(0,0);
             }
     
-            Optional<Character> nearest(int self, List<Character> others,
+            Optional<Character> nearest(int self, List<Character> scene,
                                          boolean includeNearZombies) {
                 double bestDist = 0.0;
                 Optional<Character> best = Optional.empty();
-                for (Character ch : others)
+                for (Character ch : scene)
                     if (ch.id != self && (includeNearZombies
                                     || ch.type == CharacterType.SAPIENS)) {
                         double dist = Vector.distance(ch.pos, orig);
@@ -61,31 +61,31 @@ public class HomoZombicus {
         }
 
         class All {
-            All(State state, double t, List<Character> others) {
+            All(State state, double t, List<Character> scene) {
                 this.state = state;
                 this.t = t;
-                this.others = others;
+                this.scene = scene;
             }
             State state;
             double t;
-            List<Character> others;
+            List<Character> scene;
         }
 
         CellLoop<State> state = new CellLoop<>();
         Cell<All> all = Cell.lift((st, t, o) -> new All(st, t, o),
-            state, clock, others);
+            state, clock, scene);
         Stream<State> sChange = Stream.filterOptional(
             sTick.snapshot(all,
                 (u, a) ->
                     a.t - a.state.t0 >= 0.2
                       ? Optional.of(new State(a.t, a.state.positionAt(a.t),
-                          self, a.others))
+                          self, a.scene))
                       : Optional.<State>empty()
             )
         );
-        List<Character> initOthers = new ArrayList<Character>(0);
+        List<Character> emptyScene = new ArrayList<Character>(0);
         state.loop(
-            sChange.hold(new State(tInit, posInit, self, initOthers))
+            sChange.hold(new State(tInit, posInit, self, emptyScene))
         );
         character = all.map(a -> new Character(self,
             CharacterType.ZOMBICUS,
@@ -94,7 +94,7 @@ public class HomoZombicus {
             sTick.snapshot(all,
                 (u, a) -> {
                     Optional<Character> oVictim = a.state.nearest(self,
-                        a.others, false);
+                        a.scene, false);
                     if (oVictim.isPresent()) {
                         Character victim = oVictim.get();
                         Point myPos = a.state.positionAt(a.t);
