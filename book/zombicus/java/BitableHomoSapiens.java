@@ -1,19 +1,8 @@
 import java.awt.Point;
 import java.util.List;
-import java.util.Optional;
-import java.util.Random;
 import sodium.*;
 
 public class BitableHomoSapiens {
-    private static class All {
-        All(Character character, double t) {
-            this.character = character;
-            this.t = t;
-        }
-        Character character;
-        double t;
-    }
-
     public BitableHomoSapiens(
         World world,
         int self,
@@ -24,6 +13,15 @@ public class BitableHomoSapiens {
         Stream<Integer> sBite,
         Cell<List<Character>> scene)
     {
+        class All {
+            All(Character character, double t) {
+                this.character = character;
+                this.t = t;
+            }
+            Character character;
+            double t;
+        }
+    
         HomoSapiens h = new HomoSapiens(world, self, tInit, posInit,
             clock, sTick);
         Stream<Integer> sBiteMe = sBite.filter(id -> id == self);
