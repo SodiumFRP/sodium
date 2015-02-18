@@ -32,4 +32,13 @@
         </java>
     </target>
 
+    <target name="dynamic" depends="compile">
+        <java classname="dynamic" fork="true">
+            <classpath>
+                <pathelement path="build/"/>
+                <pathelement path="../../../java/sodium/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
 </project>
