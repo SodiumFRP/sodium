@@ -9,21 +9,26 @@ public class World {
         this(windowSize, new ArrayList<Polygon>());
     }
 
-    public World(Dimension windowSize, List<Polygon> obstacles) {
+    public World(Dimension windowSize, List<Polygon> holes) {
         this.windowSize = windowSize;
-        this.obstacles = obstacles;
+        this.holes = holes;
     }
 
     private final Dimension windowSize;
-    private final List<Polygon> obstacles;
+    private final List<Polygon> holes;
+
+    public boolean hitsHole(Point pt)
+    {
+        for (Polygon o : holes)
+            if (o.contains(pt))
+                return true;
+        return false;
+    }
 
     public boolean hitsObstacle(Point pt)
     {
-        for (Polygon o : obstacles) {
-            if (o.contains(pt))
-                return true;
-        }
-        return pt.x < 31 || pt.x >= (windowSize.width - 31) ||
+        return hitsHole(pt) ||
+               pt.x < 31 || pt.x >= (windowSize.width - 31) ||
                pt.y < 73 || pt.y >= (windowSize.height - 23);
     }
 }

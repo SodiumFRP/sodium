@@ -10,8 +10,7 @@ import java.util.Optional;
 import sodium.*;
 
 public class dynamic {
-    public static <A> Cell<List<A>> sequence(Collection<Cell<A>> in)
-    {
+    public static <A> Cell<List<A>> sequence(Collection<Cell<A>> in) {
         Cell<List<A>> out = new Cell<>(new ArrayList<A>());
         for (Cell<A> c : in)
             out = Cell.lift(
@@ -19,29 +18,23 @@ public class dynamic {
                     List<A> l = new ArrayList<A>(l0);
                     l.add(a);
                     return l;
-                },
-                out, c);
+                }, out, c);
         return out;
     }
-
-    public static <A> Stream<A> merges(Collection<Stream<A>> in)
-    {
+    public static <A> Stream<A> merges(Collection<Stream<A>> in) {
         Stream<A> sOut = new Stream<>();
         for (Stream<A> c : in)
             sOut = sOut.merge(c);
         return sOut;
     }
-
-    public static Stream<Unit> periodicTimer(double t0, Cell<Double> clock, Stream<Unit> sTick, double period)
-    {
+    public static Stream<Unit> periodicTimer(double t0,
+            Cell<Double> clock, Stream<Unit> sTick, double period) {
         CellLoop<Double> tAlarm = new CellLoop<>();
-        Stream<Double> sAlarm =
-            Stream.filterOptional(
-                sTick.snapshot(clock)
-                     .snapshot(tAlarm,
-                        (t, alarm) -> t >= alarm ? Optional.of(t + period)
-                                                 : Optional.<Double>empty())
-            );
+        Stream<Double> sAlarm = Stream.filterOptional(
+            sTick.snapshot(clock).snapshot(tAlarm,
+                    (t, alarm) -> t >= alarm ? Optional.of(t + period)
+                                             : Optional.<Double>empty())
+        );
         tAlarm.loop(sAlarm.hold(t0));
         return sAlarm.map(u -> Unit.UNIT);
     }
@@ -66,29 +59,39 @@ public class dynamic {
         final Map<Integer, Stream<Integer>> sBites;
         final Map<Integer, Stream<Integer>> sDestroys;
 
-        State add(Cell<Character> chr, Stream<Integer> sBite, Stream<Integer> sDestroy) {
-            Map<Integer, Cell<Character>> chars = new HashMap<>(this.chars);
+        State add(Cell<Character> chr, Stream<Integer> sBite,
+                  Stream<Integer> sDestroy) {
+            Map<Integer, Cell<Character>> chars =
+                                         new HashMap<>(this.chars);
+            Map<Integer, Stream<Integer>> sBites =
+                                         new HashMap<>(this.sBites);
+            Map<Integer, Stream<Integer>> sDestroys =
+                                         new HashMap<>(this.sDestroys);
             chars.put(nextID, chr);
-            Map<Integer, Stream<Integer>> sBites = new HashMap<>(this.sBites);
             sBites.put(nextID, sBite);
-            Map<Integer, Stream<Integer>> sDestroys = new HashMap<>(this.sDestroys);
             sDestroys.put(nextID, sDestroy);
             return new State(nextID+1, chars, sBites, sDestroys);
         }
         State remove(int id) {
-            Map<Integer, Cell<Character>> chars = new HashMap<>(this.chars);
+            Map<Integer, Cell<Character>> chars =
+                                         new HashMap<>(this.chars);
+            Map<Integer, Stream<Integer>> sBites =
+                                         new HashMap<>(this.sBites);
+            Map<Integer, Stream<Integer>> sDestroys =
+                                         new HashMap<>(this.sDestroys);
             chars.remove(id);
-            Map<Integer, Stream<Integer>> sBites = new HashMap<>(this.sBites);
             sBites.remove(id);
-            Map<Integer, Stream<Integer>> sDestroys = new HashMap<>(this.sDestroys);
             sDestroys.remove(id);
             return new State(nextID, chars, sBites, sDestroys);
         }
     }
-
-    static Stream<Integer> fallDownHole()
-    {
-        return new Stream<Integer>();
+    static Stream<Integer> fallDownHole(int self, Stream<Unit> sTick,
+                               Cell<Character> character, World world) {
+        return Stream.filterOptional(
+            sTick.snapshot(character, (u, ch) ->
+                world.hitsHole(ch.pos) ? Optional.of(self)
+                                       : Optional.<Integer>empty()
+            ));
     }
 
     public static void main(String[] args)
@@ -102,6 +105,14 @@ public class dynamic {
             new int[] { 203, 250, 342, 455, 515, 467, 286 },
             new int[] { 376, 337, 369, 350, 401, 438, 425 },
             7));
+        obstacles.add(new Polygon(
+            new int[] { 387, 371, 414, 503, 438, 412 },
+            new int[] { 200, 256, 308, 287, 215, 181 },
+            6));
+        obstacles.add(new Polygon(
+            new int[] { 558, 536, 612, 603 },
+            new int[] { 124, 191, 228, 155 },
+            4));
 
         Animate.animate(
             "Zombicus dynamic",
@@ -109,42 +120,45 @@ public class dynamic {
                                 Dimension windowSize) -> {
     World world = new World(windowSize, obstacles);
     CellLoop<List<Character>> scene = new CellLoop<>();
-
     State initState = new State();
-    HomoZombicus z = new HomoZombicus(initState.nextID, t0, new Point(596,156),
-        clock, sTick, scene);
-    initState = initState.add(z.character, z.sBite, fallDownHole());
+    HomoZombicus z = new HomoZombicus(initState.nextID, t0,
+        new Point(36,332), clock, sTick, scene);
+    initState = initState.add(z.character, z.sBite,
+        fallDownHole(initState.nextID, sTick, z.character, world));
 
-    Point center = new Point(windowSize.width / 2, windowSize.height / 2);
-
-    Stream<Unit> sAlarm = periodicTimer(t0 + 1, clock, sTick, 4.0);
     CellLoop<State> state = new CellLoop<>();
     StreamLoop<Integer> sBite = new StreamLoop<>();
-    Stream<Lambda1<State, State>> sCreate =
-        sAlarm.snapshot(clock,
-                (u, t) ->
-                    st -> {
-                        BitableHomoSapiens h = new BitableHomoSapiens(world, st.nextID,
-                                t, center, clock, sTick, sBite, scene);
-                        return st.add(h.character, h.sBite, fallDownHole());
-                    }
-            );
-    Stream<Lambda1<State, State>> sDestroy = new Stream<>();
-    Stream<Lambda1<State, State>> sChange = sCreate
-            .merge(sDestroy, (f1, f2) -> a -> f1.apply(f2.apply(a))); 
-    state.loop(
-        sChange
-            .snapshot(state, (f, st) -> f.apply(st))
-            .hold(initState)
-    );
-    Cell<Cell<List<Character>>> cchars = state.map(st -> sequence(st.chars.values()));
+    StreamLoop<Integer> sDestroy = new StreamLoop<>();
+    Point center = new Point(windowSize.width / 2, windowSize.height / 2);
+    Stream<Lambda1<State, State>> sAdd =
+        periodicTimer(t0 + 1, clock, sTick, 6.0).snapshot(clock, (u, t) ->
+            st -> {
+                BitableHomoSapiens h = new BitableHomoSapiens(world,
+                    st.nextID, t, center, clock, sTick, sBite, scene);
+                return st.add(h.character, h.sBite,
+                    fallDownHole(st.nextID, sTick, h.character, world));
+            }
+        );
+    Stream<Lambda1<State, State>> sRemove = sDestroy.map(id ->
+                                               st -> st.remove(id));
+    Stream<Lambda1<State, State>> sChange = sAdd.merge(sRemove,
+        (f1, f2) -> a -> f1.apply(f2.apply(a))); 
+    state.loop(sChange.snapshot(state, (f, st) -> f.apply(st))
+                      .hold(initState));
+
+    Cell<Cell<List<Character>>> cchars = state.map(st ->
+                                sequence(st.chars.values()));
     Cell<List<Character>> chars = Cell.switchC(cchars);
     ArrayList<Character> emptyScene = new ArrayList<>();
     scene.loop(chars.updates().hold(emptyScene));
 
-    Cell<Stream<Integer>> csBites = state.map(st -> merges(st.sBites.values()));
-    sBite.loop(Cell.switchS(csBites));
+    Cell<Stream<Integer>> csBite = state.map(st ->
+                                merges(st.sBites.values()));
+    sBite.loop(Cell.switchS(csBite));
 
+    Cell<Stream<Integer>> csDestroy = state.map(st ->
+                                merges(st.sDestroys.values()));
+    sDestroy.loop(Cell.switchS(csDestroy));
     return scene;
 },
 obstacles
