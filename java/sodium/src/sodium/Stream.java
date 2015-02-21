@@ -73,8 +73,18 @@ public class Stream<A> {
                 if (!suppressEarlierFirings) {
                     // Anything sent already in this transaction must be sent now so that
                     // there's no order dependency between send and listen.
-                    for (A a : firings)
-                        action.run(trans, a);
+                    for (A a : firings) {
+                        Transaction.inCallback++;
+                        try {  // Don't allow transactions to interfere with Sodium
+                               // internals.
+                            action.run(trans, a);
+                        } catch (Throwable t) {
+                            t.printStackTrace();
+                        }
+                        finally {
+                            Transaction.inCallback--;
+                        }
+                    }
                 }
             }
         });

@@ -48,6 +48,7 @@ public final class Transaction {
 	}
 
 	private static Transaction currentTransaction;
+    static int inCallback;
 
 	/**
 	 * Return the current transaction, or null if there isn't one.

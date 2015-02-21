@@ -20,11 +20,15 @@ public class StreamWithSend<A> extends Stream<A> {
 		for (Node.Target target : node.listeners) {
             trans.prioritized(target.node, new Handler<Transaction>() {
                 public void run(Transaction trans2) {
+                    Transaction.inCallback++;
                     try {  // Don't allow transactions to interfere with Sodium
                            // internals.
                         ((TransactionHandler<A>)target.action).run(trans, a);
                     } catch (Throwable t) {
                         t.printStackTrace();
+                    }
+                    finally {
+                        Transaction.inCallback--;
                     }
                 }
             });
