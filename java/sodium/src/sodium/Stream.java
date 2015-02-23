@@ -32,7 +32,7 @@ public class Stream<A> {
 	}
 
 	protected final List<Listener> finalizers = new ArrayList<Listener>();
-	Node node = new Node(0L);
+	final Node node = new Node(0L);
 	protected final List<A> firings = new ArrayList<A>();
 
 	/**
