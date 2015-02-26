@@ -1,7 +1,7 @@
 package sodium;
 
 public class Cell<A> {
-	protected Stream<A> event;
+	protected final Stream<A> event;
 	A value;
 	A valueUpdate;
 	private Listener cleanup;
