@@ -17,8 +17,8 @@ public class Node implements Comparable<Node> {
 	        this.action = action;
 	        this.node = node;
 	    }
-	    TransactionHandler<Unit> action;
-	    Node node;
+	    final TransactionHandler<Unit> action;
+	    final Node node;
     }
 
 	private long rank;

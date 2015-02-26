@@ -16,8 +16,8 @@ public final class Transaction {
     boolean toRegen = false;
 
 	private static class Entry implements Comparable<Entry> {
-		private Node rank;
-		private Handler<Transaction> action;
+		private final Node rank;
+		private final Handler<Transaction> action;
 		private static long nextSeq;
 		private long seq;
 
@@ -39,9 +39,9 @@ public final class Transaction {
 
 	}
 
-	private PriorityQueue<Entry> prioritizedQ = new PriorityQueue<Entry>();
-	private Set<Entry> entries = new HashSet<Entry>();
-	private List<Runnable> lastQ = new ArrayList<Runnable>(); 
+	private final PriorityQueue<Entry> prioritizedQ = new PriorityQueue<Entry>();
+	private final Set<Entry> entries = new HashSet<Entry>();
+	private final List<Runnable> lastQ = new ArrayList<Runnable>();
 	private List<Runnable> postQ;
 
 	Transaction() {
