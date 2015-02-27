@@ -1,9 +1,9 @@
 <html>
-  <head><title>Select cat or dog</title></head>
-  <script src="rx.all.min.js"></script>
+  <head><title>Select cat or dog - Flapjax</title></head>
+  <script src="flapjax.js"></script>
 </head>
 <body>
-  <div>Select cat or dog then click OK</div>
+  <div>Select cat or dog then click OK - Flapjax</div>
   <canvas style="border-style: solid; border-width: 1px"
              id="myCanvas" width="300" height="200">
     Your browser does not support the HTML5 canvas tag.
@@ -35,19 +35,23 @@
     var canvas = document.getElementById("myCanvas");
     var getXY = function(e) { return { x : e.pageX - canvas.offsetLeft,
                                        y : e.pageY - canvas.offsetTop }; };
-    var mouseDown = Rx.Observable.fromEvent(canvas, 'mousedown')
-            .map(getXY);
-    var selectedObs = mouseDown.map(
+    var mouseDown = extractEventE(canvas,'mousedown').mapE(getXY);
+    var selected = mouseDown.mapE(
         function(pos) {
           for (var i = 0; i < shapes.length; i++)
              if (insidePolygon(pos, shapes[i]))
                  return shapes[i].id;
           return null;
-        });
-    var selected = new Rx.BehaviorSubject("cat");
-    selectedObs.subscribe(selected);
+        }).startsWith("cat");
 
-    selected.subscribe(function(selected) {
+    var okButton = document.getElementById('ok');
+    var ok = clicksE(okButton);
+    snapshotE(ok, selected, function(ok, sel) { return sel; })
+      .mapE(function(sel) {
+        alert('You selected '+sel);
+      });
+
+    selected.liftB(function(selected) {
       var ctx=canvas.getContext("2d");
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       for (var i = 0; i < shapes.length; i++) {
@@ -64,13 +68,6 @@
         ctx.stroke();
       }
     });
-
-    var okButton = document.getElementById('ok');
-    var ok = Rx.Observable.fromEvent(okButton, 'click');
-    ok.withLatestFrom(selected, function(ok, sel) { return sel; })
-      .subscribe(function(sel) {
-        alert('You selected '+sel);
-      });
   </script>
 </body>
 

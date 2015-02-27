@@ -14,7 +14,7 @@ public class World {
         this.holes = holes;
     }
 
-    private final Dimension windowSize;
+    public final Dimension windowSize;
     private final List<Polygon> holes;
 
     public boolean hitsHole(Point pt)

@@ -10,7 +10,7 @@ import java.util.Optional;
 import sodium.*;
 
 public class dynamic {
-    public static <A> Cell<List<A>> sequence(Collection<Cell<A>> in) {
+    static <A> Cell<List<A>> sequence(Collection<Cell<A>> in) {
         Cell<List<A>> out = new Cell<>(new ArrayList<A>());
         for (Cell<A> c : in)
             out = Cell.lift(
@@ -21,24 +21,23 @@ public class dynamic {
                 }, out, c);
         return out;
     }
-    public static <A> Stream<A> merges(Collection<Stream<A>> in) {
+    static <A> Stream<A> merges(Collection<Stream<A>> in) {
         Stream<A> sOut = new Stream<>();
         for (Stream<A> c : in)
             sOut = sOut.merge(c);
         return sOut;
     }
     public static Stream<Unit> periodicTimer(double t0,
-            Cell<Double> clock, Stream<Unit> sTick, double period) {
+            Cell<Double> time, Stream<Unit> sTick, double period) {
         CellLoop<Double> tAlarm = new CellLoop<>();
         Stream<Double> sAlarm = Stream.filterOptional(
-            sTick.snapshot(clock).snapshot(tAlarm,
+            sTick.snapshot(time).snapshot(tAlarm,
                     (t, alarm) -> t >= alarm ? Optional.of(t + period)
                                              : Optional.<Double>empty())
         );
         tAlarm.loop(sAlarm.hold(t0));
         return sAlarm.map(u -> Unit.UNIT);
     }
-
     static class State {
         State() {
             this.nextID = 0;
@@ -93,6 +92,51 @@ public class dynamic {
                                        : Optional.<Integer>empty()
             ));
     }
+    static class CreateCharacters {
+        CreateCharacters(double t0, Cell<Double> time,
+                    Stream<Unit> sTick, World world,
+                    Cell<List<Character>> scene, Stream<Integer> sBite,
+                    Stream<Integer> sDestroy) {
+            State initState = new State();
+            HomoZombicus z = new HomoZombicus(initState.nextID, t0,
+                new Point(36,332), time, sTick, scene);
+            initState = initState.add(z.character, z.sBite,
+                fallDownHole(initState.nextID, sTick, z.character, world));
+            CellLoop<State> state = new CellLoop<>();
+            Point center = new Point(world.windowSize.width / 2,
+                                     world.windowSize.height / 2);
+            Stream<Lambda1<State, State>> sAdd =
+                periodicTimer(t0 + 1, time, sTick, 6.0)
+                .snapshot(time, (u, t) ->
+                    st -> {
+                        BitableHomoSapiens h = new BitableHomoSapiens(
+                            world, st.nextID, t, center, time, sTick,
+                            sBite, scene);
+                        return st.add(h.character, h.sBite,
+                            fallDownHole(st.nextID, sTick, h.character,
+                                world));
+                    }
+                );
+            Stream<Lambda1<State, State>> sRemove = sDestroy.map(id ->
+                                                    st -> st.remove(id));
+            Stream<Lambda1<State, State>> sChange = sAdd.merge(sRemove,
+                (f1, f2) -> a -> f1.apply(f2.apply(a))); 
+            state.loop(sChange.snapshot(state, (f, st) -> f.apply(st))
+                              .hold(initState));
+            Cell<Cell<List<Character>>> cchars = state.map(st ->
+                                        sequence(st.chars.values()));
+            this.scene = Cell.switchC(cchars);
+            Cell<Stream<Integer>> csBite = state.map(st ->
+                                        merges(st.sBites.values()));
+            this.sBite = Cell.switchS(csBite);
+            Cell<Stream<Integer>> csDestroy = state.map(st ->
+                                        merges(st.sDestroys.values()));
+            this.sDestroy = Cell.switchS(csDestroy);
+        }
+        final Cell<List<Character>> scene;
+        final Stream<Integer> sBite;
+        final Stream<Integer> sDestroy;
+    }
 
     public static void main(String[] args)
     {
@@ -113,56 +157,23 @@ public class dynamic {
             new int[] { 558, 536, 612, 603 },
             new int[] { 124, 191, 228, 155 },
             4));
-
         Animate.animate(
             "Zombicus dynamic",
-(double t0, Cell<Double> clock, Stream<Unit> sTick,
-                                Dimension windowSize) -> {
-    World world = new World(windowSize, obstacles);
-    CellLoop<List<Character>> scene = new CellLoop<>();
-    State initState = new State();
-    HomoZombicus z = new HomoZombicus(initState.nextID, t0,
-        new Point(36,332), clock, sTick, scene);
-    initState = initState.add(z.character, z.sBite,
-        fallDownHole(initState.nextID, sTick, z.character, world));
-
-    CellLoop<State> state = new CellLoop<>();
-    StreamLoop<Integer> sBite = new StreamLoop<>();
-    StreamLoop<Integer> sDestroy = new StreamLoop<>();
-    Point center = new Point(windowSize.width / 2, windowSize.height / 2);
-    Stream<Lambda1<State, State>> sAdd =
-        periodicTimer(t0 + 1, clock, sTick, 6.0).snapshot(clock, (u, t) ->
-            st -> {
-                BitableHomoSapiens h = new BitableHomoSapiens(world,
-                    st.nextID, t, center, clock, sTick, sBite, scene);
-                return st.add(h.character, h.sBite,
-                    fallDownHole(st.nextID, sTick, h.character, world));
-            }
-        );
-    Stream<Lambda1<State, State>> sRemove = sDestroy.map(id ->
-                                               st -> st.remove(id));
-    Stream<Lambda1<State, State>> sChange = sAdd.merge(sRemove,
-        (f1, f2) -> a -> f1.apply(f2.apply(a))); 
-    state.loop(sChange.snapshot(state, (f, st) -> f.apply(st))
-                      .hold(initState));
-
-    Cell<Cell<List<Character>>> cchars = state.map(st ->
-                                sequence(st.chars.values()));
-    Cell<List<Character>> chars = Cell.switchC(cchars);
-    ArrayList<Character> emptyScene = new ArrayList<>();
-    scene.loop(chars.updates().hold(emptyScene));
-
-    Cell<Stream<Integer>> csBite = state.map(st ->
-                                merges(st.sBites.values()));
-    sBite.loop(Cell.switchS(csBite));
-
-    Cell<Stream<Integer>> csDestroy = state.map(st ->
-                                merges(st.sDestroys.values()));
-    sDestroy.loop(Cell.switchS(csDestroy));
-    return scene;
-},
-obstacles
-
+            (double t0, Cell<Double> time, Stream<Unit> sTick,
+                                            Dimension windowSize) -> {
+                World world = new World(windowSize, obstacles);
+                CellLoop<List<Character>> scene = new CellLoop<>();
+                StreamLoop<Integer> sBite = new StreamLoop<>();
+                StreamLoop<Integer> sDestroy = new StreamLoop<>();
+                CreateCharacters cc = new CreateCharacters(t0,
+                    time, sTick, world, scene, sBite, sDestroy);
+                ArrayList<Character> emptyScene = new ArrayList<>();
+                scene.loop(cc.scene.updates().hold(emptyScene));
+                sBite.loop(cc.sBite);
+                sDestroy.loop(cc.sDestroy);
+                return scene;
+            },
+            obstacles
         );
     }
 }

@@ -8,7 +8,7 @@ public class BitableHomoSapiens {
         int self,
         double tInit,
         Point posInit,
-        Cell<Double> clock,
+        Cell<Double> time,
         Stream<Unit> sTick,
         Stream<Integer> sBite,
         Cell<List<Character>> scene)
@@ -23,17 +23,17 @@ public class BitableHomoSapiens {
         }
     
         HomoSapiens h = new HomoSapiens(world, self, tInit, posInit,
-            clock, sTick);
+            time, sTick);
         Stream<Integer> sBiteMe = sBite.filter(id -> id == self);
         Cell<All> all = Cell.lift(
             (ch, t) -> new All(ch, t),
-            h.character, clock);
+            h.character, time);
         Stream<HomoZombicus> sBecome = sBiteMe.snapshot(
             all,
             (id, a) -> new HomoZombicus(
                     self,
                     a.t, a.character.pos,
-                    clock,
+                    time,
                     sTick, scene 
                 )
         );

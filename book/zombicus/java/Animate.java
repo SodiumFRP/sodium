@@ -30,12 +30,12 @@ public class Animate extends JPanel {
     private final BufferedImage coneImg;
     private Cell<List<Character>> scene;
     private final List<Polygon> obstacles;
-    private CellSink<Double> clock;
+    private CellSink<Double> time;
     private StreamSink<Unit> sTick;
 
     public interface Animation {
         public Cell<List<Character>> create(
-            double t0, Cell<Double> clock, Stream<Unit> sTick,
+            double t0, Cell<Double> time, Stream<Unit> sTick,
             Dimension screenSize);
     }
 
@@ -49,9 +49,9 @@ public class Animate extends JPanel {
         zombicusImgR = ImageIO.read(new URL(rootURL, "../images/homo-zombicus-right.png"));
         coneImg = ImageIO.read(new URL(rootURL, "../images/roadius-conium.png"));
         Transaction.runVoid(() -> {
-            clock = new CellSink<Double>(t0);
+            time = new CellSink<Double>(t0);
             sTick = new StreamSink<Unit>();
-            this.scene = animation.create(t0, clock, sTick, windowSize);
+            this.scene = animation.create(t0, time, sTick, windowSize);
         });
         this.obstacles = obstacles;
         addMouseListener(new MouseAdapter() {
@@ -117,7 +117,7 @@ public class Animate extends JPanel {
                 long toWait = tIdeal - t;
                 if (toWait > 0)
                     try { Thread.sleep(toWait); } catch (InterruptedException e) {}
-                view.clock.send((double)(tIdeal - t0) * 0.001);
+                view.time.send((double)(tIdeal - t0) * 0.001);
                 view.sTick.send(Unit.UNIT);
                 view.repaint(0);
                 tLast = tIdeal;

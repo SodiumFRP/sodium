@@ -4,9 +4,8 @@ import java.util.Optional;
 import java.util.Random;
 import sodium.*;
 
-public class HomoSapiens {
-    public HomoSapiens(
-        World world,
+public class SimpleHomoSapiens {
+    public SimpleHomoSapiens(
         int self,
         double tInit,
         Point posInit,
@@ -14,19 +13,14 @@ public class HomoSapiens {
         Stream<Unit> sTick)
     {
         final double speed = 80.0;
-        final double step = 0.02;
         class Trajectory {
-            Trajectory(World world, Random rng, double t0, Point orig) {
+            Trajectory(Random rng, double t0, Point orig) {
                 this.t0 = t0;
                 this.orig = orig;
                 this.period = rng.nextDouble() * 1 + 0.5;
-                for (int i = 0; i < 10; i++) {
-                    double angle = rng.nextDouble() * Math.PI * 2;
-                    velocity = new Vector(Math.sin(angle), Math.cos(angle))
-                                .mult(speed);
-                    if (!world.hitsObstacle(positionAt(t0 + step*2)))
-                        break;
-                }
+                double angle = rng.nextDouble() * Math.PI * 2;
+                velocity = new Vector(Math.sin(angle), Math.cos(angle))
+                            .mult(speed);
             }
             double t0;
             Point orig;
@@ -52,17 +46,15 @@ public class HomoSapiens {
         Stream<Unit> sChange = Stream.filterOptional(
             sTick.snapshot(all,
                 (u, a) -> {
-                    if (world.hitsObstacle(a.traj.positionAt(a.t + step))
-                        || a.t - a.traj.t0 >= a.traj.period)
+                    if (a.t - a.traj.t0 >= a.traj.period)
                         return Optional.of(Unit.UNIT);
                     else
                         return Optional.<Unit>empty();
                 }));
         traj.loop(
             sChange.snapshot(all, (u, a) -> {
-                return new Trajectory(world, rng, a.t,
-                                      a.traj.positionAt(a.t));
-            }).hold(new Trajectory(world, rng, tInit, posInit))
+                return new Trajectory(rng, a.t, a.traj.positionAt(a.t));
+            }).hold(new Trajectory(rng, tInit, posInit))
         );
         character = all.map(a -> {
                 return new Character(self, CharacterType.SAPIENS,

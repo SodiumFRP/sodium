@@ -9,19 +9,18 @@ public class HomoZombicus {
         int self,
         double tInit,
         Point posInit,
-        Cell<Double> clock,
+        Cell<Double> time,
         Stream<Unit> sTick,
         Cell<List<Character>> scene)
     {
         final double speed = 20.0;
-
         class State {
             State(double t0, Point orig, int self,
                                                List<Character> scene) {
                 this.t0 = t0;
                 this.orig = orig;
                 double bestDist = 0.0;
-                Optional<Character> oOther = nearest(self, scene, true);
+                Optional<Character> oOther = nearest(self, scene);
                 if (oOther.isPresent()) {
                     Character other = oOther.get();
                     this.velocity = Vector.subtract(other.pos, orig)
@@ -33,14 +32,11 @@ public class HomoZombicus {
                 else
                     this.velocity = new Vector(0,0);
             }
-    
-            Optional<Character> nearest(int self, List<Character> scene,
-                                         boolean includeNearZombies) {
+            Optional<Character> nearest(int self, List<Character> scene) {
                 double bestDist = 0.0;
                 Optional<Character> best = Optional.empty();
                 for (Character ch : scene)
-                    if (ch.id != self && (includeNearZombies
-                                    || ch.type == CharacterType.SAPIENS)) {
+                    if (ch.id != self) {
                         double dist = Vector.distance(ch.pos, orig);
                         if (ch.type == CharacterType.ZOMBICUS && dist > 60)
                             ;
@@ -52,6 +48,15 @@ public class HomoZombicus {
                     }
                 return best;
             }
+            Optional<Character> nearestSapiens(int self,
+                                               List<Character> scene) {
+                List<Character> sapiens = new ArrayList<>();
+                for (Character ch : scene) {
+                    if (ch.type == CharacterType.SAPIENS)
+                        sapiens.add(ch);
+                }
+                return nearest(self, sapiens);
+            }
             final double t0;
             final Point orig;
             final Vector velocity;
@@ -59,7 +64,6 @@ public class HomoZombicus {
                 return velocity.mult(t - t0).add(orig);
             }
         }
-
         class All {
             All(State state, double t, List<Character> scene) {
                 this.state = state;
@@ -73,7 +77,7 @@ public class HomoZombicus {
 
         CellLoop<State> state = new CellLoop<>();
         Cell<All> all = Cell.lift((st, t, sc) -> new All(st, t, sc),
-            state, clock, scene);
+            state, time, scene);
         Stream<State> sChange = Stream.filterOptional(
             sTick.snapshot(all,
                 (u, a) ->
@@ -93,8 +97,8 @@ public class HomoZombicus {
         sBite = Stream.filterOptional(
             sTick.snapshot(all,
                 (u, a) -> {
-                    Optional<Character> oVictim = a.state.nearest(self,
-                        a.scene, false);
+                    Optional<Character> oVictim = a.state.nearestSapiens(
+                        self, a.scene);
                     if (oVictim.isPresent()) {
                         Character victim = oVictim.get();
                         Point myPos = a.state.positionAt(a.t);

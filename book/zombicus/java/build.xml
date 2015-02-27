@@ -14,6 +14,24 @@
         </javac>
     </target>
 
+    <target name="simple" depends="compile">
+        <java classname="simple" fork="true">
+            <classpath>
+                <pathelement path="build/"/>
+                <pathelement path="../../../java/sodium/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="humans" depends="compile">
+        <java classname="humans" fork="true">
+            <classpath>
+                <pathelement path="build/"/>
+                <pathelement path="../../../java/sodium/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
     <target name="characters" depends="compile">
         <java classname="characters" fork="true">
             <classpath>
