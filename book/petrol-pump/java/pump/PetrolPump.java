@@ -303,7 +303,7 @@ public class PetrolPump extends JFrame
                 Cell<Double> price1 = textPrice1.text.map(parseDbl);
                 Cell<Double> price2 = textPrice2.text.map(parseDbl);
                 Cell<Double> price3 = textPrice3.text.map(parseDbl);
-                StreamSink<Unit> sClearSale = new StreamSink<>();
+                StreamLoop<Unit> sClearSale = new StreamLoop<>();
 
                 Cell<Outputs> outputs = logic.selectedItem.map(
                     pump -> pump.create(
@@ -405,9 +405,9 @@ public class PetrolPump extends JFrame
                     dialog.add(ok);
                     dialog.pack();
                     dialog.setVisible(true);
+                    sClearSale.loop(ok.sClicked);
                     this.l = l.append(ok.sClicked.listen(u -> {
                         dialog.dispose();
-                        sClearSale.send(Unit.UNIT);
                     }));
                 }));
             }
