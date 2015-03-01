@@ -182,7 +182,7 @@ public final class Transaction {
 	    }
 	}
 
-	public void close() {
+	void close() {
 	    while (true) {
 	        checkRegen();
 		    if (prioritizedQ.isEmpty()) break;
