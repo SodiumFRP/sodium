@@ -1,3 +1,9 @@
+/**
+ * Copyright (c) 2012-2015, Stephen Blackheath and Anthony Jones
+ * Released under a BSD3 licence.
+ *
+ * C++ implementation courtesy of International Telematics Ltd.
+ */
 #include <sodium/impl/magic_ref.h>
 
 namespace sodium {

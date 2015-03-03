@@ -1,6 +1,13 @@
-#ifndef _SODIUM_IMPL_MAGIC_REF_H_
-#define _SODIUM_IMPL_MAGIC_REF_H_
+/**
+ * Copyright (c) 2012-2015, Stephen Blackheath and Anthony Jones
+ * Released under a BSD3 licence.
+ *
+ * C++ implementation courtesy of International Telematics Ltd.
+ */
+#ifndef _SODIUM2_IMPL_MAGIC_REF_H_
+#define _SODIUM2_IMPL_MAGIC_REF_H_
 
+#include <sodium/impl/common.h>
 #include <sodium/impl/mutex.h>
 #include <list>
 #include <set>
@@ -8,7 +15,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 
-namespace sodium {
+namespace SODIUM_NAMESPACE {
     namespace impl {
 
         /* Bacon/Attanasio/Rajan/Smith algorithm. */
@@ -84,14 +91,19 @@ namespace sodium {
 
             link* l() const { return r; }
 
-            inline A* operator ->() { return &r->oa.get(); }
-            inline A* operator ->() const { return &r->oa.get(); }
-
-            inline A& operator *() { return r->oa.get(); }
-            inline A& operator *() const { return r->oa.get(); }
-
-            inline A* get() { return &r->oa.get(); }
-            inline A* get() const { return &r->oa.get(); }
+            // The returned pointers are const because the only safe way to
+            // modify is through 'assign'.
+            inline const A* operator ->() const { return &r->oa.get(); }
+            inline const A& operator *() const { return r->oa.get(); }
+            inline const A& get() const { return r->oa.get(); }
+            inline const A* get_ptr() const { return &r->oa.get(); }
+            /*!
+             * Variant of get() that allows you to modify the contents in-place.
+             * This MUST NOT change any contained magic_refs. This will break the
+             * reference tracking.
+             * If you wish to do this, use assign().
+             */
+            inline A& unsafe_get() { return r->oa.get(); }
         };
     }
 

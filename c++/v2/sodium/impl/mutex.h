@@ -1,9 +1,16 @@
-#ifndef _SODIUM_IMPL_MUTEX_H_
-#define _SODIUM_IMPL_MUTEX_H_
+/**
+ * Copyright (c) 2012-2015, Stephen Blackheath and Anthony Jones
+ * Released under a BSD3 licence.
+ *
+ * C++ implementation courtesy of International Telematics Ltd.
+ */
+#ifndef _SODIUM2_IMPL_MUTEX_H_
+#define _SODIUM2_IMPL_MUTEX_H_
 
+#include <sodium/impl/common.h>
 #include <pthread.h>
 
-namespace sodium {
+namespace SODIUM_NAMESPACE {
     namespace impl {
         class mutex
         {
