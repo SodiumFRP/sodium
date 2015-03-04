@@ -181,7 +181,6 @@ class FRP implements Paradigm {
 
 class Actor implements Paradigm {
     public Actor(Document initDoc, Callback cb) {
-        in = new ArrayBlockingQueue<>(1);
         ArrayBlockingQueue<Document> out = new ArrayBlockingQueue<>(1);
         new Thread(() -> {
             try {
@@ -222,7 +221,7 @@ class Actor implements Paradigm {
             } catch (InterruptedException e) {}
         }).start();
     }
-    private ArrayBlockingQueue<MouseEvt> in;
+    private ArrayBlockingQueue<MouseEvt> in = new ArrayBlockingQueue<>(1);
     public void mouseEvent(MouseEvt me) {
         try {
             in.put(me);
