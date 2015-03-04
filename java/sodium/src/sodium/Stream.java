@@ -26,10 +26,6 @@ public class Stream<A> {
                 event.node.unlinkTo(target);
             }
 		}
-
-		protected void finalize() throws Throwable {
-			unlisten();
-		}
 	}
 
 	protected final List<Listener> finalizers = new ArrayList<Listener>();
@@ -69,9 +65,9 @@ public class Stream<A> {
                 trans.toRegen = true;
         }
         final List<A> firings = new ArrayList<A>(this.firings);
-        trans.prioritized(target, new Handler<Transaction>() {
-            public void run(Transaction trans2) {
-                if (!suppressEarlierFirings) {
+        if (!suppressEarlierFirings && !firings.isEmpty())
+            trans.prioritized(target, new Handler<Transaction>() {
+                public void run(Transaction trans2) {
                     // Anything sent already in this transaction must be sent now so that
                     // there's no order dependency between send and listen.
                     for (A a : firings) {
@@ -87,8 +83,7 @@ public class Stream<A> {
                         }
                     }
                 }
-            }
-        });
+            });
 		return new ListenerImplementation<A>(this, action, target);
 	}
 
