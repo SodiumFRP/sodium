@@ -101,11 +101,6 @@ interface Paradigm {
 }
 
 class Classic implements Paradigm {
-    public static class Factory implements Paradigm.Factory {
-        public Paradigm create(Document initDoc, Callback cb) {
-            return new Classic(initDoc, cb);
-        }
-    }
     public Classic(Document initDoc, Callback cb) {
         this.doc = initDoc;
         this.cb = cb;
@@ -127,8 +122,10 @@ class Classic implements Paradigm {
         switch (me.type) {
         case DOWN:
             Optional<Entry> oe = doc.getByPoint(me.pt);
-            if (oe.isPresent())
+            if (oe.isPresent()) {
+                System.out.println("classic dragging "+oe.get().id);
                 oDragging = Optional.of(new Dragging(me, oe.get()));
+            }
             break;
         case MOVE:
             if (oDragging.isPresent()) {
@@ -146,11 +143,6 @@ class Classic implements Paradigm {
 }
 
 class FRP implements Paradigm {
-    public static class Factory implements Paradigm.Factory {
-        public Paradigm create(Document initDoc, Callback cb) {
-            return new FRP(initDoc, cb);
-        }
-    }
     public FRP(Document initDoc, Callback cb) {
         l = Transaction.run(() -> {
             CellLoop<Document> doc = new CellLoop<>();
@@ -161,10 +153,10 @@ class FRP implements Paradigm {
                         if (oe.isPresent()) {
                             String id = oe.get().id;
                             Element elt = oe.get().element;
+                            System.out.println("FRP dragging "+id);
                             Stream<Document> sMoves = sMouse
                                 .filter(me -> me.type == Type.MOVE)
-                                .map(me ->
-                                     d.insert(id,
+                                .map(me -> d.insert(id,
                                          elt.translate(me1.pt, me.pt)));
                             return Optional.of(sMoves);
                         }
@@ -188,11 +180,6 @@ class FRP implements Paradigm {
 }
 
 class Actor implements Paradigm {
-    public static class Factory implements Paradigm.Factory {
-        public Paradigm create(Document initDoc, Callback cb) {
-            return new Actor(initDoc, cb);
-        }
-    }
     public Actor(Document initDoc, Callback cb) {
         in = new ArrayBlockingQueue<>(1);
         ArrayBlockingQueue<Document> out = new ArrayBlockingQueue<>(1);
@@ -213,6 +200,7 @@ class Actor implements Paradigm {
                             }
                         }
                     }
+                    System.out.println("actor dragging "+ent.id);
                     while (true) {
                         MouseEvt me = in.take();
                         if (me.type == Type.MOVE) {
@@ -325,22 +313,25 @@ public class BattleOfTheParadigms {
         c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 1;
-        view.add(new ParadigmView(doc, new Classic.Factory()), c);
+        view.add(new ParadigmView(doc,
+            (initDoc, cb) -> new Classic(initDoc, cb)), c);
         c.gridx = 0;
         c.gridy = 2;
-        view.add(new JLabel("Classic state machine"), c);
+        view.add(new JLabel("classic state machine"), c);
         c.gridx = 1;
         c.gridy = 1;
-        view.add(new ParadigmView(doc, new FRP.Factory()), c);
+        view.add(new ParadigmView(doc,
+            (initDoc, cb) -> new FRP(initDoc, cb)), c);
         c.gridx = 1;
         c.gridy = 2;
         view.add(new JLabel("FRP"), c);
         c.gridx = 2;
         c.gridy = 1;
-        view.add(new ParadigmView(doc, new Actor.Factory()), c);
+        view.add(new ParadigmView(doc,
+            (initDoc, cb) -> new Actor(initDoc, cb)), c);
         c.gridx = 2;
         c.gridy = 2;
-        view.add(new JLabel("Actor"), c);
+        view.add(new JLabel("actor model"), c);
         frame.setContentPane(view);
         frame.pack();
         frame.setVisible(true);
