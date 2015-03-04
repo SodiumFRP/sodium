@@ -56,11 +56,6 @@ class Document {
         this.elements = elements;
     }
     private final Map<String,Element> elements;
-    public Optional<Element> getByID(String id) {
-        Element p = elements.get(id);
-        return p == null ? Optional.empty()
-                         : Optional.of(p);
-    }
     public Optional<Entry> getByPoint(Point pt) {
         Optional<Entry> oe = Optional.empty();
         for (Map.Entry<String,Element> e : elements.entrySet()) {
@@ -147,16 +142,16 @@ class FRP implements Paradigm {
         l = Transaction.run(() -> {
             CellLoop<Document> doc = new CellLoop<>();
             Stream<Stream<Document>> sStartDrag = Stream.filterOptional(
-                sMouse.snapshot(doc, (me1, d) -> {
+                sMouse.snapshot(doc, (me1, d1) -> {
                     if (me1.type == Type.DOWN) {
-                        Optional<Entry> oe = d.getByPoint(me1.pt);
+                        Optional<Entry> oe = d1.getByPoint(me1.pt);
                         if (oe.isPresent()) {
                             String id = oe.get().id;
                             Element elt = oe.get().element;
                             System.out.println("FRP dragging "+id);
                             Stream<Document> sMoves = sMouse
                                 .filter(me -> me.type == Type.MOVE)
-                                .map(me -> d.insert(id,
+                                .snapshot(doc, (me, d) -> d.insert(id,
                                          elt.translate(me1.pt, me.pt)));
                             return Optional.of(sMoves);
                         }
