@@ -17,6 +17,7 @@ namespace SODIUM_NAMESPACE {
     namespace impl {
         typedef uint32_t rank_t;
         static const rank_t null_rank = 0x80000000;
+        typedef uint64_t seq_t;
 
         struct node_t {
             node(rank_t rank) : rank(rank) {}
@@ -42,6 +43,59 @@ namespace SODIUM_NAMESPACE {
         void unlink_to(magic_ref<node_t>& node,
                        const magic_ref<node_t>& target);
         bool ensure_bigger_than(magic_ref<node_t>& node, rank_t limit);
+
+        class transaction_impl {
+        private:
+            struct entry {
+                entry(const magic_ref<node_t>& node,
+                      const std::shared_ptr<std::function<void(const magic_ref<transaction_impl>&)>>& action);
+                entry(const magic_ref<node_t>& node,
+                      const std::shared_ptr<std::function<void(const magic_ref<transaction_impl>&)>>& action,
+                      seq_t seq);
+                rank_t rank;
+                magic_ref<node_t> node;
+                std::shared_ptr<std::function<void(const magic_ref<transaction_impl>&)>> action;
+                static seq_t next_seq;
+                seq_t seq;
+                bool operator == (const entry& other) const {
+                    return rank == other.rank && seq == other.seq;
+                };
+                bool operator < (const entry& other) const {
+                    return rank == other.rank ? seq < other.seq
+                                              : rank < other.rank;
+                }
+            };
+
+            static mutex listeners_lock;
+            bool to_regen;
+            std::set<entry> prioritized_q;
+            std::list<std::shared_ptr<std::function<void()>>> last_q;
+            std::list<std::shared_ptr<std::function<void()>>> post_q;
+
+            void check_regen();
+        public:
+            transaction_impl()
+            : to_regen(false)
+            {
+            }
+        };
+
+        class transaction {
+        private:
+            std::shared_ptr<transaction_impl> impl;
+            static mutex transaction_lock;
+            static std::shared_ptr<transaction_impl> current_transaction;
+            static int in_callback;
+            transaction(const std::shared_ptr<transaction_impl>& impl);
+        public:
+            transaction();
+            ~transaction() { close(); }
+            void close();
+            boost::optional<transaction> get_current_transaction();
+            void prioritized(magic_ref<node_t>& node, const std::function<void(const magic_ref<transaction_impl>&)>& action);
+            void post(const std::function<void()>& action);
+            void last(const std::function<void()>& action);
+        };
     };
 }  // end namespace sodium
 

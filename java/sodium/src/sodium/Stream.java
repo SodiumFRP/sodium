@@ -1,6 +1,7 @@
 package sodium;
 
 import java.util.ArrayList;
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -202,9 +203,10 @@ public class Stream<A> {
 	}
 
 	/**
-	 * Push each event occurrence onto a new transaction.
+	 * Push this event occurrence onto a new transaction. Same as split() but works
+     * on a single value.
 	 */
-	public final Stream<A> delay()
+	public final Stream<A> defer()
 	{
 	    final StreamSink<A> out = new StreamSink<A>();
 	    Listener l1 = listen_(out.node, new TransactionHandler<A>() {
@@ -223,6 +225,31 @@ public class Stream<A> {
 	    });
 	    return out.addCleanup(l1);
 	}
+
+	/**
+	 * Push each event occurrence in the list onto a new transaction.
+	 */
+    public static final <A, C extends Collection<A>> Stream<A> split(Stream<C> s)
+    {
+	    final StreamSink<A> out = new StreamSink<A>();
+	    Listener l1 = s.listen_(out.node, new TransactionHandler<C>() {
+	        public void run(Transaction trans, final C as) {
+	            trans.post(new Runnable() {
+                    public void run() {
+                        for (A a : as) {
+                            Transaction trans = new Transaction();
+                            try {
+                                out.send(trans, a);
+                            } finally {
+                                trans.close();
+                            }
+                        }
+                    }
+	            });
+	        }
+	    });
+	    return out.addCleanup(l1);
+    }
 
     /**
      * If there's more than one firing in a single transaction, combine them into

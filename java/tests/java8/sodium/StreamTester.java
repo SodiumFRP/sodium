@@ -222,12 +222,12 @@ public class StreamTester extends TestCase {
         assertEquals(Arrays.asList('A'), out);
     }
 
-    public void testDelay()
+    public void testDefer()
     {
         StreamSink<Character> e = new StreamSink();
         Cell<Character> b = e.hold(' ');
         List<Character> out = new ArrayList();
-        Listener l = e.delay().snapshot(b).listen((x) -> { out.add(x); });
+        Listener l = e.defer().snapshot(b).listen((x) -> { out.add(x); });
         e.send('C');
         e.send('B');
         e.send('A');
