@@ -16,11 +16,11 @@ class test_sodium : public CppUnit::TestFixture {
     CPPUNIT_TEST_SUITE(test_sodium);
     // event tests
     CPPUNIT_TEST(event1);
+#if 0
     CPPUNIT_TEST(map);
     CPPUNIT_TEST(map_effectful);
     CPPUNIT_TEST(merge_non_simultaneous);
     CPPUNIT_TEST(merge_left_bias);
-#if !defined(SODIUM_NO_CXX11)
     CPPUNIT_TEST(merge_left_bias_2a);
     CPPUNIT_TEST(merge_left_bias_2b);
     CPPUNIT_TEST(merge_simultaneous);
@@ -81,11 +81,11 @@ class test_sodium : public CppUnit::TestFixture {
 
 
     void event1();
+#if 0
     void map();
     void map_effectful();
     void merge_non_simultaneous();
     void merge_left_bias();
-#if !defined(SODIUM_NO_CXX11)
     void merge_left_bias_2_common(
         sodium::event_sink<std::string> e1,
         sodium::event_sink<std::string> e2,

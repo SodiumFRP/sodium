@@ -59,6 +59,9 @@ namespace SODIUM_NAMESPACE {
             receptacle<A>* r;
         public:
             magic_ref() : r(new receptacle<A>) {}
+            magic_ref(const A& a) : r(new receptacle<A>) {
+                assign(a);
+            }
             magic_ref(const magic_ref<A>& other) {
                 link::lock.lock();
                 r = other.r;
@@ -83,9 +86,10 @@ namespace SODIUM_NAMESPACE {
 
             void assign(const A& a) const {
                 link::lock.lock();
+                std::list<link*>* capturer_was = link::capturer;
                 link::capturer = &r->children;
                 r->oa = boost::optional<A>(a);
-                link::capturer = NULL;
+                link::capturer = capturer_was;
                 link::lock.unlock();
             }
 
@@ -103,7 +107,7 @@ namespace SODIUM_NAMESPACE {
              * reference tracking.
              * If you wish to do this, use assign().
              */
-            inline A& unsafe_get() { return r->oa.get(); }
+            inline A& unsafe_get() const { return r->oa.get(); }
         };
     }
 

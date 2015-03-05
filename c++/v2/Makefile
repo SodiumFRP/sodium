@@ -1,14 +1,30 @@
-CPPFLAGS=-I. --std=c++11 -g
+CXXFLAGS=--std=c++11 -g
+CPPFLAGS=-I. -DSODIUM_OLD_NAME_COMPATIBILITY
 LDFLAGS=-lpthread
-OBJS=test.o sodium/impl/magic_ref.o sodium/impl/mutex.o
+OBJS=sodium/impl/magic_ref.o \
+     sodium/impl/mutex.o \
+     sodium/transaction.o
 
-all: test
+all: test_sodium test
 
 clean:
-	rm -f $(OBJS)
+	rm -f $(OBJS) test_sodium.o test.o
 
+sodium/impl/mutex.h: sodium/impl/common.h
 sodium/impl/magic_ref.h: sodium/impl/mutex.h
-test.o: sodium/impl/magic_ref.h sodium/impl/mutex.h
+sodium/impl/magic_ref.cpp: sodium/impl/magic_ref.h
+sodium/transaction.cpp: sodium/impl/magic_ref.h
+sodium/sodium.h: sodium/transaction.h
+../tests/test_sodium.cpp: sodium/sodium.h
+test.o: sodium/impl/magic_ref.h
 
-test: $(OBJS)
-	g++ -g -o test $(OBJS) $(LDFLAGS)
+# Why doesn't "../tests/test_sodium.cpp: sodium/sodium.h" above work
+test_sodium.o: ../tests/test_sodium.cpp sodium/sodium.h
+	g++ $(CPPFLAGS) $(CXXFLAGS) -g -o test_sodium.o -c $<
+
+test: test.o $(OBJS)
+	g++ -g -o test test.o $(OBJS) $(LDFLAGS)
+
+test_sodium: test_sodium.o $(OBJS)
+	g++ -g -o test_sodium test_sodium.o $(OBJS) $(LDFLAGS) -lcppunit
+

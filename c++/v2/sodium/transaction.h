@@ -10,9 +10,13 @@
 #include <sodium/unit.h>
 #include <sodium/impl/magic_ref.h>
 #include <stdint.h>
+#include <memory>
 
 namespace SODIUM_NAMESPACE {
     class transaction;
+    template <class A> class stream;
+    template <class A> class stream_with_send;
+    template <class A> class stream_sink;
 
     namespace impl {
         typedef uint32_t rank_t;
@@ -20,16 +24,17 @@ namespace SODIUM_NAMESPACE {
         typedef uint64_t seq_t;
 
         struct node_t {
-            node(rank_t rank) : rank(rank) {}
-            node(rank_t rank, const std::vector<target_t>& listeners) : rank(rank), listeners(listeners) {}
+            static node_t null;
             struct target_t {
                 target_t(
-                    const magic_ref<std::function<void(transaction& trans, void*)>>& action,
-                    const magic_ref<node>& n
-                ) : action(action), n(n) {}
-                magic_ref<std::function<void(transaction& trans, void*)>> action;
-                magic_ref<node_t> node_t;
+                    const magic_ref<std::function<void(const transaction& trans, const void*)>>& action,
+                    const magic_ref<node_t>& node
+                ) : action(action), node(node) {}
+                magic_ref<std::function<void(const transaction& trans, const void*)>> action;
+                magic_ref<node_t> node;
             };
+            node_t(rank_t rank) : rank(rank) {}
+            node_t(rank_t rank, const std::vector<target_t>& listeners) : rank(rank), listeners(listeners) {}
             rank_t rank;
             std::vector<target_t> listeners;
         };
@@ -37,24 +42,26 @@ namespace SODIUM_NAMESPACE {
         /*!
          * Return true if any changes were made. 
          */
-        bool link_to(magic_ref<node_t>& node,
-                     const magic_ref<std::function<void(transaction& trans, void*)>>& action,
+        bool link_to(const magic_ref<node_t>& node,
+                     const magic_ref<std::function<void(const transaction& trans, const void*)>>& action,
                      const magic_ref<node_t>& target);
-        void unlink_to(magic_ref<node_t>& node,
+        void unlink_to(const magic_ref<node_t>& node,
                        const magic_ref<node_t>& target);
-        bool ensure_bigger_than(magic_ref<node_t>& node, rank_t limit);
 
-        class transaction_impl {
-        private:
+        struct transaction_impl {
+            unsigned ref_count;
+            static impl::mutex transaction_lock;
+            template <class A> friend class sodium::stream;
+            friend class transaction;
             struct entry {
                 entry(const magic_ref<node_t>& node,
-                      const std::shared_ptr<std::function<void(const magic_ref<transaction_impl>&)>>& action);
+                      const std::shared_ptr<std::function<void(const transaction&)>>& action);
                 entry(const magic_ref<node_t>& node,
-                      const std::shared_ptr<std::function<void(const magic_ref<transaction_impl>&)>>& action,
+                      const std::shared_ptr<std::function<void(const transaction&)>>& action,
                       seq_t seq);
                 rank_t rank;
                 magic_ref<node_t> node;
-                std::shared_ptr<std::function<void(const magic_ref<transaction_impl>&)>> action;
+                std::shared_ptr<std::function<void(const transaction&)>> action;
                 static seq_t next_seq;
                 seq_t seq;
                 bool operator == (const entry& other) const {
@@ -66,36 +73,38 @@ namespace SODIUM_NAMESPACE {
                 }
             };
 
-            static mutex listeners_lock;
             bool to_regen;
             std::set<entry> prioritized_q;
             std::list<std::shared_ptr<std::function<void()>>> last_q;
             std::list<std::shared_ptr<std::function<void()>>> post_q;
 
+            transaction_impl();
+            ~transaction_impl();
+            void close(const transaction& trans);
             void check_regen();
-        public:
-            transaction_impl()
-            : to_regen(false)
-            {
-            }
         };
+    }  // end namespace impl
 
-        class transaction {
-        private:
-            std::shared_ptr<transaction_impl> impl;
-            static mutex transaction_lock;
-            static std::shared_ptr<transaction_impl> current_transaction;
-            static int in_callback;
-            transaction(const std::shared_ptr<transaction_impl>& impl);
-        public:
-            transaction();
-            ~transaction() { close(); }
-            void close();
-            boost::optional<transaction> get_current_transaction();
-            void prioritized(magic_ref<node_t>& node, const std::function<void(const magic_ref<transaction_impl>&)>& action);
-            void post(const std::function<void()>& action);
-            void last(const std::function<void()>& action);
-        };
+    class transaction {
+    template <class A> friend class sodium::stream;
+    template <class A> friend class sodium::stream_with_send;
+    template <class A> friend class sodium::stream_sink;
+    private:
+        std::shared_ptr<impl::transaction_impl> impl;
+        static impl::mutex listeners_lock;
+        static std::weak_ptr<impl::transaction_impl> current_transaction;
+        static int in_callback;
+        transaction(const std::shared_ptr<impl::transaction_impl>& impl);
+    public:
+        transaction();
+        ~transaction() { close(); }
+        void close();
+    private:
+        boost::optional<transaction> get_current_transaction();
+        void prioritized(const impl::magic_ref<impl::node_t>& node,
+                         const std::function<void(const transaction&)>& action) const;
+        void post(const std::function<void()>& action) const;
+        void last(const std::function<void()>& action) const;
     };
 }  // end namespace sodium
 

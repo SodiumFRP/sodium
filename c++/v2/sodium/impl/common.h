@@ -10,6 +10,7 @@
 #ifndef SODIUM_NAMESPACE
 #define SODIUM_NAMESPACE sodium
 #endif
+#define SODIUM_V2 1
 
 #endif
 
