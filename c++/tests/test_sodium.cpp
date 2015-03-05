@@ -68,23 +68,6 @@ void test_sodium::map()
     CPPUNIT_ASSERT(shouldBe == *out);
 }
 
-#if 0
-void test_sodium::map_effectful()
-{
-    event_sink<int> e;
-    auto m = e.map_effectful<string>([] (const int& x) {
-        char buf[128];
-        sprintf(buf, "%d", x);
-        return string(buf);
-    });
-    std::shared_ptr<vector<string> > out = std::make_shared<vector<string> >();
-    auto unlisten = m.listen([out] (const string& x) { out->push_back(x); });
-    e.send(5);
-    unlisten();
-    vector<string> shouldBe = { string("5") };
-    CPPUNIT_ASSERT(shouldBe == *out);
-}
-
 void test_sodium::merge_non_simultaneous()
 {
     event_sink<int> e1;
@@ -104,17 +87,25 @@ void test_sodium::merge_left_bias()
     event_sink<string> e1;
     event_sink<string> e2;
     std::shared_ptr<vector<string> > out = std::make_shared<vector<string> >();
-    event<string, def_part> e = e1.merge(e2);
+    event<string> e = e1.merge(e2);
     auto unlisten = e.listen([out] (const string& x) { out->push_back(x); });
     {
-        transaction<def_part> trans;
+#if defined(SODIUM_V2)
+        transaction trans;
+#else
+        transaction<> trans;
+#endif
         e1.send("left1a");
         e1.send("left1b");
         e2.send("right1a");
         e2.send("right1b");
     }
     {
-        transaction<def_part> trans;
+#if defined(SODIUM_V2)
+        transaction trans;
+#else
+        transaction<> trans;
+#endif
         e2.send("right2a");
         e2.send("right2b");
         e1.send("left2a");
@@ -139,37 +130,61 @@ void test_sodium::merge_left_bias_2_common(
 {
     auto unlisten = e.listen([out] (const string& x) { out->push_back(x); });
     {
+#if defined(SODIUM_V2)
+        transaction trans;
+#else
         transaction<> trans;
+#endif
         e1.send("1a");
         e2.send("1b");
         e3.send("1c");
     }
     {
+#if defined(SODIUM_V2)
+        transaction trans;
+#else
         transaction<> trans;
+#endif
         e2.send("2b");
         e1.send("2a");
         e3.send("2c");
     }
     {
+#if defined(SODIUM_V2)
+        transaction trans;
+#else
         transaction<> trans;
+#endif
         e1.send("3a");
         e3.send("3c");
         e2.send("3b");
     }
     {
+#if defined(SODIUM_V2)
+        transaction trans;
+#else
         transaction<> trans;
+#endif
         e3.send("4c");
         e1.send("4a");
         e2.send("4b");
     }
     {
+#if defined(SODIUM_V2)
+        transaction trans;
+#else
         transaction<> trans;
+#endif
         e2.send("5b");
         e3.send("5c");
         e1.send("5a");
     }
     {
+#if defined(SODIUM_V2)
+        transaction trans;
+#else
         transaction<> trans;
+#endif
         e3.send("6c");
         e2.send("6b");
         e1.send("6a");
@@ -233,6 +248,7 @@ void test_sodium::coalesce()
     CPPUNIT_ASSERT(shouldBe == *out);
 }
 
+#if 0
 void test_sodium::filter()
 {
     event_sink<char> e;

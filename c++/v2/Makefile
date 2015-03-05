@@ -15,11 +15,9 @@ sodium/impl/magic_ref.h: sodium/impl/mutex.h
 sodium/impl/magic_ref.cpp: sodium/impl/magic_ref.h
 sodium/transaction.cpp: sodium/impl/magic_ref.h
 sodium/sodium.h: sodium/transaction.h
-../tests/test_sodium.cpp: sodium/sodium.h
 test.o: sodium/impl/magic_ref.h
 
-# Why doesn't "../tests/test_sodium.cpp: sodium/sodium.h" above work
-test_sodium.o: ../tests/test_sodium.cpp sodium/sodium.h
+test_sodium.o: ../tests/test_sodium.cpp sodium/sodium.h ../tests/test_sodium.h
 	g++ $(CPPFLAGS) $(CXXFLAGS) -g -o test_sodium.o -c $<
 
 test: test.o $(OBJS)

@@ -17,14 +17,13 @@ class test_sodium : public CppUnit::TestFixture {
     // event tests
     CPPUNIT_TEST(event1);
     CPPUNIT_TEST(map);
-#if 0
-    CPPUNIT_TEST(map_effectful);
     CPPUNIT_TEST(merge_non_simultaneous);
     CPPUNIT_TEST(merge_left_bias);
     CPPUNIT_TEST(merge_left_bias_2a);
     CPPUNIT_TEST(merge_left_bias_2b);
     CPPUNIT_TEST(merge_simultaneous);
     CPPUNIT_TEST(coalesce);
+#if 0
     CPPUNIT_TEST(filter);
     CPPUNIT_TEST(filter_optional1);
     CPPUNIT_TEST(loop_event);
@@ -82,8 +81,6 @@ class test_sodium : public CppUnit::TestFixture {
 
     void event1();
     void map();
-#if 0
-    void map_effectful();
     void merge_non_simultaneous();
     void merge_left_bias();
     void merge_left_bias_2_common(
@@ -91,11 +88,12 @@ class test_sodium : public CppUnit::TestFixture {
         sodium::event_sink<std::string> e2,
         sodium::event_sink<std::string> e3,
         sodium::event<std::string> e,
-        SODIUM_SHARED_PTR<std::vector<std::string> > out);
+        std::shared_ptr<std::vector<std::string> > out);
     void merge_left_bias_2a();
     void merge_left_bias_2b();
     void merge_simultaneous();
     void coalesce();
+#if 0
     void filter();
     void filter_optional1();
     void loop_event();

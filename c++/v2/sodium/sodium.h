@@ -58,6 +58,12 @@ namespace SODIUM_NAMESPACE {
             return map(f);
         }
 
+        stream<A> merge(const stream<A>& s) const;
+        stream<A> merge(const stream<A>& s, const std::function<A(const A&, const A&)>& f) const {
+            return merge(s).coalesce(f);
+        }
+        stream<A> coalesce(const std::function<A(const A&, const A&)>& f) const;
+
         stream<A> add_cleanup(const std::function<void()>& cleanup0) {
             impl::magic_ref<std::function<void()>> cleanup(cleanup0);
             std::forward_list<impl::magic_ref<std::function<void()>>> finalizers(impl->finalizers);
@@ -174,6 +180,48 @@ namespace SODIUM_NAMESPACE {
         return out.add_cleanup(kill);
     }
 
+    template <class A>
+    stream<A> stream<A>::merge(const stream<A>& s) const {
+        stream_with_send<A> out;
+        impl::magic_ref<impl::node_t> left(impl::node_t(0));
+        const impl::magic_ref<impl::node_t>& right(out.impl->node);
+        impl::magic_ref<std::function<void(const transaction& trans, const void*)>> null_action;
+        impl::link_to(left, null_action, right);
+        std::function<void(const transaction& trans, const void* va)> h =
+            [out] (const transaction& trans, const void* va) {
+                out.send(trans, *(const A*)va);
+            };
+        auto kill1 = listen_(left, h);
+        auto kill2 = s.listen_(right, h);
+        return out.add_cleanup([kill1, kill2, left, right] () {
+            kill1();
+            kill2();
+            unlink_to(left, right);
+        });
+    }
+
+    template <class A>
+    stream<A> stream<A>::coalesce(const std::function<A(const A&, const A&)>& f) const {
+        using namespace std;
+        using namespace boost;
+        transaction trans;
+        stream_with_send<A> out;
+        shared_ptr<optional<A>> p_state(new optional<A>);
+        auto kill = listen(out.impl->node, trans, [p_state, f, out] (const transaction& trans, const void* va) {
+            const A& a = *(const A*)va;
+            if (*p_state)
+                *p_state = optional<A>(f(p_state->get(), a));
+            else {
+                trans.prioritized(out.impl->node, [out, p_state] (const transaction& trans) {
+                    out.send(trans, p_state->get());
+                    *p_state = optional<A>();
+                });
+                *p_state = optional<A>(a);
+            }
+        }, false);
+        return out.add_cleanup(kill);
+    }
+
 #if 0
 	/**
 	 * Create a behavior with the specified initial value, that gets updated
@@ -241,35 +289,6 @@ namespace SODIUM_NAMESPACE {
 	    return Stream.<A>merge(this, eb);
 	}
 
-    /**
-     * Merge two streams of events of the same type.
-     *
-     * In the case where two event occurrences are simultaneous (i.e. both
-     * within the same transaction), both will be delivered in the same
-     * transaction. If the event firings are ordered for some reason, then
-     * their ordering is retained. In many common cases the ordering will
-     * be undefined.
-     */
-	private static <A> Stream<A> merge(final Stream<A> ea, final Stream<A> eb)
-	{
-	    final StreamSink<A> out = new StreamSink<A>();
-        final Node left = new Node(0);
-        final Node right = out.node;
-        left.linkTo(null, right);
-        TransactionHandler<A> h = new TransactionHandler<A>() {
-        	public void run(Transaction trans, A a) {
-	            out.send(trans, a);
-	        }
-        };
-        Listener l1 = ea.listen_(left, h);
-        Listener l2 = eb.listen_(right, h);
-        return out.addCleanup(l1).addCleanup(l2).addCleanup(new Listener() {
-            public void unlisten() {
-                left.unlinkTo(right);
-            }
-        });
-	}
-
 	/**
 	 * Push this event occurrence onto a new transaction. Same as split() but works
      * on a single value.
@@ -317,33 +336,6 @@ namespace SODIUM_NAMESPACE {
 	        }
 	    });
 	    return out.addCleanup(l1);
-    }
-
-    /**
-     * If there's more than one firing in a single transaction, combine them into
-     * one using the specified combining function.
-     *
-     * If the event firings are ordered, then the first will appear at the left
-     * input of the combining function. In most common cases it's best not to
-     * make any assumptions about the ordering, and the combining function would
-     * ideally be commutative.
-     */
-	public final Stream<A> coalesce(final Lambda2<A,A,A> f)
-	{
-	    return Transaction.apply(new Lambda1<Transaction, Stream<A>>() {
-	    	public Stream<A> apply(Transaction trans) {
-	    		return coalesce(trans, f);
-	    	}
-	    });
-	}
-
-	final Stream<A> coalesce(Transaction trans1, final Lambda2<A,A,A> f)
-	{
-	    final Stream<A> ev = this;
-	    final StreamSink<A> out = new StreamSink<A>();
-        TransactionHandler<A> h = new CoalesceHandler<A>(f, out);
-        Listener l = listen(out.node, trans1, h, false);
-        return out.addCleanup(l);
     }
 
     /**
