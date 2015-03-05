@@ -18,6 +18,15 @@ namespace SODIUM_NAMESPACE {
         template <class A>
         struct stream_impl {
             stream_impl() : node(node_t(0)) {}
+            stream_impl(
+                const std::forward_list<impl::magic_ref<std::function<void()>>>& finalizers,
+                const impl::magic_ref<node_t>& node,
+                const std::forward_list<magic_ref<A>>& firings)
+            : finalizers(finalizers),
+              node(node),
+              firings(firings)
+            {
+            }
             std::forward_list<impl::magic_ref<std::function<void()>>> finalizers;
             impl::magic_ref<node_t> node;
             std::forward_list<magic_ref<A>> firings;
@@ -26,9 +35,12 @@ namespace SODIUM_NAMESPACE {
 
     template <class A>
     class stream {
+    template <class AA> friend class stream;
     protected:
         impl::magic_ref<impl::stream_impl<A>> impl;
 
+    private:
+        stream(const impl::magic_ref<impl::stream_impl<A>>& impl) : impl(impl) {}
     public:
         stream() : impl(impl::stream_impl<A>()) {}
         virtual ~stream() {}
@@ -37,6 +49,28 @@ namespace SODIUM_NAMESPACE {
                 action(*(const A*)v);
             });
         }
+
+        template <class B>
+        stream<B> map(const std::function<B(const A&)>& f) const;
+
+        template <class B>
+        stream<B> map_(const std::function<B(const A&)>& f) const {
+            return map(f);
+        }
+
+        stream<A> add_cleanup(const std::function<void()>& cleanup0) {
+            impl::magic_ref<std::function<void()>> cleanup(cleanup0);
+            std::forward_list<impl::magic_ref<std::function<void()>>> finalizers(impl->finalizers);
+            finalizers.push_front(cleanup);
+            return stream<A>(impl::magic_ref<impl::stream_impl<A>>(
+                    impl::stream_impl<A>(
+                        finalizers,
+                        impl->node,
+                        impl->firings
+                    )
+                ));
+        }
+
     protected:
         std::function<void()> listen_(const impl::magic_ref<impl::node_t>& target,
                 const std::function<void(const transaction&, const void*)>& action) const {
@@ -82,6 +116,7 @@ namespace SODIUM_NAMESPACE {
 
     template <class A>
     class stream_with_send : public stream<A> {
+    template <class AA> friend class stream;
     public:
         stream_with_send() {}
         virtual ~stream_with_send() {}
@@ -128,22 +163,18 @@ namespace SODIUM_NAMESPACE {
         }
 	};
 
-#if 0
-    /**
-     * Transform the event's value according to the supplied function.
-     */
-	public final <B> Stream<B> map(final Lambda1<A,B> f)
-	{
-	    final Stream<A> ev = this;
-	    final StreamSink<B> out = new StreamSink<B>();
-        Listener l = listen_(out.node, new TransactionHandler<A>() {
-        	public void run(Transaction trans2, A a) {
-	            out.send(trans2, f.apply(a));
-	        }
+    template <class A>
+    template <class B>
+    stream<B> stream<A>::map(const std::function<B(const A&)>& f) const {
+        stream_with_send<B> out;
+        auto kill = listen_(out.impl->node, [out, f] (const transaction& trans, const void* va) {
+            const A& a = *(const A*)va;
+            out.send(trans, f(a));
         });
-        return out.addCleanup(l);
-	}
+        return out.add_cleanup(kill);
+    }
 
+#if 0
 	/**
 	 * Create a behavior with the specified initial value, that gets updated
      * by the values coming through the event. The 'current value' of the behavior

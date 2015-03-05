@@ -52,7 +52,6 @@ void test_sodium::event1()
     CPPUNIT_ASSERT_EQUAL(string("hello"), *out);
 }
 
-#if 0
 void test_sodium::map()
 {
     event_sink<int> e;
@@ -69,6 +68,7 @@ void test_sodium::map()
     CPPUNIT_ASSERT(shouldBe == *out);
 }
 
+#if 0
 void test_sodium::map_effectful()
 {
     event_sink<int> e;
