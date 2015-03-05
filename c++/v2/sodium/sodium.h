@@ -36,6 +36,8 @@ namespace SODIUM_NAMESPACE {
     template <class A>
     class stream {
     template <class AA> friend class stream;
+    template <class AA>
+    friend stream<AA> filter_optional(const stream<boost::optional<AA>>& s);
     protected:
         impl::magic_ref<impl::stream_impl<A>> impl;
 
@@ -50,19 +52,60 @@ namespace SODIUM_NAMESPACE {
             });
         }
 
+        /*!
+         * Transform the event's value according to the supplied function.
+         */
         template <class B>
         stream<B> map(const std::function<B(const A&)>& f) const;
 
+        /*!
+         * Transform the event's value according to the supplied function.
+         * same as map_. This is here to help avoid problems with namespace
+         * conflicts with std::map.
+         */
         template <class B>
         stream<B> map_(const std::function<B(const A&)>& f) const {
             return map(f);
         }
 
+        /*!
+         * Merge two streams of events of the same type.
+         *
+         * In the case where two event occurrences are simultaneous (i.e. both
+         * within the same transaction), both will be delivered in the same
+         * transaction. If the event firings are ordered for some reason, then
+         * their ordering is retained. In many common cases the ordering will
+         * be undefined.
+         */
         stream<A> merge(const stream<A>& s) const;
+
+        /*!
+         * Merge two streams of events of the same type, combining simultaneous
+         * event occurrences.
+         *
+         * In the case where multiple event occurrences are simultaneous (i.e. all
+         * within the same transaction), they are combined using the same logic as
+         * 'coalesce'.
+         */
         stream<A> merge(const stream<A>& s, const std::function<A(const A&, const A&)>& f) const {
             return merge(s).coalesce(f);
         }
+
+        /*!
+         * If there's more than one firing in a single transaction, combine them into
+         * one using the specified combining function.
+         *
+         * If the event firings are ordered, then the first will appear at the left
+         * input of the combining function. In most common cases it's best not to
+         * make any assumptions about the ordering, and the combining function would
+         * ideally be commutative.
+         */
         stream<A> coalesce(const std::function<A(const A&, const A&)>& f) const;
+
+        /*!
+         * Only keep event occurrences for which the predicate returns true.
+         */
+        stream<A> filter(const std::function<bool(const A&)>& f) const;
 
         stream<A> add_cleanup(const std::function<void()>& cleanup0) {
             impl::magic_ref<std::function<void()>> cleanup(cleanup0);
@@ -123,6 +166,8 @@ namespace SODIUM_NAMESPACE {
     template <class A>
     class stream_with_send : public stream<A> {
     template <class AA> friend class stream;
+    template <class AA>
+    friend stream<AA> filter_optional(const stream<boost::optional<AA>>& s);
     public:
         stream_with_send() {}
         virtual ~stream_with_send() {}
@@ -219,6 +264,26 @@ namespace SODIUM_NAMESPACE {
                 *p_state = optional<A>(a);
             }
         }, false);
+        return out.add_cleanup(kill);
+    }
+
+    template <class A>
+    stream<A> stream<A>::filter(const std::function<bool(const A&)>& f) const {
+        stream_with_send<A> out;
+        auto kill = listen_(out.impl->node, [f, out] (const transaction& trans, const void *va) {
+            const A& a = *(const A*)va;
+            if (f(a)) out.send(trans, a);
+        });
+        return out.add_cleanup(kill);
+    }
+
+    template <class A>
+    stream<A> filter_optional(const stream<boost::optional<A>>& s) {
+        stream_with_send<A> out;
+        auto kill = s.listen_(out.impl->node, [out] (const transaction& trans, const void *va) {
+            const boost::optional<A>& oa = *(const boost::optional<A>*)va;
+            if (oa) out.send(trans, oa.get());
+        });
         return out.add_cleanup(kill);
     }
 
@@ -348,42 +413,9 @@ namespace SODIUM_NAMESPACE {
         });
     }
 
-    /**
-     * Merge two streams of events of the same type, combining simultaneous
-     * event occurrences.
-     *
-     * In the case where multiple event occurrences are simultaneous (i.e. all
-     * within the same transaction), they are combined using the same logic as
-     * 'coalesce'.
-     */
     public Stream<A> merge(Stream<A> eb, Lambda2<A,A,A> f)
     {
         return merge(eb).coalesce(f);
-    }
-
-    /**
-     * Only keep event occurrences for which the predicate returns true.
-     */
-    public final Stream<A> filter(final Lambda1<A,Boolean> f)
-    {
-        final Stream<A> ev = this;
-        final StreamSink<A> out = new StreamSink<A>();
-        Listener l = listen_(out.node, new TransactionHandler<A>() {
-        	public void run(Transaction trans2, A a) {
-	            if (f.apply(a)) out.send(trans2, a);
-	        }
-        });
-        return out.addCleanup(l);
-    }
-
-    /**
-     * Filter out any event occurrences whose value is a Java null pointer.
-     */
-    public final Stream<A> filterNotNull()
-    {
-        return filter(new Lambda1<A,Boolean>() {
-        	public Boolean apply(A a) { return a != null; }
-        });
     }
 
     /**

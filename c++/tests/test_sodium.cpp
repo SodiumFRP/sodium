@@ -248,7 +248,6 @@ void test_sodium::coalesce()
     CPPUNIT_ASSERT(shouldBe == *out);
 }
 
-#if 0
 void test_sodium::filter()
 {
     event_sink<char> e;
@@ -276,6 +275,7 @@ void test_sodium::filter_optional1()
     CPPUNIT_ASSERT(vector<string>({ string("tomato"), string("peach") }) == *out);
 }
 
+#if 0
 // NOTE! Currently this leaks memory.
 void test_sodium::loop_event()
 {

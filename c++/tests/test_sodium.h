@@ -23,9 +23,9 @@ class test_sodium : public CppUnit::TestFixture {
     CPPUNIT_TEST(merge_left_bias_2b);
     CPPUNIT_TEST(merge_simultaneous);
     CPPUNIT_TEST(coalesce);
-#if 0
     CPPUNIT_TEST(filter);
     CPPUNIT_TEST(filter_optional1);
+#if 0
     CPPUNIT_TEST(loop_event);
     CPPUNIT_TEST(gate1);
     CPPUNIT_TEST(collect1);
@@ -93,9 +93,9 @@ class test_sodium : public CppUnit::TestFixture {
     void merge_left_bias_2b();
     void merge_simultaneous();
     void coalesce();
-#if 0
     void filter();
     void filter_optional1();
+#if 0
     void loop_event();
     void gate1();
     void collect1();
