@@ -19,6 +19,13 @@ using namespace sodium;
 using namespace boost;
 
 
+void test_sodium::tearDown()
+{
+#if defined(SODIUM_V2)
+    sodium::collect_cycles();
+#endif
+}
+
 void test_sodium::event1()
 {
     event_sink<int> ev;
@@ -275,14 +282,37 @@ void test_sodium::filter_optional1()
     CPPUNIT_ASSERT(vector<string>({ string("tomato"), string("peach") }) == *out);
 }
 
-#if 0
-// NOTE! Currently this leaks memory.
-void test_sodium::loop_event()
+// Sodium v2 now fixes the memory leak in this code.  
+void test_sodium::loop_event1()
+{
+    event_sink<int> ea;
+#if defined(SODIUM_V2)
+    transaction trans;
+#else
+    transaction<> trans;
+#endif
+    event_loop<int> eb;
+    eb.loop(ea);
+    trans.close();
+    auto out = std::make_shared<vector<int>>();
+    auto unlisten = eb.listen([out] (const int& x) { out->push_back(x); });
+    ea.send(2);
+    ea.send(52);
+    unlisten();
+    CPPUNIT_ASSERT(vector<int>({ 2, 52 }) == *out);
+}
+
+// Sodium v2 now fixes the memory leak in this code.  
+void test_sodium::loop_event2()
 {
     event_sink<int> ea;
     event<int> ec;
     {
+#if defined(SODIUM_V2)
+        transaction trans;
+#else
         transaction<> trans;
+#endif
         event_loop<int> eb;
         ec = ea.map<int>([] (const int& x) { return x % 10; })
                     .merge(eb, [] (const int& x, const int& y) { return x+y; });
@@ -298,6 +328,7 @@ void test_sodium::loop_event()
     CPPUNIT_ASSERT(vector<int>({ 2, 7 }) == *out);
 }
 
+#if 0
 void test_sodium::gate1()
 {
     event_sink<char> ec;
@@ -312,6 +343,7 @@ void test_sodium::gate1()
     unlisten();
     CPPUNIT_ASSERT_EQUAL(string("HI"), *out);
 }
+#endif
 
 void test_sodium::once1()
 {
@@ -325,6 +357,7 @@ void test_sodium::once1()
     CPPUNIT_ASSERT_EQUAL(string("A"), *out);
 }
 
+#if 0
 void test_sodium::hold1()
 {
     event_sink<int> e;

@@ -25,12 +25,15 @@ class test_sodium : public CppUnit::TestFixture {
     CPPUNIT_TEST(coalesce);
     CPPUNIT_TEST(filter);
     CPPUNIT_TEST(filter_optional1);
+    CPPUNIT_TEST(loop_event1);
+    CPPUNIT_TEST(loop_event2);
 #if 0
-    CPPUNIT_TEST(loop_event);
     CPPUNIT_TEST(gate1);
+#endif
+    //CPPUNIT_TEST(once1);
+#if 0
     CPPUNIT_TEST(collect1);
     CPPUNIT_TEST(accum1);
-    CPPUNIT_TEST(once1);
     // behaviour tests
     CPPUNIT_TEST(collect2);
     CPPUNIT_TEST(hold1);
@@ -78,6 +81,8 @@ class test_sodium : public CppUnit::TestFixture {
 #endif
     CPPUNIT_TEST_SUITE_END();
 
+public:
+    virtual void tearDown();
 
     void event1();
     void map();
@@ -95,12 +100,15 @@ class test_sodium : public CppUnit::TestFixture {
     void coalesce();
     void filter();
     void filter_optional1();
+    void loop_event1();
+    void loop_event2();
 #if 0
-    void loop_event();
     void gate1();
+#endif
+    void once1();
+#if 0
     void collect1();
     void accum1();
-    void once1();
     void collect2();
     void hold1();
     void snapshot1();

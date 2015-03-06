@@ -15,6 +15,7 @@ namespace sodium {
         void link::increment() {
             capturer_acquire();
             ref_count++;
+            colour = colour_t::black;
         }
 
         void link::decrement() {
@@ -27,15 +28,26 @@ namespace sodium {
         }
 
         void link::release() {
-            colour = colour_t::black;
-            ref_count = 0x08000000;
+            /*
+            for (auto it = children.begin(); it != children.end(); ++it) {
+                link* l = *it;
+                l->decrement();
+            }
+            */
+            //colour = colour_t::black;  // @@@
+            if (buffered)                // @@@
+                roots.erase(this);       // @@@
+            //if (!buffered)             // @@@
             delete this;
         }
 
         void link::possible_root() {
             if (colour != colour_t::purple) {
                 colour = colour_t::purple;
-                roots.insert(this);
+                if (!buffered) {
+                    buffered = true;
+                    roots.insert(this);
+                }
             }
         }
 
@@ -54,6 +66,7 @@ namespace sodium {
                 if (l->colour == colour_t::purple && l->ref_count > 0)
                     l->mark_grey();
                 else {
+                    l->buffered = false;
                     roots.erase(it);
                     if (l->colour == colour_t::black && l->ref_count == 0)
                         delete l;
@@ -73,11 +86,10 @@ namespace sodium {
 
         /*static*/ void link::collect_roots() {
             std::set<link*>::iterator nextIt;
-            for (auto it = roots.begin(); it != roots.end(); it = nextIt) {
-                link* l = *it;
-                nextIt = it;
-                ++nextIt;
-                roots.erase(it);
+            while (roots.begin() != roots.end()) {
+                link* l = *roots.begin();
+                roots.erase(roots.begin());
+                l->buffered = false;
                 l->collect_white();
             }
         }
@@ -118,7 +130,7 @@ namespace sodium {
         }
 
         void link::collect_white() {
-            if (colour == colour_t::white) {
+            if (colour == colour_t::white && !buffered) {
                 colour = colour_t::black;
                 for (auto it = children.begin(); it != children.end(); ++it) {
                     link* l = *it;

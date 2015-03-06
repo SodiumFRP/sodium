@@ -12,12 +12,14 @@ clean:
 
 sodium/impl/mutex.h: sodium/impl/common.h
 sodium/impl/magic_ref.h: sodium/impl/mutex.h
-sodium/impl/magic_ref.cpp: sodium/impl/magic_ref.h
-sodium/transaction.cpp: sodium/impl/magic_ref.h
-sodium/sodium.h: sodium/transaction.h
-test.o: sodium/impl/magic_ref.h
+sodium/impl/magic_ref.cpp: sodium/impl/magic_ref.h sodium/impl/mutex.h
+sodium/transaction.cpp: sodium/transaction.h sodium/impl/magic_ref.h sodium/impl/mutex.h
+sodium/sodium.h: sodium/transaction.h sodium/impl/magic_ref.h sodium/impl/mutex.h
+test.o: sodium/impl/magic_ref.h sodium/impl/mutex.h
 
-test_sodium.o: ../tests/test_sodium.cpp sodium/sodium.h ../tests/test_sodium.h
+test_sodium.o: ../tests/test_sodium.cpp ../tests/test_sodium.h \
+        sodium/sodium.h sodium/transaction.h sodium/impl/magic_ref.h \
+        sodium/impl/mutex.h sodium/impl/common.h
 	g++ $(CPPFLAGS) $(CXXFLAGS) -g -o test_sodium.o -c $<
 
 test: test.o $(OBJS)

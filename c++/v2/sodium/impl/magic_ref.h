@@ -21,10 +21,12 @@ namespace SODIUM_NAMESPACE {
         /* Bacon/Attanasio/Rajan/Smith algorithm. */
         struct link {
             enum colour_t { black, grey, white, purple };
-            link() : ref_count(1), colour(colour_t::black) {}
+            link() : ref_count(1), colour(colour_t::black), buffered(false) {
+            }
             virtual ~link() {}
-            uint32_t ref_count : 29;
+            uint32_t ref_count : 28;
             colour_t colour : 3;
+            bool buffered : 1;
             std::list<link*> children;  // Other links that we reference
             static std::list<link*>* capturer;
             static mutex lock;
@@ -91,6 +93,13 @@ namespace SODIUM_NAMESPACE {
                 r->oa = boost::optional<A>(a);
                 link::capturer = capturer_was;
                 link::lock.unlock();
+            }
+
+            /*!
+             * Return true if this reference has been assign()ed.
+             */
+            operator bool () const {
+                return (bool)r->oa; 
             }
 
             link* l() const { return r; }

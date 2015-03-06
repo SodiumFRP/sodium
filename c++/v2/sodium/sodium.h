@@ -36,6 +36,7 @@ namespace SODIUM_NAMESPACE {
     template <class A>
     class stream {
     template <class AA> friend class stream;
+    template <class AA> friend class stream_loop;
     template <class AA>
     friend stream<AA> filter_optional(const stream<boost::optional<AA>>& s);
     protected:
@@ -107,20 +108,47 @@ namespace SODIUM_NAMESPACE {
          */
         stream<A> filter(const std::function<bool(const A&)>& f) const;
 
-        stream<A> add_cleanup(const std::function<void()>& cleanup0) {
-            impl::magic_ref<std::function<void()>> cleanup(cleanup0);
-            std::forward_list<impl::magic_ref<std::function<void()>>> finalizers(impl->finalizers);
-            finalizers.push_front(cleanup);
+        stream<A> once() const {
+            using namespace boost;
+            optional<std::function<void()>> no_func;
+            impl::magic_ref<optional<std::function<void()>>> r_kill(no_func);
+            stream_with_send<A> out;
+            r_kill.assign(make_optional(listen_(out.impl->node,
+                [out, r_kill] (const transaction& trans, const void* va) {
+                    if (*r_kill) {
+                        const A& a = *(const A*)va;
+                        out.send(trans, a);
+                        (*r_kill).get()();
+                        optional<std::function<void()>> no_func;
+                        r_kill.assign(no_func);
+                    }
+                })));
+            return out.add_cleanup(*r_kill.get());
+        }
+
+        stream<A> add_cleanup(const std::function<void()>& cleanup0) const {
             return stream<A>(impl::magic_ref<impl::stream_impl<A>>(
-                    impl::stream_impl<A>(
-                        finalizers,
-                        impl->node,
-                        impl->firings
-                    )
+                    add_cleanup_impl(cleanup0)
                 ));
         }
 
     protected:
+        void unsafe_add_cleanup(const std::function<void()>& cleanup0) const {
+            impl::stream_impl<A> a = add_cleanup_impl(cleanup0);
+            impl.assign(a);
+        }
+
+        impl::stream_impl<A> add_cleanup_impl(const std::function<void()>& cleanup0) const {
+            impl::magic_ref<std::function<void()>> cleanup(cleanup0);
+            std::forward_list<impl::magic_ref<std::function<void()>>> finalizers(impl->finalizers);
+            finalizers.push_front(cleanup);
+            return impl::stream_impl<A>(
+                    finalizers,
+                    impl->node,
+                    impl->firings
+                );
+        }
+
         std::function<void()> listen_(const impl::magic_ref<impl::node_t>& target,
                 const std::function<void(const transaction&, const void*)>& action) const {
             transaction trans;
@@ -171,9 +199,9 @@ namespace SODIUM_NAMESPACE {
     public:
         stream_with_send() {}
         virtual ~stream_with_send() {}
-    protected:
-        void send(const transaction& trans, const A& a) const {
-            auto impl(this->impl);
+
+        static void send(impl::magic_ref<impl::stream_impl<A>> impl,
+                         const transaction& trans, const A& a) {
             if (impl->firings.begin() == impl->firings.end()) {
                 trans.last([impl] () {
                     impl.unsafe_get().firings.clear();
@@ -198,6 +226,11 @@ namespace SODIUM_NAMESPACE {
                     }
                 });
             }
+        }
+
+    protected:
+        void send(const transaction& trans, const A& a) const {
+            send(this->impl, trans, a);
         }
     };
 
@@ -286,6 +319,27 @@ namespace SODIUM_NAMESPACE {
         });
         return out.add_cleanup(kill);
     }
+
+    template <class A>
+    struct stream_loop : stream<A> {
+        impl::magic_ref<stream<A>> out;
+        stream_loop() {
+            if (!transaction::get_current_transaction())
+                throw std::runtime_error("stream_loop/cell_loop must be used within an explicit transaction");
+        }
+
+        void loop(const stream<A>& out) const {
+            if (this->out)
+                throw std::runtime_error("stream_loop looped more than once");
+            this->out.assign(out);
+            auto impl(this->impl);
+            stream<A>::unsafe_add_cleanup(out.listen_(impl->node,
+                [impl] (const transaction& trans, const void* va) {
+                    const A& a = *(const A*)va;
+                    stream_with_send<A>::send(impl, trans, a);
+                }));
+        }
+    };
 
 #if 0
 	/**
@@ -528,6 +582,12 @@ namespace SODIUM_NAMESPACE {
         event_sink() {}
         event_sink(const stream_sink<A>& other) : stream_sink<A>(other) {}
         virtual ~event_sink() {}
+    };
+    template <class A>
+    struct event_loop : stream_loop<A> {
+        event_loop() {}
+        event_loop(const event_loop<A>& other) : event_loop<A>(other) {}
+        virtual ~event_loop() {}
     };
 #endif
 

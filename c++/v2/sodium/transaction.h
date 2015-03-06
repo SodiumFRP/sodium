@@ -17,6 +17,7 @@ namespace SODIUM_NAMESPACE {
     template <class A> class stream;
     template <class A> class stream_with_send;
     template <class A> class stream_sink;
+    template <class A> class stream_loop;
 
     namespace impl {
         typedef uint32_t rank_t;
@@ -48,8 +49,12 @@ namespace SODIUM_NAMESPACE {
         void unlink_to(const magic_ref<node_t>& node,
                        const magic_ref<node_t>& target);
 
-        struct transaction_impl {
-            unsigned ref_count;
+        class transaction_impl {
+        private:
+            transaction_impl(const transaction_impl& other) {}
+            transaction_impl operator = (const transaction_impl& other) { return *this; }
+        public:
+            bool active;
             static impl::mutex transaction_lock;
             template <class A> friend class sodium::stream;
             friend class transaction;
@@ -80,27 +85,31 @@ namespace SODIUM_NAMESPACE {
 
             transaction_impl();
             ~transaction_impl();
-            void close(const transaction& trans);
+            void close(const std::shared_ptr<transaction_impl>& impl);
             void check_regen();
         };
     }  // end namespace impl
 
     class transaction {
+    friend class impl::transaction_impl;
     template <class A> friend class sodium::stream;
     template <class A> friend class sodium::stream_with_send;
     template <class A> friend class sodium::stream_sink;
+    template <class A> friend class sodium::stream_loop;
     private:
         std::shared_ptr<impl::transaction_impl> impl;
         static impl::mutex listeners_lock;
-        static std::weak_ptr<impl::transaction_impl> current_transaction;
+        static std::weak_ptr<impl::transaction_impl> current_transaction_1;
+        static std::shared_ptr<impl::transaction_impl> current_transaction_2;
         static int in_callback;
         transaction(const std::shared_ptr<impl::transaction_impl>& impl);
     public:
         transaction();
-        ~transaction() { close(); }
+        ~transaction() {}
         void close();
     private:
-        boost::optional<transaction> get_current_transaction();
+        static std::shared_ptr<impl::transaction_impl> get_current_transaction_impl();
+        static boost::optional<transaction> get_current_transaction();
         void prioritized(const impl::magic_ref<impl::node_t>& node,
                          const std::function<void(const transaction&)>& action) const;
         void post(const std::function<void()>& action) const;
