@@ -31,6 +31,7 @@ namespace SODIUM_NAMESPACE {
             static std::list<link*>* capturer;
             static mutex lock;
             static std::set<link*> roots;
+            static std::set<link*> to_delete;
             void increment();
             void decrement();
             void release();
@@ -43,6 +44,7 @@ namespace SODIUM_NAMESPACE {
             void scan();
             void scan_black();
             void collect_white();
+            void dump_white();
             void capturer_acquire();
             void capturer_release();
         };

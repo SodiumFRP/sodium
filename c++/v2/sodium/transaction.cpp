@@ -10,7 +10,7 @@ namespace SODIUM_NAMESPACE {
     namespace impl {
 
         node_t node_t::null(null_rank);
-        target_id_t node_t::target_t::next_target_id = 0;
+        target_ref_t node_t::target_t::next_target_ref = 0;
 
         static bool ensure_bigger_than(const magic_ref<node_t>& node, rank_t limit, std::set<const node_t*>& visited) {
             if (node->rank > limit || visited.find(node.get_ptr()) != visited.end())
@@ -34,26 +34,31 @@ namespace SODIUM_NAMESPACE {
         bool link_to(const magic_ref<node_t>& node,
                      const magic_ref<std::function<void(const transaction& trans, const void*)>>& action,
                      const magic_ref<node_t>& target,
-                     target_id_t& target_id) {
+                     target_ref_t& target_ref) {
             bool changed = ensure_bigger_than(target, node->rank);
             std::vector<node_t::target_t> listeners = node->listeners;
-            target_id = ++node_t::target_t::next_target_id;
-            listeners.push_back(node_t::target_t(action, target, target_id));
+            target_ref = ++node_t::target_t::next_target_ref;
+            listeners.push_back(node_t::target_t(action, target, target_ref));
             node.assign(node_t(node->rank, listeners));
             return changed;
         }
 
         void unlink_to(const magic_ref<node_t>& node,
-                       target_id_t target_id) {
-            std::vector<node_t::target_t> listeners;
-            bool changed = false;
-            for (auto it = node->listeners.begin(); it != node->listeners.end(); ++it)
-                if (it->target_id == target_id)
-                    changed = true;
-                else
-                    listeners.push_back(*it);
-            if (changed)
-                node.assign(node_t(node->rank, listeners));
+                       target_ref_t target_ref) {
+            // The node we're referring to could be deleted already. This is because if
+            // we're in a circular reference loop, we can't control what order the cycle
+            // is deleted in.
+            if (node) {
+                std::vector<node_t::target_t> listeners;
+                bool changed = false;
+                for (auto it = node->listeners.begin(); it != node->listeners.end(); ++it)
+                    if (it->target_ref == target_ref)
+                        changed = true;
+                    else
+                        listeners.push_back(*it);
+                if (changed)
+                    node.assign(node_t(node->rank, listeners));
+            }
         }
 
         seq_t transaction_impl::entry::next_seq = 0;

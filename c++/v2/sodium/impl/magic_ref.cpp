@@ -11,6 +11,7 @@ namespace sodium {
         std::list<link*>* link::capturer;
         mutex             link::lock;
         std::set<link*>   link::roots;
+        std::set<link*>   link::to_delete;
 
         void link::increment() {
             capturer_acquire();
@@ -19,12 +20,15 @@ namespace sodium {
         }
 
         void link::decrement() {
-            capturer_release();
-            ref_count--;
-            if (ref_count == 0)
-                release();
-            else
-                possible_root();
+            // If not already deleted
+            if (to_delete.find(this) == to_delete.end()) {
+                capturer_release();
+                ref_count--;
+                if (ref_count == 0)
+                    release();
+                else
+                    possible_root();
+            }
         }
 
         void link::release() {
@@ -55,6 +59,15 @@ namespace sodium {
             mark_roots();
             scan_roots();
             collect_roots();
+            for (auto it = to_delete.begin(); it != to_delete.end(); ++it) {
+                link* l = *it;
+                delete l;
+            }
+            to_delete.clear();
+            // Cleaned up cycles should not be able to change anything outside
+            // of themselves. If they can, then it means we have made a mistake
+            // in tracking children.
+            assert(roots.begin() == roots.end());
         }
 
         /*static*/ void link::mark_roots() {
@@ -85,13 +98,12 @@ namespace sodium {
         }
 
         /*static*/ void link::collect_roots() {
-            std::set<link*>::iterator nextIt;
-            while (roots.begin() != roots.end()) {
-                link* l = *roots.begin();
-                roots.erase(roots.begin());
+            for (auto it = roots.begin(); it != roots.end(); ++it) {
+                link* l = *it;
                 l->buffered = false;
                 l->collect_white();
             }
+            link::roots.clear();
         }
 
         void link::mark_grey() {
@@ -136,7 +148,7 @@ namespace sodium {
                     link* l = *it;
                     l->collect_white();
                 }
-                delete this;
+                to_delete.insert(this);
             }
         }
 

@@ -24,20 +24,20 @@ namespace SODIUM_NAMESPACE {
         typedef uint32_t rank_t;
         static const rank_t null_rank = 0x80000000;
         typedef uint64_t seq_t;
-        typedef uint32_t target_id_t;
+        typedef uint32_t target_ref_t;
 
         struct node_t {
             static node_t null;
             struct target_t {
-                static target_id_t next_target_id;
+                static target_ref_t next_target_ref;
                 target_t(
                     const magic_ref<std::function<void(const transaction& trans, const void*)>>& action,
                     const magic_ref<node_t>& node,
-                    target_id_t target_id
-                ) : action(action), node(node), target_id(target_id) {}
+                    target_ref_t target_ref
+                ) : action(action), node(node), target_ref(target_ref) {}
                 magic_ref<std::function<void(const transaction& trans, const void*)>> action;
                 magic_ref<node_t> node;
-                target_id_t target_id;
+                target_ref_t target_ref;
             };
             node_t(rank_t rank) : rank(rank) {}
             node_t(rank_t rank, const std::vector<target_t>& listeners) : rank(rank), listeners(listeners) {}
@@ -51,9 +51,9 @@ namespace SODIUM_NAMESPACE {
         bool link_to(const magic_ref<node_t>& node,
                      const magic_ref<std::function<void(const transaction& trans, const void*)>>& action,
                      const magic_ref<node_t>& target,
-                     target_id_t& target_id);
+                     target_ref_t& target_ref);
         void unlink_to(const magic_ref<node_t>& node,
-                       target_id_t target_id);
+                       target_ref_t target_ref);
 
         class transaction_impl {
         private:

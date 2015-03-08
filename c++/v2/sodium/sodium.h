@@ -182,8 +182,8 @@ namespace SODIUM_NAMESPACE {
                 bool suppress_earlier_firings) const {
             impl::magic_ref<std::function<void(const transaction& trans, const void*)>> action(action0);
             transaction::listeners_lock.lock();
-            impl::target_id_t target_id;
-            if (link_to(impl->node, action, target, target_id))
+            impl::target_ref_t target_ref;
+            if (link_to(impl->node, action, target, target_ref))
                 trans.impl->to_regen = true;
             transaction::listeners_lock.unlock();
             // reverse the firings list when we copy it, because we've stored it in reverse order.
@@ -205,10 +205,10 @@ namespace SODIUM_NAMESPACE {
                     }
                 });
             }
-            auto impl(this->impl);
-            return [impl, target_id] () {
+            impl::magic_ref<impl::node_t> node = impl->node;
+            return [node, target_ref] () {
                 transaction::listeners_lock.lock();
-                unlink_to(impl->node, target_id);
+                impl::unlink_to(node, target_ref);
                 transaction::listeners_lock.unlock();
             };
         }
@@ -287,18 +287,18 @@ namespace SODIUM_NAMESPACE {
         impl::magic_ref<impl::node_t> left(impl::node_t(0));
         const impl::magic_ref<impl::node_t>& right(out.impl->node);
         impl::magic_ref<std::function<void(const transaction& trans, const void*)>> null_action;
-        impl::target_id_t target_id;
-        impl::link_to(left, null_action, right, target_id);
+        impl::target_ref_t target_ref;
+        impl::link_to(left, null_action, right, target_ref);
         std::function<void(const transaction& trans, const void* va)> h =
             [out] (const transaction& trans, const void* va) {
                 out.send(trans, *(const A*)va);
             };
         auto kill1 = listen_(left, h);
         auto kill2 = s.listen_(right, h);
-        return out.add_cleanup([kill1, kill2, left, target_id] () {
+        return out.add_cleanup([kill1, kill2, left, target_ref] () {
             kill1();
             kill2();
-            unlink_to(left, target_id);
+            unlink_to(left, target_ref);
         });
     }
 
@@ -467,7 +467,6 @@ namespace SODIUM_NAMESPACE {
         cell_sink(const A& initValue) : cell<A>(stream<A>(), initValue) {}
         void send(const A& a) {
             transaction trans;
-            printf("send\n");
             stream_with_send<A>::send(this->impl->str.impl, trans, a); 
         }
     };
