@@ -32,11 +32,15 @@ namespace SODIUM_NAMESPACE {
             std::forward_list<magic_ref<A>> firings;
         };
     }
+    template <class A> class cell;
+    template <class A> class cell_sink;
 
     template <class A>
     class stream {
     template <class AA> friend class stream;
     template <class AA> friend class stream_loop;
+    template <class AA> friend class cell;
+    template <class AA> friend class cell_sink;
     template <class AA>
     friend stream<AA> filter_optional(const stream<boost::optional<AA>>& s);
     protected:
@@ -126,6 +130,24 @@ namespace SODIUM_NAMESPACE {
             return out.add_cleanup(*r_kill.get());
         }
 
+        stream<A> gate(const cell<bool>& b) const;
+
+        /*!
+         * Variant of snapshot that throws away the event's value and captures the behavior's.
+         */
+        template <class B>
+        stream<B> snapshot(const cell<B>& b) const;
+
+        /*!
+         * Sample the behavior at the time of the event firing. Note that the 'current value'
+         * of the behavior that's sampled is the value as at the start of the transaction
+         * before any state changes of the current transaction are applied through 'hold's.
+         */
+        template <class B, class C>
+        stream<C> snapshot(const cell<B>& b, const std::function<C(const A&, const B&)>& f) const;
+
+        cell<A> hold(const A& init_a) const;
+
         stream<A> add_cleanup(const std::function<void()>& cleanup0) const {
             return stream<A>(impl::magic_ref<impl::stream_impl<A>>(
                     add_cleanup_impl(cleanup0)
@@ -160,7 +182,8 @@ namespace SODIUM_NAMESPACE {
                 bool suppress_earlier_firings) const {
             impl::magic_ref<std::function<void(const transaction& trans, const void*)>> action(action0);
             transaction::listeners_lock.lock();
-            if (link_to(impl->node, action, target))
+            impl::target_id_t target_id;
+            if (link_to(impl->node, action, target, target_id))
                 trans.impl->to_regen = true;
             transaction::listeners_lock.unlock();
             // reverse the firings list when we copy it, because we've stored it in reverse order.
@@ -183,9 +206,9 @@ namespace SODIUM_NAMESPACE {
                 });
             }
             auto impl(this->impl);
-            return [impl, target] () {
+            return [impl, target_id] () {
                 transaction::listeners_lock.lock();
-                unlink_to(impl->node, target);
+                unlink_to(impl->node, target_id);
                 transaction::listeners_lock.unlock();
             };
         }
@@ -264,17 +287,18 @@ namespace SODIUM_NAMESPACE {
         impl::magic_ref<impl::node_t> left(impl::node_t(0));
         const impl::magic_ref<impl::node_t>& right(out.impl->node);
         impl::magic_ref<std::function<void(const transaction& trans, const void*)>> null_action;
-        impl::link_to(left, null_action, right);
+        impl::target_id_t target_id;
+        impl::link_to(left, null_action, right, target_id);
         std::function<void(const transaction& trans, const void* va)> h =
             [out] (const transaction& trans, const void* va) {
                 out.send(trans, *(const A*)va);
             };
         auto kill1 = listen_(left, h);
         auto kill2 = s.listen_(right, h);
-        return out.add_cleanup([kill1, kill2, left, right] () {
+        return out.add_cleanup([kill1, kill2, left, target_id] () {
             kill1();
             kill2();
-            unlink_to(left, right);
+            unlink_to(left, target_id);
         });
     }
 
@@ -321,6 +345,32 @@ namespace SODIUM_NAMESPACE {
     }
 
     template <class A>
+    stream<A> stream<A>::gate(const cell<bool>& b) const {
+        using namespace boost;
+        return filter_optional(snapshot<bool,optional<A>>(b, [] (const A& a, const bool& b) {
+            return b ? optional<A>(a)
+                     : optional<A>();
+        }));
+    }
+
+    template <class A>
+    template <class B>
+    stream<B> stream<A>::snapshot(const cell<B>& b) const {
+        return snapshot<B,B>(b, [] (const A&, const B& b) { return b; });
+    }
+
+    template <class A>
+    template <class B, class C>
+    stream<C> stream<A>::snapshot(const cell<B>& b, const std::function<C(const A&, const B&)>& f) const {
+        stream_with_send<C> out;
+        auto kill = listen_(out.impl->node, [out, b, f] (const transaction& trans, const void* va) {
+            const A& a = *(const A*)va;
+            out.send(trans, f(a, b.sample_no_trans()));
+        });
+        return out.add_cleanup(kill);
+    }
+
+    template <class A>
     struct stream_loop : stream<A> {
         impl::magic_ref<stream<A>> out;
         stream_loop() {
@@ -341,6 +391,86 @@ namespace SODIUM_NAMESPACE {
         }
     };
 
+    namespace impl {
+        template <class A>
+        struct cell_impl {
+            cell_impl(const A& a) : value(a), cleanup([] () {}) {}
+            cell_impl(const stream<A>& str, const A& a, const std::function<void()>& cleanup)
+                : str(str), value(a), really_clean_up(false), cleanup(cleanup) {}
+            ~cell_impl() {
+                if (really_clean_up)
+                    cleanup();
+            }
+            stream<A> str;
+            impl::magic_ref<A> value;
+            impl::magic_ref<A> value_update;
+            bool really_clean_up;
+            std::function<void()> cleanup;
+            impl::magic_ref<std::function<A()>> lazy_init_value;
+        };
+    }
+
+    template <class A>
+    class cell {
+    template <class AA> friend class stream;
+    protected:
+        impl::magic_ref<impl::cell_impl<A>> impl;
+        cell(const stream<A>& str, const A& init_a) {
+            transaction trans;
+            auto impl(this->impl);
+            auto kill = str.listen(impl::node_t::null, trans, [impl] (const transaction& trans, const void* va) {
+                const A& a = *(const A*)va;
+                if (!impl->value_update) {
+                    trans.last([impl] () {
+                        impl.unsafe_get().value = impl->value_update;
+                        impl.unsafe_get().lazy_init_value.reset();
+                        impl.unsafe_get().value_update = impl::magic_ref<A>();
+                    });
+                }
+                impl->value_update.assign(a);
+            }, false);
+            impl.assign(impl::cell_impl<A>(str, init_a, kill));
+            impl.unsafe_get().really_clean_up = true;
+        }
+    public:
+        cell(const A& a) : impl(impl::cell_impl<A>(a)) {}
+    
+        /*!
+         * Sample the behavior's current value.
+         *
+         * This should generally be avoided in favour of value().listen(..) so you don't
+         * miss any updates, but in many circumstances it makes sense.
+         *
+         * It can be best to use it inside an explicit transaction.
+         * For example, a b.sample() inside an explicit transaction along with a
+         * b.updates().listen(..) will capture the current value and any updates without risk
+         * of missing any in between.
+         */
+        A sample() const {
+            transaction trans;
+            return sample_no_trans();
+        }
+    protected:
+        A sample_no_trans() const {
+            return *impl->value;
+        }
+    };
+
+    template <class A>
+    cell<A> stream<A>::hold(const A& init_a) const {
+        return cell<A>(*this, init_a);
+    }
+
+    template <class A>
+    class cell_sink : public cell<A> {
+    public:
+        cell_sink(const A& initValue) : cell<A>(stream<A>(), initValue) {}
+        void send(const A& a) {
+            transaction trans;
+            printf("send\n");
+            stream_with_send<A>::send(this->impl->str.impl, trans, a); 
+        }
+    };
 #if 0
 	/**
 	 * Create a behavior with the specified initial value, that gets updated
@@ -349,49 +479,20 @@ namespace SODIUM_NAMESPACE {
      * That is, state updates caused by event firings get processed at the end of
      * the transaction.
      */
-	public final Cell<A> hold(final A initValue) {
+	public final Cell<A> hold(final A init_a) {
 		return Transaction.apply(new Lambda1<Transaction, Cell<A>>() {
 			public Cell<A> apply(Transaction trans) {
-			    return new Cell<A>(lastFiringOnly(trans), initValue);
+			    return new Cell<A>(lastFiringOnly(trans), init_a);
 			}
 		});
 	}
 
-	final Cell<A> holdLazy(final Lambda0<A> initValue) {
+	final Cell<A> holdLazy(final Lambda0<A> init_a) {
 		return Transaction.apply(new Lambda1<Transaction, Cell<A>>() {
 			public Cell<A> apply(Transaction trans) {
-			    return new LazyCell<A>(lastFiringOnly(trans), initValue);
+			    return new LazyCell<A>(lastFiringOnly(trans), init_a);
 			}
 		});
-	}
-
-	/**
-	 * Variant of snapshot that throws away the event's value and captures the behavior's.
-	 */
-	public final <B> Stream<B> snapshot(Cell<B> beh)
-	{
-	    return snapshot(beh, new Lambda2<A,B,B>() {
-	    	public B apply(A a, B b) {
-	    		return b;
-	    	}
-	    });
-	}
-
-	/**
-	 * Sample the behavior at the time of the event firing. Note that the 'current value'
-     * of the behavior that's sampled is the value as at the start of the transaction
-     * before any state changes of the current transaction are applied through 'hold's.
-     */
-	public final <B,C> Stream<C> snapshot(final Cell<B> b, final Lambda2<A,B,C> f)
-	{
-	    final Stream<A> ev = this;
-		final StreamSink<C> out = new StreamSink<C>();
-        Listener l = listen_(out.node, new TransactionHandler<A>() {
-        	public void run(Transaction trans2, A a) {
-	            out.send(trans2, f.apply(a, b.sampleNoTrans()));
-	        }
-        });
-        return out.addCleanup(l);
 	}
 
     /**
@@ -589,6 +690,391 @@ namespace SODIUM_NAMESPACE {
         event_loop(const event_loop<A>& other) : event_loop<A>(other) {}
         virtual ~event_loop() {}
     };
+    template <class A>
+    struct behavior : cell<A> {
+        behavior(const A& initValue) : cell<A>(initValue) {}
+    };
+    template <class A>
+    struct behavior_sink : cell_sink<A> {
+        behavior_sink(const A& initValue) : cell_sink<A>(initValue) {}
+    };
+#endif
+
+#if 0
+package sodium;
+
+public class Cell<A> {
+	protected final Stream<A> event;
+	A value;
+	A valueUpdate;
+	private Listener cleanup;
+    protected Lambda0<A> lazyInitValue;  // Used by LazyCell
+
+	/**
+	 * A behavior with a constant value.
+	 */
+    public Cell(A value)
+    {
+    	this.event = new Stream<A>();
+    	this.value = value;
+    }
+
+    Cell(final Stream<A> event, A init_a)
+    {
+    	this.event = event;
+    	this.value = init_a;
+    	Transaction.run(new Handler<Transaction>() {
+    		public void run(Transaction trans1) {
+	    		Cell.this.cleanup = event.listen(Node.NULL, trans1, new TransactionHandler<A>() {
+	    			public void run(Transaction trans2, A a) {
+			    		if (Cell.this.valueUpdate == null) {
+			    			trans2.last(new Runnable() {
+			    				public void run() {
+				    				Cell.this.value = Cell.this.valueUpdate;
+				    				Cell.this.lazyInitValue = null;
+				    				Cell.this.valueUpdate = null;
+				    			}
+			    			});
+			    		}
+			    		Cell.this.valueUpdate = a;
+			    	}
+	    		}, false);
+    		}
+    	});
+    }
+
+    /**
+     * @return The value including any updates that have happened in this transaction.
+     */
+    final A newValue()
+    {
+    	return valueUpdate == null ? sampleNoTrans() :  valueUpdate;
+    }
+
+    /**
+     * An event that gives the updates for the behavior. If this behavior was created
+     * with a hold, then updates() gives you an event equivalent to the one that was held.
+     */
+    public final Stream<A> updates()
+    {
+    	return event;
+    }
+
+    /**
+     * An event that is guaranteed to fire once when you listen to it, giving
+     * the current value of the behavior, and thereafter behaves like updates(),
+     * firing for each update to the behavior's value.
+     */
+    public final Stream<A> value()
+    {
+        return Transaction.apply(new Lambda1<Transaction, Stream<A>>() {
+        	public Stream<A> apply(Transaction trans) {
+        		return value(trans);
+        	}
+        });
+    }
+
+    final Stream<A> value(Transaction trans1)
+    {
+    	StreamSink<Unit> sSpark = new StreamSink<Unit>();
+        trans1.prioritized(sSpark.node, new Handler<Transaction>() {
+            public void run(Transaction trans2) {
+                sSpark.send(trans2, Unit.UNIT);
+            }
+        });
+    	Stream<A> sInitial = sSpark.<A>snapshot(this);
+        return sInitial.merge(updates()).lastFiringOnly(trans1);
+    }
+
+    /**
+     * Transform the behavior's value according to the supplied function.
+     */
+	public final <B> Cell<B> map(Lambda1<A,B> f)
+	{
+		return updates().map(f).holdLazy(() -> f.apply(sampleNoTrans()));
+	}
+
+	/**
+	 * Lift a binary function into behaviors.
+	 */
+	public final <B,C> Cell<C> lift(final Lambda2<A,B,C> f, Cell<B> b)
+	{
+		Lambda1<A, Lambda1<B,C>> ffa = new Lambda1<A, Lambda1<B,C>>() {
+			public Lambda1<B,C> apply(final A aa) {
+				return new Lambda1<B,C>() {
+					public C apply(B bb) {
+						return f.apply(aa,bb);
+					}
+				};
+			}
+		};
+		Cell<Lambda1<B,C>> bf = map(ffa);
+		return apply(bf, b);
+	}
+
+	/**
+	 * Lift a binary function into behaviors.
+	 */
+	public static final <A,B,C> Cell<C> lift(Lambda2<A,B,C> f, Cell<A> a, Cell<B> b)
+	{
+		return a.lift(f, b);
+	}
+
+	/**
+	 * Lift a ternary function into behaviors.
+	 */
+	public final <B,C,D> Cell<D> lift(final Lambda3<A,B,C,D> f, Cell<B> b, Cell<C> c)
+	{
+		Lambda1<A, Lambda1<B, Lambda1<C,D>>> ffa = new Lambda1<A, Lambda1<B, Lambda1<C,D>>>() {
+			public Lambda1<B, Lambda1<C,D>> apply(final A aa) {
+				return new Lambda1<B, Lambda1<C,D>>() {
+					public Lambda1<C,D> apply(final B bb) {
+						return new Lambda1<C,D>() {
+							public D apply(C cc) {
+								return f.apply(aa,bb,cc);
+							}
+						};
+					}
+				};
+			}
+		};
+		Cell<Lambda1<B, Lambda1<C, D>>> bf = map(ffa);
+		return apply(apply(bf, b), c);
+	}
+
+	/**
+	 * Lift a ternary function into behaviors.
+	 */
+	public static final <A,B,C,D> Cell<D> lift(Lambda3<A,B,C,D> f, Cell<A> a, Cell<B> b, Cell<C> c)
+	{
+		return a.lift(f, b, c);
+	}
+
+	/**
+	 * Lift a quaternary function into behaviors.
+	 */
+	public final <B,C,D,E> Cell<E> lift(final Lambda4<A,B,C,D,E> f, Cell<B> b, Cell<C> c, Cell<D> d)
+	{
+		Lambda1<A, Lambda1<B, Lambda1<C, Lambda1<D,E>>>> ffa = new Lambda1<A, Lambda1<B, Lambda1<C, Lambda1<D,E>>>>() {
+			public Lambda1<B, Lambda1<C, Lambda1<D,E>>> apply(final A aa) {
+				return new Lambda1<B, Lambda1<C, Lambda1<D,E>>>() {
+					public Lambda1<C, Lambda1<D, E>> apply(final B bb) {
+						return new Lambda1<C, Lambda1<D,E>>() {
+							public Lambda1<D,E> apply(final C cc) {
+                                return new Lambda1<D, E>() {
+                                    public E apply(D dd) {
+                                        return f.apply(aa,bb,cc,dd);
+                                    }
+                                };
+							}
+						};
+					}
+				};
+			}
+		};
+		Cell<Lambda1<B, Lambda1<C, Lambda1<D, E>>>> bf = map(ffa);
+		return apply(apply(apply(bf, b), c), d);
+	}
+
+	/**
+	 * Lift a quaternary function into behaviors.
+	 */
+	public static final <A,B,C,D,E> Cell<E> lift(Lambda4<A,B,C,D,E> f, Cell<A> a, Cell<B> b, Cell<C> c, Cell<D> d)
+	{
+		return a.lift(f, b, c, d);
+	}
+
+	/**
+	 * Apply a value inside a behavior to a function inside a behavior. This is the
+	 * primitive for all function lifting.
+	 */
+	public static <A,B> Cell<B> apply(final Cell<Lambda1<A,B>> bf, final Cell<A> ba)
+	{
+    	return Transaction.apply(new Lambda1<Transaction, Cell<B>>() {
+    		public Cell<B> apply(Transaction trans0) {
+                final StreamSink<B> out = new StreamSink<B>();
+
+                class ApplyHandler implements Handler<Transaction> {
+                    ApplyHandler(Transaction trans0) {
+                        resetFired(trans0);  // We suppress firing during the first transaction
+                    }
+                    boolean fired = true;
+                    Lambda1<A,B> f = null;
+                    A a = null;
+                    @Override
+                    public void run(Transaction trans1) {
+                        if (fired) 
+                            return;
+
+                        fired = true;
+                        trans1.prioritized(out.node, new Handler<Transaction>() {
+                            public void run(Transaction trans2) {
+                                out.send(trans2, f.apply(a));
+                            }
+                        });
+                        resetFired(trans1);
+                    }
+                    void resetFired(Transaction trans1) {
+                        trans1.last(() -> { fired = false; });
+                    }
+                }
+
+                Node out_target = out.node;
+                Node in_target = new Node(0);
+                in_target.linkTo(null, out_target);
+                final ApplyHandler h = new ApplyHandler(trans0);
+                Listener l1 = bf.value().listen_(in_target, new TransactionHandler<Lambda1<A,B>>() {
+                    public void run(Transaction trans1, Lambda1<A,B> f) {
+                        h.f = f;
+                        h.run(trans1);
+                    }
+                });
+                Listener l2 = ba.value().listen_(in_target, new TransactionHandler<A>() {
+                    public void run(Transaction trans1, A a) {
+                        h.a = a;
+                        h.run(trans1);
+                    }
+                });
+                return out.addCleanup(l1).addCleanup(l2).addCleanup(
+                    new Listener() {
+                        public void unlisten() {
+                            in_target.unlinkTo(out_target);
+                        }
+                    }).holdLazy(() -> bf.sampleNoTrans().apply(ba.sampleNoTrans()));
+            }
+        });
+	}
+
+	/**
+	 * Unwrap a behavior inside another behavior to give a time-varying behavior implementation.
+	 */
+	public static <A> Cell<A> switchC(final Cell<Cell<A>> bba)
+	{
+	    return Transaction.apply(new Lambda1<Transaction, Cell<A>>() {
+	        public Cell<A> apply(Transaction trans0) {
+                Lambda0<A> za = () -> bba.sampleNoTrans().sampleNoTrans();
+                final StreamSink<A> out = new StreamSink<A>();
+                TransactionHandler<Cell<A>> h = new TransactionHandler<Cell<A>>() {
+                    private Listener currentListener;
+                    @Override
+                    public void run(Transaction trans2, Cell<A> ba) {
+                        // Note: If any switch takes place during a transaction, then the
+                        // value().listen will always cause a sample to be fetched from the
+                        // one we just switched to. The caller will be fetching our output
+                        // using value().listen, and value() throws away all firings except
+                        // for the last one. Therefore, anything from the old input behaviour
+                        // that might have happened during this transaction will be suppressed.
+                        if (currentListener != null)
+                            currentListener.unlisten();
+                        currentListener = ba.value(trans2).listen(out.node, trans2, new TransactionHandler<A>() {
+                            public void run(Transaction trans3, A a) {
+                                out.send(trans3, a);
+                            }
+                        }, false);
+                    }
+        
+                    @Override
+                    protected void finalize() throws Throwable {
+                        if (currentListener != null)
+                            currentListener.unlisten();
+                    }
+                };
+                Listener l1 = bba.value().listen_(out.node, h);
+                return out.addCleanup(l1).holdLazy(za);
+            }
+        });
+	}
+	
+	/**
+	 * Unwrap an event inside a behavior to give a time-varying event implementation.
+	 */
+	public static <A> Stream<A> switchS(final Cell<Stream<A>> bea)
+	{
+        return Transaction.apply(new Lambda1<Transaction, Stream<A>>() {
+        	public Stream<A> apply(final Transaction trans) {
+                return switchS(trans, bea);
+        	}
+        });
+    }
+
+	private static <A> Stream<A> switchS(final Transaction trans1, final Cell<Stream<A>> bea)
+	{
+        final StreamSink<A> out = new StreamSink<A>();
+        final TransactionHandler<A> h2 = new TransactionHandler<A>() {
+        	public void run(Transaction trans2, A a) {
+	            out.send(trans2, a);
+	        }
+        };
+        TransactionHandler<Stream<A>> h1 = new TransactionHandler<Stream<A>>() {
+            private Listener currentListener = bea.sampleNoTrans().listen(out.node, trans1, h2, false);
+
+            @Override
+            public void run(final Transaction trans2, final Stream<A> ea) {
+                trans2.last(new Runnable() {
+                	public void run() {
+	                    if (currentListener != null)
+	                        currentListener.unlisten();
+	                    currentListener = ea.listen(out.node, trans2, h2, true);
+	                }
+                });
+            }
+
+            @Override
+            protected void finalize() throws Throwable {
+                if (currentListener != null)
+                    currentListener.unlisten();
+            }
+        };
+        Listener l1 = bea.updates().listen(out.node, trans1, h1, false);
+        return out.addCleanup(l1);
+	}
+
+    /**
+     * Transform a behavior with a generalized state loop (a mealy machine). The function
+     * is passed the input and the old state and returns the new state and output value.
+     */
+    public final <B,S> Cell<B> collect(final S initState, final Lambda2<A, S, Tuple2<B, S>> f)
+    {
+        return Transaction.<Cell<B>>run(() -> {
+            final Stream<A> ea = updates().coalesce(new Lambda2<A,A,A>() {
+                public A apply(A fst, A snd) { return snd; }
+            });
+            final Lambda0<Tuple2<B, S>> zbs = () -> f.apply(sampleNoTrans(), initState);
+            StreamLoop<Tuple2<B,S>> ebs = new StreamLoop<Tuple2<B,S>>();
+            Cell<Tuple2<B,S>> bbs = ebs.holdLazy(zbs);
+            Cell<S> bs = bbs.map(new Lambda1<Tuple2<B,S>,S>() {
+                public S apply(Tuple2<B,S> x) {
+                    return x.b;
+                }
+            });
+            Stream<Tuple2<B,S>> ebs_out = ea.snapshot(bs, f);
+            ebs.loop(ebs_out);
+            return bbs.map(new Lambda1<Tuple2<B,S>,B>() {
+                public B apply(Tuple2<B,S> x) {
+                    return x.a;
+                }
+            });
+        });
+    }
+
+	@Override
+	protected void finalize() throws Throwable {
+	    if (cleanup != null)
+            cleanup.unlisten();
+	}
+
+	/**
+	 * Listen for firings of this event. The returned Listener has an unlisten()
+	 * method to cause the listener to be removed. This is the observer pattern.
+     */
+	public final Listener listen(final Handler<A> action) {
+        return Transaction.apply(new Lambda1<Transaction, Listener>() {
+        	public Listener apply(final Transaction trans) {
+                return value().listen(action);
+			}
+		});
+	}
+}
 #endif
 
 }  // end namespace SODIUM_NAMESPACE

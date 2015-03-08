@@ -88,10 +88,19 @@ namespace SODIUM_NAMESPACE {
 
             void assign(const A& a) const {
                 link::lock.lock();
+                r->children.clear();
+                r->oa = boost::optional<A>();
                 std::list<link*>* capturer_was = link::capturer;
                 link::capturer = &r->children;
                 r->oa = boost::optional<A>(a);
                 link::capturer = capturer_was;
+                link::lock.unlock();
+            }
+
+            void reset() const {
+                link::lock.lock();
+                r->children.clear();
+                r->oa = boost::optional<A>();
                 link::lock.unlock();
             }
 

@@ -328,7 +328,6 @@ void test_sodium::loop_event2()
     CPPUNIT_ASSERT(vector<int>({ 2, 7 }) == *out);
 }
 
-#if 0
 void test_sodium::gate1()
 {
     event_sink<char> ec;
@@ -343,7 +342,6 @@ void test_sodium::gate1()
     unlisten();
     CPPUNIT_ASSERT_EQUAL(string("HI"), *out);
 }
-#endif
 
 void test_sodium::once1()
 {
