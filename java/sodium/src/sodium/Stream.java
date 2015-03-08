@@ -13,9 +13,9 @@ public class Stream<A> {
 		 */
 		private final Stream<A> event;
 		private final TransactionHandler<A> action;
-		private final Node target;
+		private final Node.Target target;
 
-		private ListenerImplementation(Stream<A> event, TransactionHandler<A> action, Node target) {
+		private ListenerImplementation(Stream<A> event, TransactionHandler<A> action, Node.Target target) {
 			this.event = event;
 			this.action = action;
 			this.target = target;
@@ -60,10 +60,12 @@ public class Stream<A> {
 
 	@SuppressWarnings("unchecked")
 	final Listener listen(Node target, Transaction trans, TransactionHandler<A> action, boolean suppressEarlierFirings) {
+	    Node.Target[] node_target_ = new Node.Target[1];
         synchronized (Transaction.listenersLock) {
-            if (node.linkTo((TransactionHandler<Unit>)action, target))
+            if (node.linkTo((TransactionHandler<Unit>)action, target, node_target_))
                 trans.toRegen = true;
         }
+        Node.Target node_target = node_target_[0];
         final List<A> firings = new ArrayList<A>(this.firings);
         if (!suppressEarlierFirings && !firings.isEmpty())
             trans.prioritized(target, new Handler<Transaction>() {
@@ -84,7 +86,7 @@ public class Stream<A> {
                     }
                 }
             });
-		return new ListenerImplementation<A>(this, action, target);
+		return new ListenerImplementation<A>(this, action, node_target);
 	}
 
     /**
@@ -182,7 +184,9 @@ public class Stream<A> {
 	    final StreamSink<A> out = new StreamSink<A>();
         final Node left = new Node(0);
         final Node right = out.node;
-        left.linkTo(null, right);
+        Node.Target[] node_target_ = new Node.Target[1];
+        left.linkTo(null, right, node_target_);
+        Node.Target node_target = node_target_[0];
         TransactionHandler<A> h = new TransactionHandler<A>() {
         	public void run(Transaction trans, A a) {
 	            out.send(trans, a);
@@ -192,7 +196,7 @@ public class Stream<A> {
         Listener l2 = eb.listen_(right, h);
         return out.addCleanup(l1).addCleanup(l2).addCleanup(new Listener() {
             public void unlisten() {
-                left.unlinkTo(right);
+                left.unlinkTo(node_target);
             }
         });
 	}

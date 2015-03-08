@@ -243,7 +243,9 @@ public class Cell<A> {
 
                 Node out_target = out.node;
                 Node in_target = new Node(0);
-                in_target.linkTo(null, out_target);
+                Node.Target[] node_target_ = new Node.Target[1];
+                in_target.linkTo(null, out_target, node_target_);
+                Node.Target node_target = node_target_[0];
                 final ApplyHandler h = new ApplyHandler(trans0);
                 Listener l1 = bf.value().listen_(in_target, new TransactionHandler<Lambda1<A,B>>() {
                     public void run(Transaction trans1, Lambda1<A,B> f) {
@@ -260,7 +262,7 @@ public class Cell<A> {
                 return out.addCleanup(l1).addCleanup(l2).addCleanup(
                     new Listener() {
                         public void unlisten() {
-                            in_target.unlinkTo(out_target);
+                            in_target.unlinkTo(node_target);
                         }
                     }).holdLazy(() -> bf.sampleNoTrans().apply(ba.sampleNoTrans()));
             }

@@ -27,18 +27,16 @@ public class Node implements Comparable<Node> {
 	/**
 	 * @return true if any changes were made. 
 	 */
-	boolean linkTo(TransactionHandler<Unit> action, Node target) {
+	boolean linkTo(TransactionHandler<Unit> action, Node target, Target[] outTarget) {
 		boolean changed = target.ensureBiggerThan(rank, new HashSet<Node>());
-		listeners.add(new Target(action, target));
+		Target t = new Target(action, target);
+		listeners.add(t);
+		outTarget[0] = t;
 		return changed;
 	}
 
-	void unlinkTo(Node target) {
-	    for (int i = 0; i < listeners.size(); i++)
-            if (listeners.get(i).node == target) {
-                listeners.remove(i);
-                break;
-            }
+	void unlinkTo(Target target) {
+	    listeners.remove(target);
 	}
 
 	private boolean ensureBiggerThan(long limit, Set<Node> visited) {
