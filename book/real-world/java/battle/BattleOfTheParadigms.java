@@ -1,3 +1,5 @@
+package battle;
+
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
@@ -6,6 +8,7 @@ import java.awt.GridBagLayout;
 import java.awt.Point;
 import java.awt.Polygon;
 import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
 import javax.swing.BorderFactory;
 import javax.swing.JFrame;
@@ -86,22 +89,23 @@ class MouseEvt {
 }
 
 interface Paradigm {
-    interface Callback {
-        void updateDocument(Document doc);
+    interface DocumentListener {
+        void documentUpdated(Document doc);
     }
     interface Factory {
-        Paradigm create(Document initDoc, Callback cb);
+        Paradigm create(Document initDoc, DocumentListener dl);
     }
     void mouseEvent(MouseEvt me);
+    void dispose();
 }
 
 class Classic implements Paradigm {
-    public Classic(Document initDoc, Callback cb) {
+    public Classic(Document initDoc, DocumentListener dl) {
         this.doc = initDoc;
-        this.cb = cb;
+        this.dl = dl;
     }
     private Document doc;
-    private final Callback cb;
+    private final DocumentListener dl;
 
     private static class Dragging {
         Dragging(MouseEvt me1, Entry ent) {
@@ -118,7 +122,7 @@ class Classic implements Paradigm {
         case DOWN:
             Optional<Entry> oe = doc.getByPoint(me.pt);
             if (oe.isPresent()) {
-                System.out.println("classic dragging "+oe.get().id);
+                System.out.println("classic dragging " + oe.get().id);
                 oDragging = Optional.of(new Dragging(me, oe.get()));
             }
             break;
@@ -127,7 +131,7 @@ class Classic implements Paradigm {
                 Dragging dr = oDragging.get();
                 doc = doc.insert(dr.ent.id,
                     dr.ent.element.translate(dr.me1.pt, me.pt));
-                cb.updateDocument(doc);
+                dl.documentUpdated(doc);
             }
             break;
         case UP:
@@ -135,24 +139,25 @@ class Classic implements Paradigm {
             break;
         }
     }
+    public void dispose() {}
 }
 
 class FRP implements Paradigm {
-    public FRP(Document initDoc, Callback cb) {
+    public FRP(Document initDoc, DocumentListener dl) {
         l = Transaction.run(() -> {
             CellLoop<Document> doc = new CellLoop<>();
             Stream<Stream<Document>> sStartDrag = Stream.filterOptional(
-                sMouse.snapshot(doc, (me1, d1) -> {
+                sMouse.snapshot(doc, (me1, doc1) -> {
                     if (me1.type == Type.DOWN) {
-                        Optional<Entry> oe = d1.getByPoint(me1.pt);
+                        Optional<Entry> oe = doc1.getByPoint(me1.pt);
                         if (oe.isPresent()) {
                             String id = oe.get().id;
                             Element elt = oe.get().element;
-                            System.out.println("FRP dragging "+id);
+                            System.out.println("FRP dragging " + id);
                             Stream<Document> sMoves = sMouse
                                 .filter(me -> me.type == Type.MOVE)
-                                .snapshot(doc, (me, d) -> d.insert(id,
-                                         elt.translate(me1.pt, me.pt)));
+                                .snapshot(doc, (me2, doc2) -> doc2.insert(id,
+                                         elt.translate(me1.pt, me2.pt)));
                             return Optional.of(sMoves);
                         }
                     }
@@ -166,18 +171,19 @@ class FRP implements Paradigm {
                 sStartDrag.merge(sEndDrag).hold(sIdle)
             );
             doc.loop(sDocUpdate.hold(initDoc));
-            return sDocUpdate.listen(d -> cb.updateDocument(d));
+            return sDocUpdate.listen(doc_ -> dl.documentUpdated(doc_));
         });
     }
     private final Listener l;
     private final StreamSink<MouseEvt> sMouse = new StreamSink<>();
     public void mouseEvent(MouseEvt me) { sMouse.send(me); }
+    public void dispose() { l.unlisten(); }
 }
 
 class Actor implements Paradigm {
-    public Actor(Document initDoc, Callback cb) {
+    public Actor(Document initDoc, DocumentListener dl) {
         ArrayBlockingQueue<Document> out = new ArrayBlockingQueue<>(1);
-        new Thread(() -> {
+        t1 = new Thread(() -> {
             try {
                 Document doc = initDoc;
                 while (true) {
@@ -194,7 +200,7 @@ class Actor implements Paradigm {
                             }
                         }
                     }
-                    System.out.println("actor dragging "+ent.id);
+                    System.out.println("actor dragging " + ent.id);
                     while (true) {
                         MouseEvt me = in.take();
                         if (me.type == Type.MOVE) {
@@ -208,43 +214,48 @@ class Actor implements Paradigm {
                     }
                 }
             } catch (InterruptedException e) {}
-        }).start();
-        new Thread(() -> {
+        });
+        t1.start();
+        t2 = new Thread(() -> {
             try {
                 while (true)
-                    cb.updateDocument(out.take());
+                    dl.documentUpdated(out.take());
             } catch (InterruptedException e) {}
-        }).start();
+        });
+        t2.start();
     }
-    private ArrayBlockingQueue<MouseEvt> in = new ArrayBlockingQueue<>(1);
+    private final Thread t1;
+    private final Thread t2;
+    private final ArrayBlockingQueue<MouseEvt> in = new ArrayBlockingQueue<>(1);
     public void mouseEvent(MouseEvt me) {
         try {
             in.put(me);
         } catch (InterruptedException e) {}
     }
+    public void dispose() { t1.interrupt(); t2.interrupt(); }
 }
 
-class ParadigmView extends JPanel implements Paradigm.Callback {
+class ParadigmView extends JPanel implements Paradigm.DocumentListener {
     public ParadigmView(Document initDoc, Paradigm.Factory factory) {
         this.doc = initDoc;
         this.paradigm = factory.create(initDoc, this);
         setBorder(BorderFactory.createLineBorder(Color.black));
         addMouseListener(new MouseAdapter() {
-            public void mousePressed(java.awt.event.MouseEvent ev) {
+            public void mousePressed(MouseEvent ev) {
                 paradigm.mouseEvent(new MouseEvt(Type.DOWN,
                     new Point(ev.getX(), ev.getY())));
             }
-            public void mouseReleased(java.awt.event.MouseEvent ev) {
+            public void mouseReleased(MouseEvent ev) {
                 paradigm.mouseEvent(new MouseEvt(Type.UP,
                     new Point(ev.getX(), ev.getY())));
             }
         });
         addMouseMotionListener(new MouseMotionAdapter() {
-            public void mouseDragged(java.awt.event.MouseEvent ev) {
+            public void mouseDragged(MouseEvent ev) {
                 paradigm.mouseEvent(new MouseEvt(Type.MOVE,
                     new Point(ev.getX(), ev.getY())));
             }
-            public void mouseMoved(java.awt.event.MouseEvent ev) {
+            public void mouseMoved(MouseEvent ev) {
                 paradigm.mouseEvent(new MouseEvt(Type.MOVE,
                     new Point(ev.getX(), ev.getY())));
             }
@@ -255,13 +266,17 @@ class ParadigmView extends JPanel implements Paradigm.Callback {
     public Dimension getPreferredSize() {
         return new Dimension(250, 300);
     }
-    public void updateDocument(Document doc) {
+    public void documentUpdated(Document doc) {
         this.doc = doc;
         repaint();
     }
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
         doc.draw(g);
+    }
+    public void removeNotify() {
+        paradigm.dispose();
+        super.removeNotify();
     }
 }
 
@@ -308,21 +323,21 @@ public class BattleOfTheParadigms {
         c.gridx = 0;
         c.gridy = 1;
         view.add(new ParadigmView(doc,
-            (initDoc, cb) -> new Classic(initDoc, cb)), c);
+            (initDoc, dl) -> new Classic(initDoc, dl)), c);
         c.gridx = 0;
         c.gridy = 2;
         view.add(new JLabel("classic state machine"), c);
         c.gridx = 1;
         c.gridy = 1;
         view.add(new ParadigmView(doc,
-            (initDoc, cb) -> new FRP(initDoc, cb)), c);
+            (initDoc, dl) -> new FRP(initDoc, dl)), c);
         c.gridx = 1;
         c.gridy = 2;
         view.add(new JLabel("FRP"), c);
         c.gridx = 2;
         c.gridy = 1;
         view.add(new ParadigmView(doc,
-            (initDoc, cb) -> new Actor(initDoc, cb)), c);
+            (initDoc, dl) -> new Actor(initDoc, dl)), c);
         c.gridx = 2;
         c.gridy = 2;
         view.add(new JLabel("actor model"), c);

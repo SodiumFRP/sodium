@@ -14,8 +14,17 @@
         </javac>
     </target>
 
-    <target name="paradigms" depends="compile">
-        <java classname="BattleOfTheParadigms" fork="true">
+    <target name="battle" depends="compile">
+        <java classname="battle.BattleOfTheParadigms" fork="true">
+            <classpath>
+                <pathelement path="build/"/>
+                <pathelement path="../../../java/sodium/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="shift" depends="compile">
+        <java classname="shift.ShiftOfTheParadigms" fork="true">
             <classpath>
                 <pathelement path="build/"/>
                 <pathelement path="../../../java/sodium/sodium.jar"/>
