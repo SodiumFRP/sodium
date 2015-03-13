@@ -28,21 +28,23 @@ public class Stream<A> {
 		}
 	}
 
-	protected final List<Listener> finalizers;
 	final Node node;
-	protected final List<A> firings = new ArrayList<A>();
+	protected final List<Listener> finalizers;
+	protected final List<A> firings;
 
 	/**
 	 * An event that never fires.
 	 */
 	public Stream() {
-	    this.finalizers = new ArrayList<Listener>();
 	    this.node = new Node(0L);
+	    this.finalizers = new ArrayList<Listener>();
+	    this.firings = new ArrayList<A>();
 	}
 
-	private Stream(Node node, List<Listener> finalizers) {
+	private Stream(Node node, List<Listener> finalizers, List<A> firings) {
 	    this.node = node;
 	    this.finalizers = finalizers;
+        this.firings = firings;
 	}
 
 	/**
@@ -426,7 +428,7 @@ public class Stream<A> {
     public Stream<A> addCleanup(Listener cleanup) {
         List<Listener> fsNew = new ArrayList<Listener>(finalizers);
         fsNew.add(cleanup);
-        return new Stream<A>(node, fsNew);
+        return new Stream<A>(node, fsNew, firings);
     }
 
 	@Override
