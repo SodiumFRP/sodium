@@ -1,4 +1,4 @@
-package battle;
+package shift2;
 
 import java.awt.Color;
 import java.awt.Dimension;
@@ -7,9 +7,11 @@ import java.awt.GridBagConstraints;
 import java.awt.GridBagLayout;
 import java.awt.Point;
 import java.awt.Polygon;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
-import java.awt.event.MouseEvent;
 import java.awt.event.MouseMotionAdapter;
+import java.awt.event.MouseEvent;
 import javax.swing.BorderFactory;
 import javax.swing.JFrame;
 import javax.swing.JLabel;
@@ -28,9 +30,15 @@ class Element {
     public boolean contains(Point pt) {
         return polygon.contains(pt);
     }
-    public Element translate(Point orig, Point pt) {
+    public Element translate(Point orig, Point pt, boolean axisLock) {
         int tx = pt.x - orig.x;
         int ty = pt.y - orig.y;
+        if (axisLock) {
+            if (Math.abs(tx) < Math.abs(ty))
+                tx = 0;
+            else
+                ty = 0;
+        }
         Polygon neu = new Polygon(polygon.xpoints,polygon.ypoints,
                                   polygon.npoints);
         neu.translate(tx, ty);
@@ -96,6 +104,7 @@ interface Paradigm {
         Paradigm create(Document initDoc, DocumentListener dl);
     }
     void mouseEvent(MouseEvt me);
+    void shiftEvent(Type t);
     void dispose();
 }
 
@@ -115,7 +124,9 @@ class Classic implements Paradigm {
         final Entry ent; 
     }
     private Document doc;
+    private Point move;
     private Optional<Dragging> oDragging = Optional.empty();
+    private boolean axisLock;
 
     public void mouseEvent(MouseEvt me) {
         switch (me.type) {
@@ -124,28 +135,39 @@ class Classic implements Paradigm {
             if (oe.isPresent()) {
                 System.out.println("classic dragging " + oe.get().id);
                 oDragging = Optional.of(new Dragging(me, oe.get()));
+                move = me.pt;
             }
             break;
         case MOVE:
-            if (oDragging.isPresent()) {
-                Dragging dr = oDragging.get();
-                doc = doc.insert(dr.ent.id,
-                    dr.ent.element.translate(dr.me1.pt, me.pt));
-                dl.documentUpdated(doc);
-            }
+            move = me.pt;
+            updateMove();
             break;
         case UP:
             oDragging = Optional.empty();
             break;
         }
     }
+    public void shiftEvent(Type t) {
+        axisLock = t == Type.DOWN;
+        updateMove();
+    }
+    private void updateMove() {
+        if (oDragging.isPresent()) {
+            Dragging dr = oDragging.get();
+            doc = doc.insert(dr.ent.id,
+                dr.ent.element.translate(dr.me1.pt, move, axisLock));
+            dl.documentUpdated(doc);
+        }
+    }
     public void dispose() {}
 }
 
-class FRP implements Paradigm {
-    public FRP(Document initDoc, DocumentListener dl) {
+class FRP1 implements Paradigm {
+    public FRP1(Document initDoc, DocumentListener dl) {
         l = Transaction.run(() -> {
             CellLoop<Document> doc = new CellLoop<>();
+            Cell<Boolean> axisLock = sShift.map(t -> t == Type.DOWN)
+                                           .hold(false);
             Stream<Stream<Document>> sStartDrag = Stream.filterOptional(
                 sMouse.snapshot(doc, (me1, doc1) -> {
                     if (me1.type == Type.DOWN) {
@@ -153,12 +175,15 @@ class FRP implements Paradigm {
                         if (oe.isPresent()) {
                             String id = oe.get().id;
                             Element elt = oe.get().element;
-                            System.out.println("FRP dragging " + id);
-                            Stream<Document> sMoves = sMouse
-                                .filter(me -> me.type == Type.MOVE)
-                                .snapshot(doc, (me2, doc2) ->
-                                    doc2.insert(id,
-                                         elt.translate(me1.pt, me2.pt)));
+                            System.out.println("FRP2 dragging " + id);
+                            Cell<Point> move =
+                                sMouse.filter(me -> me.type == Type.MOVE)
+                                      .map(me -> me.pt)
+                                      .hold(me1.pt);
+                            Stream<Document> sMoves = Cell.lift(
+                                (mv, lck, doc2) -> doc2.insert(id,
+                                      elt.translate(me1.pt, mv, lck)),
+                                move, axisLock, doc).updates();
                             return Optional.of(sMoves);
                         }
                     }
@@ -178,6 +203,65 @@ class FRP implements Paradigm {
     private final Listener l;
     private final StreamSink<MouseEvt> sMouse = new StreamSink<>();
     public void mouseEvent(MouseEvt me) { sMouse.send(me); }
+    private final StreamSink<Type> sShift = new StreamSink<>();
+    public void shiftEvent(Type t) { sShift.send(t); }
+    public void dispose() { l.unlisten(); }
+}
+
+class FRP2 implements Paradigm {
+    public FRP2(Document initDoc, DocumentListener dl) {
+        l = Transaction.run(() -> {
+            CellLoop<Document> doc = new CellLoop<>();
+            Stream<Boolean> sAxisLock = sShift.map(t -> t == Type.DOWN);
+            Cell<Boolean> axisLock = sAxisLock.hold(false);
+            Stream<Stream<Document>> sStartDrag = Stream.filterOptional(
+                sMouse.snapshot(doc, (me1, doc1) -> {
+                    if (me1.type == Type.DOWN) {
+                        Optional<Entry> oe = doc1.getByPoint(me1.pt);
+                        if (oe.isPresent()) {
+                            String id = oe.get().id;
+                            Element elt = oe.get().element;
+                            System.out.println("FRP1 dragging " + id);
+                            class Pair {
+                                Pair(Point move, boolean lock) {
+                                    this.move = move;
+                                    this.lock = lock;
+                                }
+                                Point move;
+                                boolean lock;
+                            }
+                            Stream<Point> sMove =
+                                sMouse.filter(me -> me.type == Type.MOVE)
+                                      .map(me -> me.pt);
+                            Cell<Point> move = sMove.hold(me1.pt);
+                            Stream<Pair> sPair = sMove.snapshot(axisLock,
+                                    (m, l) -> new Pair(m, l))
+                                .merge(sAxisLock.snapshot(move,
+                                    (l, m) -> new Pair(m, l)));
+                            Stream<Document> sMoves = sPair.snapshot(doc,
+                                (p, doc2) -> doc2.insert(id,
+                                  elt.translate(me1.pt, p.move, p.lock)));
+                            return Optional.of(sMoves);
+                        }
+                    }
+                    return Optional.empty();
+                }));
+            Stream<Document> sIdle = new Stream<>();
+            Stream<Stream<Document>> sEndDrag =
+                sMouse.filter(me -> me.type == Type.UP)
+                      .map(me -> sIdle);
+            Stream<Document> sDocUpdate = Cell.switchS(
+                sStartDrag.merge(sEndDrag).hold(sIdle)
+            );
+            doc.loop(sDocUpdate.hold(initDoc));
+            return sDocUpdate.listen(doc_ -> dl.documentUpdated(doc_));
+        });
+    }
+    private final Listener l;
+    private final StreamSink<MouseEvt> sMouse = new StreamSink<>();
+    public void mouseEvent(MouseEvt me) { sMouse.send(me); }
+    private final StreamSink<Type> sShift = new StreamSink<>();
+    public void shiftEvent(Type t) { sShift.send(t); }
     public void dispose() { l.unlisten(); }
 }
 
@@ -187,31 +271,54 @@ class Actor implements Paradigm {
         t1 = new Thread(() -> {
             try {
                 Document doc = initDoc;
+                boolean axisLock = false;
                 while (true) {
                     MouseEvt me1 = null;
                     Entry ent = null;
                     while (true) {
-                        MouseEvt me = in.take();
-                        if (me.type == Type.DOWN) {
-                            Optional<Entry> oe = doc.getByPoint(me.pt);
-                            if (oe.isPresent()) {
-                                me1 = me;
-                                ent = oe.get();
-                                break;
+                        Object o = in.take();
+                        if (o instanceof MouseEvt) {
+                            MouseEvt me = (MouseEvt) o;
+                            if (me.type == Type.DOWN) {
+                                Optional<Entry> oe = doc.getByPoint(me.pt);
+                                if (oe.isPresent()) {
+                                    me1 = me;
+                                    ent = oe.get();
+                                    break;
+                                }
                             }
+                        }
+                        if (o instanceof Type) {
+                            Type t = (Type) o;
+                            axisLock = t == Type.DOWN;
                         }
                     }
                     System.out.println("actor dragging " + ent.id);
+                    Point move = me1.pt;
                     while (true) {
-                        MouseEvt me = in.take();
-                        if (me.type == Type.MOVE) {
+                        Object o = in.take();
+                        boolean toUpdate = false;
+                        if (o instanceof MouseEvt) {
+                            MouseEvt me = (MouseEvt) o;
+                            if (me.type == Type.MOVE) {
+                                move = me.pt;
+                                toUpdate = true;
+                            }
+                            else
+                            if (me.type == Type.UP)
+                                break;
+                        }
+                        if (o instanceof Type) {
+                            Type t = (Type) o;
+                            axisLock = t == Type.DOWN;
+                            toUpdate = true;
+                        }
+                        if (toUpdate) {
                             doc = doc.insert(ent.id,
-                                ent.element.translate(me1.pt, me.pt));
+                                ent.element.translate(me1.pt, move,
+                                    axisLock));
                             out.put(doc);
                         }
-                        else
-                        if (me.type == Type.UP)
-                            break;
                     }
                 }
             } catch (InterruptedException e) {}
@@ -226,18 +333,24 @@ class Actor implements Paradigm {
         t2.start();
     }
     private final Thread t1, t2;
-    private final ArrayBlockingQueue<MouseEvt> in =
+    private final ArrayBlockingQueue<Object> in =
                                             new ArrayBlockingQueue<>(1);
     public void mouseEvent(MouseEvt me) {
         try {
             in.put(me);
         } catch (InterruptedException e) {}
     }
+    public void shiftEvent(Type t) {
+        try {
+            in.put(t);
+        } catch (InterruptedException e) {}
+    }
     public void dispose() { t1.interrupt(); t2.interrupt(); }
 }
 
 class ParadigmView extends JPanel implements Paradigm.DocumentListener {
-    public ParadigmView(Document initDoc, Paradigm.Factory factory) {
+    public ParadigmView(Document initDoc, JFrame frame,
+            Paradigm.Factory factory) {
         this.doc = initDoc;
         this.paradigm = factory.create(initDoc, this);
         setBorder(BorderFactory.createLineBorder(Color.black));
@@ -261,6 +374,16 @@ class ParadigmView extends JPanel implements Paradigm.DocumentListener {
                     new Point(ev.getX(), ev.getY())));
             }
         });
+        frame.addKeyListener(new KeyAdapter() {
+            public void keyPressed(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_SHIFT)
+                    paradigm.shiftEvent(Type.DOWN);
+            }
+            public void keyReleased(KeyEvent e) {
+                if (e.getKeyCode() == KeyEvent.VK_SHIFT)
+                    paradigm.shiftEvent(Type.UP);
+            }
+        });
     }
     private Document doc;
     private Paradigm paradigm;
@@ -281,7 +404,7 @@ class ParadigmView extends JPanel implements Paradigm.DocumentListener {
     }
 }
 
-public class BattleOfTheParadigms {
+public class ShiftOfTheParadigms2 {
     private static Element shape(int ox, int oy, int sides, double angle)
     {
         int[] xs = new int[sides];
@@ -306,7 +429,7 @@ public class BattleOfTheParadigms {
         elements.put("octagon",  shape(200, 125, 8, 22.5));
 
         Document doc = new Document(elements);
-        JFrame frame = new JFrame("BattleOfTheParadigms");
+        JFrame frame = new JFrame("ShiftOfTheParadigms2");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         JPanel view = new JPanel();
         GridBagLayout gridbag = new GridBagLayout();
@@ -319,27 +442,34 @@ public class BattleOfTheParadigms {
         c.gridx = 0;
         c.gridy = 0;
         c.gridwidth = 3;
-        view.add(new JLabel("Drag the polygons with your mouse"), c);
+        view.add(new JLabel("Drag the polygons with your mouse and use shift to axis lock"), c);
         c.gridwidth = 1;
         c.gridx = 0;
         c.gridy = 1;
-        view.add(new ParadigmView(doc,
+        view.add(new ParadigmView(doc, frame,
             (initDoc, dl) -> new Classic(initDoc, dl)), c);
         c.gridx = 0;
         c.gridy = 2;
         view.add(new JLabel("classic state machine"), c);
         c.gridx = 1;
         c.gridy = 1;
-        view.add(new ParadigmView(doc,
-            (initDoc, dl) -> new FRP(initDoc, dl)), c);
+        view.add(new ParadigmView(doc, frame,
+            (initDoc, dl) -> new FRP1(initDoc, dl)), c);
         c.gridx = 1;
         c.gridy = 2;
-        view.add(new JLabel("FRP"), c);
+        view.add(new JLabel("FRP1"), c);
         c.gridx = 2;
         c.gridy = 1;
-        view.add(new ParadigmView(doc,
-            (initDoc, dl) -> new Actor(initDoc, dl)), c);
+        view.add(new ParadigmView(doc, frame,
+            (initDoc, dl) -> new FRP2(initDoc, dl)), c);
         c.gridx = 2;
+        c.gridy = 2;
+        view.add(new JLabel("FRP2"), c);
+        c.gridx = 3;
+        c.gridy = 1;
+        view.add(new ParadigmView(doc, frame,
+            (initDoc, dl) -> new Actor(initDoc, dl)), c);
+        c.gridx = 3;
         c.gridy = 2;
         view.add(new JLabel("actor model"), c);
         frame.setContentPane(view);

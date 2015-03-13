@@ -12,6 +12,7 @@
 #include <sodium/transaction.h>
 #include <forward_list>
 #include <stdexcept>
+#include <boost/variant.hpp>
 
 namespace SODIUM_NAMESPACE {
     namespace impl {
@@ -438,7 +439,7 @@ namespace SODIUM_NAMESPACE {
         /*!
          * Sample the behavior's current value.
          *
-         * This should generally be avoided in favour of value().listen(..) so you don't
+         * This should generally be avoided in favour of listen(..) so you don't
          * miss any updates, but in many circumstances it makes sense.
          *
          * It can be best to use it inside an explicit transaction.
@@ -450,6 +451,79 @@ namespace SODIUM_NAMESPACE {
             transaction trans;
             return sample_no_trans();
         }
+
+    private:
+        std::function<A()> sample_lazy() const {
+            using namespace boost;
+            transaction trans;
+            variant<impl::magic_ref<impl::cell_impl<A>>, impl::magic_ref<A>> v_impl(impl);
+            impl::magic_ref<variant<impl::magic_ref<impl::cell_impl<A>>, impl::magic_ref<A>>> lazy(
+                    v_impl
+                );
+            trans.last([lazy] () {
+                auto impl = boost::get<impl::magic_ref<impl::cell_impl<A>>>(lazy);
+                lazy.assign(variant<impl::magic_ref<impl::cell_impl<A>>, impl::magic_ref<A>>(
+                    impl->value_update ? impl->value_update : impl_value
+                ));
+            });
+            return [lazy] () -> A {
+                transaction trans;
+                if (const impl::magic_ref<A>* refa = boost::get<impl::magic_ref<A>>(&*lazy))
+                    return **refa;
+                else {
+                    auto impl = boost::get<impl::magic_ref<impl::cell_impl<A>>>(*lazy); 
+                    return impl->value;
+                }
+                return *impl->sample().template cast_ptr<A>(NULL);
+            };
+        }
+
+        /*!
+         * Transform a behavior with a generalized state loop (a mealy machine). The function
+         * is passed the input and the old state and returns the new state and output value.
+         */
+        template <class S, class B>
+        cell<B> collect_lazy(
+            const std::function<S()>& initS,
+            const std::function<std::tuple<B, S>(const A&, const S&)>& f
+        ) const
+        {
+            transaction<P> trans;
+            auto ea = updates().coalesce([] (const A&, const A& snd) -> A { return snd; });
+            std::function<A()> za_lazy = sample_lazy();
+            std::function<SODIUM_TUPLE<B,S>()> zbs = [za_lazy, initS, f] () -> SODIUM_TUPLE<B,S> {
+                return f(za_lazy(), initS());
+            };
+            SODIUM_SHARED_PTR<impl::collect_state<S> > pState(new impl::collect_state<S>([zbs] () -> S {
+                return SODIUM_TUPLE_GET<1>(zbs());
+            }));
+            SODIUM_TUPLE<impl::event_,SODIUM_SHARED_PTR<impl::node> > p = impl::unsafe_new_event();
+            auto kill = updates().listen_raw(trans.impl(), SODIUM_TUPLE_GET<1>(p),
+                new std::function<void(const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
+                    [pState, f] (const SODIUM_SHARED_PTR<impl::node>& target, impl::transaction_impl* trans, const light_ptr& ptr) {
+                        SODIUM_TUPLE<B,S> outsSt = f(*ptr.cast_ptr<A>(NULL), pState->s_lazy());
+                        const S& new_s = SODIUM_TUPLE_GET<1>(outsSt);
+                        pState->s_lazy = [new_s] () { return new_s; };
+                        send(target, trans, light_ptr::create<B>(SODIUM_TUPLE_GET<0>(outsSt)));
+                    }), false);
+            return event<B, P>(SODIUM_TUPLE_GET<0>(p).unsafe_add_cleanup(kill)).hold_lazy([zbs] () -> B {
+                return SODIUM_TUPLE_GET<0>(zbs());
+            });
+        }
+
+        /*!
+         * Transform a behavior with a generalized state loop (a mealy machine). The function
+         * is passed the input and the old state and returns the new state and output value.
+         */
+        template <class S, class B>
+        cell<B> collect(
+            const S& initS,
+            const std::function<std::tuple<B, S>(const A&, const S&)>& f
+        ) const
+        {
+            return collect_lazy<S, B>([initS] () -> S { return initS; }, f);
+        }
+
     protected:
         A sample_no_trans() const {
             return *impl->value;

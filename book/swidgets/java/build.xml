@@ -1,4 +1,4 @@
-<project default="compile">
+<project default="jar">
 
     <target name="clean">
         <delete dir="swidgets/build"/>

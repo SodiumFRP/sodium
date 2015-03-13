@@ -110,7 +110,7 @@ public final class Transaction {
         }
 	}
 
-	static void run(Handler<Transaction> code) {
+	public static void run(Handler<Transaction> code) {
         synchronized (transactionLock) {
             // If we are already inside a transaction (which must be on the same
             // thread otherwise we wouldn't have acquired transactionLock), then

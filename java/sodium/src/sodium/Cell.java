@@ -259,7 +259,7 @@ public class Cell<A> {
                         h.run(trans1);
                     }
                 });
-                return out.addCleanup(l1).addCleanup(l2).addCleanup(
+                return out.unsafeAddCleanup(l1).unsafeAddCleanup(l2).unsafeAddCleanup(
                     new Listener() {
                         public void unlisten() {
                             in_target.unlinkTo(node_target);
@@ -304,7 +304,7 @@ public class Cell<A> {
                     }
                 };
                 Listener l1 = bba.value().listen_(out.node, h);
-                return out.addCleanup(l1).holdLazy(za);
+                return out.unsafeAddCleanup(l1).holdLazy(za);
             }
         });
 	}
@@ -350,7 +350,7 @@ public class Cell<A> {
             }
         };
         Listener l1 = bea.updates().listen(out.node, trans1, h1, false);
-        return out.addCleanup(l1);
+        return out.unsafeAddCleanup(l1);
 	}
 
     /**

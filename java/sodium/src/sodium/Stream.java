@@ -28,14 +28,21 @@ public class Stream<A> {
 		}
 	}
 
-	protected final List<Listener> finalizers = new ArrayList<Listener>();
-	final Node node = new Node(0L);
+	protected final List<Listener> finalizers;
+	final Node node;
 	protected final List<A> firings = new ArrayList<A>();
 
 	/**
 	 * An event that never fires.
 	 */
 	public Stream() {
+	    this.finalizers = new ArrayList<Listener>();
+	    this.node = new Node(0L);
+	}
+
+	private Stream(Node node, List<Listener> finalizers) {
+	    this.node = node;
+	    this.finalizers = finalizers;
 	}
 
 	/**
@@ -101,7 +108,7 @@ public class Stream<A> {
 	            out.send(trans2, f.apply(a));
 	        }
         });
-        return out.addCleanup(l);
+        return out.unsafeAddCleanup(l);
 	}
 
 	/**
@@ -153,7 +160,7 @@ public class Stream<A> {
 	            out.send(trans2, f.apply(a, b.sampleNoTrans()));
 	        }
         });
-        return out.addCleanup(l);
+        return out.unsafeAddCleanup(l);
 	}
 
     /**
@@ -194,7 +201,7 @@ public class Stream<A> {
         };
         Listener l1 = ea.listen_(left, h);
         Listener l2 = eb.listen_(right, h);
-        return out.addCleanup(l1).addCleanup(l2).addCleanup(new Listener() {
+        return out.unsafeAddCleanup(l1).unsafeAddCleanup(l2).unsafeAddCleanup(new Listener() {
             public void unlisten() {
                 left.unlinkTo(node_target);
             }
@@ -222,7 +229,7 @@ public class Stream<A> {
 	            });
 	        }
 	    });
-	    return out.addCleanup(l1);
+	    return out.unsafeAddCleanup(l1);
 	}
 
 	/**
@@ -247,7 +254,7 @@ public class Stream<A> {
 	            });
 	        }
 	    });
-	    return out.addCleanup(l1);
+	    return out.unsafeAddCleanup(l1);
     }
 
     /**
@@ -274,7 +281,7 @@ public class Stream<A> {
 	    final StreamSink<A> out = new StreamSink<A>();
         TransactionHandler<A> h = new CoalesceHandler<A>(f, out);
         Listener l = listen(out.node, trans1, h, false);
-        return out.addCleanup(l);
+        return out.unsafeAddCleanup(l);
     }
 
     /**
@@ -312,7 +319,7 @@ public class Stream<A> {
 	            if (f.apply(a)) out.send(trans2, a);
 	        }
         });
-        return out.addCleanup(l);
+        return out.unsafeAddCleanup(l);
     }
 
     /**
@@ -336,7 +343,7 @@ public class Stream<A> {
 	            if (oa.isPresent()) out.send(trans2, oa.get());
 	        }
         });
-        return out.addCleanup(l);
+        return out.unsafeAddCleanup(l);
     }
 
     /**
@@ -407,13 +414,19 @@ public class Stream<A> {
 	            }
 	        }
         });
-        return out.addCleanup(la[0]);
+        return out.unsafeAddCleanup(la[0]);
     }
 
-    Stream<A> addCleanup(Listener cleanup)
+    Stream<A> unsafeAddCleanup(Listener cleanup)
     {
         finalizers.add(cleanup);
         return this;
+    }
+
+    public Stream<A> addCleanup(Listener cleanup) {
+        List<Listener> fsNew = new ArrayList<Listener>(finalizers);
+        fsNew.add(cleanup);
+        return new Stream<A>(node, fsNew);
     }
 
 	@Override

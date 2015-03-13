@@ -113,7 +113,6 @@ class Classic implements Paradigm {
         this.doc = initDoc;
         this.dl = dl;
     }
-    private Document doc;
     private final DocumentListener dl;
 
     private static class Dragging {
@@ -124,6 +123,7 @@ class Classic implements Paradigm {
         final MouseEvt me1;
         final Entry ent; 
     }
+    private Document doc;
     private Optional<Dragging> oDragging = Optional.empty();
     private boolean axisLock;
 
@@ -160,7 +160,7 @@ class FRP implements Paradigm {
     public FRP(Document initDoc, DocumentListener dl) {
         l = Transaction.run(() -> {
             CellLoop<Document> doc = new CellLoop<>();
-            Cell<Boolean> axisLock = sAxisLock.map(t -> t == Type.DOWN)
+            Cell<Boolean> axisLock = sShift.map(t -> t == Type.DOWN)
                                               .hold(false);
             Stream<Stream<Document>> sStartDrag = Stream.filterOptional(
                 sMouse.snapshot(doc, (me1, doc1) -> {
@@ -172,7 +172,8 @@ class FRP implements Paradigm {
                             System.out.println("FRP dragging " + id);
                             Stream<Document> sMoves = sMouse
                                 .filter(me -> me.type == Type.MOVE)
-                                .snapshot(doc, (me2, doc2) -> doc2.insert(id,
+                                .snapshot(doc, (me2, doc2) ->
+                                    doc2.insert(id,
                                          elt.translate(me1.pt, me2.pt, 
                                              axisLock.sample())));
                             return Optional.of(sMoves);
@@ -193,9 +194,9 @@ class FRP implements Paradigm {
     }
     private final Listener l;
     private final StreamSink<MouseEvt> sMouse = new StreamSink<>();
-    private final StreamSink<Type> sAxisLock = new StreamSink<>();
     public void mouseEvent(MouseEvt me) { sMouse.send(me); }
-    public void shiftEvent(Type t) { sAxisLock.send(t); }
+    private final StreamSink<Type> sShift = new StreamSink<>();
+    public void shiftEvent(Type t) { sShift.send(t); }
     public void dispose() { l.unlisten(); }
 }
 
@@ -232,15 +233,15 @@ class Actor implements Paradigm {
                         Object o = in.take();
                         if (o instanceof MouseEvt) {
                             MouseEvt me = (MouseEvt) o;
-			    if (me.type == Type.MOVE) {
-				doc = doc.insert(ent.id,
-				    ent.element.translate(me1.pt, me.pt,
+                            if (me.type == Type.MOVE) {
+                                doc = doc.insert(ent.id,
+                                    ent.element.translate(me1.pt, me.pt,
                                         axisLock));
-				out.put(doc);
-			    }
-			    else
-			    if (me.type == Type.UP)
-				break;
+                                out.put(doc);
+                            }
+                            else
+                            if (me.type == Type.UP)
+                                break;
                         }
                         if (o instanceof Type) {
                             Type t = (Type) o;
@@ -259,9 +260,9 @@ class Actor implements Paradigm {
         });
         t2.start();
     }
-    private final Thread t1;
-    private final Thread t2;
-    private final ArrayBlockingQueue<Object> in = new ArrayBlockingQueue<>(1);
+    private final Thread t1, t2;
+    private final ArrayBlockingQueue<Object> in =
+                                            new ArrayBlockingQueue<>(1);
     public void mouseEvent(MouseEvt me) {
         try {
             in.put(me);

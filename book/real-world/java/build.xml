@@ -6,9 +6,11 @@
 
     <target name="compile">
         <subant buildpath="../../../java"/>
+        <subant buildpath="../../swidgets/java"/>
         <mkdir dir="build"/>
         <javac debug="true" srcdir="." destdir="build" source="1.8" target="1.8">
             <classpath>
+                <pathelement path="../../swidgets/java/swidgets/swidgets.jar"/>
                 <pathelement path="../../../java/sodium/sodium.jar"/>
             </classpath>
         </javac>
@@ -27,6 +29,25 @@
         <java classname="shift.ShiftOfTheParadigms" fork="true">
             <classpath>
                 <pathelement path="build/"/>
+                <pathelement path="../../../java/sodium/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="shift2" depends="compile">
+        <java classname="shift2.ShiftOfTheParadigms2" fork="true">
+            <classpath>
+                <pathelement path="build/"/>
+                <pathelement path="../../../java/sodium/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="lookup" depends="compile">
+        <java classname="lookup.Lookup" fork="true">
+            <classpath>
+                <pathelement path="build/"/>
+                <pathelement path="../../swidgets/java/swidgets/swidgets.jar"/>
                 <pathelement path="../../../java/sodium/sodium.jar"/>
             </classpath>
         </java>

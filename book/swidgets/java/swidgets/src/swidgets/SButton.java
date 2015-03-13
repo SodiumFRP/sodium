@@ -20,7 +20,11 @@ public class SButton extends JButton {
                 sClickedSink.send(Unit.UNIT);
             }
         });
-        setEnabled(enabled.sample());
+        Transaction.run((Transaction trans) -> {
+            trans.post(
+                () -> setEnabled(enabled.sample())
+            );
+        });
         l = enabled.updates().listen(
             ena -> {
                 if (SwingUtilities.isEventDispatchThread())
