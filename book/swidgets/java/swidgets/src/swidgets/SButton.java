@@ -20,8 +20,9 @@ public class SButton extends JButton {
                 sClickedSink.send(Unit.UNIT);
             }
         });
+        // Do it at the end of the transaction so it works with looped cells
         Transaction.run((Transaction trans) -> {
-            trans.post(
+            trans.last(
                 () -> setEnabled(enabled.sample())
             );
         });

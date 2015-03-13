@@ -46,7 +46,12 @@ public class STextField extends JTextField
 
         getDocument().addDocumentListener(dl);
 
-        setEnabled(enabled.sample());
+        // Do it at the end of the transaction so it works with looped cells
+        Transaction.run((Transaction trans) -> {
+            trans.last(
+                () -> setEnabled(enabled.sample())
+            );
+        });
         l = sText.listen(text -> {
             SwingUtilities.invokeLater(() -> {
                 setText(text);
