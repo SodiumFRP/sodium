@@ -106,7 +106,13 @@ namespace SODIUM_NAMESPACE {
          * make any assumptions about the ordering, and the combining function would
          * ideally be commutative.
          */
-        stream<A> coalesce(const std::function<A(const A&, const A&)>& f) const;
+        stream<A> coalesce(const std::function<A(const A&, const A&)>& f) const {
+            transaction trans;
+            return coalesce(trans, f);
+        }
+    protected:
+        stream<A> coalesce(const transaction& trans, const std::function<A(const A&, const A&)>& f) const;
+    public:
 
         /*!
          * Only keep event occurrences for which the predicate returns true.
@@ -128,7 +134,8 @@ namespace SODIUM_NAMESPACE {
                         r_kill.assign(no_func);
                     }
                 })));
-            return out.add_cleanup(*r_kill.get());
+            out.unsafe_add_cleanup(*r_kill.get());
+            return out;
         }
 
         stream<A> gate(const cell<bool>& b) const;
@@ -148,6 +155,8 @@ namespace SODIUM_NAMESPACE {
         stream<C> snapshot(const cell<B>& b, const std::function<C(const A&, const B&)>& f) const;
 
         cell<A> hold(const A& init_a) const;
+
+        cell<A> hold_lazy(const std::function<A()>& lazy_init_a) const;
 
         stream<A> add_cleanup(const std::function<void()>& cleanup0) const {
             return stream<A>(impl::magic_ref<impl::stream_impl<A>>(
@@ -213,11 +222,19 @@ namespace SODIUM_NAMESPACE {
                 transaction::listeners_lock.unlock();
             };
         }
+
+        /**
+         * Clean up the output by discarding any firing other than the last one. 
+         */
+        stream<A> last_firing_only(const transaction& trans) {
+            return coalesce(trans, [] (const A&, const A& second) { return second; });
+        }
     };
 
     template <class A>
     class stream_with_send : public stream<A> {
     template <class AA> friend class stream;
+    template <class AA> friend class cell;
     template <class AA>
     friend stream<AA> filter_optional(const stream<boost::optional<AA>>& s);
     public:
@@ -275,11 +292,11 @@ namespace SODIUM_NAMESPACE {
     template <class B>
     stream<B> stream<A>::map(const std::function<B(const A&)>& f) const {
         stream_with_send<B> out;
-        auto kill = listen_(out.impl->node, [out, f] (const transaction& trans, const void* va) {
+        out.unsafe_add_cleanup(listen_(out.impl->node, [out, f] (const transaction& trans, const void* va) {
             const A& a = *(const A*)va;
             out.send(trans, f(a));
-        });
-        return out.add_cleanup(kill);
+        }));
+        return out;
     }
 
     template <class A>
@@ -304,10 +321,9 @@ namespace SODIUM_NAMESPACE {
     }
 
     template <class A>
-    stream<A> stream<A>::coalesce(const std::function<A(const A&, const A&)>& f) const {
+    stream<A> stream<A>::coalesce(const transaction& trans, const std::function<A(const A&, const A&)>& f) const {
         using namespace std;
         using namespace boost;
-        transaction trans;
         stream_with_send<A> out;
         shared_ptr<optional<A>> p_state(new optional<A>);
         auto kill = listen(out.impl->node, trans, [p_state, f, out] (const transaction& trans, const void* va) {
@@ -396,8 +412,11 @@ namespace SODIUM_NAMESPACE {
         template <class A>
         struct cell_impl {
             cell_impl(const A& a) : value(a), cleanup([] () {}) {}
-            cell_impl(const stream<A>& str, const A& a, const std::function<void()>& cleanup)
-                : str(str), value(a), really_clean_up(false), cleanup(cleanup) {}
+            cell_impl(const stream<A>& str, const impl::magic_ref<A>& value,
+                      const impl::magic_ref<std::function<A()>>& lazy_init_value,
+                      const std::function<void()>& cleanup)
+                : str(str), value(value), really_clean_up(false), cleanup(cleanup),
+                  lazy_init_value(lazy_init_value) {}
             ~cell_impl() {
                 if (really_clean_up)
                     cleanup();
@@ -408,6 +427,17 @@ namespace SODIUM_NAMESPACE {
             bool really_clean_up;
             std::function<void()> cleanup;
             impl::magic_ref<std::function<A()>> lazy_init_value;
+
+            A sample() const {
+                return value ? *value
+                             : (*lazy_init_value)();
+            }
+        };
+
+        template <class S>
+        struct collect_state {
+            collect_state(const std::function<S()>& s_lazy) : s_lazy(s_lazy) {}
+            std::function<S()> s_lazy;
         };
     }
 
@@ -416,7 +446,8 @@ namespace SODIUM_NAMESPACE {
     template <class AA> friend class stream;
     protected:
         impl::magic_ref<impl::cell_impl<A>> impl;
-        cell(const stream<A>& str, const A& init_a) {
+        cell(const stream<A>& str, const impl::magic_ref<A>& init_a,
+                                   const impl::magic_ref<std::function<A()>>& lazy_init_value) {
             transaction trans;
             auto impl(this->impl);
             auto kill = str.listen(impl::node_t::null, trans, [impl] (const transaction& trans, const void* va) {
@@ -430,7 +461,7 @@ namespace SODIUM_NAMESPACE {
                 }
                 impl->value_update.assign(a);
             }, false);
-            impl.assign(impl::cell_impl<A>(str, init_a, kill));
+            impl.assign(impl::cell_impl<A>(str, init_a, lazy_init_value, kill));
             impl.unsafe_get().really_clean_up = true;
         }
     public:
@@ -452,7 +483,34 @@ namespace SODIUM_NAMESPACE {
             return sample_no_trans();
         }
 
-    private:
+        /*!
+         * Returns an event giving the updates to a behavior. If this behavior was created
+         * by a hold, then this gives you back an event equivalent to the one that was held.
+         */
+        stream<A> updates() const {
+            return impl->str;
+        }
+
+        /*!
+         * Returns an event describing the value of a behavior, where there's an initial event
+         * giving the current value.
+         */
+        stream<A> value() const {
+            transaction trans;
+            return stream<A>(value(trans));
+        }
+
+    protected:
+        stream<A> value(const transaction& trans1) const {
+            stream_sink<unit> sSpark;
+            trans1.prioritized(sSpark.impl->node, [sSpark] (const transaction& trans2) {
+                sSpark.send(unit());
+            });
+            stream<A> sInitial = sSpark.snapshot(*this);
+            return sInitial.merge(updates()).last_firing_only(trans1);
+        }
+
+    public:
         std::function<A()> sample_lazy() const {
             using namespace boost;
             transaction trans;
@@ -461,9 +519,9 @@ namespace SODIUM_NAMESPACE {
                     v_impl
                 );
             trans.last([lazy] () {
-                auto impl = boost::get<impl::magic_ref<impl::cell_impl<A>>>(lazy);
+                auto impl = boost::get<impl::magic_ref<impl::cell_impl<A>>>(*lazy);
                 lazy.assign(variant<impl::magic_ref<impl::cell_impl<A>>, impl::magic_ref<A>>(
-                    impl->value_update ? impl->value_update : impl_value
+                    impl->value_update ? *impl->value_update : impl->sample()
                 ));
             });
             return [lazy] () -> A {
@@ -472,9 +530,8 @@ namespace SODIUM_NAMESPACE {
                     return **refa;
                 else {
                     auto impl = boost::get<impl::magic_ref<impl::cell_impl<A>>>(*lazy); 
-                    return impl->value;
+                    return impl->sample();
                 }
-                return *impl->sample().template cast_ptr<A>(NULL);
             };
         }
 
@@ -484,30 +541,30 @@ namespace SODIUM_NAMESPACE {
          */
         template <class S, class B>
         cell<B> collect_lazy(
-            const std::function<S()>& initS,
+            const std::function<S()>& initS0,
             const std::function<std::tuple<B, S>(const A&, const S&)>& f
         ) const
         {
-            transaction<P> trans;
-            auto ea = updates().coalesce([] (const A&, const A& snd) -> A { return snd; });
-            std::function<A()> za_lazy = sample_lazy();
-            std::function<SODIUM_TUPLE<B,S>()> zbs = [za_lazy, initS, f] () -> SODIUM_TUPLE<B,S> {
-                return f(za_lazy(), initS());
-            };
-            SODIUM_SHARED_PTR<impl::collect_state<S> > pState(new impl::collect_state<S>([zbs] () -> S {
-                return SODIUM_TUPLE_GET<1>(zbs());
+            transaction trans;
+            auto ea = updates() /*.coalesce([] (const A&, const A& snd) -> A { return snd; })*/;
+            impl::magic_ref<std::function<A()>> za_lazy(sample_lazy());
+            impl::magic_ref<std::function<S()>> initS(initS0);
+            impl::magic_ref<std::function<std::tuple<B,S>()>> zbs([za_lazy, initS, f] () -> std::tuple<B,S> {
+                return f((*za_lazy)(), (*initS)());
+            });
+            impl::magic_ref<impl::collect_state<S> > state(impl::collect_state<S>([zbs] () -> S {
+                return std::get<1>((*zbs)());
             }));
-            SODIUM_TUPLE<impl::event_,SODIUM_SHARED_PTR<impl::node> > p = impl::unsafe_new_event();
-            auto kill = updates().listen_raw(trans.impl(), SODIUM_TUPLE_GET<1>(p),
-                new std::function<void(const SODIUM_SHARED_PTR<impl::node>&, impl::transaction_impl*, const light_ptr&)>(
-                    [pState, f] (const SODIUM_SHARED_PTR<impl::node>& target, impl::transaction_impl* trans, const light_ptr& ptr) {
-                        SODIUM_TUPLE<B,S> outsSt = f(*ptr.cast_ptr<A>(NULL), pState->s_lazy());
-                        const S& new_s = SODIUM_TUPLE_GET<1>(outsSt);
-                        pState->s_lazy = [new_s] () { return new_s; };
-                        send(target, trans, light_ptr::create<B>(SODIUM_TUPLE_GET<0>(outsSt)));
-                    }), false);
-            return event<B, P>(SODIUM_TUPLE_GET<0>(p).unsafe_add_cleanup(kill)).hold_lazy([zbs] () -> B {
-                return SODIUM_TUPLE_GET<0>(zbs());
+            stream_with_send<B> out;
+            out.unsafe_add_cleanup(ea.listen(out.impl->node, trans,
+                [state, f, out] (const transaction& trans, const void* va) {
+                    std::tuple<B,S> outsSt = f(*(const A*)va, state->s_lazy());
+                    const S& new_s = std::get<1>(outsSt);
+                    state.assign(impl::collect_state<S>([new_s] () { return new_s; }));
+                    out.send(trans, std::get<0>(outsSt));
+                }, false));
+            return out.hold_lazy([zbs] () -> B {
+                return std::get<0>((*zbs)());
             });
         }
 
@@ -526,19 +583,24 @@ namespace SODIUM_NAMESPACE {
 
     protected:
         A sample_no_trans() const {
-            return *impl->value;
+            return impl->sample();
         }
     };
 
     template <class A>
     cell<A> stream<A>::hold(const A& init_a) const {
-        return cell<A>(*this, init_a);
+        return cell<A>(*this, impl::magic_ref<A>(init_a), impl::magic_ref<std::function<A()>>());
+    }
+
+    template <class A>
+    cell<A> stream<A>::hold_lazy(const std::function<A()>& lazy_init_a) const {
+        return cell<A>(*this, impl::magic_ref<A>(), impl::magic_ref<std::function<A()>>(lazy_init_a));
     }
 
     template <class A>
     class cell_sink : public cell<A> {
     public:
-        cell_sink(const A& initValue) : cell<A>(stream<A>(), initValue) {}
+        cell_sink(const A& initValue) : cell<A>(stream<A>(), impl::magic_ref<A>(initValue), impl::magic_ref<std::function<A()>>()) {}
         void send(const A& a) {
             transaction trans;
             stream_with_send<A>::send(this->impl->str.impl, trans, a); 
@@ -760,12 +822,13 @@ namespace SODIUM_NAMESPACE {
     template <class A>
     struct event_loop : stream_loop<A> {
         event_loop() {}
-        event_loop(const event_loop<A>& other) : event_loop<A>(other) {}
+        event_loop(const stream_loop<A>& other) : event_loop<A>(other) {}
         virtual ~event_loop() {}
     };
     template <class A>
     struct behavior : cell<A> {
         behavior(const A& initValue) : cell<A>(initValue) {}
+        behavior(const cell<A>& other) : cell<A>(other) {}
     };
     template <class A>
     struct behavior_sink : cell_sink<A> {

@@ -355,7 +355,6 @@ void test_sodium::once1()
     CPPUNIT_ASSERT_EQUAL(string("A"), *out);
 }
 
-#if 0
 void test_sodium::hold1()
 {
     event_sink<int> e;
@@ -368,6 +367,7 @@ void test_sodium::hold1()
     CPPUNIT_ASSERT(vector<int>({ 2, 9 }) == *out);
 }
 
+#if 0
 void test_sodium::snapshot1()
 {
     behavior_sink<int> b(0);
@@ -868,12 +868,17 @@ void test_sodium::collect1()
     unlisten();
     CPPUNIT_ASSERT(vector<int>({ 105, 112, 113, 115, 118 }) == *out);
 }
+#endif
 
 void test_sodium::collect2()
 {
     event_sink<int> ea;
     auto out = std::make_shared<vector<int>>();
+#if defined(SODIUM_V2)
+    transaction trans;
+#else
     transaction<> trans;
+#endif
     behavior<int> sum = ea.hold(100).collect<int, int>(0, [] (const int& a, const int& s) {
         return tuple<int, int>(a+s, a+s);
     });
@@ -888,6 +893,7 @@ void test_sodium::collect2()
     CPPUNIT_ASSERT(vector<int>({ 100, 105, 112, 113, 115, 118 }) == *out);
 }
 
+#if 0
 void test_sodium::accum1()
 {
     event_sink<int> ea;

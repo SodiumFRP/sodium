@@ -8,7 +8,7 @@ OBJS=sodium/impl/magic_ref.o \
 all: test_sodium test
 
 clean:
-	rm -f $(OBJS) test_sodium.o test.o
+	rm -f $(OBJS) test_sodium.o test.o test_sodium test
 
 sodium/impl/mutex.h: sodium/impl/common.h
 sodium/impl/magic_ref.h: sodium/impl/mutex.h

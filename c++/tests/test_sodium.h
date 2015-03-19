@@ -28,13 +28,15 @@ class test_sodium : public CppUnit::TestFixture {
     CPPUNIT_TEST(loop_event1);
     CPPUNIT_TEST(loop_event2);
     CPPUNIT_TEST(gate1);
-    CPPUNIT_TEST(once1);
 #if 0
+    CPPUNIT_TEST(once1);
     CPPUNIT_TEST(collect1);
     CPPUNIT_TEST(accum1);
     // behaviour tests
+#endif
     CPPUNIT_TEST(collect2);
     CPPUNIT_TEST(hold1);
+#if 0
     CPPUNIT_TEST(snapshot1);
     CPPUNIT_TEST(value1);
     CPPUNIT_TEST(value_const);
@@ -105,8 +107,10 @@ public:
 #if 0
     void collect1();
     void accum1();
+#endif
     void collect2();
     void hold1();
+#if 0
     void snapshot1();
     void value1();
     void value_const();
