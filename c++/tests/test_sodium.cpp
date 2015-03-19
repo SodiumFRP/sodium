@@ -367,10 +367,11 @@ void test_sodium::hold1()
     CPPUNIT_ASSERT(vector<int>({ 2, 9 }) == *out);
 }
 
-#if 0
 void test_sodium::snapshot1()
 {
     behavior_sink<int> b(0);
+    b.send(2);  /* ### */
+    /*
     event_sink<long> trigger;
     auto out = std::make_shared<vector<string>>();
     auto unlisten = trigger.snapshot<int,string>(b, [out] (const long& x, const int& y) -> string {
@@ -388,12 +389,17 @@ void test_sodium::snapshot1()
     trigger.send(300l);
     unlisten();
     CPPUNIT_ASSERT(vector<string>({ string("100 0"), string("200 2"), string("300 1") }) == *out);
+    */
 }
 
 void test_sodium::value1()
 {
     behavior_sink<int> b(9);
+#if defined(SODIUM_V2)
+    transaction trans;
+#else
     transaction<> trans;
+#endif
     auto out = std::make_shared<vector<int>>();
     auto unlisten = b.value().listen([out] (const int& x) { out->push_back(x); });
     trans.close();
@@ -407,13 +413,18 @@ void test_sodium::value_const()
 {
     behavior<int> b(9);
     auto out = std::make_shared<vector<int>>();
+#if defined(SODIUM_V2)
+    transaction trans;
+#else
     transaction<> trans;
+#endif
     auto unlisten = b.value().listen([out] (const int& x) { out->push_back(x); });
     trans.close();
     unlisten();
     CPPUNIT_ASSERT(vector<int>({ 9 }) == *out);
 }
 
+#if 0
 void test_sodium::constant_behavior()
 {
     behavior_sink<int> b(12);

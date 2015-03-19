@@ -14,6 +14,7 @@
 
 class test_sodium : public CppUnit::TestFixture {
     CPPUNIT_TEST_SUITE(test_sodium);
+#if 0
     // event tests
     CPPUNIT_TEST(event1);
     CPPUNIT_TEST(map);
@@ -34,8 +35,9 @@ class test_sodium : public CppUnit::TestFixture {
     // behaviour tests
     CPPUNIT_TEST(collect2);
     CPPUNIT_TEST(hold1);
-#if 0
+#endif
     CPPUNIT_TEST(snapshot1);
+#if 0
     CPPUNIT_TEST(value1);
     CPPUNIT_TEST(value_const);
     CPPUNIT_TEST(constant_behavior);
@@ -106,10 +108,10 @@ public:
     void accum1();
     void collect2();
     void hold1();
-#if 0
     void snapshot1();
     void value1();
     void value_const();
+#if 0
     void constant_behavior();
     void value_then_map();
     void value_twice_then_map();

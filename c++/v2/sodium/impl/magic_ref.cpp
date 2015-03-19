@@ -42,6 +42,7 @@ namespace sodium {
             if (buffered)                // @@@
                 roots.erase(this);       // @@@
             //if (!buffered)             // @@@
+            printf("release %p\n", this);  // ###
             delete this;
         }
 
@@ -111,6 +112,8 @@ namespace sodium {
                 colour = colour_t::grey;
                 for (auto it = children.begin(); it != children.end(); ++it) {
                     link* l = *it;
+                    printf("dec %p\n", l);  // ###
+                    fflush(stdout);  // ###
                     l->ref_count--;
                     l->mark_grey();
                 }

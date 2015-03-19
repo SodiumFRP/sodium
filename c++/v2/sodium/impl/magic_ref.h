@@ -82,10 +82,13 @@ namespace SODIUM_NAMESPACE {
 
             magic_ref<A>& operator = (const magic_ref<A>& other) {
                 link::lock.lock();
-                r->decrement();
-                r = other.r;
-                r->increment();
+                if (r != other.r) {
+                    r->decrement();
+                    r = other.r;
+                    r->increment();
+                }
                 link::lock.unlock();
+                return *this;
             }
 
             void assign(const A& a) const {

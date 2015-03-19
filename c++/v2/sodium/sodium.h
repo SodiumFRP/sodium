@@ -429,11 +429,11 @@ namespace SODIUM_NAMESPACE {
     template <class A>
     stream<A> filter_optional(const stream<boost::optional<A>>& s) {
         stream_with_send<A> out;
-        auto kill = s.listen_(out.impl->node, [out] (const transaction& trans, const void *va) {
+        out.unsafe_add_cleanup(s.listen_(out.impl->node, [out] (const transaction& trans, const void *va) {
             const boost::optional<A>& oa = *(const boost::optional<A>*)va;
             if (oa) out.send(trans, oa.get());
-        });
-        return out.add_cleanup(kill);
+        }));
+        return out;
     }
 
     template <class A>
@@ -455,11 +455,11 @@ namespace SODIUM_NAMESPACE {
     template <class B, class C>
     stream<C> stream<A>::snapshot(const cell<B>& b, const std::function<C(const A&, const B&)>& f) const {
         stream_with_send<C> out;
-        auto kill = listen_(out.impl->node, [out, b, f] (const transaction& trans, const void* va) {
+        out.unsafe_add_cleanup(listen_(out.impl->node, [out, b, f] (const transaction& trans, const void* va) {
             const A& a = *(const A*)va;
             out.send(trans, f(a, b.sample_no_trans()));
-        });
-        return out.add_cleanup(kill);
+        }));
+        return out;
     }
 
     template <class A>
@@ -530,18 +530,18 @@ namespace SODIUM_NAMESPACE {
             cell_impl(const A& a) : value(a), cleanup([] () {}) {}
             cell_impl(const stream<A>& str, const impl::magic_ref<A>& value,
                       const impl::magic_ref<std::function<A()>>& lazy_init_value,
-                      const std::function<void()>& cleanup)
+                      const impl::magic_ref<std::function<void()>>& cleanup)
                 : str(str), value(value), really_clean_up(false), cleanup(cleanup),
                   lazy_init_value(lazy_init_value) {}
             ~cell_impl() {
                 if (really_clean_up)
-                    cleanup();
+                    (*cleanup)();
             }
             stream<A> str;
             impl::magic_ref<A> value;
             impl::magic_ref<A> value_update;
             bool really_clean_up;
-            std::function<void()> cleanup;
+            impl::magic_ref<std::function<void()>> cleanup;
             impl::magic_ref<std::function<A()>> lazy_init_value;
 
             A sample() const {
@@ -566,7 +566,7 @@ namespace SODIUM_NAMESPACE {
                     trans.last([impl] () {
                         impl.unsafe_get().value = impl->value_update;
                         impl.unsafe_get().lazy_init_value.reset();
-                        impl.unsafe_get().value_update = impl::magic_ref<A>();
+                        impl.unsafe_get().value_update.reset();
                     });
                 }
                 impl->value_update.assign(a);
