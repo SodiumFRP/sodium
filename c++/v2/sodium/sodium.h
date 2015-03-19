@@ -32,6 +32,12 @@ namespace SODIUM_NAMESPACE {
             impl::magic_ref<node_t> node;
             std::forward_list<magic_ref<A>> firings;
         };
+
+        template <class S>
+        struct collect_state {
+            collect_state(const std::function<S()>& s_lazy) : s_lazy(s_lazy) {}
+            std::function<S()> s_lazy;
+        };
     }
     template <class A> class cell;
     template <class A> class cell_sink;
@@ -157,6 +163,75 @@ namespace SODIUM_NAMESPACE {
         cell<A> hold(const A& init_a) const;
 
         cell<A> hold_lazy(const std::function<A()>& lazy_init_a) const;
+
+        /*!
+         * Transform a behavior with a generalized state loop (a mealy machine). The function
+         * is passed the input and the old state and returns the new state and output value.
+         */
+        template <class B>
+        stream<B> accum_e_lazy(
+            const std::function<B()>& initB0,
+            const std::function<B(const A&, const B&)>& f
+        ) const;
+
+        /*!
+         * Transform a behavior with a generalized state loop (a mealy machine). The function
+         * is passed the input and the old state and returns the new state and output value.
+         */
+        template <class B>
+        cell<B> accum_lazy(
+            const std::function<B()>& initB0,
+            const std::function<B(const A&, const B&)>& f
+        ) const {
+            return accum_e_lazy<B>(initB0, f).hold_lazy(initB0);
+        }
+
+        /*!
+         * Transform a behavior with a generalized state loop (a mealy machine). The function
+         * is passed the input and the old state and returns the new state and output value.
+         */
+        template <class B>
+        stream<B> accum_e(
+            const B& initB0,
+            const std::function<B(const A&, const B&)>& f
+        ) const {
+            return accum_e_lazy([initB0] () { return initB0; }, f);
+        }
+
+        /*!
+         * Transform a behavior with a generalized state loop (a mealy machine). The function
+         * is passed the input and the old state and returns the new state and output value.
+         */
+        template <class B>
+        cell<B> accum(
+            const B& initB0,
+            const std::function<B(const A&, const B&)>& f
+        ) const {
+            return accum_lazy<B>([initB0] () { return initB0; }, f);
+        }
+
+        /*!
+         * Transform a behavior with a generalized state loop (a mealy machine). The function
+         * is passed the input and the old state and returns the new state and output value.
+         */
+        template <class S, class B>
+        stream<B> collect_lazy(
+            const std::function<S()>& initS0,
+            const std::function<std::tuple<B, S>(const A&, const S&)>& f
+        ) const;
+
+        /*!
+         * Transform a behavior with a generalized state loop (a mealy machine). The function
+         * is passed the input and the old state and returns the new state and output value.
+         */
+        template <class S, class B>
+        stream<B> collect(
+            const S& initS,
+            const std::function<std::tuple<B, S>(const A&, const S&)>& f
+        ) const
+        {
+            return collect_lazy<S, B>([initS] () -> S { return initS; }, f);
+        }
 
         stream<A> add_cleanup(const std::function<void()>& cleanup0) const {
             return stream<A>(impl::magic_ref<impl::stream_impl<A>>(
@@ -388,6 +463,47 @@ namespace SODIUM_NAMESPACE {
     }
 
     template <class A>
+    template <class B>
+    stream<B> stream<A>::accum_e_lazy(
+        const std::function<B()>& initB0,
+        const std::function<B(const A&, const B&)>& f
+    ) const
+    {
+        transaction trans;
+        impl::collect_state<B> initB(initB0);
+        impl::magic_ref<impl::collect_state<B> > state(initB);
+        stream_with_send<B> out;
+        out.unsafe_add_cleanup(listen(out.impl->node, trans,
+            [state, f, out] (const transaction& trans, const void* va) {
+                B outB = f(*(const A*)va, state->s_lazy());
+                state.assign(impl::collect_state<B>([outB] () { return outB; }));
+                out.send(trans, outB);
+            }, false));
+        return out;
+    }
+
+    template <class A>
+    template <class S, class B>
+    stream<B> stream<A>::collect_lazy(
+        const std::function<S()>& initS0,
+        const std::function<std::tuple<B, S>(const A&, const S&)>& f
+    ) const
+    {
+        transaction trans;
+        impl::collect_state<S> initS(initS0);
+        impl::magic_ref<impl::collect_state<S> > state(initS);
+        stream_with_send<B> out;
+        out.unsafe_add_cleanup(listen(out.impl->node, trans,
+            [state, f, out] (const transaction& trans, const void* va) {
+                std::tuple<B,S> outsSt = f(*(const A*)va, state->s_lazy());
+                const S& new_s = std::get<1>(outsSt);
+                state.assign(impl::collect_state<S>([new_s] () { return new_s; }));
+                out.send(trans, std::get<0>(outsSt));
+            }, false));
+        return out;
+    }
+
+    template <class A>
     struct stream_loop : stream<A> {
         impl::magic_ref<stream<A>> out;
         stream_loop() {
@@ -432,12 +548,6 @@ namespace SODIUM_NAMESPACE {
                 return value ? *value
                              : (*lazy_init_value)();
             }
-        };
-
-        template <class S>
-        struct collect_state {
-            collect_state(const std::function<S()>& s_lazy) : s_lazy(s_lazy) {}
-            std::function<S()> s_lazy;
         };
     }
 

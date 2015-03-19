@@ -851,6 +851,7 @@ void test_sodium::loop_behavior()
     CPPUNIT_ASSERT(vector<int>({ 0, 2, 5, 6 }) == *out);
     CPPUNIT_ASSERT(sum.sample() == 6);
 }
+#endif
 
 void test_sodium::collect1()
 {
@@ -868,7 +869,6 @@ void test_sodium::collect1()
     unlisten();
     CPPUNIT_ASSERT(vector<int>({ 105, 112, 113, 115, 118 }) == *out);
 }
-#endif
 
 void test_sodium::collect2()
 {
@@ -893,7 +893,6 @@ void test_sodium::collect2()
     CPPUNIT_ASSERT(vector<int>({ 100, 105, 112, 113, 115, 118 }) == *out);
 }
 
-#if 0
 void test_sodium::accum1()
 {
     event_sink<int> ea;
@@ -911,6 +910,7 @@ void test_sodium::accum1()
     CPPUNIT_ASSERT(vector<int>({ 105, 112, 113, 115, 118 }) == *out);
 }
 
+#if 0
 void test_sodium::split1()
 {
     event_sink<string> ea;
