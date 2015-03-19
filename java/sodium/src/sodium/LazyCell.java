@@ -1,7 +1,7 @@
 package sodium;
 
 class LazyCell<A> extends Cell<A> {
-    LazyCell(final Stream<A> event, final Lambda0<A> lazyInitValue) {
+    LazyCell(final Stream<A> event, final Lazy<A> lazyInitValue) {
         super(event, null);
         this.lazyInitValue = lazyInitValue;
     }
@@ -9,8 +9,8 @@ class LazyCell<A> extends Cell<A> {
     @Override
     protected A sampleNoTrans()
     {
-        if (value == null) {
-            value = lazyInitValue.apply();
+        if (value == null && lazyInitValue != null) {
+            value = lazyInitValue.get();
             lazyInitValue = null;
         }
         return value;

@@ -128,7 +128,7 @@ public class Stream<A> {
 		});
 	}
 
-	final Cell<A> holdLazy(final Lambda0<A> initValue) {
+	public final Cell<A> holdLazy(final Lazy<A> initValue) {
 		return Transaction.apply(new Lambda1<Transaction, Cell<A>>() {
 			public Cell<A> apply(Transaction trans) {
 			    return new LazyCell<A>(lastFiringOnly(trans), initValue);
@@ -366,10 +366,19 @@ public class Stream<A> {
      */
     public final <B,S> Stream<B> collect(final S initState, final Lambda2<A, S, Tuple2<B, S>> f)
     {
+        return collectLazy(new Lazy<S>(initState), f);
+    }
+
+    /**
+     * Transform an event with a generalized state loop (a mealy machine). The function
+     * is passed the input and the old state and returns the new state and output value.
+     */
+    public final <B,S> Stream<B> collectLazy(final Lazy<S> initState, final Lambda2<A, S, Tuple2<B, S>> f)
+    {
         return Transaction.<Stream<B>>run(() -> {
             final Stream<A> ea = this;
             StreamLoop<S> es = new StreamLoop<S>();
-            Cell<S> s = es.hold(initState);
+            Cell<S> s = es.holdLazy(initState);
             Stream<Tuple2<B,S>> ebs = ea.snapshot(s, f);
             Stream<B> eb = ebs.map(new Lambda1<Tuple2<B,S>,B>() {
                 public B apply(Tuple2<B,S> bs) { return bs.a; }
@@ -387,13 +396,22 @@ public class Stream<A> {
      */
     public final <S> Cell<S> accum(final S initState, final Lambda2<A, S, S> f)
     {
+        return accumLazy(new Lazy<S>(initState), f);
+    }
+
+    /**
+     * Accumulate on input event, outputting the new state each time.
+     * Variant that takes a lazy initial state.
+     */
+    public final <S> Cell<S> accumLazy(final Lazy<S> initState, final Lambda2<A, S, S> f)
+    {
         return Transaction.<Cell<S>>run(() -> {
             final Stream<A> ea = this;
             StreamLoop<S> es = new StreamLoop<S>();
-            Cell<S> s = es.hold(initState);
+            Cell<S> s = es.holdLazy(initState);
             Stream<S> es_out = ea.snapshot(s, f);
             es.loop(es_out);
-            return es_out.hold(initState);
+            return es_out.holdLazy(initState);
         });
     }
 

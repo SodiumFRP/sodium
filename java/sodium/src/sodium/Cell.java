@@ -1,14 +1,16 @@
 package sodium;
 
+import java.util.Optional;
+
 public class Cell<A> {
 	protected final Stream<A> event;
 	A value;
 	A valueUpdate;
 	private Listener cleanup;
-    protected Lambda0<A> lazyInitValue;  // Used by LazyCell
+    protected Lazy<A> lazyInitValue;  // Used by LazyCell
 
 	/**
-	 * A behavior with a constant value.
+	 * A cell with a constant value.
 	 */
     public Cell(A value)
     {
@@ -49,7 +51,7 @@ public class Cell<A> {
     }
 
     /**
-     * Sample the behavior's current value.
+     * Sample the cell's current value.
      *
      * This should generally be avoided in favour of value().listen(..) so you don't
      * miss any updates, but in many circumstances it makes sense.
@@ -68,13 +70,48 @@ public class Cell<A> {
         });
     }
 
+    private static class LazySample<A> {
+        LazySample(Cell<A> cell) {
+            this.cell = cell;
+        }
+        Cell<A> cell;
+        boolean hasValue;
+        A value;
+    }
+
+    /**
+     * A variant of sample() that works for CellLoops when they haven't been looped yet.
+     * @see Stream.holdLazy()
+     */
+    public final Lazy<A> sampleLazy() {
+        final Cell<A> me = this;
+        return Transaction.apply(new Lambda1<Transaction, Lazy<A>>() {
+        	public Lazy<A> apply(Transaction trans) {
+                LazySample<A> s = new LazySample<A>(me);
+                trans.last(() -> {
+                    s.value = me.valueUpdate != null ? me.valueUpdate : me.sampleNoTrans();
+                    s.hasValue = true;
+                    s.cell = null;
+                });
+                return new Lazy<A>(new Lambda0<A>() {
+                    public A apply() {
+                        if (s.hasValue)
+                            return s.value;
+                        else
+                            return s.cell.sample();
+                    }
+                });
+            }
+        });
+    }
+
     protected A sampleNoTrans()
     {
         return value;
     }
 
     /**
-     * An event that gives the updates for the behavior. If this behavior was created
+     * An event that gives the updates for the cell. If this cell was created
      * with a hold, then updates() gives you an event equivalent to the one that was held.
      */
     public final Stream<A> updates()
@@ -84,8 +121,8 @@ public class Cell<A> {
 
     /**
      * An event that is guaranteed to fire once when you listen to it, giving
-     * the current value of the behavior, and thereafter behaves like updates(),
-     * firing for each update to the behavior's value.
+     * the current value of the cell, and thereafter behaves like updates(),
+     * firing for each update to the cell's value.
      */
     public final Stream<A> value()
     {
@@ -109,17 +146,17 @@ public class Cell<A> {
     }
 
     /**
-     * Transform the behavior's value according to the supplied function.
+     * Transform the cell's value according to the supplied function.
      */
 	public final <B> Cell<B> map(Lambda1<A,B> f)
 	{
-		return updates().map(f).holdLazy(() -> f.apply(sampleNoTrans()));
+		return updates().map(f).holdLazy(sampleLazy().map(f));
 	}
 
 	/**
-	 * Lift a binary function into behaviors.
+	 * Lift a binary function into cells.
 	 */
-	public final <B,C> Cell<C> lift(final Lambda2<A,B,C> f, Cell<B> b)
+	public static final <A,B,C> Cell<C> lift(Lambda2<A,B,C> f, Cell<A> a, Cell<B> b)
 	{
 		Lambda1<A, Lambda1<B,C>> ffa = new Lambda1<A, Lambda1<B,C>>() {
 			public Lambda1<B,C> apply(final A aa) {
@@ -130,22 +167,14 @@ public class Cell<A> {
 				};
 			}
 		};
-		Cell<Lambda1<B,C>> bf = map(ffa);
+		Cell<Lambda1<B,C>> bf = a.map(ffa);
 		return apply(bf, b);
 	}
 
 	/**
-	 * Lift a binary function into behaviors.
+	 * Lift a ternary function into cells.
 	 */
-	public static final <A,B,C> Cell<C> lift(Lambda2<A,B,C> f, Cell<A> a, Cell<B> b)
-	{
-		return a.lift(f, b);
-	}
-
-	/**
-	 * Lift a ternary function into behaviors.
-	 */
-	public final <B,C,D> Cell<D> lift(final Lambda3<A,B,C,D> f, Cell<B> b, Cell<C> c)
+	public static final <A,B,C,D> Cell<D> lift(Lambda3<A,B,C,D> f, Cell<A> a, Cell<B> b, Cell<C> c)
 	{
 		Lambda1<A, Lambda1<B, Lambda1<C,D>>> ffa = new Lambda1<A, Lambda1<B, Lambda1<C,D>>>() {
 			public Lambda1<B, Lambda1<C,D>> apply(final A aa) {
@@ -160,22 +189,14 @@ public class Cell<A> {
 				};
 			}
 		};
-		Cell<Lambda1<B, Lambda1<C, D>>> bf = map(ffa);
-		return apply(apply(bf, b), c);
+		Cell<Lambda1<B, Lambda1<C, D>>> bf = a.map(ffa);
+		return a.apply(apply(bf, b), c);
 	}
 
 	/**
-	 * Lift a ternary function into behaviors.
+	 * Lift a quaternary function into cells.
 	 */
-	public static final <A,B,C,D> Cell<D> lift(Lambda3<A,B,C,D> f, Cell<A> a, Cell<B> b, Cell<C> c)
-	{
-		return a.lift(f, b, c);
-	}
-
-	/**
-	 * Lift a quaternary function into behaviors.
-	 */
-	public final <B,C,D,E> Cell<E> lift(final Lambda4<A,B,C,D,E> f, Cell<B> b, Cell<C> c, Cell<D> d)
+	public static final <A,B,C,D,E> Cell<E> lift(Lambda4<A,B,C,D,E> f, Cell<A> a, Cell<B> b, Cell<C> c, Cell<D> d)
 	{
 		Lambda1<A, Lambda1<B, Lambda1<C, Lambda1<D,E>>>> ffa = new Lambda1<A, Lambda1<B, Lambda1<C, Lambda1<D,E>>>>() {
 			public Lambda1<B, Lambda1<C, Lambda1<D,E>>> apply(final A aa) {
@@ -194,20 +215,12 @@ public class Cell<A> {
 				};
 			}
 		};
-		Cell<Lambda1<B, Lambda1<C, Lambda1<D, E>>>> bf = map(ffa);
+		Cell<Lambda1<B, Lambda1<C, Lambda1<D, E>>>> bf = a.map(ffa);
 		return apply(apply(apply(bf, b), c), d);
 	}
 
 	/**
-	 * Lift a quaternary function into behaviors.
-	 */
-	public static final <A,B,C,D,E> Cell<E> lift(Lambda4<A,B,C,D,E> f, Cell<A> a, Cell<B> b, Cell<C> c, Cell<D> d)
-	{
-		return a.lift(f, b, c, d);
-	}
-
-	/**
-	 * Apply a value inside a behavior to a function inside a behavior. This is the
+	 * Apply a value inside a cell to a function inside a cell. This is the
 	 * primitive for all function lifting.
 	 */
 	public static <A,B> Cell<B> apply(final Cell<Lambda1<A,B>> bf, final Cell<A> ba)
@@ -264,19 +277,23 @@ public class Cell<A> {
                         public void unlisten() {
                             in_target.unlinkTo(node_target);
                         }
-                    }).holdLazy(() -> bf.sampleNoTrans().apply(ba.sampleNoTrans()));
+                    }).holdLazy(new Lazy<B>(new Lambda0<B>() {
+                        public B apply() {
+                            return bf.sampleNoTrans().apply(ba.sampleNoTrans());
+                        }
+                    }));
             }
         });
 	}
 
 	/**
-	 * Unwrap a behavior inside another behavior to give a time-varying behavior implementation.
+	 * Unwrap a cell inside another cell to give a time-varying cell implementation.
 	 */
 	public static <A> Cell<A> switchC(final Cell<Cell<A>> bba)
 	{
 	    return Transaction.apply(new Lambda1<Transaction, Cell<A>>() {
 	        public Cell<A> apply(Transaction trans0) {
-                Lambda0<A> za = () -> bba.sampleNoTrans().sampleNoTrans();
+                Lazy<A> za = bba.sampleLazy().map(ba -> ba.sample());
                 final StreamSink<A> out = new StreamSink<A>();
                 TransactionHandler<Cell<A>> h = new TransactionHandler<Cell<A>>() {
                     private Listener currentListener;
@@ -310,7 +327,7 @@ public class Cell<A> {
 	}
 	
 	/**
-	 * Unwrap an event inside a behavior to give a time-varying event implementation.
+	 * Unwrap an event inside a cell to give a time-varying event implementation.
 	 */
 	public static <A> Stream<A> switchS(final Cell<Stream<A>> bea)
 	{
@@ -354,16 +371,27 @@ public class Cell<A> {
 	}
 
     /**
-     * Transform a behavior with a generalized state loop (a mealy machine). The function
+     * Transform a cell with a generalized state loop (a mealy machine). The function
      * is passed the input and the old state and returns the new state and output value.
      */
     public final <B,S> Cell<B> collect(final S initState, final Lambda2<A, S, Tuple2<B, S>> f)
+    {
+        return collect(new Lazy<S>(initState), f);
+    }
+
+    /**
+     * Transform a cell with a generalized state loop (a mealy machine). The function
+     * is passed the input and the old state and returns the new state and output value.
+     * Variant that takes a lazy initial state.
+     */
+    public final <B,S> Cell<B> collect(final Lazy<S> initState, final Lambda2<A, S, Tuple2<B, S>> f)
     {
         return Transaction.<Cell<B>>run(() -> {
             final Stream<A> ea = updates().coalesce(new Lambda2<A,A,A>() {
                 public A apply(A fst, A snd) { return snd; }
             });
-            final Lambda0<Tuple2<B, S>> zbs = () -> f.apply(sampleNoTrans(), initState);
+            final Lazy<Tuple2<B,S>> zbs = Lazy.<A,S,Tuple2<B,S>>lift(
+                f, sampleLazy(), initState);
             StreamLoop<Tuple2<B,S>> ebs = new StreamLoop<Tuple2<B,S>>();
             Cell<Tuple2<B,S>> bbs = ebs.holdLazy(zbs);
             Cell<S> bs = bbs.map(new Lambda1<Tuple2<B,S>,S>() {
