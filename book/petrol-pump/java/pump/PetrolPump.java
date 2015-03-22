@@ -303,7 +303,8 @@ public class PetrolPump extends JFrame
                 Cell<Double> price1 = textPrice1.text.map(parseDbl);
                 Cell<Double> price2 = textPrice2.text.map(parseDbl);
                 Cell<Double> price3 = textPrice3.text.map(parseDbl);
-                StreamLoop<Unit> sClearSale = new StreamLoop<>();
+                CellSink<Stream<Unit>> csClearSale = new CellSink<>(new Stream<Unit>());
+                Stream<Unit> sClearSale = Cell.switchS(csClearSale);
 
                 Cell<Outputs> outputs = logic.selectedItem.map(
                     pump -> pump.create(
@@ -391,24 +392,26 @@ public class PetrolPump extends JFrame
                 }
 
                 l = l.append(sSaleComplete.listen(sale -> {
-                    JDialog dialog = new JDialog(this, "Sale complete", false);
-                    dialog.setLayout(new GridLayout(5,2));
-                    dialog.add(new JLabel("Fuel "));
-                    dialog.add(new JLabel(sale.fuel.toString()));
-                    dialog.add(new JLabel("Price "));
-                    dialog.add(new JLabel(Formatters.priceFmt.format(sale.price)));
-                    dialog.add(new JLabel("Dollars delivered "));
-                    dialog.add(new JLabel(Formatters.costFmt.format(sale.cost)));
-                    dialog.add(new JLabel("Liters delivered "));
-                    dialog.add(new JLabel(Formatters.quantityFmt.format(sale.quantity)));
-                    SButton ok = new SButton("OK");
-                    dialog.add(ok);
-                    dialog.pack();
-                    dialog.setVisible(true);
-                    sClearSale.loop(ok.sClicked);
-                    this.l = l.append(ok.sClicked.listen(u -> {
-                        dialog.dispose();
-                    }));
+                    SwingUtilities.invokeLater(() -> {
+                        JDialog dialog = new JDialog(this, "Sale complete", false);
+                        dialog.setLayout(new GridLayout(5,2));
+                        dialog.add(new JLabel("Fuel "));
+                        dialog.add(new JLabel(sale.fuel.toString()));
+                        dialog.add(new JLabel("Price "));
+                        dialog.add(new JLabel(Formatters.priceFmt.format(sale.price)));
+                        dialog.add(new JLabel("Dollars delivered "));
+                        dialog.add(new JLabel(Formatters.costFmt.format(sale.cost)));
+                        dialog.add(new JLabel("Liters delivered "));
+                        dialog.add(new JLabel(Formatters.quantityFmt.format(sale.quantity)));
+                        SButton ok = new SButton("OK");
+                        dialog.add(ok);
+                        dialog.pack();
+                        dialog.setVisible(true);
+                        csClearSale.send(ok.sClicked);
+                        this.l = l.append(ok.sClicked.listen(u -> {
+                            dialog.dispose();
+                        }));
+                    });
                 }));
             }
             catch (MalformedURLException e) {
