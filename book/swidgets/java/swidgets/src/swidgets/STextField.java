@@ -4,7 +4,6 @@ import sodium.*;
 import javax.swing.event.DocumentEvent;
 import javax.swing.event.DocumentListener;
 import javax.swing.*;
-import javax.swing.SwingUtilities;
 import java.util.concurrent.ArrayBlockingQueue;
 
 public class STextField extends JTextField
@@ -24,11 +23,16 @@ public class STextField extends JTextField
     public STextField(Stream<String> sText, String initText, int width, Cell<Boolean> enabled) {
         super(initText, width);
 
-        allow = sText.map(u -> 1).merge(sDecrement).accum(0, (d, b) -> b + d).map(b -> b == 0);
+        allow = sText.map(u -> 1)  // Block local changes until remote change has
+                                   // been completed in the GUI
+                     .merge(sDecrement)
+                     .accum(0, (d, b) -> b + d).map(b -> b == 0);
 
-        final StreamSink<String> sUserText = new StreamSink<String>();
-        this.text = sUserText.gate(allow).merge(sText).hold(initText);
+        final StreamSink<String> sUserChangesSnk = new StreamSink<String>();
+        this.sUserChanges = sUserChangesSnk;
+        this.text = sUserChangesSnk.gate(allow).merge(sText).hold(initText);
         DocumentListener dl = new DocumentListener() {
+            private String text = null;
             public void changedUpdate(DocumentEvent e) {
                 update();
             }
@@ -38,9 +42,14 @@ public class STextField extends JTextField
             public void insertUpdate(DocumentEvent e) {
                 update();
             }
-
             public void update() {
-                sUserText.send(getText());
+                this.text = getText();
+                SwingUtilities.invokeLater(() -> {
+                    if (this.text != null) {
+                        sUserChangesSnk.send(this.text);
+                        this.text = null;
+                    }
+                });
             }
         };
 
@@ -54,8 +63,10 @@ public class STextField extends JTextField
         });
         l = sText.listen(text -> {
             SwingUtilities.invokeLater(() -> {
+                getDocument().removeDocumentListener(dl);
                 setText(text);
-                sDecrement.send(-1);
+                getDocument().addDocumentListener(dl);
+                sDecrement.send(-1);  // Re-allow blocked remote changes
             });
         }).append(
             enabled.updates().listen(
@@ -71,11 +82,11 @@ public class STextField extends JTextField
             )
         );
     }
-
     private final StreamSink<Integer> sDecrement = new StreamSink<>();
     private final Cell<Boolean> allow;
     private final Listener l;
     public final Cell<String> text;
+    public final Stream<String> sUserChanges;
 
     public void removeNotify() {
         l.unlisten();
