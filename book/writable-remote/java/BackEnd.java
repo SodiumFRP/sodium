@@ -26,7 +26,8 @@ public class BackEnd {
                             new Thread(() -> {
                                 try { Thread.sleep(50); }
                                         catch (InterruptedException e) {}
-                                System.out.println("BackEnd: "+name+" -> " +a);
+                                System.out.println("BackEnd: "
+                                                        +name+" -> " +a);
                                 recvd.send(Optional.of(a));
                             }).start();
                         })

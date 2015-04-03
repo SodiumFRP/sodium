@@ -10,7 +10,7 @@ public abstract class Value<A> {
             public ValueOutput<B> construct(Stream<B> sWriteB) {
                 ValueOutput<A> out = va.construct(sWriteB.map(bij.fInv));
                 return new ValueOutput<B>(
-                    out.output.map(oa ->
+                    out.value.map(oa ->
                         oa.isPresent() ? Optional.of(bij.f.apply(oa.get()))
                                        : Optional.empty()),
                     out.cleanup);
@@ -28,7 +28,7 @@ public abstract class Value<A> {
                 return Transaction.run(() -> {
                     StreamLoop<A> sWriteA = new StreamLoop<>();
                     ValueOutput<A> out = va.construct(sWriteA);
-                    Cell<Optional<A>> oa = out.output;
+                    Cell<Optional<A>> oa = out.value;
                     sWriteA.loop(Stream.filterOptional(
                         sWriteB.snapshot(oa, (wb, oa_) ->
                             oa_.isPresent()

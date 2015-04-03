@@ -7,7 +7,7 @@ public class simple {
         Value<Integer> vAge = be.allocate("age", 0);
         StreamSink<Integer> sAge = new StreamSink<>();
         ValueOutput<Integer> out = vAge.construct(sAge);
-        Cell<Optional<Integer>> age = out.output;
+        Cell<Optional<Integer>> age = out.value;
         Listener l = age.listen(oa -> {
             System.out.println("age = "+(
                 oa.isPresent() ? Integer.toString(oa.get())
