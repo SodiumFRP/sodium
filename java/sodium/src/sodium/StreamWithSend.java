@@ -23,7 +23,10 @@ public class StreamWithSend<A> extends Stream<A> {
                     Transaction.inCallback++;
                     try {  // Don't allow transactions to interfere with Sodium
                            // internals.
-                        ((TransactionHandler<A>)target.action).run(trans, a);
+                        // Dereference the weak reference
+                        TransactionHandler<Unit> uta = target.action.get();
+                        if (uta != null)  // If it hasn't been gc'ed..., call it
+                            ((TransactionHandler<A>)uta).run(trans, a);
                     } catch (Throwable t) {
                         t.printStackTrace();
                     }

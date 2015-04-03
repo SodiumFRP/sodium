@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.HashSet;
 import java.util.Set;
+import java.lang.ref.WeakReference;
 
 public class Node implements Comparable<Node> {
     public final static Node NULL = new Node(Long.MAX_VALUE);
@@ -14,10 +15,10 @@ public class Node implements Comparable<Node> {
 
 	public static class Target {
 	    Target(TransactionHandler<Unit> action, Node node) {
-	        this.action = action;
+	        this.action = new WeakReference<>(action);
 	        this.node = node;
 	    }
-	    final TransactionHandler<Unit> action;
+	    final WeakReference<TransactionHandler<Unit>> action;
 	    final Node node;
     }
 

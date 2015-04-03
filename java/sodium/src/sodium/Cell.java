@@ -3,7 +3,7 @@ package sodium;
 import java.util.Optional;
 
 public class Cell<A> {
-	protected final Stream<A> event;
+	protected final Stream<A> str;
 	A value;
 	A valueUpdate;
 	private Listener cleanup;
@@ -14,17 +14,17 @@ public class Cell<A> {
 	 */
     public Cell(A value)
     {
-    	this.event = new Stream<A>();
+    	this.str = new Stream<A>();
     	this.value = value;
     }
 
-    Cell(final Stream<A> event, A initValue)
+    Cell(final Stream<A> str, A initValue)
     {
-    	this.event = event;
+    	this.str = str;
     	this.value = initValue;
     	Transaction.run(new Handler<Transaction>() {
     		public void run(Transaction trans1) {
-	    		Cell.this.cleanup = event.listen(Node.NULL, trans1, new TransactionHandler<A>() {
+	    		Cell.this.cleanup = str.listen(Node.NULL, trans1, new TransactionHandler<A>() {
 	    			public void run(Transaction trans2, A a) {
 			    		if (Cell.this.valueUpdate == null) {
 			    			trans2.last(new Runnable() {
@@ -111,16 +111,16 @@ public class Cell<A> {
     }
 
     /**
-     * An event that gives the updates for the cell. If this cell was created
-     * with a hold, then updates() gives you an event equivalent to the one that was held.
+     * A stream that gives the updates for the cell. If this cell was created
+     * with a hold, then updates() gives you a stream equivalent to the one that was held.
      */
     public final Stream<A> updates()
     {
-    	return event;
+    	return str;
     }
 
     /**
-     * An event that is guaranteed to fire once when you listen to it, giving
+     * A stream that is guaranteed to fire once when you listen to it, giving
      * the current value of the cell, and thereafter behaves like updates(),
      * firing for each update to the cell's value.
      */
@@ -327,7 +327,7 @@ public class Cell<A> {
 	}
 	
 	/**
-	 * Unwrap an event inside a cell to give a time-varying event implementation.
+	 * Unwrap a stream inside a cell to give a time-varying stream implementation.
 	 */
 	public static <A> Stream<A> switchS(final Cell<Stream<A>> bea)
 	{
@@ -416,7 +416,7 @@ public class Cell<A> {
 	}
 
 	/**
-	 * Listen for firings of this event. The returned Listener has an unlisten()
+	 * Listen for firings of this stream. The returned Listener has an unlisten()
 	 * method to cause the listener to be removed. This is the observer pattern.
      */
 	public final Listener listen(final Handler<A> action) {

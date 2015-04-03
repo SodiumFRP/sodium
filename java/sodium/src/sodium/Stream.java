@@ -11,9 +11,13 @@ public class Stream<A> {
 		 * It's essential that we keep the listener alive while the caller holds
 		 * the Listener, so that the finalizer doesn't get triggered.
 		 */
-		private final Stream<A> event;
-		private final TransactionHandler<A> action;
-		private final Node.Target target;
+		private Stream<A> event;
+		/**
+		 * It's also essential that we keep the action alive, since the node uses
+		 * a weak reference.
+		 */
+		private TransactionHandler<A> action;
+		private Node.Target target;
 
 		private ListenerImplementation(Stream<A> event, TransactionHandler<A> action, Node.Target target) {
 			this.event = event;
@@ -23,7 +27,12 @@ public class Stream<A> {
 
 		public void unlisten() {
 		    synchronized (Transaction.listenersLock) {
-                event.node.unlinkTo(target);
+		        if (this.event != null) {
+                    event.node.unlinkTo(target);
+                    this.event = null;
+                    this.action = null;
+                    this.target = null;
+                }
             }
 		}
 	}

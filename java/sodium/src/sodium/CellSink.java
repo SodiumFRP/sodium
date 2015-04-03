@@ -7,6 +7,6 @@ public final class CellSink<A> extends Cell<A> {
     
     public void send(A a)
     {
-        ((StreamSink<A>)event).send(a);
+        ((StreamSink<A>)str).send(a);
     }
 }
