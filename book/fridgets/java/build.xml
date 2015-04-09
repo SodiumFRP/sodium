@@ -1,0 +1,45 @@
+<project default="jar">
+
+    <target name="clean">
+        <delete dir="fridgets/build"/>
+        <delete file="fridgets/fridgets.jar"/>
+        <delete>
+            <fileset dir="examples" includes="*.class"/>
+        </delete>
+    </target>
+
+    <target name="compile">
+        <subant buildpath="../../../java"/>
+        <mkdir dir="fridgets/build/src"/>
+        <javac debug="true" srcdir="fridgets/src" destdir="fridgets/build/src" source="1.8" target="1.8">
+            <classpath>
+                <pathelement path="../../../java/sodium/sodium.jar"/>
+            </classpath>
+        </javac>
+    </target>
+
+    <target name="jar" depends="compile">
+        <mkdir dir="fridgets/build/jar" />
+        <jar destfile="fridgets/fridgets.jar" basedir="fridgets/build/src"/>
+    </target>
+
+    <target name="compile-examples" depends="jar">
+        <javac debug="true" srcdir="examples" destdir="examples" source="1.8" target="1.8">
+            <classpath>
+                <pathelement path="fridgets/fridgets.jar"/>
+                <pathelement path="../../../java/sodium/sodium.jar"/>
+            </classpath>
+        </javac>
+    </target>
+
+    <target name="button" depends="compile-examples">
+        <java classname="button" fork="true">
+            <classpath>
+                <pathelement path="examples"/>
+                <pathelement path="fridgets/fridgets.jar"/>
+                <pathelement path="../../../java/sodium/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
+</project>

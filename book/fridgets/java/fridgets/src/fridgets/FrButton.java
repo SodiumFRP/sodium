@@ -1,0 +1,64 @@
+package fridgets;
+
+import java.awt.*;
+import java.awt.event.MouseEvent;
+import java.util.Optional;
+import sodium.*;
+
+public class FrButton implements Fridget<Stream<Unit>> {
+    public FrButton(Cell<String> label) {
+        this.label = label;
+    }
+
+    private final Cell<String> label;
+
+    public FridgetOutput<Stream<Unit>> reify(
+            Cell<Optional<Dimension>> size,
+            Stream<MouseEvent> sMouse) {
+        Stream<Unit> sPressed = Stream.filterOptional(
+            sMouse.snapshot(size, (e, osz) ->
+                osz.isPresent() &&
+                e.getID() == MouseEvent.MOUSE_PRESSED
+                    && e.getX() >= 0 && e.getX() < osz.get().width
+                    && e.getY() >= 0 && e.getY() < osz.get().height
+                ? Optional.of(Unit.UNIT)
+                : Optional.empty()
+            )
+        );
+        Stream<Unit> sReleased = Stream.filterOptional(
+            sMouse.map(e -> e.getID() == MouseEvent.MOUSE_RELEASED
+                ? Optional.of(Unit.UNIT)
+                : Optional.empty()));
+        Cell<Boolean> pressed =
+            sPressed.map(u -> true)
+                    .merge(sReleased.map(u -> false))
+                    .hold(false);
+        Stream<Unit> sClicked = sReleased.gate(pressed); 
+        return new FridgetOutput<Stream<Unit>>(
+            sClicked,
+            Cell.lift(
+                (label_, osz, pressed_) ->
+                    g -> {
+                        if (osz.isPresent()) {
+                            Dimension sz = osz.get();
+                            FontMetrics fm = g.getFontMetrics();
+                            int w = fm.stringWidth(label_);
+                            g.setColor(pressed_ ? Color.darkGray
+                                                : Color.lightGray);
+                            g.fillRect(3, 3, sz.width-6, sz.height-6);
+                            g.setColor(Color.black);
+                            g.drawRect(2, 2, sz.width-5, sz.height-5);
+                            int centerX = sz.width / 2;
+                            g.drawString(label_,
+                                (sz.width - w)/2,
+                                (sz.height - fm.getHeight())/2
+                                        + fm.getAscent());
+                        }
+                    },
+                label, size, pressed
+            ),
+            new Cell<Dimension>(new Dimension(100, 50))
+        );
+    }
+}
+
