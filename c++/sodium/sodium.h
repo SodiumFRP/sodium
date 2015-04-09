@@ -1780,9 +1780,9 @@ namespace sodium {
      */
     template <class A, class B, class C, class D, class E, class F, class P EQ_DEF_PART>
 #if defined(SODIUM_NO_CXX11)
-    behavior<E, P> lift(const lambda5<E, const A&, const B&, const C&, const D&, const E&>& f,
+    behavior<F, P> lift(const lambda5<F, const A&, const B&, const C&, const D&, const E&>& f,
 #else
-    behavior<E, P> lift(const std::function<F(const A&, const B&, const C&, const D&, const E&)>& f,
+    behavior<F, P> lift(const std::function<F(const A&, const B&, const C&, const D&, const E&)>& f,
 #endif
         const behavior<A, P>& ba,
         const behavior<B, P>& bb,
