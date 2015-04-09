@@ -10,7 +10,7 @@ public class FrButton extends Fridget {
         this(label, new StreamLoop<Unit>());
     }
     private FrButton(Cell<String> label, StreamLoop<Unit> sClicked) {
-        super((size, sMouse, idSupply) -> {
+        super((size, sMouse, sKey, focus, idSupply) -> {
             Stream<Unit> sPressed = Stream.filterOptional(
                 sMouse.snapshot(size, (e, osz) ->
                     osz.isPresent() &&
@@ -52,7 +52,8 @@ public class FrButton extends Fridget {
                         },
                     label, size, pressed
                 ),
-                new Cell<Dimension>(new Dimension(100, 50))
+                new Cell<Dimension>(new Dimension(100, 50)),
+                new Stream<Long>()
             );
         });
         this.sClicked = sClicked;

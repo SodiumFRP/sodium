@@ -5,11 +5,18 @@ import sodium.*;
 public class button {
     public static void main(String[] args) {
         JFrame frame = new JFrame("button");
-        Listener l = Transaction.run(() -> {
+        frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
+        frame.setContentPane(Transaction.run(() -> {
             FrButton b = new FrButton(new Cell<>("OK"));
-            frame.setContentPane(new FrView(frame, b));
-            return b.sClicked.listen(u -> System.out.println("clicked!"));
-        });
+            Listener l = b.sClicked.listen(
+                u -> System.out.println("clicked!"));
+            return new FrView(frame, b) {
+                public void removeNotify() {
+                    super.removeNotify();
+                    l.unlisten();
+                }
+            };
+        }));
         frame.pack();
         frame.setVisible(true);
     }

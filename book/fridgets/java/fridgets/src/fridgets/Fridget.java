@@ -1,6 +1,7 @@
 package fridgets;
 
 import java.awt.Dimension;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.util.Optional;
 import sodium.*;
@@ -9,30 +10,29 @@ public abstract class Fridget {
     public static class Output {
         public Output(
                 Cell<Drawable> drawable,
-                Cell<Dimension> desiredSize) {
+                Cell<Dimension> desiredSize,
+                Stream<Long> sChangeFocus) {
             this.drawable = drawable;
             this.desiredSize = desiredSize;
+            this.sChangeFocus = sChangeFocus;
         }
         public Cell<Drawable> drawable;
         public Cell<Dimension> desiredSize;
+        public Stream<Long> sChangeFocus;
     }
-    public Fridget(Lambda3<
-            Cell<Optional<Dimension>>,
-            Stream<MouseEvent>,
-            Supply,
-            Output> reify_) {
+    public Fridget(Lambda5<
+            Cell<Optional<Dimension>>, Stream<MouseEvent>,
+            Stream<KeyEvent>, Cell<Long>, Supply, Output> reify_) {
         this.reify_ = reify_;
     }
-    private final Lambda3<
-        Cell<Optional<Dimension>>,
-        Stream<MouseEvent>,
-        Supply,
-        Output> reify_;
+    private final Lambda5<
+            Cell<Optional<Dimension>>, Stream<MouseEvent>,
+            Stream<KeyEvent>, Cell<Long>, Supply, Output> reify_;
     public final Output reify(
             Cell<Optional<Dimension>> size,
-            Stream<MouseEvent> sMouse,
-            Supply idSupply) {
-        return reify_.apply(size, sMouse, idSupply);
+            Stream<MouseEvent> sMouse, Stream<KeyEvent> sKey,
+            Cell<Long> focus, Supply idSupply) {
+        return reify_.apply(size, sMouse, sKey, focus, idSupply);
     }
 }
 
