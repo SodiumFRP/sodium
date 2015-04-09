@@ -12,8 +12,8 @@ import javax.swing.*;
 import java.util.Optional;
 import sodium.*;
 
-public class View<A> extends JPanel {
-    public View(Fridget<A> fr) {
+public class FrView extends JPanel {
+    public FrView(JFrame frame, Fridget fr) {
         StreamSink<MouseEvent> sMouse = new StreamSink<>();
         StreamSink<KeyEvent> sKey = new StreamSink<>();
         addMouseListener(new MouseAdapter() {
@@ -39,20 +39,18 @@ public class View<A> extends JPanel {
                     size.send(Optional.of(getSize()));
             }
         });
-        /*frame.*/addKeyListener(new KeyAdapter() {
+        frame.addKeyListener(new KeyAdapter() {
             public void keyTyped(KeyEvent e) {
+                System.out.println(e);
                 sKey.send(e);
             }
         });
-        FridgetOutput<A> fo = fr.reify(size, sMouse);
-        this.out = fo.out;
+        Fridget.Output fo = fr.reify(size, sMouse, new Supply());
         this.drawable = fo.drawable;
         l = l.append(drawable.updates().listen(d -> {
             repaint();
         }));
     }
-
-    public final A out;
 
     private Listener l = new Listener();
     private final CellSink<Optional<Dimension>> size;
@@ -68,6 +66,8 @@ public class View<A> extends JPanel {
     public void removeNotify() {
         l.unlisten();
         super.removeNotify();
+    }
+    public void handleKeys(JFrame frame) {
     }
 }
 

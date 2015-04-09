@@ -32,6 +32,16 @@
         </javac>
     </target>
 
+    <target name="supply" depends="compile-examples">
+        <java classname="supply" fork="true">
+            <classpath>
+                <pathelement path="examples"/>
+                <pathelement path="fridgets/fridgets.jar"/>
+                <pathelement path="../../../java/sodium/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
     <target name="button" depends="compile-examples">
         <java classname="button" fork="true">
             <classpath>
