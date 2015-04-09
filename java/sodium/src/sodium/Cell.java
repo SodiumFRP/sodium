@@ -220,6 +220,70 @@ public class Cell<A> {
 	}
 
 	/**
+	 * Lift a 5-argument function into cells.
+	 */
+	public static final <A,B,C,D,E,F> Cell<F> lift(Lambda5<A,B,C,D,E,F> fn, Cell<A> a, Cell<B> b, Cell<C> c, Cell<D> d, Cell<E> e)
+	{
+		Lambda1<A, Lambda1<B, Lambda1<C, Lambda1<D, Lambda1<E, F>>>>> ffa = new Lambda1<A, Lambda1<B, Lambda1<C, Lambda1<D,Lambda1<E, F>>>>>() {
+			public Lambda1<B, Lambda1<C, Lambda1<D, Lambda1<E, F>>>> apply(final A aa) {
+				return new Lambda1<B, Lambda1<C, Lambda1<D, Lambda1<E, F>>>>() {
+					public Lambda1<C, Lambda1<D, Lambda1<E, F>>> apply(final B bb) {
+						return new Lambda1<C, Lambda1<D, Lambda1<E, F>>>() {
+							public Lambda1<D, Lambda1<E, F>> apply(final C cc) {
+                                return new Lambda1<D, Lambda1<E, F>>() {
+                                    public Lambda1<E, F> apply(D dd) {
+                                        return new Lambda1<E, F>() {
+                                            public F apply(E ee) {
+                                                return fn.apply(aa,bb,cc,dd,ee);
+                                            }
+                                        };
+                                    }
+                                };
+							}
+						};
+					}
+				};
+			}
+		};
+		Cell<Lambda1<B, Lambda1<C, Lambda1<D, Lambda1<E, F>>>>> bf = a.map(ffa);
+		return apply(apply(apply(apply(bf, b), c), d), e);
+	}
+
+	/**
+	 * Lift a 6-argument function into cells.
+	 */
+	public static final <A,B,C,D,E,F,G> Cell<G> lift(Lambda6<A,B,C,D,E,F,G> fn, Cell<A> a, Cell<B> b, Cell<C> c, Cell<D> d, Cell<E> e, Cell<F> f)
+	{
+		Lambda1<A, Lambda1<B, Lambda1<C, Lambda1<D, Lambda1<E, Lambda1<F, G>>>>>> ffa = new Lambda1<A, Lambda1<B, Lambda1<C, Lambda1<D,Lambda1<E, Lambda1<F, G>>>>>>() {
+			public Lambda1<B, Lambda1<C, Lambda1<D, Lambda1<E, Lambda1<F, G>>>>> apply(final A aa) {
+				return new Lambda1<B, Lambda1<C, Lambda1<D, Lambda1<E, Lambda1<F, G>>>>>() {
+					public Lambda1<C, Lambda1<D, Lambda1<E, Lambda1<F, G>>>> apply(final B bb) {
+						return new Lambda1<C, Lambda1<D, Lambda1<E, Lambda1<F, G>>>>() {
+							public Lambda1<D, Lambda1<E, Lambda1<F, G>>> apply(final C cc) {
+                                return new Lambda1<D, Lambda1<E, Lambda1<F, G>>>() {
+                                    public Lambda1<E, Lambda1<F, G>> apply(D dd) {
+                                        return new Lambda1<E, Lambda1<F, G>>() {
+                                            public Lambda1<F, G> apply(E ee) {
+                                                return new Lambda1<F, G>() {
+                                                    public G apply(F ff) {
+                                                        return fn.apply(aa,bb,cc,dd,ee,ff);
+                                                    }
+                                                };
+                                            }
+                                        };
+                                    }
+                                };
+							}
+						};
+					}
+				};
+			}
+		};
+		Cell<Lambda1<B, Lambda1<C, Lambda1<D, Lambda1<E, Lambda1<F, G>>>>>> bf = a.map(ffa);
+		return apply(apply(apply(apply(apply(bf, b), c), d), e), f);
+	}
+
+	/**
 	 * Apply a value inside a cell to a function inside a cell. This is the
 	 * primitive for all function lifting.
 	 */
