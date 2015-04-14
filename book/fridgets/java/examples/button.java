@@ -17,7 +17,7 @@ public class button {
                 }
             };
         }));
-        frame.pack();
+        frame.setSize(360,120);
         frame.setVisible(true);
     }
 }

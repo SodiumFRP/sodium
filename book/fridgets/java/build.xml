@@ -52,4 +52,24 @@
         </java>
     </target>
 
+    <target name="flow" depends="compile-examples">
+        <java classname="flow" fork="true">
+            <classpath>
+                <pathelement path="examples"/>
+                <pathelement path="fridgets/fridgets.jar"/>
+                <pathelement path="../../../java/sodium/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="textfield" depends="compile-examples">
+        <java classname="textfield" fork="true">
+            <classpath>
+                <pathelement path="examples"/>
+                <pathelement path="fridgets/fridgets.jar"/>
+                <pathelement path="../../../java/sodium/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
 </project>

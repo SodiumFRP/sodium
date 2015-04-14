@@ -41,7 +41,6 @@ public class FrView extends JPanel {
         });
         frame.addKeyListener(new KeyAdapter() {
             public void keyTyped(KeyEvent e) {
-                System.out.println(e);
                 sKey.send(e);
             }
         });
@@ -61,9 +60,6 @@ public class FrView extends JPanel {
     public void paintComponent(Graphics g) {
         super.paintComponent(g);
         drawable.sample().draw(g);
-    }
-    public Dimension getPreferredSize() {
-        return new Dimension(250, 300);
     }
     public void removeNotify() {
         l.unlisten();
