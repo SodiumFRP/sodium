@@ -36,8 +36,8 @@
         </javac>
     </target>
 
-    <target name="ClearField" depends="compile-examples">
-        <java classname="ClearField" fork="true">
+    <target name="clearfield" depends="compile-examples">
+        <java classname="clearfield" fork="true">
             <classpath>
                 <pathelement path="examples"/>
                 <pathelement path="swidgets/swidgets.jar"/>
@@ -46,8 +46,8 @@
         </java>
     </target>
 
-    <target name="Translate" depends="compile-examples">
-        <java classname="Translate" fork="true">
+    <target name="gamechat" depends="compile-examples">
+        <java classname="gamechat" fork="true">
             <classpath>
                 <pathelement path="examples"/>
                 <pathelement path="swidgets/swidgets.jar"/>
@@ -56,8 +56,8 @@
         </java>
     </target>
 
-    <target name="SpinMe" depends="compile-examples">
-        <java classname="SpinMe" fork="true">
+    <target name="translate" depends="compile-examples">
+        <java classname="translate" fork="true">
             <classpath>
                 <pathelement path="examples"/>
                 <pathelement path="swidgets/swidgets.jar"/>
@@ -66,8 +66,18 @@
         </java>
     </target>
 
-    <target name="FormValidation" depends="compile-examples">
-        <java classname="FormValidation" fork="true">
+    <target name="spinme" depends="compile-examples">
+        <java classname="spinme" fork="true">
+            <classpath>
+                <pathelement path="examples"/>
+                <pathelement path="swidgets/swidgets.jar"/>
+                <pathelement path="../../../java/sodium/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="formvalidation" depends="compile-examples">
+        <java classname="formvalidation" fork="true">
             <classpath>
                 <pathelement path="examples"/>
                 <pathelement path="swidgets/swidgets.jar"/>

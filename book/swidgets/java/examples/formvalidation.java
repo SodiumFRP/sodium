@@ -6,10 +6,10 @@ import java.lang.reflect.Array;
 import swidgets.*;
 import sodium.*;
 
-public class FormValidation {
+public class formvalidation {
     public static void main(String[] args) {
         JFrame view = new JFrame("FormValidation");
-
+        view.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         Transaction.runVoid(() -> {
             final int maxEmails = 4;
 
@@ -80,12 +80,6 @@ public class FormValidation {
             c.fill = GridBagConstraints.NONE;
             SButton ok = new SButton("OK", allValid);
             view.add(ok, c);
-        });
-
-        view.addWindowListener(new WindowAdapter() {
-            public void windowClosing(WindowEvent e) {
-                System.exit(0);
-            }
         });
         view.setSize(600, 200);
         view.setVisible(true);

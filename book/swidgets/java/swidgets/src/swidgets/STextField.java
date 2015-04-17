@@ -8,10 +8,15 @@ import java.util.concurrent.ArrayBlockingQueue;
 
 public class STextField extends JTextField
 {
+    public STextField(String initText) {
+        this(new Stream<String>(), initText, 15);
+    }
     public STextField(String initText, int width) {
         this(new Stream<String>(), initText, width);
     }
-
+    public STextField(Stream<String> sText, String initText) {
+        this(sText, initText, 15);
+    }
     public STextField(Stream<String> sText, String initText, int width) {
         this(sText, initText, width, new Cell<Boolean>(true));
     }

@@ -4,11 +4,11 @@ import java.awt.event.*;
 import swidgets.*;
 import sodium.*;
 
-public class Translate {
+public class translate {
     public static void main(String[] args) {
         JFrame view = new JFrame("Translate");
+        view.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         view.setLayout(new FlowLayout());
-
         Transaction.runVoid(() -> {
             StreamLoop<String> sTranslate = new StreamLoop<>();
             STextField text = new STextField(sTranslate,
@@ -21,12 +21,6 @@ public class Translate {
             );
             view.add(text);
             view.add(translate);
-        });
-
-        view.addWindowListener(new WindowAdapter() {
-            public void windowClosing(WindowEvent e) {
-                System.exit(0);
-            }
         });
         view.setSize(400, 160);
         view.setVisible(true);
