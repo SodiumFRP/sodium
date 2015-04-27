@@ -8,7 +8,7 @@ import sodium.*;
 
 public class formvalidation {
     public static void main(String[] args) {
-        JFrame view = new JFrame("FormValidation");
+        JFrame view = new JFrame("formvalidation");
         view.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         Transaction.runVoid(() -> {
             final int maxEmails = 4;

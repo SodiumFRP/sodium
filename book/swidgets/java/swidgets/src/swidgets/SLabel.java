@@ -8,7 +8,7 @@ import java.util.concurrent.ArrayBlockingQueue;
 public class SLabel extends JLabel
 {
     public SLabel(Cell<String> text) {
-        super(text.sample());
+        super("");
         l = text.updates().listen(t -> {
             if (SwingUtilities.isEventDispatchThread())
                 setText(t);
@@ -16,6 +16,15 @@ public class SLabel extends JLabel
                 SwingUtilities.invokeLater(() -> {
                     setText(t);
                 });
+        });
+        // Set the text at the end of the transaction so SLabel works
+        // with CellLoops.
+        Transaction.run((Transaction trans) -> {
+            trans.last(
+                () -> SwingUtilities.invokeLater(() -> {
+                    setText(text.sample());
+                })
+            );
         });
     }
 

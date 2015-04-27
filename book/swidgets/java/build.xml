@@ -46,6 +46,26 @@
         </java>
     </target>
 
+    <target name="label" depends="compile-examples">
+        <java classname="label" fork="true">
+            <classpath>
+                <pathelement path="examples"/>
+                <pathelement path="swidgets/swidgets.jar"/>
+                <pathelement path="../../../java/sodium/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="reverse" depends="compile-examples">
+        <java classname="reverse" fork="true">
+            <classpath>
+                <pathelement path="examples"/>
+                <pathelement path="swidgets/swidgets.jar"/>
+                <pathelement path="../../../java/sodium/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
     <target name="gamechat" depends="compile-examples">
         <java classname="gamechat" fork="true">
             <classpath>
@@ -56,8 +76,48 @@
         </java>
     </target>
 
+    <target name="redgreen" depends="compile-examples">
+        <java classname="redgreen" fork="true">
+            <classpath>
+                <pathelement path="examples"/>
+                <pathelement path="swidgets/swidgets.jar"/>
+                <pathelement path="../../../java/sodium/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="add" depends="compile-examples">
+        <java classname="add" fork="true">
+            <classpath>
+                <pathelement path="examples"/>
+                <pathelement path="swidgets/swidgets.jar"/>
+                <pathelement path="../../../java/sodium/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
     <target name="translate" depends="compile-examples">
         <java classname="translate" fork="true">
+            <classpath>
+                <pathelement path="examples"/>
+                <pathelement path="swidgets/swidgets.jar"/>
+                <pathelement path="../../../java/sodium/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="spinner" depends="compile-examples">
+        <java classname="spinner" fork="true">
+            <classpath>
+                <pathelement path="examples"/>
+                <pathelement path="swidgets/swidgets.jar"/>
+                <pathelement path="../../../java/sodium/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="nonegative" depends="compile-examples">
+        <java classname="nonegative" fork="true">
             <classpath>
                 <pathelement path="examples"/>
                 <pathelement path="swidgets/swidgets.jar"/>

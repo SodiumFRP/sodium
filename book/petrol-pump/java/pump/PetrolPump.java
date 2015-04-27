@@ -239,18 +239,12 @@ public class PetrolPump extends JFrame
                 firstPanel.add(new JLabel("Logic"));
 
                 SComboBox<Pump> logic = new SComboBox<>(new DefaultComboBoxModel<Pump>(new Pump[] {
-                    new chapter2.section3.Beeper(),
-                    new chapter2.section8.Nozzle8888(),
-                    new chapter2.section10.NozzlePrice(),
-                    new chapter2.section11.CapturePrice(),
-                    new chapter2.section12.CapturePriceFiltered(),
-                    new chapter2.section13.AccumulatePulses(),
-                    new chapter4.section1.LifeCyclePump(),
-                    new chapter4.section3.AccumulatePulsesPump(),
-                    new chapter4.section4.ShowDollarsPump(),
-                    new chapter4.section5.ClearSalePump(),
-                    new chapter4.section6.KeypadPump(),
-                    new chapter4.section8.PresetAmountPump()
+                    new chapter4.section4.LifeCyclePump(),
+                    new chapter4.section6.AccumulatePulsesPump(),
+                    new chapter4.section7.ShowDollarsPump(),
+                    new chapter4.section8.ClearSalePump(),
+                    new chapter4.section9.KeypadPump(),
+                    new chapter4.section11.PresetAmountPump()
                 }));
                 logic.setRenderer(new ClassNameRenderer());
                 firstPanel.add(logic);

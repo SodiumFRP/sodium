@@ -6,7 +6,7 @@ import sodium.*;
 
 public class spinme {
     public static void main(String[] args) {
-        JFrame view = new JFrame("SpinMe");
+        JFrame view = new JFrame("spinme");
         view.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         view.setLayout(new FlowLayout());
         Transaction.runVoid(() -> {
