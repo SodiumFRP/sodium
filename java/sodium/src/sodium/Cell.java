@@ -142,7 +142,7 @@ public class Cell<A> {
             }
         });
     	Stream<A> sInitial = sSpark.<A>snapshot(this);
-        return sInitial.merge(updates()).lastFiringOnly(trans1);
+        return sInitial.merge(updates().lastFiringOnly(trans1));
     }
 
     /**
