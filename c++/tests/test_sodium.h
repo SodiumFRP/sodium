@@ -14,7 +14,6 @@
 
 class test_sodium : public CppUnit::TestFixture {
     CPPUNIT_TEST_SUITE(test_sodium);
-#if 0
     // event tests
     CPPUNIT_TEST(event1);
     CPPUNIT_TEST(map);
@@ -35,9 +34,7 @@ class test_sodium : public CppUnit::TestFixture {
     // behaviour tests
     CPPUNIT_TEST(collect2);
     CPPUNIT_TEST(hold1);
-#endif
     CPPUNIT_TEST(snapshot1);
-#if 0
     CPPUNIT_TEST(value1);
     CPPUNIT_TEST(value_const);
     CPPUNIT_TEST(constant_behavior);
@@ -78,7 +75,7 @@ class test_sodium : public CppUnit::TestFixture {
     CPPUNIT_TEST(move_semantics);
     CPPUNIT_TEST(move_semantics_sink);
     CPPUNIT_TEST(move_semantics_hold);
-#endif
+    CPPUNIT_TEST(lift_from_simultaneous);
     CPPUNIT_TEST_SUITE_END();
 
 public:
@@ -111,7 +108,6 @@ public:
     void snapshot1();
     void value1();
     void value_const();
-#if 0
     void constant_behavior();
     void value_then_map();
     void value_twice_then_map();
@@ -150,7 +146,7 @@ public:
     void move_semantics();
     void move_semantics_sink();
     void move_semantics_hold();
-#endif
+    void lift_from_simultaneous();
 };
 
 #endif

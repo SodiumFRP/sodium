@@ -295,9 +295,8 @@ public class Cell<A> {
 
                 class ApplyHandler implements Handler<Transaction> {
                     ApplyHandler(Transaction trans0) {
-                        resetFired(trans0);  // We suppress firing during the first transaction
                     }
-                    boolean fired = true;
+                    boolean fired = false;
                     Lambda1<A,B> f = null;
                     A a = null;
                     @Override
@@ -305,16 +304,12 @@ public class Cell<A> {
                         if (fired) 
                             return;
 
-                        fired = true;
                         trans1.prioritized(out.node, new Handler<Transaction>() {
                             public void run(Transaction trans2) {
                                 out.send(trans2, f.apply(a));
+                                fired = false;
                             }
                         });
-                        resetFired(trans1);
-                    }
-                    void resetFired(Transaction trans1) {
-                        trans1.last(() -> { fired = false; });
                     }
                 }
 
@@ -327,13 +322,15 @@ public class Cell<A> {
                 Listener l1 = bf.value().listen_(in_target, new TransactionHandler<Lambda1<A,B>>() {
                     public void run(Transaction trans1, Lambda1<A,B> f) {
                         h.f = f;
-                        h.run(trans1);
+                        if (h.a != null)
+                            h.run(trans1);
                     }
                 });
                 Listener l2 = ba.value().listen_(in_target, new TransactionHandler<A>() {
                     public void run(Transaction trans1, A a) {
                         h.a = a;
-                        h.run(trans1);
+                        if (h.f != null)
+                            h.run(trans1);
                     }
                 });
                 return out.unsafeAddCleanup(l1).unsafeAddCleanup(l2).unsafeAddCleanup(

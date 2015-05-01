@@ -1813,6 +1813,87 @@ namespace sodium {
         return apply(apply(apply(apply(ba.map_(fa), bb), bc), bd), be);
     }
 
+    /*!
+     * Lift a 6-argument function into behaviors.
+     */
+    template <class A, class B, class C, class D, class E, class F, class G, class P EQ_DEF_PART>
+#if defined(SODIUM_NO_CXX11)
+    behavior<G, P> lift(const lambda6<G, const A&, const B&, const C&, const D&, const E&, const F&>& fn,
+#else
+    behavior<G, P> lift(const std::function<G(const A&, const B&, const C&, const D&, const E&, const F&)>& fn,
+#endif
+        const behavior<A, P>& ba,
+        const behavior<B, P>& bb,
+        const behavior<C, P>& bc,
+        const behavior<D, P>& bd,
+        const behavior<E, P>& be,
+        const behavior<F, P>& bf
+    )
+    {
+#if defined(SODIUM_NO_CXX11)
+        *** TO DO
+#else
+        std::function<std::function<std::function<std::function<std::function<std::function<G(const F&)>(const E&)>(const D&)>(const C&)>(const B&)>(const A&)> fa(
+            [fn] (const A& a) -> std::function<std::function<std::function<std::function<std::function<G(const F&)>(const E&)>(const D&)>(const C&)>(const B&)> {
+                return [fn, a] (const B& b) -> std::function<std::function<std::function<std::function<G(const F&)>(const E&)>(const D&)>(const C&)> {
+                    return [fn, a, b] (const C& c) -> std::function<std::function<std::function<G(const F&)>(const E&)>(const D&)> {
+                        return [fn, a, b, c] (const D& d) -> std::function<std::function<G(const F&)>(const E&)> {
+                            return [fn, a, b, c, d] (const E& e) -> std::function<G(const F&)> {
+                                return [fn, a, b, c, d, e] (const F& f) -> G {
+                                    return fn(a,b,c,d,e,f);
+                                };
+                            };
+                        };
+                    };
+                };
+            }
+        );
+#endif
+        return apply(apply(apply(apply(apply(ba.map_(fa), bb), bc), bd), be), bf);
+    }
+
+    /*!
+     * Lift a 7-argument function into behaviors.
+     */
+    template <class A, class B, class C, class D, class E, class F, class G, class H, class P EQ_DEF_PART>
+#if defined(SODIUM_NO_CXX11)
+    behavior<H, P> lift(const lambda7<H, const A&, const B&, const C&, const D&, const E&, const F&, const G&>& fn,
+#else
+    behavior<H, P> lift(const std::function<H(const A&, const B&, const C&, const D&, const E&, const F&, const G&)>& fn,
+#endif
+        const behavior<A, P>& ba,
+        const behavior<B, P>& bb,
+        const behavior<C, P>& bc,
+        const behavior<D, P>& bd,
+        const behavior<E, P>& be,
+        const behavior<F, P>& bf,
+        const behavior<G, P>& bg
+    )
+    {
+#if defined(SODIUM_NO_CXX11)
+        *** TO DO
+#else
+        std::function<std::function<std::function<std::function<std::function<std::function<std::function<H(const G&)>(const F&)>(const E&)>(const D&)>(const C&)>(const B&)>(const A&)> fa(
+            [fn] (const A& a) -> std::function<std::function<std::function<std::function<std::function<std::function<H(const G&)>(const F&)>(const E&)>(const D&)>(const C&)>(const B&)> {
+                return [fn, a] (const B& b) -> std::function<std::function<std::function<std::function<std::function<H(const G&)>(const F&)>(const E&)>(const D&)>(const C&)> {
+                    return [fn, a, b] (const C& c) -> std::function<std::function<std::function<std::function<H(const G&)>(const F&)>(const E&)>(const D&)> {
+                        return [fn, a, b, c] (const D& d) -> std::function<std::function<std::function<H(const G&)>(const F&)>(const E&)> {
+                            return [fn, a, b, c, d] (const E& e) -> std::function<std::function<H(const G&)>(const F&)> {
+                                return [fn, a, b, c, d, e] (const F& f) -> std::function<H(const G&)> {
+                                    return [fn, a, b, c, d, e, f] (const G& g) {
+                                        return fn(a,b,c,d,e,f,g);
+                                    };
+                                };
+                            };
+                        };
+                    };
+                };
+            }
+        );
+#endif
+        return apply(apply(apply(apply(apply(apply(ba.map_(fa), bb), bc), bd), be), bf), bg);
+    }
+
 #if defined(SODIUM_NO_CXX11)
     namespace impl {
         template <class A, class P>

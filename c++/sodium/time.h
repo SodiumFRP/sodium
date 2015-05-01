@@ -57,5 +57,21 @@ namespace sodium {
             new impl::behavior_impl_time<T>(t)
         ));
     }
+
+    template <class P EQ_DEF_PART, class T>
+    event<unit, P> periodic_timer(const T& t, const behavior<typename T::time>& period) {
+        using namespace boost;
+        behavior_loop<optional<typename T::time>> tAlarm;
+        event<unit, P> eAlarm = at(t, tAlarm);
+        behavior<typename T::time> now = clock(t);
+        tAlarm.loop(
+            eAlarm.template snapshot<optional<typename T::time>, optional<typename T::time>>(
+                tAlarm,
+                [period] (const unit&, const optional<typename T::time>& ota) {
+                    return optional<typename T::time>(ota.get() + period.sample());
+                })
+            .hold(optional<typename T::time>(now.sample())));
+        return eAlarm;
+    }
 }  // end namespace sodium
 #endif

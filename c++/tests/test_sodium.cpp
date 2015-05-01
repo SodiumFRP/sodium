@@ -424,7 +424,6 @@ void test_sodium::value_const()
     CPPUNIT_ASSERT(vector<int>({ 9 }) == *out);
 }
 
-#if 0
 void test_sodium::constant_behavior()
 {
     behavior_sink<int> b(12);
@@ -862,7 +861,6 @@ void test_sodium::loop_behavior()
     CPPUNIT_ASSERT(vector<int>({ 0, 2, 5, 6 }) == *out);
     CPPUNIT_ASSERT(sum.sample() == 6);
 }
-#endif
 
 void test_sodium::collect1()
 {
@@ -921,7 +919,6 @@ void test_sodium::accum1()
     CPPUNIT_ASSERT(vector<int>({ 105, 112, 113, 115, 118 }) == *out);
 }
 
-#if 0
 void test_sodium::split1()
 {
     event_sink<string> ea;
@@ -1135,7 +1132,23 @@ void test_sodium::move_semantics_hold()
     });
     CPPUNIT_ASSERT(val.sample() == 345);
 }
-#endif
+
+void test_sodium::lift_from_simultaneous()
+{
+    transaction<> trans;
+    behavior_sink<int> b1(3);
+    behavior_sink<int> b2(5);
+    behavior<int> sum = lift<int, int, int>(
+        [] (const int& a, const int& b) { return a + b; }, b1, b2);
+    auto out = std::make_shared<vector<int>>();
+    auto kill = sum.value().listen([out] (const int& sum) {
+        out->push_back(sum);
+    });
+    b2.send(7);
+    trans.close();
+    kill();
+    CPPUNIT_ASSERT(vector<int>({ 10 }) == *out);
+}
 
 int main(int argc, char* argv[])
 {

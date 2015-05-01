@@ -679,7 +679,7 @@ namespace sodium {
 #endif
 
         struct applicative_state {
-            applicative_state() : fired(true) {}
+            applicative_state() : fired(false) {}
             bool fired;
             boost::optional<light_ptr> f;
             boost::optional<light_ptr> a;
@@ -746,18 +746,22 @@ namespace sodium {
                             new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(
                                 [state, out_target, output] (const std::shared_ptr<impl::node>& target, transaction_impl* trans, const light_ptr& f) {
                                     state->f = f;
-                                    if (state->fired) return;
-                                    state->fired = true;
-                                    trans->prioritized(out_target, output);
+                                    if (state->a) {
+                                        if (state->fired) return;
+                                        state->fired = true;
+                                        trans->prioritized(out_target, output);
+                                    }
                                 }
                             ), false);
                     auto kill2 = ba.value_(trans0).listen_raw(trans0, in_target,
                             new std::function<void(const std::shared_ptr<impl::node>&, transaction_impl*, const light_ptr&)>(
                                 [state, out_target, output] (const std::shared_ptr<impl::node>& target, transaction_impl* trans, const light_ptr& a) {
                                     state->a = a;
-                                    if (state->fired) return;
-                                    state->fired = true;
-                                    trans->prioritized(out_target, output);
+                                    if (state->f) {
+                                        if (state->fired) return;
+                                        state->fired = true;
+                                        trans->prioritized(out_target, output);
+                                    }
                                 }
                             ), false);
                     auto kill3 = new std::function<void()>([in_target, h] () {
@@ -765,8 +769,6 @@ namespace sodium {
                         delete h;
                     });
 #endif
-                    // Suppress firing during first transaction.
-                    trans0->last([state] () { state->fired = false; });
                     return SODIUM_TUPLE_GET<0>(p).unsafe_add_cleanup(kill1, kill2, kill3).hold_lazy_(
                         trans0, [bf, ba] () -> light_ptr {
                             auto f = *bf.impl->sample().cast_ptr<std::function<light_ptr(const light_ptr&)>>(NULL);
