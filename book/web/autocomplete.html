@@ -79,10 +79,8 @@
                       popup.style.visibility = 'visible';
                   }
               }
-              else {
-                  if (popup.style.visibility != 'hidden')
-                      popup.style.visibility = 'hidden';
-              }
+              else
+                  popup.style.visibility = 'hidden';
           });
 
           return sEnterKey.map(function (e) { return textEdit.value; })
