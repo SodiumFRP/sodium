@@ -7,8 +7,8 @@
   <div id="info" style="padding-top:20px"></div>
   <script>
       function changes(s) {
-          return s.scan([null, null], function([prev, out], thiz) {
-              return [thiz, thiz != prev ? thiz : null];
+          return s.scan([null, null], function(prev_out, thiz) {
+              return [thiz, thiz != prev_out[0] ? thiz : null];
           }).map(function(tpl) { return tpl[1]; })
             .filter(function(a) { return a !== null; });
       }
@@ -58,7 +58,9 @@
           var sEnterKey = sKeyPresses.filter(function(k) { return k.keyCode == 13; });
           var lookedUp =
               lookup("http://gd.geobytes.com/AutoCompleteCity?q=", sTextUpdate)
-                  .map(function ([req, resp]) {
+                  .map(function (req_resp) {
+                       var req = req_resp[0];
+                       var resp = req_resp[1];
                        return resp.length == 1 &&
                               (resp[0] == "%s" || resp[0] == ""
                                 || resp[0] == req)
@@ -90,7 +92,9 @@
       var sEntered = autocomplete(cityInput);
       var infoDiv = document.getElementById("info");
       lookup("http://getcitydetails.geobytes.com/GetCityDetails?fqcn=", sEntered)
-          .subscribe(function ([city, info]) {
+          .subscribe(function (city_info) {
+              var city = city_info[0];
+              var info = city_info[1];
               var html = 'Information for <b>'+escapeHTML(city)+'</b>'+
                   '<table cellspacing="0" cellpadding="2" border="1">';
               for (var key in info)
