@@ -52,12 +52,19 @@
                      .map(function (e) { return popup.value; });
           sClicked.subscribe(function (text) { return textEdit.value = text; });
           var sKeyPresses = Rx.Observable.fromEvent(textEdit, 'keydown');
+          var editText = sKeyPresses.map(function (e) {return textEdit.value; });
           var sDebounced = sKeyPresses.startWith(null).debounce(100);
-          var sTextUpdate = changes(sDebounced.map(function (e) {return textEdit.value; }));
+          var sTextUpdate = changes(
+              sDebounced.withLatestFrom(editText,
+                  function (key, text) { return text; }));
+          var sTabKey = sKeyPresses.filter(function(k) { return k.keyCode == 9; });
           var sEscapeKey = sKeyPresses.filter(function(k) { return k.keyCode == 27; });
           var sEnterKey = sKeyPresses.filter(function(k) { return k.keyCode == 13; });
           var lookedUp =
-              lookup("http://gd.geobytes.com/AutoCompleteCity?q=", sTextUpdate)
+              lookup("http://gd.geobytes.com/AutoCompleteCity?q=",
+                     sTextUpdate.merge(sTabKey.withLatestFrom(editText,
+                          function (key, text) { return text; }))
+                  )
                   .map(function (req_resp) {
                        var req = req_resp[0];
                        var resp = req_resp[1];
@@ -85,7 +92,7 @@
                   popup.style.visibility = 'hidden';
           });
 
-          return sEnterKey.map(function (e) { return textEdit.value; })
+          return sEnterKey.withLatestFrom(editText, function (key, text) { return text; })
                           .merge(sClicked);
       }
       var cityInput = document.getElementById("city");
