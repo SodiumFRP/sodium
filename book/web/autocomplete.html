@@ -52,7 +52,8 @@
                      .map(function (e) { return popup.value; });
           sClicked.subscribe(function (text) { return textEdit.value = text; });
           var sKeyPresses = Rx.Observable.fromEvent(textEdit, 'keyup');
-          var editText = sKeyPresses.map(function (e) {return textEdit.value; });
+          var editText = sKeyPresses.map(function (e) {return textEdit.value; })
+                                    .startWith(textEdit.value);
           var sDebounced = sKeyPresses.startWith(null).debounce(100);
           var sTextUpdate = changes(
               sDebounced.withLatestFrom(editText,
