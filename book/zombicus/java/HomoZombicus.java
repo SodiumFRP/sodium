@@ -91,9 +91,9 @@ public class HomoZombicus {
         state.loop(
             sChange.hold(new State(tInit, posInit, self, emptyScene))
         );
-        character = all.map(a -> new Character(self,
+        character = state.map(st -> new Character(self,
             CharacterType.ZOMBICUS,
-            a.state.positionAt(a.t), a.state.velocity));
+            st.positionAt(time.sample()), st.velocity));
         sBite = Stream.filterOptional(
             sTick.snapshot(all,
                 (u, a) -> {

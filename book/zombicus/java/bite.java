@@ -66,10 +66,7 @@ public class bite {
                 StreamLoop<Integer> sBite = new StreamLoop<>();
                 CreateCharacters cc = new CreateCharacters(t0,
                     time, sTick, world, scene, sBite);
-                ArrayList<Character> emptyScene = new ArrayList<>();
-                Cell<List<Character>> fixedScene = cc.scene.updates()
-                                                  .hold(emptyScene);
-                scene.loop(fixedScene);
+                scene.loop(cc.scene);
                 sBite.loop(cc.sBite);
                 return scene;
             }

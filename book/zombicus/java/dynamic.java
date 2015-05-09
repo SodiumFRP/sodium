@@ -167,8 +167,7 @@ public class dynamic {
                 StreamLoop<Integer> sDestroy = new StreamLoop<>();
                 CreateCharacters cc = new CreateCharacters(t0,
                     time, sTick, world, scene, sBite, sDestroy);
-                ArrayList<Character> emptyScene = new ArrayList<>();
-                scene.loop(cc.scene.updates().hold(emptyScene));
+                scene.loop(cc.scene);
                 sBite.loop(cc.sBite);
                 sDestroy.loop(cc.sDestroy);
                 return scene;

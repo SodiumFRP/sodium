@@ -49,10 +49,7 @@ public class characters {
                 CellLoop<List<Character>> scene = new CellLoop<>();
                 Cell<List<Character>> scene_ = createCharacters(t0,
                     time, sTick, world, scene);
-                ArrayList<Character> emptyScene = new ArrayList<>();
-                Cell<List<Character>> fixedScene = scene_.updates()
-                                                         .hold(emptyScene);
-                scene.loop(fixedScene);
+                scene.loop(scene_);
                 return scene;
             }
         );
