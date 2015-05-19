@@ -1,116 +1,20 @@
 <html>
-  <head><title>Autocomplete - Rx.JS</title></head>
-  <script src="rx.all.min.js"></script>
+<head>
+    <title>Autocomplete - Rx.JS</title>
+    <style>
+        #info { padding-top: 20px; }
+        #city { width: 300px; }
+        table { border-collapse: collapse; }
+        table td { padding: 2px; border: 1px solid black; }
+    </style>
+    <script src="rx.all.min.js"></script>
+    <script src="autocomplete.js"></script>
 </head>
-<body>
-  <div>City <input id="city" type="text" size="30"></div>
-  <div id="info" style="padding-top:20px"></div>
-  <script>
-      function changes(s) {
-          return s.scan([null, null], function(prev_out, thiz) {
-              return [thiz, thiz != prev_out[0] ? thiz : null];
-          }).map(function(tpl) { return tpl[1]; })
-            .filter(function(a) { return a !== null; });
-      }
-      var jsonpCallbacks = {cntr: 0};
-      function lookup(url, sRequest) {
-          var sResponse = Rx.Observable.create(function (observer) {
-              return sRequest.subscribe(function(req) {
-                  var fnName = "fn" + jsonpCallbacks.cntr++;
-                  var script = document.createElement("script");
-                  script.type = "text/javascript";
-                  script.src = url+encodeURIComponent(req)+
-                      "&callback=jsonpCallbacks."+encodeURIComponent(fnName);
-                  jsonpCallbacks[fnName] = function(resp) {
-                      delete jsonpCallbacks[fnName];
-                      document.body.removeChild(script);
-                      observer.onNext([req, resp]);
-                  }
-                  document.body.appendChild(script);
-              });
-          }).publish();
-          sResponse.connect();
-          return sResponse;
-      }
-      function escapeHTML(text) {
-          return text.replace(/&/g, '&amp;')
-                     .replace(/"/g, '&quot;')
-                     .replace(/'/g, '&#39;')
-                     .replace(/</g, '&lt;')
-                     .replace(/>/g, '&gt;');
-      }
-      function autocomplete(textEdit) {
-          var popup = document.createElement('select');
-          popup.size = 15;
-          popup.style.zIndex = 100;
-          popup.style.position = 'absolute';
-          popup.style.top = 0;
-          popup.style.left = 0;
-          popup.style.visibility = 'hidden';
-          document.body.appendChild(popup);
-          var sClicked = Rx.Observable.fromEvent(popup, 'change')
-                     .map(function (e) { return popup.value; });
-          sClicked.subscribe(function (text) { return textEdit.value = text; });
-          var sKeyPresses = Rx.Observable.fromEvent(textEdit, 'keyup');
-          var editText = sKeyPresses.map(function (e) {return textEdit.value; })
-                                    .startWith(textEdit.value);
-          var sDebounced = sKeyPresses.startWith(null).debounce(100);
-          var sTextUpdate = changes(
-              sDebounced.withLatestFrom(editText,
-                  function (key, text) { return text; }));
-          var sTabKey = sKeyPresses.filter(function(k) { return k.keyCode == 9; });
-          var sEscapeKey = sKeyPresses.filter(function(k) { return k.keyCode == 27; });
-          var sEnterKey = sKeyPresses.filter(function(k) { return k.keyCode == 13; });
-          var lookedUp =
-              lookup("http://gd.geobytes.com/AutoCompleteCity?q=",
-                     sTextUpdate.merge(sTabKey.withLatestFrom(editText,
-                          function (key, text) { return text; }))
-                  )
-                  .map(function (req_resp) {
-                       var req = req_resp[0];
-                       var resp = req_resp[1];
-                       return resp.length == 1 &&
-                              (resp[0] == "%s" || resp[0] == ""
-                                || resp[0] == req)
-                          ? null : resp;
-                  })
-                  .merge(sEscapeKey.merge(sEnterKey).merge(sClicked).map(null))
-                  .startWith(null);
-
-          lookedUp.subscribe(function(items) {
-              if (items !== null) {
-                  var html = '';
-                  for (var i = 0; i < items.length; i++)
-                      html += '<option>' + escapeHTML(items[i]) + '</option>';
-                  popup.innerHTML = html;
-                  if (popup.style.visibility != 'visible') {
-                      popup.style.left = textEdit.getBoundingClientRect().left + 20;
-                      popup.style.top = textEdit.getBoundingClientRect().bottom;
-                      popup.style.visibility = 'visible';
-                  }
-              }
-              else
-                  popup.style.visibility = 'hidden';
-          });
-
-          return sEnterKey.withLatestFrom(editText, function (key, text) { return text; })
-                          .merge(sClicked);
-      }
-      var cityInput = document.getElementById("city");
-      var sEntered = autocomplete(cityInput);
-      var infoDiv = document.getElementById("info");
-      lookup("http://getcitydetails.geobytes.com/GetCityDetails?fqcn=", sEntered)
-          .subscribe(function (city_info) {
-              var city = city_info[0];
-              var info = city_info[1];
-              var html = 'Information for <b>'+escapeHTML(city)+'</b>'+
-                  '<table cellspacing="0" cellpadding="2" border="1">';
-              for (var key in info)
-                  html += '<tr><td>'+escapeHTML(key)
-                         +'</td><td>'+escapeHTML(info[key])+'</td></tr>';
-              html += '</table>';
-              infoDiv.innerHTML = html;
-          });
-  </script>
+<body onload="init()">
+    <div>
+        <label for="city">City</label>
+        <input id="city" type="text" />
+    </div>
+    <div id="info"></div>
 </body>
-
+</html>

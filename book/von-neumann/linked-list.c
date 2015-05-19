@@ -6,12 +6,12 @@ typedef struct Node {
     unsigned value;
 } Node;
 
-void shuffle(Node** nodes, unsigned n) {
+void shuffle(Node** nodes, unsigned n, int doit) {
     unsigned i;
     for (i = 0; i < n; i++) {
         unsigned j = (unsigned)(((long long)random() * n) /
                      ((long long)RAND_MAX + 1));
-        if (i != j) {
+        if (i != j && doit) {
             Node* node = nodes[i];
             nodes[i] = nodes[j];
             nodes[j] = node;
@@ -33,8 +33,8 @@ int main(int argc, char* argv[])
             nodes[i] = malloc(sizeof(Node));
             nodes[i]->value = i;
         }
-        if (argc != 2 || strcmp(argv[1], "--no-shuffle") != 0)
-            shuffle(nodes, n);
+        shuffle(nodes, n,
+            argc == 2 && strcmp(argv[1], "--no-shuffle") == 0);
         for (i = 0; i < n; i++)
             nodes[i]->next = (i+1) < n ? nodes[i+1] : NULL;
         head = nodes[0];
