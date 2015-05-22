@@ -1,34 +1,13 @@
-<html>
-  <head><title>Connect the dots</title></head>
-  <script src="rx.all.min.js"></script>
+<html><head>
+    <title>Connect the dots</title>
+    <style>
+      #myCanvas { border-style: solid; border-width: 1px }
+    </style>
+    <script src="rx.all.min.js"></script>
+    <script src="connect-the-dots.js"></script>
 </head>
-<body>
-  <div>Please click on the canvas</div>
-  <canvas style="border-style: solid; border-width: 1px"
-             id="myCanvas" width="300" height="200">
-    Your browser does not support the HTML5 canvas tag.
-  </canvas>
-  <script type="text/javascript">
-    var canvas = document.getElementById("myCanvas");
-    var mouseDown = Rx.Observable.fromEvent(canvas, 'mousedown');
-    var initial = { x0 : 0, y0 : 0,
-                    x1 : 0, y1 : 0 };
-    var lines = mouseDown.scan(initial,
-            function(last, e) {
-                var x = e.pageX - canvas.offsetLeft;
-                var y = e.pageY - canvas.offsetTop;
-                return { x0 : last.x1, y0 : last.y1,
-                         x1 : x,       y1 : y };
-            });
-    var subscription = lines.subscribe(
-            function (l) {
-                var ctx=canvas.getContext("2d");
-                ctx.beginPath();
-                ctx.moveTo(l.x0, l.y0);
-                ctx.lineTo(l.x1, l.y1);
-                console.log('{ x:'+l.x1+', y:'+l.y1+' },');
-                ctx.stroke();
-            }); 
-  </script>
+<body onload="init()">
+    <div>Please click on the canvas</div>
+    <canvas id="myCanvas" width="300" height="200">No canvas!</canvas>
 </body>
-
+</html>

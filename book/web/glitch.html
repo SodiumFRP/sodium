@@ -1,14 +1,14 @@
-<html>
-  <head><title>Glitch</title></head>
-  <script src="rx.all.min.js"></script>
+<html><head>
+    <title>Glitch</title>
+    <script src="rx.all.min.js"></script>
 </head>
 <body>
-  <script type="text/javascript">
-     var ones = Rx.Observable.range(1, 2);
-     var hundreds = ones.map(function(x) { return x * 100; });
-     var sum = ones.combineLatest(hundreds, function(o, h) {
-         return o + h; });
-     sum.subscribe(function(s) { alert(s); });
-  </script>
+    <script type="text/javascript">
+        var ones = Rx.Observable.range(1, 2);
+        var hundreds = ones.map(function(x) { return x * 100; });
+        var sum = ones.combineLatest(hundreds, function(o, h) {
+        return o + h; });
+        sum.subscribe(function(s) { alert(s); });
+    </script>
 </body>
 
