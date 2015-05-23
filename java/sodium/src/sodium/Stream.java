@@ -140,9 +140,13 @@ public class Stream<A> {
 	public final Cell<A> holdLazy(final Lazy<A> initValue) {
 		return Transaction.apply(new Lambda1<Transaction, Cell<A>>() {
 			public Cell<A> apply(Transaction trans) {
-			    return new LazyCell<A>(lastFiringOnly(trans), initValue);
+			    return holdLazy(trans, initValue);
 			}
 		});
+	}
+
+	final Cell<A> holdLazy(Transaction trans, final Lazy<A> initValue) {
+	    return new LazyCell<A>(lastFiringOnly(trans), initValue);
 	}
 
 	/**

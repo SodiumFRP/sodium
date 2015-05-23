@@ -27,7 +27,7 @@ public abstract class TimerSystem<T> {
     public Stream<Unit> at(Cell<Optional<T>> tAlarm) {
         StreamSink<Unit> sOut = new StreamSink<>();
         CurrentTimer current = new CurrentTimer();
-        Listener l = tAlarm.value().listen(oAlarm -> {
+        Listener l = tAlarm.listen(oAlarm -> {
             if (current.oTimer.isPresent())
                 current.oTimer.get().cancel();
             current.oTimer = oAlarm.isPresent()

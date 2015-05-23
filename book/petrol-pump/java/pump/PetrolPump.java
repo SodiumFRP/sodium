@@ -73,23 +73,23 @@ class PumpFace extends Component {
         this.nozzles[0] = nozzle1;
         this.nozzles[1] = nozzle2;
         this.nozzles[2] = nozzle3;
-        l = l.append(presetLCD.updates().listen(text -> {
+        l = l.append(presetLCD.listen(text -> {
             this.repaintSegments(193, 140, larges, 5);
-        })).append(saleCostLCD.updates().listen(text -> {
+        })).append(saleCostLCD.listen(text -> {
             this.repaintSegments(517, 30, larges, 5);
-        })).append(saleQuantityLCD.updates().listen(text -> {
+        })).append(saleQuantityLCD.listen(text -> {
             this.repaintSegments(517, 120, larges, 5);
-        })).append(priceLCD1.updates().listen(text -> {
+        })).append(priceLCD1.listen(text -> {
             this.repaintSegments(355, 230, smalls, 4);
-        })).append(priceLCD2.updates().listen(text -> {
+        })).append(priceLCD2.listen(text -> {
             this.repaintSegments(485, 230, smalls, 4);
-        })).append(priceLCD3.updates().listen(text -> {
+        })).append(priceLCD3.listen(text -> {
             this.repaintSegments(615, 230, smalls, 4);
-        })).append(nozzle1.updates().listen(ud -> {
+        })).append(nozzle1.listen(ud -> {
             this.repaint(0);
-        })).append(nozzle2.updates().listen(ud -> {
+        })).append(nozzle2.listen(ud -> {
             this.repaint(0);
-        })).append(nozzle3.updates().listen(ud -> {
+        })).append(nozzle3.listen(ud -> {
             this.repaint(0);
         }));
         background = ImageIO.read(new URL(rootURL, "../images/petrol-pump-front.png"));
@@ -214,7 +214,7 @@ public class PetrolPump extends JFrame
     public static <A> Stream<A> changes(Cell<A> b)
     {
         return Stream.filterOptional(
-            b.value().snapshot(b, (neu, old) ->
+            Operational.value(b).snapshot(b, (neu, old) ->
                 old.equals(neu) ? Optional.empty() : Optional.of(neu)));
     }
 
@@ -303,9 +303,9 @@ public class PetrolPump extends JFrame
                 Cell<Outputs> outputs = logic.selectedItem.map(
                     pump -> pump.create(
                         new Inputs(
-                            nozzles[0].updates(),
-                            nozzles[1].updates(),
-                            nozzles[2].updates(),
+                            Operational.updates(nozzles[0]),
+                            Operational.updates(nozzles[1]),
+                            Operational.updates(nozzles[2]),
                             sKey,
                             sFuelPulses,
                             calibration,

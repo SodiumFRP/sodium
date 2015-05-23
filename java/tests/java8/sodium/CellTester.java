@@ -18,7 +18,7 @@ public class CellTester extends TestCase {
         StreamSink<Integer> e = new StreamSink<Integer>();
         Cell<Integer> b = e.hold(0);
         List<Integer> out = new ArrayList<Integer>();
-        Listener l = b.updates().listen(x -> { out.add(x); });
+        Listener l = Operational.updates(b).listen(x -> { out.add(x); });
         e.send(2);
         e.send(9);
         l.unlisten();
@@ -64,7 +64,7 @@ public class CellTester extends TestCase {
 		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
 		Listener l = Transaction.run(
-		    () -> b.value().map(x -> x+100).listen(x -> { out.add(x); })
+		    () -> Operational.value(b).map(x -> x+100).listen(x -> { out.add(x); })
         );
 		b.send(2);
 		b.send(7);
@@ -87,7 +87,7 @@ public class CellTester extends TestCase {
 		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
 		Listener l = Transaction.run(
-		    () -> doubleUp(b.value()).map(x -> x+100).listen(x -> { out.add(x); })
+		    () -> doubleUp(Operational.value(b)).map(x -> x+100).listen(x -> { out.add(x); })
         );
 		b.send(2);
 		b.send(7);
@@ -99,7 +99,7 @@ public class CellTester extends TestCase {
 		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
 		Listener l = Transaction.run(
-		    () -> b.value().coalesce((fst, snd) -> snd).listen(x -> { out.add(x); })
+		    () -> Operational.value(b).coalesce((fst, snd) -> snd).listen(x -> { out.add(x); })
         );
 		b.send(2);
 		b.send(7);
@@ -111,7 +111,7 @@ public class CellTester extends TestCase {
 		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
 		Listener l = Transaction.run(
-		    () -> doubleUp(b.value()).coalesce((fst, snd) -> fst+snd).listen(x -> { out.add(x); })
+		    () -> doubleUp(Operational.value(b)).coalesce((fst, snd) -> fst+snd).listen(x -> { out.add(x); })
         );
 		b.send(2);
 		b.send(7);
@@ -124,7 +124,7 @@ public class CellTester extends TestCase {
 		CellSink<Character> bc = new CellSink<Character>('a');
 		List<Character> out = new ArrayList<Character>();
 		Listener l = Transaction.run(
-		    () -> bi.value().snapshot(bc).listen(x -> { out.add(x); })
+		    () -> Operational.value(bi).snapshot(bc).listen(x -> { out.add(x); })
         );
 		bc.send('b');
 		bi.send(2);
@@ -139,7 +139,7 @@ public class CellTester extends TestCase {
 		CellSink<Character> bc = new CellSink<Character>('a');
 		List<Character> out = new ArrayList<Character>();
 		Listener l = Transaction.run(
-		    () -> doubleUp(bi.value()).snapshot(bc).listen(x -> { out.add(x); })
+		    () -> doubleUp(Operational.value(bi)).snapshot(bc).listen(x -> { out.add(x); })
         );
 		bc.send('b');
 		bi.send(2);
@@ -154,7 +154,7 @@ public class CellTester extends TestCase {
 		CellSink<Integer> bj = new CellSink<Integer>(2);
 		List<Integer> out = new ArrayList<Integer>();
 		Listener l = Transaction.run(
-		    () -> bi.value().merge(bj.value(), (x, y) -> x+y)
+		    () -> Operational.value(bi).merge(Operational.value(bj), (x, y) -> x+y)
                 .listen(x -> { out.add(x); })
         );
 		bi.send(1);
@@ -167,7 +167,7 @@ public class CellTester extends TestCase {
 		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
 		Listener l = Transaction.run(
-		    () -> b.value().filter(a -> true).listen(x -> { out.add(x); })
+		    () -> Operational.value(b).filter(a -> true).listen(x -> { out.add(x); })
         );
 		b.send(2);
 		b.send(7);
@@ -179,7 +179,7 @@ public class CellTester extends TestCase {
 		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
 		Listener l = Transaction.run(
-		    () -> doubleUp(b.value()).filter(a -> true).listen(x -> { out.add(x); })
+		    () -> doubleUp(Operational.value(b)).filter(a -> true).listen(x -> { out.add(x); })
         );
 		b.send(2);
 		b.send(7);
@@ -191,7 +191,7 @@ public class CellTester extends TestCase {
 		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
 		Listener l = Transaction.run(
-		    () -> b.value().once().listen(x -> { out.add(x); })
+		    () -> Operational.value(b).once().listen(x -> { out.add(x); })
         );
 		b.send(2);
 		b.send(7);
@@ -203,7 +203,7 @@ public class CellTester extends TestCase {
 		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
 		Listener l = Transaction.run(
-		    () -> doubleUp(b.value()).once().listen(x -> { out.add(x); })
+		    () -> doubleUp(Operational.value(b)).once().listen(x -> { out.add(x); })
         );
 		b.send(2);
 		b.send(7);
@@ -214,7 +214,7 @@ public class CellTester extends TestCase {
 	public void testValuesLateListen() {
 		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
-		Stream<Integer> value = b.value();
+		Stream<Integer> value = Operational.value(b);
 		b.send(8);
 		Listener l = value.listen(x -> { out.add(x); });
 		b.send(2);
@@ -437,7 +437,7 @@ public class CellTester extends TestCase {
         Listener l = Transaction.run(() -> {
             Cell<String> a = new Cell("lettuce");
             CellLoop<String> b = new CellLoop();
-            Stream<String> eSnap = a.value().snapshot(b, (String aa, String bb) -> aa + " " + bb);
+            Stream<String> eSnap = Operational.value(a).snapshot(b, (String aa, String bb) -> aa + " " + bb);
             b.loop(new Cell<String>("cheese"));
             return eSnap.listen((x) -> { out.add(x); });
         });
@@ -450,7 +450,7 @@ public class CellTester extends TestCase {
         List<String> out = new ArrayList();
         Cell<String> value = Transaction.<Cell<String>>run(() -> {
             CellLoop<String> a = new CellLoop();
-            Cell<String> value_ = a.value().hold("onion");
+            Cell<String> value_ = Operational.value(a).hold("onion");
             a.loop(new Cell<String>("cheese"));
             return value_;
         });

@@ -9,7 +9,7 @@ public class SLabel extends JLabel
 {
     public SLabel(Cell<String> text) {
         super("");
-        l = text.updates().listen(t -> {
+        l = Operational.updates(text).listen(t -> {
             if (SwingUtilities.isEventDispatchThread())
                 setText(t);
             else

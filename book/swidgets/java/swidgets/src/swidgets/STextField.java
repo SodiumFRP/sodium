@@ -74,7 +74,7 @@ public class STextField extends JTextField
                 sDecrement.send(-1);  // Re-allow blocked remote changes
             });
         }).append(
-            enabled.updates().listen(
+            Operational.updates(enabled).listen(
                 ena -> {
                     if (SwingUtilities.isEventDispatchThread())
                         this.setEnabled(ena);

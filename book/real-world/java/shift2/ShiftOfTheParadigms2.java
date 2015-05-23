@@ -180,10 +180,10 @@ class FRP1 implements Paradigm {
                                 sMouse.filter(me -> me.type == Type.MOVE)
                                       .map(me -> me.pt)
                                       .hold(me1.pt);
-                            Stream<Document> sMoves = Cell.lift(
+                            Stream<Document> sMoves = Operational.updates(Cell.lift(
                                 (mv, lck, doc2) -> doc2.insert(id,
                                       elt.translate(me1.pt, mv, lck)),
-                                move, axisLock, doc).updates();
+                                move, axisLock, doc));
                             return Optional.of(sMoves);
                         }
                     }

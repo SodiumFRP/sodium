@@ -32,7 +32,7 @@ class VTextField extends STextField {
     private VTextField(StreamLoop<String> sRemoteWrite,
                    ValueOutput<String> outRemote, int width) {
         super(
-            Stream.filterOptional(outRemote.value.value()),
+            Stream.filterOptional(Operational.value(outRemote.value)),
             "",
             width,
             outRemote.value.map(oV -> oV.isPresent())

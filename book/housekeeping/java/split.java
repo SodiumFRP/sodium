@@ -5,10 +5,10 @@ import java.util.Arrays;
 public class split {
     public static void main(String[] args) {
         StreamSink<List<Integer>> as = new StreamSink<>();
-        Listener l = Stream.split(as)
-               .<Integer>accum(0, (a, b) -> a + b)
-               .updates()
-               .listen(total -> { System.out.println(total); });
+        Listener l = Operational.updates(
+                Stream.split(as)
+                      .<Integer>accum(0, (a, b) -> a + b)
+            ).listen(total -> { System.out.println(total); });
         as.send(Arrays.asList(100, 15, 60));
         as.send(Arrays.asList(1, 5));
         l.unlisten();

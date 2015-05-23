@@ -87,20 +87,25 @@ public class Cell<A> {
         final Cell<A> me = this;
         return Transaction.apply(new Lambda1<Transaction, Lazy<A>>() {
         	public Lazy<A> apply(Transaction trans) {
-                LazySample<A> s = new LazySample<A>(me);
-                trans.last(() -> {
-                    s.value = me.valueUpdate != null ? me.valueUpdate : me.sampleNoTrans();
-                    s.hasValue = true;
-                    s.cell = null;
-                });
-                return new Lazy<A>(new Lambda0<A>() {
-                    public A apply() {
-                        if (s.hasValue)
-                            return s.value;
-                        else
-                            return s.cell.sample();
-                    }
-                });
+        	    return me.sampleLazy(trans);
+            }
+        });
+    }
+
+    final Lazy<A> sampleLazy(Transaction trans) {
+        final Cell<A> me = this;
+        LazySample<A> s = new LazySample<A>(me);
+        trans.last(() -> {
+            s.value = me.valueUpdate != null ? me.valueUpdate : me.sampleNoTrans();
+            s.hasValue = true;
+            s.cell = null;
+        });
+        return new Lazy<A>(new Lambda0<A>() {
+            public A apply() {
+                if (s.hasValue)
+                    return s.value;
+                else
+                    return s.cell.sample();
             }
         });
     }
@@ -110,27 +115,9 @@ public class Cell<A> {
         return value;
     }
 
-    /**
-     * A stream that gives the updates for the cell. If this cell was created
-     * with a hold, then updates() gives you a stream equivalent to the one that was held.
-     */
-    public final Stream<A> updates()
+    final Stream<A> updates(Transaction trans)
     {
-    	return str;
-    }
-
-    /**
-     * A stream that is guaranteed to fire once when you listen to it, giving
-     * the current value of the cell, and thereafter behaves like updates(),
-     * firing for each update to the cell's value.
-     */
-    public final Stream<A> value()
-    {
-        return Transaction.apply(new Lambda1<Transaction, Stream<A>>() {
-        	public Stream<A> apply(Transaction trans) {
-        		return value(trans);
-        	}
-        });
+        return str.lastFiringOnly(trans);
     }
 
     final Stream<A> value(Transaction trans1)
@@ -142,7 +129,7 @@ public class Cell<A> {
             }
         });
     	Stream<A> sInitial = sSpark.<A>snapshot(this);
-        return sInitial.merge(updates().lastFiringOnly(trans1));
+        return sInitial.merge(updates(trans1));
     }
 
     /**
@@ -150,7 +137,11 @@ public class Cell<A> {
      */
 	public final <B> Cell<B> map(Lambda1<A,B> f)
 	{
-		return updates().map(f).holdLazy(sampleLazy().map(f));
+		return Transaction.apply(new Lambda1<Transaction, Cell<B>>() {
+			public Cell<B> apply(Transaction trans) {
+                return updates(trans).map(f).holdLazy(trans, sampleLazy(trans).map(f));
+            }
+        });
 	}
 
 	/**
@@ -319,14 +310,14 @@ public class Cell<A> {
                 in_target.linkTo(null, out_target, node_target_);
                 Node.Target node_target = node_target_[0];
                 final ApplyHandler h = new ApplyHandler(trans0);
-                Listener l1 = bf.value().listen_(in_target, new TransactionHandler<Lambda1<A,B>>() {
+                Listener l1 = bf.value(trans0).listen_(in_target, new TransactionHandler<Lambda1<A,B>>() {
                     public void run(Transaction trans1, Lambda1<A,B> f) {
                         h.f = f;
                         if (h.a != null)
                             h.run(trans1);
                     }
                 });
-                Listener l2 = ba.value().listen_(in_target, new TransactionHandler<A>() {
+                Listener l2 = ba.value(trans0).listen_(in_target, new TransactionHandler<A>() {
                     public void run(Transaction trans1, A a) {
                         h.a = a;
                         if (h.f != null)
@@ -381,7 +372,7 @@ public class Cell<A> {
                             currentListener.unlisten();
                     }
                 };
-                Listener l1 = bba.value().listen_(out.node, h);
+                Listener l1 = bba.value(trans0).listen_(out.node, h);
                 return out.unsafeAddCleanup(l1).holdLazy(za);
             }
         });
@@ -427,7 +418,7 @@ public class Cell<A> {
                     currentListener.unlisten();
             }
         };
-        Listener l1 = bea.updates().listen(out.node, trans1, h1, false);
+        Listener l1 = bea.updates(trans1).listen(out.node, trans1, h1, false);
         return out.unsafeAddCleanup(l1);
 	}
 
@@ -447,8 +438,8 @@ public class Cell<A> {
      */
     public final <B,S> Cell<B> collect(final Lazy<S> initState, final Lambda2<A, S, Tuple2<B, S>> f)
     {
-        return Transaction.<Cell<B>>run(() -> {
-            final Stream<A> ea = updates().coalesce(new Lambda2<A,A,A>() {
+        return Transaction.<Cell<B>>apply(trans0 -> {
+            final Stream<A> ea = updates(trans0).coalesce(new Lambda2<A,A,A>() {
                 public A apply(A fst, A snd) { return snd; }
             });
             final Lazy<Tuple2<B,S>> zbs = Lazy.<A,S,Tuple2<B,S>>lift(
@@ -483,7 +474,7 @@ public class Cell<A> {
 	public final Listener listen(final Handler<A> action) {
         return Transaction.apply(new Lambda1<Transaction, Listener>() {
         	public Listener apply(final Transaction trans) {
-                return value().listen(action);
+                return value(trans).listen(action);
 			}
 		});
 	}

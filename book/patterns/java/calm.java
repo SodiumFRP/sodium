@@ -24,7 +24,7 @@ public class calm {
     public static <A> Cell<A> calm(Cell<A> a) {
         Lazy<A> initA = a.sampleLazy();
         Lazy<Optional<A>> oInitA = initA.map(a_ -> Optional.of(a_));
-        return calm(a.updates(), oInitA).holdLazy(initA);
+        return calm(Operational.updates(a), oInitA).holdLazy(initA);
     }
 
     public static void main(String[] args) {

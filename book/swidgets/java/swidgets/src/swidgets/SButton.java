@@ -26,7 +26,7 @@ public class SButton extends JButton {
                 () -> setEnabled(enabled.sample())
             );
         });
-        l = enabled.updates().listen(
+        l = Operational.updates(enabled).listen(
             ena -> {
                 if (SwingUtilities.isEventDispatchThread())
                     this.setEnabled(ena);

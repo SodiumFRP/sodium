@@ -4,7 +4,7 @@ import java.util.Optional;
 public class pause {
     public static <A> Stream<Unit> changeTo(Cell<A> a, A target) {
         return Stream.filterOptional(
-            a.updates().snapshot(a,
+            Operational.updates(a).snapshot(a,
                 (neu, old) -> neu.equals(target) && !neu.equals(old)
                     ? Optional.of(Unit.UNIT)
                     : Optional.empty()

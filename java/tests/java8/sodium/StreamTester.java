@@ -200,14 +200,14 @@ public class StreamTester extends TestCase {
         StreamSink<Integer> ea = new StreamSink();
         List<Integer> out = new ArrayList();
         Cell<Integer> sum = ea.accum(100, (a,s)->a+s);
-        Listener l = sum.updates().listen((x) -> { out.add(x); });
+        Listener l = sum.listen((x) -> { out.add(x); });
         ea.send(5);
         ea.send(7);
         ea.send(1);
         ea.send(2);
         ea.send(3);
         l.unlisten();
-        assertEquals(Arrays.asList(105,112,113,115,118), out);
+        assertEquals(Arrays.asList(100,105,112,113,115,118), out);
     }
 
     public void testOnce()
