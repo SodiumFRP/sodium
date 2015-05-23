@@ -27,14 +27,16 @@ public class dynamic {
             sOut = sOut.merge(c);
         return sOut;
     }
-    public static Stream<Unit> periodicTimer(double t0,
+    public static Stream<Unit> periodicTimer(
             Cell<Double> time, Stream<Unit> sTick, double period) {
         CellLoop<Double> tAlarm = new CellLoop<>();
         Stream<Double> sAlarm = Stream.filterOptional(
-            sTick.snapshot(time).snapshot(tAlarm,
-                    (t, alarm) -> t >= alarm ? Optional.of(t + period)
-                                             : Optional.<Double>empty())
+            sTick.snapshot(tAlarm,
+                (u, alarm) -> time.sample() >= alarm
+                    ? Optional.of(time.sample() + period)
+                    : Optional.<Double>empty())
         );
+        double t0 = time.sample() + period;
         tAlarm.loop(sAlarm.hold(t0));
         return sAlarm.map(u -> Unit.UNIT);
     }
@@ -93,12 +95,12 @@ public class dynamic {
             ));
     }
     static class CreateCharacters {
-        CreateCharacters(double t0, Cell<Double> time,
+        CreateCharacters(Cell<Double> time,
                     Stream<Unit> sTick, World world,
                     Cell<List<Character>> scene, Stream<Integer> sBite,
                     Stream<Integer> sDestroy) {
             State initState = new State();
-            HomoZombicus z = new HomoZombicus(initState.nextID, t0,
+            HomoZombicus z = new HomoZombicus(initState.nextID,
                 new Point(36,332), time, sTick, scene);
             initState = initState.add(z.character, z.sBite,
                 fallDownHole(initState.nextID, sTick, z.character, world));
@@ -106,11 +108,11 @@ public class dynamic {
             Point center = new Point(world.windowSize.width / 2,
                                      world.windowSize.height / 2);
             Stream<Lambda1<State, State>> sAdd =
-                periodicTimer(t0 + 1, time, sTick, 6.0)
-                .snapshot(time, (u, t) ->
+                periodicTimer(time, sTick, 6.0)
+                .map(u ->
                     st -> {
                         BitableHomoSapiens h = new BitableHomoSapiens(
-                            world, st.nextID, t, center, time, sTick,
+                            world, st.nextID, center, time, sTick,
                             sBite, scene);
                         return st.add(h.character, h.sBite,
                             fallDownHole(st.nextID, sTick, h.character,
@@ -159,13 +161,13 @@ public class dynamic {
             4));
         Animate.animate(
             "Zombicus dynamic",
-            (double t0, Cell<Double> time, Stream<Unit> sTick,
+            (Cell<Double> time, Stream<Unit> sTick,
                                             Dimension windowSize) -> {
                 World world = new World(windowSize, obstacles);
                 CellLoop<List<Character>> scene = new CellLoop<>();
                 StreamLoop<Integer> sBite = new StreamLoop<>();
                 StreamLoop<Integer> sDestroy = new StreamLoop<>();
-                CreateCharacters cc = new CreateCharacters(t0,
+                CreateCharacters cc = new CreateCharacters(
                     time, sTick, world, scene, sBite, sDestroy);
                 scene.loop(cc.scene);
                 sBite.loop(cc.sBite);

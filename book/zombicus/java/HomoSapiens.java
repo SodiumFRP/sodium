@@ -8,7 +8,6 @@ public class HomoSapiens {
     public HomoSapiens(
         World world,
         int self,
-        double tInit,
         Point posInit,
         Cell<Double> time,
         Stream<Unit> sTick)
@@ -16,7 +15,7 @@ public class HomoSapiens {
         final double speed = 80.0;
         final double step = 0.02;
         class Trajectory {
-            Trajectory(World world, Random rng, double t0, Point orig) {
+            Trajectory(Random rng, double t0, Point orig) {
                 this.t0 = t0;
                 this.orig = orig;
                 this.period = rng.nextDouble() * 1 + 0.5;
@@ -36,38 +35,29 @@ public class HomoSapiens {
                 return velocity.mult(t - t0).add(orig);
             }
         }
-        class All {
-            All(Trajectory traj, double t) {
-                this.traj = traj;
-                this.t = t;
-            }
-            final Trajectory traj;
-            final double t;
-        };
 
         Random rng = new Random();
         CellLoop<Trajectory> traj = new CellLoop<>();
-        Cell<All> all = Cell.lift(
-            (tr, clk) -> new All(tr, clk), traj, time);
         Stream<Unit> sChange = Stream.filterOptional(
-            sTick.snapshot(all,
-                (u, a) -> {
-                    if (world.hitsObstacle(a.traj.positionAt(a.t + step))
-                        || a.t - a.traj.t0 >= a.traj.period)
-                        return Optional.of(Unit.UNIT);
-                    else
-                        return Optional.<Unit>empty();
+            sTick.snapshot(traj,
+                (u, traj_) -> {
+                    double t = time.sample();
+                    return world.hitsObstacle(traj_.positionAt(t + step))
+                                || t - traj_.t0 >= traj_.period
+                        ? Optional.of(Unit.UNIT)
+                        : Optional.<Unit>empty();
                 }));
         traj.loop(
-            sChange.snapshot(all, (u, a) -> {
-                return new Trajectory(world, rng, a.t,
-                                      a.traj.positionAt(a.t));
-            }).hold(new Trajectory(world, rng, tInit, posInit))
+            sChange.snapshot(traj, (u, traj_) ->
+                new Trajectory(rng, time.sample(),
+                    traj_.positionAt(time.sample()))
+            ).hold(new Trajectory(rng, time.sample(), posInit))
         );
-        character = all.map(a -> {
-                return new Character(self, CharacterType.SAPIENS,
-                    a.traj.positionAt(a.t), a.traj.velocity);
-            });
+        character = Cell.lift((traj_, t) ->
+            new Character(self, CharacterType.SAPIENS,
+                traj_.positionAt(t), traj_.velocity),
+            traj, time
+        );
     }
 
     public final Cell<Character> character;

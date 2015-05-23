@@ -7,7 +7,6 @@ import sodium.*;
 public class HomoZombicus {
     public HomoZombicus(
         int self,
-        double tInit,
         Point posInit,
         Cell<Double> time,
         Stream<Unit> sTick,
@@ -64,44 +63,34 @@ public class HomoZombicus {
                 return velocity.mult(t - t0).add(orig);
             }
         }
-        class All {
-            All(State state, double t, List<Character> scene) {
-                this.state = state;
-                this.t = t;
-                this.scene = scene;
-            }
-            State state;
-            double t;
-            List<Character> scene;
-        }
 
         CellLoop<State> state = new CellLoop<>();
-        Cell<All> all = Cell.lift((st, t, sc) -> new All(st, t, sc),
-            state, time, scene);
         Stream<State> sChange = Stream.filterOptional(
-            sTick.snapshot(all,
-                (u, a) ->
-                    a.t - a.state.t0 >= 0.2
-                      ? Optional.of(new State(a.t, a.state.positionAt(a.t),
-                          self, a.scene))
-                      : Optional.<State>empty()
-            )
-        );
+            sTick.snapshot(state,
+                (u, st) -> {
+                    double t = time.sample();
+                    return t - st.t0 >= 0.2
+                        ? Optional.of(new State(t, st.positionAt(t),
+                            self, scene.sample()))
+                        : Optional.<State>empty();
+                }
+            ));
         List<Character> emptyScene = new ArrayList<Character>(0);
-        state.loop(
-            sChange.hold(new State(tInit, posInit, self, emptyScene))
-        );
-        character = state.map(st -> new Character(self,
-            CharacterType.ZOMBICUS,
-            st.positionAt(time.sample()), st.velocity));
+        state.loop(sChange.hold(
+            new State(time.sample(), posInit, self, emptyScene)
+        ));
+        character = Cell.lift((st, t) ->
+            new Character(self, CharacterType.ZOMBICUS,
+                st.positionAt(time.sample()), st.velocity),
+            state, time);
         sBite = Stream.filterOptional(
-            sTick.snapshot(all,
-                (u, a) -> {
-                    Optional<Character> oVictim = a.state.nearestSapiens(
-                        self, a.scene);
+            sTick.snapshot(state,
+                (u, st) -> {
+                    Optional<Character> oVictim = st.nearestSapiens(
+                        self, scene.sample());
                     if (oVictim.isPresent()) {
                         Character victim = oVictim.get();
-                        Point myPos = a.state.positionAt(a.t);
+                        Point myPos = st.positionAt(time.sample());
                         if (Vector.distance(victim.pos, myPos) < 10)
                             return Optional.<Integer>of(victim.id);
                     }

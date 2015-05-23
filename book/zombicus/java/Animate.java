@@ -21,7 +21,6 @@ import java.awt.event.WindowEvent;
 import sodium.*;
 
 public class Animate extends JPanel {
-    private final double t0 = 0.0;
     private final Dimension windowSize = new Dimension(700, 500);
     private final BufferedImage sapienImgL;
     private final BufferedImage sapienImgR;
@@ -35,7 +34,7 @@ public class Animate extends JPanel {
 
     public interface Animation {
         public Cell<List<Character>> create(
-            double t0, Cell<Double> time, Stream<Unit> sTick,
+            Cell<Double> time, Stream<Unit> sTick,
             Dimension screenSize);
     }
 
@@ -49,9 +48,9 @@ public class Animate extends JPanel {
         zombicusImgR = ImageIO.read(new URL(rootURL, "../images/homo-zombicus-right.png"));
         coneImg = ImageIO.read(new URL(rootURL, "../images/roadius-conium.png"));
         Transaction.runVoid(() -> {
-            time = new CellSink<Double>(t0);
+            time = new CellSink<Double>(0.0);
             sTick = new StreamSink<Unit>();
-            this.scene = animation.create(t0, time, sTick, windowSize);
+            this.scene = animation.create(time, sTick, windowSize);
         });
         this.obstacles = obstacles;
         addMouseListener(new MouseAdapter() {

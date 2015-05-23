@@ -24,7 +24,7 @@ public class bite {
         return sOut;
     }
     static class CreateCharacters {
-        CreateCharacters(double t0, Cell<Double> time,
+        CreateCharacters(Cell<Double> time,
                     Stream<Unit> sTick, World world,
                     Cell<List<Character>> scene, Stream<Integer> sBite) {
             List<Cell<Character>> chars = new ArrayList<>();
@@ -35,13 +35,13 @@ public class bite {
                     Point pos0 = new Point(x, y);
                     if (id != 3 && id != 21) {
                         BitableHomoSapiens h = new BitableHomoSapiens(world, id,
-                            t0, pos0, time, sTick,
+                            pos0, time, sTick,
                             sBite, scene);
                         chars.add(h.character);
                         sBites.add(h.sBite);
                     }
                     else {
-                        HomoZombicus z = new HomoZombicus(id, t0, pos0,
+                        HomoZombicus z = new HomoZombicus(id, pos0,
                             time, sTick, scene);
                         chars.add(z.character);
                         sBites.add(z.sBite);
@@ -59,12 +59,12 @@ public class bite {
         Animate.animate(
             "Zombicus bite",
             
-            (double t0, Cell<Double> time, Stream<Unit> sTick,
+            (Cell<Double> time, Stream<Unit> sTick,
                                             Dimension windowSize) -> {
                 World world = new World(windowSize);
                 CellLoop<List<Character>> scene = new CellLoop<>();
                 StreamLoop<Integer> sBite = new StreamLoop<>();
-                CreateCharacters cc = new CreateCharacters(t0,
+                CreateCharacters cc = new CreateCharacters(
                     time, sTick, world, scene, sBite);
                 scene.loop(cc.scene);
                 sBite.loop(cc.sBite);

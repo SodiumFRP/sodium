@@ -21,7 +21,7 @@ public class simple {
     {
         Animate.animate(
             "Zombicus simple",
-            (double t0, Cell<Double> time, Stream<Unit> sTick,
+            (Cell<Double> time, Stream<Unit> sTick,
                                             Dimension windowSize) -> {
                 List<Cell<Character>> chars = new ArrayList<>();
                 int id = 0;
@@ -29,7 +29,7 @@ public class simple {
                     for (int y = 150; y < windowSize.height; y += 150) {
                         Point pos0 = new Point(x, y);
                         SimpleHomoSapiens h = new SimpleHomoSapiens(id,
-                            t0, pos0, time, sTick);
+                            pos0, time, sTick);
                         chars.add(h.character);
                         id++;
                     }

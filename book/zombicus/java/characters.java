@@ -17,7 +17,7 @@ public class characters {
                 }, out, c);
         return out;
     }
-    static Cell<List<Character>> createCharacters(double t0,
+    static Cell<List<Character>> createCharacters(
             Cell<Double> time, Stream<Unit> sTick, World world,
             Cell<List<Character>> scene) {
         List<Cell<Character>> chars = new ArrayList<>();
@@ -26,12 +26,12 @@ public class characters {
             for (int y = 150; y < world.windowSize.height; y += 150) {
                 Point pos0 = new Point(x, y);
                 if (id != 3 && id != 6 && id != 7) {
-                    HomoSapiens h = new HomoSapiens(world, id, t0, pos0,
+                    HomoSapiens h = new HomoSapiens(world, id, pos0,
                         time, sTick);
                     chars.add(h.character);
                 }
                 else {
-                    HomoZombicus z = new HomoZombicus(id, t0, pos0,
+                    HomoZombicus z = new HomoZombicus(id, pos0,
                         time, sTick, scene);
                     chars.add(z.character);
                 }
@@ -43,11 +43,11 @@ public class characters {
     {
         Animate.animate(
             "Zombicus characters",
-            (double t0, Cell<Double> time, Stream<Unit> sTick,
+            (Cell<Double> time, Stream<Unit> sTick,
                                             Dimension windowSize) -> {
                 World world = new World(windowSize);
                 CellLoop<List<Character>> scene = new CellLoop<>();
-                Cell<List<Character>> scene_ = createCharacters(t0,
+                Cell<List<Character>> scene_ = createCharacters(
                     time, sTick, world, scene);
                 scene.loop(scene_);
                 return scene;
