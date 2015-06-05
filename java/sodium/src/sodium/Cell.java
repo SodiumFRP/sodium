@@ -287,18 +287,13 @@ public class Cell<A> {
                 class ApplyHandler implements Handler<Transaction> {
                     ApplyHandler(Transaction trans0) {
                     }
-                    boolean fired = false;
                     Lambda1<A,B> f = null;
                     A a = null;
                     @Override
                     public void run(Transaction trans1) {
-                        if (fired) 
-                            return;
-
                         trans1.prioritized(out.node, new Handler<Transaction>() {
                             public void run(Transaction trans2) {
                                 out.send(trans2, f.apply(a));
-                                fired = false;
                             }
                         });
                     }
