@@ -175,15 +175,18 @@ class FRP1 implements Paradigm {
                         if (oe.isPresent()) {
                             String id = oe.get().id;
                             Element elt = oe.get().element;
-                            System.out.println("FRP2 dragging " + id);
+                            System.out.println("FRP1 dragging " + id);
                             Cell<Point> move =
                                 sMouse.filter(me -> me.type == Type.MOVE)
                                       .map(me -> me.pt)
                                       .hold(me1.pt);
-                            Stream<Document> sMoves = Operational.updates(Cell.lift(
-                                (mv, lck, doc2) -> doc2.insert(id,
-                                      elt.translate(me1.pt, mv, lck)),
-                                move, axisLock, doc));
+                            Stream<Document> sMoves = Operational.updates(
+                                    Cell.lift((mv, lck) ->
+                                        elt.translate(me1.pt, mv, lck),
+                                        move, axisLock)
+                                )
+                                .snapshot(doc, (newElt, doc2) ->
+                                    doc2.insert(id, newElt));
                             return Optional.of(sMoves);
                         }
                     }
@@ -221,7 +224,7 @@ class FRP2 implements Paradigm {
                         if (oe.isPresent()) {
                             String id = oe.get().id;
                             Element elt = oe.get().element;
-                            System.out.println("FRP1 dragging " + id);
+                            System.out.println("FRP2 dragging " + id);
                             class Pair {
                                 Pair(Point move, boolean lock) {
                                     this.move = move;

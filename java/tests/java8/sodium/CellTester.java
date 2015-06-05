@@ -290,6 +290,22 @@ public class CellTester extends TestCase {
 		assertEquals(Arrays.asList("3 5", "6 10"), out);
 	}
 
+	public void testLiftFromSimultaneous() {
+	    Tuple2<CellSink<Integer>, CellSink<Integer>> t = Transaction.run(() -> {
+            CellSink<Integer> b1 = new CellSink<>(3);
+            CellSink<Integer> b2 = new CellSink<>(5);
+            b2.send(7);
+            return new Tuple2<>(b1, b2);
+        });
+        CellSink<Integer> b1 = t.a;
+        CellSink<Integer> b2 = t.b;
+		List<Integer> out = new ArrayList<>();
+		Listener l = Cell.lift((x, y) -> x + y,	b1,	b2)
+		                 .listen(x -> { out.add(x); });
+        l.unlisten();
+        assertEquals(Arrays.asList(10), out);
+	}
+
 	public void testHoldIsDelayed() {
 	    StreamSink<Integer> e = new StreamSink<Integer>();
 	    Cell<Integer> h = e.hold(0);
