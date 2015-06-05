@@ -6,18 +6,16 @@
 
     <target name="compile">
         <subant buildpath="../../../java"/>
-        <subant buildpath="../../swidgets/java"/>
         <mkdir dir="build"/>
         <javac debug="true" srcdir="." destdir="build" source="1.8" target="1.8">
             <classpath>
-                <pathelement path="../../swidgets/java/swidgets/swidgets.jar"/>
                 <pathelement path="../../../java/sodium/sodium.jar"/>
             </classpath>
         </javac>
     </target>
 
-    <target name="calm" depends="compile">
-        <java classname="calm" fork="true">
+    <target name="timers" depends="compile">
+        <java classname="timers" fork="true">
             <classpath>
                 <pathelement path="build/"/>
                 <pathelement path="../../../java/sodium/sodium.jar"/>
@@ -25,8 +23,8 @@
         </java>
     </target>
 
-    <target name="pause" depends="compile">
-        <java classname="pause" fork="true">
+    <target name="fwoomph" depends="compile">
+        <java classname="fwoomph" fork="true">
             <classpath>
                 <pathelement path="build/"/>
                 <pathelement path="../../../java/sodium/sodium.jar"/>
@@ -34,4 +32,21 @@
         </java>
     </target>
 
+    <target name="cross" depends="compile">
+        <java classname="cross" fork="true">
+            <classpath>
+                <pathelement path="build/"/>
+                <pathelement path="../../../java/sodium/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="bounce" depends="compile">
+        <java classname="bounce" fork="true">
+            <classpath>
+                <pathelement path="build/"/>
+                <pathelement path="../../../java/sodium/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
 </project>

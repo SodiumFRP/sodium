@@ -68,15 +68,6 @@
         </java>
     </target>
 
-    <target name="bounce" depends="compile">
-        <java classname="bounce" fork="true">
-            <classpath>
-                <pathelement path="build/"/>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
-            </classpath>
-        </java>
-    </target>
-
     <target name="split" depends="compile">
         <java classname="split" fork="true">
             <classpath>

@@ -49,6 +49,8 @@ public final class Transaction {
 
 	private static Transaction currentTransaction;
     static int inCallback;
+    private static List<Runnable> onStartHooks = new ArrayList<Runnable>();
+    private static boolean runningOnStartHooks = false;
 
 	/**
 	 * Return the current transaction, or null if there isn't one.
@@ -73,8 +75,7 @@ public final class Transaction {
             // keep using that same transaction.
             Transaction transWas = currentTransaction;
             try {
-                if (currentTransaction == null)
-                    currentTransaction = new Transaction();
+                startIfNecessary();
                 code.run();
             } finally {
                 if (transWas == null)
@@ -99,8 +100,7 @@ public final class Transaction {
             // keep using that same transaction.
             Transaction transWas = currentTransaction;
             try {
-                if (currentTransaction == null)
-                    currentTransaction = new Transaction();
+                startIfNecessary();
                 return code.apply();
             } finally {
                 if (transWas == null)
@@ -117,14 +117,26 @@ public final class Transaction {
             // keep using that same transaction.
             Transaction transWas = currentTransaction;
             try {
-                if (currentTransaction == null)
-                    currentTransaction = new Transaction();
+                startIfNecessary();
                 code.run(currentTransaction);
             } finally {
                 if (transWas == null)
                     currentTransaction.close();
                 currentTransaction = transWas;
             }
+        }
+	}
+
+	/**
+	 * Add a runnable that will be executed whenever a transaction is started.
+	 * That runnable may start transactions itself, which will not cause the
+	 * hooks to be run recursively.
+	 *
+	 * The main use case of this is the implementation of a time/alarm system.
+	 */
+	public static void onStart(Runnable r) {
+        synchronized (transactionLock) {
+            onStartHooks.add(r);
         }
 	}
 
@@ -135,14 +147,29 @@ public final class Transaction {
             // keep using that same transaction.
             Transaction transWas = currentTransaction;
             try {
-                if (currentTransaction == null)
-                    currentTransaction = new Transaction();
+                startIfNecessary();
                 return code.apply(currentTransaction);
             } finally {
                 if (transWas == null)
                     currentTransaction.close();
                 currentTransaction = transWas;
             }
+        }
+	}
+
+	private static void startIfNecessary() {
+        if (currentTransaction == null) {
+            if (!runningOnStartHooks) {
+                runningOnStartHooks = true;
+                try {
+                    for (Runnable r : onStartHooks)
+                        r.run();
+                }
+                finally {
+                    runningOnStartHooks = false;
+                }
+            }
+            currentTransaction = new Transaction();
         }
 	}
 
