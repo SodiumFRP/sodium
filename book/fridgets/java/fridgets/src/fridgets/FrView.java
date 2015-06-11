@@ -45,7 +45,8 @@ public class FrView extends JPanel {
             }
         });
         CellLoop<Long> focus = new CellLoop<>();
-        Fridget.Output fo = fr.reify(size, sMouse, sKey, focus, new Supply());
+        Fridget.Output fo = fr.reify(size, sMouse, sKey, focus,
+            new Supply());
         focus.loop(fo.sChangeFocus.hold(-1l));
         this.drawable = fo.drawable;
         l = l.append(Operational.updates(drawable).listen(d -> {

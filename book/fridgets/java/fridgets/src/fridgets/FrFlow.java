@@ -19,14 +19,17 @@ public class FrFlow extends Fridget {
                   dir == Direction.HORIZONTAL
                     ? desiredSize.map(dsz -> new Dimension(dsz.width, 0))
                     : desiredSize.map(dsz -> new Dimension(0, dsz.height)))
-                    .reify(childSz, sMouse, sKey, focus, idSupply.child2());
-                idSupply = idSupply.child1();
+                    .reify(childSz, sMouse, sKey, focus,
+                        idSupply.child1());
+                idSupply = idSupply.child2();
                 childSz.loop(
                     Cell.lift((osz, foDsz) ->
                         osz.isPresent()
                             ? Optional.of(dir == Direction.HORIZONTAL
-                                ? new Dimension(foDsz.width, osz.get().height)
-                                : new Dimension(osz.get().width, foDsz.height))
+                                ? new Dimension(foDsz.width,
+                                                osz.get().height)
+                                : new Dimension(osz.get().width,
+                                                foDsz.height))
                             : Optional.empty(),
                         size, fo.desiredSize
                     )

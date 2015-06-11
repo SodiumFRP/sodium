@@ -5,7 +5,7 @@ import sodium.*;
 
 public class flow {
     public static void main(String[] args) {
-        JFrame frame = new JFrame("button");
+        JFrame frame = new JFrame("flow");
         frame.setDefaultCloseOperation(JFrame.EXIT_ON_CLOSE);
         frame.setContentPane(Transaction.run(() -> {
             FrButton ok = new FrButton(new Cell<>("OK"));

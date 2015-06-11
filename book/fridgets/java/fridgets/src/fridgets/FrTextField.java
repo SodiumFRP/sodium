@@ -86,7 +86,8 @@ public class FrTextField extends Fridget {
                                 g.drawRect(2, 2, sz.width-5, sz.height-5);
                                 int centerX = sz.width / 2;
                                 g.setFont(font);
-                                int cursorX = fm.stringWidth(txt.substring(0, x_));
+                                int cursorX = fm.stringWidth(
+                                    txt.substring(0, x_));
                                 g.drawString(txt,
                                     4,
                                     (sz.height - fm.getHeight())/2

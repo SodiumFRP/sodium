@@ -11,15 +11,13 @@ public class pause {
             ));
     }
 
-    public static Cell<Double> pausableClock(Cell<Boolean> paused,
-            Cell<Double> clock) {
-        Stream<Unit> sPause = changeTo(paused, true);
-        Stream<Unit> sUnpause = changeTo(paused, false);
+    public static Cell<Double> pausableClock(Stream<Unit> sPause,
+            Stream<Unit> sResume, Cell<Double> clock) {
         Cell<Optional<Double>> pauseTime =
             sPause.snapshot(clock, (u, t) -> Optional.<Double>of(t))
-                .merge(sUnpause.map(u -> Optional.<Double>empty()))
+                .merge(sResume.map(u -> Optional.<Double>empty()))
                 .hold(Optional.<Double>empty());
-        Cell<Double> lostTime = sUnpause.<Double>accum(
+        Cell<Double> lostTime = sResume.<Double>accum(
             0.0,
             (u, total) -> {
                 double tPause = pauseTime.sample().get();
@@ -35,19 +33,20 @@ public class pause {
 
     public static void main(String[] args) {
         CellSink<Double> mainClock = new CellSink<>(0.0);
-        CellSink<Boolean> paused = new CellSink<>(false);
-        Cell<Double> gameClock = pausableClock(paused, mainClock);
+        StreamSink<Unit> sPause = new StreamSink<>();
+        StreamSink<Unit> sResume = new StreamSink<>();
+        Cell<Double> gameClock = pausableClock(sPause, sResume, mainClock);
         Listener l = Cell.lift((m, g) -> "main="+m+" game="+g,
                                mainClock, gameClock)
                          .listen(txt -> System.out.println(txt));
         mainClock.send(1.0);
         mainClock.send(2.0);
         mainClock.send(3.0);
-        paused.send(true);
+        sPause.send(Unit.UNIT);
         mainClock.send(4.0);
         mainClock.send(5.0);
         mainClock.send(6.0);
-        paused.send(false);
+        sResume.send(Unit.UNIT);
         mainClock.send(7.0);
         l.unlisten();
     }
