@@ -14,21 +14,21 @@ public class Signal {
         return a*x*x + b*x + c;
     }
     public final static double quantum = 0.000001;
-    public Optional<Double> when(double y) {
-        double c = this.c - y;
+    public Optional<Double> when(double x) {
+        double c = this.c - x;
         if (a == 0) {
-            double x = (-c) / b;
-            return x >= quantum ? Optional.of(x + t0)
+            double t = (-c) / b;
+            return t >= quantum ? Optional.of(t + t0)
                                 : Optional.empty();
         }
         else {
             double b24ac = Math.sqrt(b*b - 4*a*c);
-            double x1 = ((-b) + b24ac) / (2*a);
-            double x2 = ((-b) - b24ac) / (2*a);
-            return x1 >= quantum
-                ? x2 >= quantum ? Optional.of((x1 < x2 ? x1 : x2) + t0)
-                                : Optional.of(x1 + t0)
-                : x2 >= quantum ? Optional.of(x2 + t0)
+            double t1 = ((-b) + b24ac) / (2*a);
+            double t2 = ((-b) - b24ac) / (2*a);
+            return t1 >= quantum
+                ? t2 >= quantum ? Optional.of((t1 < t2 ? t1 : t2) + t0)
+                                : Optional.of(t1 + t0)
+                : t2 >= quantum ? Optional.of(t2 + t0)
                                 : Optional.empty();
         }
     }

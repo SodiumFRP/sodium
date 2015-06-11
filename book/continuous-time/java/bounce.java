@@ -19,9 +19,9 @@ public class bounce extends Shapes {
             Cell<Signal> vely = sBounceY.hold(gravity.integrate(0));
             Cell<Signal> posx = Signal.integrate(velx, leftWall);
             Cell<Signal> posy = Signal.integrate(vely, roof);
-            sBounceY.loop(bounceAt(sys, vely, posy, floor));
             sBounceX.loop(bounceAt(sys, velx, posx, leftWall)
                           .merge(bounceAt(sys, velx, posx, rightWall)));
+            sBounceY.loop(bounceAt(sys, vely, posy, floor));
             return translate(
                 scale(circle(Color.red), new Cell<Double>(ballRadius)),
                 Cell.lift((t, x, y) -> new Point(x.at(t), y.at(t)),
@@ -32,7 +32,7 @@ public class bounce extends Shapes {
     static double restitution = 0.95;
     public static Stream<Signal> bounceAt(TimerSystem<Double> sys,
                     Cell<Signal> vel, Cell<Signal> pos, double target) {
-        return sys.at(pos.map(y -> y.when(target)))
+        return sys.at(pos.map(p -> p.when(target)))
                   .snapshot(vel, (t, v) ->
                       new Signal(t, v.a, v.b, -v.at(t)*restitution));
     }
