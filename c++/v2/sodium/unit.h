@@ -15,6 +15,8 @@ namespace SODIUM_NAMESPACE {
      */
     struct unit {
         unit() {}
+        bool operator == (const unit& other) const { return true; }
+        bool operator != (const unit& other) const { return false; }
     };
 };
 
