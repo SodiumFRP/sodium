@@ -5,7 +5,9 @@ public class value2 {
         CellSink<Integer> x = new CellSink<>(0);
         x.send(1);
         Listener l = Transaction.run(() -> {
-            return Operational.value(x).listen(x_ -> { System.out.println(x_); });
+            return Operational.value(x).listen(x_ -> {
+                System.out.println(x_);
+            });
         });
         x.send(2);
         x.send(3);
