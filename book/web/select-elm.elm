@@ -51,8 +51,6 @@ draw : Maybe String -> Dict String (List (Float, Float)) -> List Form
 draw mSel shapes = 
     List.concatMap (\(ident, coords) ->
         let poly = polygon coords
-            color = if mSel == Just ident then black
-                                          else rgb 255 255 255
         in (if mSel == Just ident then [filled red poly] else []) ++
            [outlined (solid black) poly]
     ) (Dict.toList shapes)
