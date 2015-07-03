@@ -1,4 +1,4 @@
-<project default="jar" xmlns:ivy="antlib:org.apache.ivy.ant">
+<project default="jar-doc" xmlns:ivy="antlib:org.apache.ivy.ant">
 
     <target name="resolve" description="Retrieve dependencies with Ivy." depends="init-ivy">
       <ivy:resolve log="download-only"/>
@@ -11,7 +11,8 @@
 
     <target name="clean">
         <delete dir="build"/>
-        <delete file="sodium/sodium.jar"/>
+        <delete dir="doc"/>
+        <delete file="sodium.jar"/>
         <delete>
             <fileset dir="." includes="TEST-*.txt"/>
         </delete>
@@ -19,21 +20,28 @@
 
     <target name="compile">
         <mkdir dir="build/src" />
-        <!-- <javac debug="true" srcdir="sodium/src" destdir="build/src" source="1.5" target="1.5"/> -->
-        <javac includeantruntime="false" debug="true" srcdir="sodium/src" destdir="build/src" source="1.8" target="1.8"/>
+        <javac includeantruntime="false" debug="true" srcdir="src" destdir="build/src" source="1.8" target="1.8"/>
+    </target>
+
+    <target name="jar-doc" depends="jar,doc">
     </target>
 
     <target name="jar" depends="compile">
         <mkdir dir="build/jar" />
-        <jar destfile="sodium/sodium.jar" basedir="build/src">
+        <jar destfile="sodium.jar" basedir="build/src">
             <manifest>
                 <attribute name="Main-Class" value="oata.HelloWorld" />
             </manifest>
         </jar>
     </target>
 
+    <target name="doc">
+        <mkdir dir="doc" />
+        <javadoc source="1.8" sourcepath="src" destdir="doc" packagenames="sodium.*,sodium.time.*" public="true"/>
+    </target>
+
     <target name="run">
-        <java jar="sodium/sodium.jar" fork="true" />
+        <java jar="sodium.jar" fork="true" />
     </target>
 
     <target name="tests-classes" depends="jar,resolve">
@@ -41,7 +49,7 @@
         <javac includeantruntime="false" debug="true" srcdir="tests/java8" destdir="build/tests/java8">
             <classpath>
                 <path refid="test.classpath"/>
-                <pathelement location="sodium/sodium.jar"/>
+                <pathelement location="sodium.jar"/>
                 <pathelement location="build/java8"/>
             </classpath>
         </javac>
@@ -52,7 +60,7 @@
             <formatter type="plain" />
             <classpath>
                 <path refid="test.classpath"/>
-                <pathelement location="sodium/sodium.jar"/>
+                <pathelement location="sodium.jar"/>
                 <pathelement location="build/tests/java8"/>
             </classpath>
 

@@ -11,7 +11,7 @@
         <javac debug="true" srcdir="." destdir="build" source="1.8" target="1.8">
             <classpath>
                 <pathelement path="../../swidgets/java/swidgets/swidgets.jar"/>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
             </classpath>
         </javac>
     </target>
@@ -21,7 +21,7 @@
             <classpath>
                 <pathelement path="build/"/>
                 <pathelement path="../../swidgets/java/swidgets/swidgets.jar"/>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
             </classpath>
         </java>
     </target>
@@ -31,7 +31,7 @@
             <classpath>
                 <pathelement path="build/"/>
                 <pathelement path="../../swidgets/java/swidgets/swidgets.jar"/>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
             </classpath>
         </java>
     </target>

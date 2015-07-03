@@ -9,7 +9,7 @@
         <mkdir dir="build"/>
         <javac debug="true" srcdir="." destdir="build" source="1.8" target="1.8">
             <classpath>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
             </classpath>
         </javac>
     </target>
@@ -18,7 +18,7 @@
         <java classname="simple" fork="true">
             <classpath>
                 <pathelement path="build/"/>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
             </classpath>
         </java>
     </target>
@@ -27,7 +27,7 @@
         <java classname="humans" fork="true">
             <classpath>
                 <pathelement path="build/"/>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
             </classpath>
         </java>
     </target>
@@ -36,7 +36,7 @@
         <java classname="characters" fork="true">
             <classpath>
                 <pathelement path="build/"/>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
             </classpath>
         </java>
     </target>
@@ -45,7 +45,7 @@
         <java classname="bite" fork="true">
             <classpath>
                 <pathelement path="build/"/>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
             </classpath>
         </java>
     </target>
@@ -54,7 +54,7 @@
         <java classname="dynamic" fork="true">
             <classpath>
                 <pathelement path="build/"/>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
             </classpath>
         </java>
     </target>

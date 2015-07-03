@@ -13,7 +13,7 @@
         <mkdir dir="fridgets/build/src"/>
         <javac debug="true" srcdir="fridgets/src" destdir="fridgets/build/src" source="1.8" target="1.8">
             <classpath>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
             </classpath>
         </javac>
     </target>
@@ -27,7 +27,7 @@
         <javac debug="true" srcdir="examples" destdir="examples" source="1.8" target="1.8">
             <classpath>
                 <pathelement path="fridgets/fridgets.jar"/>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
             </classpath>
         </javac>
     </target>
@@ -37,7 +37,7 @@
             <classpath>
                 <pathelement path="examples"/>
                 <pathelement path="fridgets/fridgets.jar"/>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
             </classpath>
         </java>
     </target>
@@ -47,7 +47,7 @@
             <classpath>
                 <pathelement path="examples"/>
                 <pathelement path="fridgets/fridgets.jar"/>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
             </classpath>
         </java>
     </target>
@@ -57,7 +57,7 @@
             <classpath>
                 <pathelement path="examples"/>
                 <pathelement path="fridgets/fridgets.jar"/>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
             </classpath>
         </java>
     </target>
@@ -67,7 +67,7 @@
             <classpath>
                 <pathelement path="examples"/>
                 <pathelement path="fridgets/fridgets.jar"/>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
             </classpath>
         </java>
     </target>

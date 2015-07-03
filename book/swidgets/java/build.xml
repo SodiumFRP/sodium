@@ -13,7 +13,7 @@
         <mkdir dir="swidgets/build/src"/>
         <javac debug="true" srcdir="swidgets/src" destdir="swidgets/build/src" source="1.8" target="1.8">
             <classpath>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
             </classpath>
         </javac>
     </target>
@@ -31,7 +31,7 @@
         <javac debug="true" srcdir="examples" destdir="examples" source="1.8" target="1.8">
             <classpath>
                 <pathelement path="swidgets/swidgets.jar"/>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
             </classpath>
         </javac>
     </target>
@@ -41,7 +41,7 @@
             <classpath>
                 <pathelement path="examples"/>
                 <pathelement path="swidgets/swidgets.jar"/>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
             </classpath>
         </java>
     </target>
@@ -51,7 +51,7 @@
             <classpath>
                 <pathelement path="examples"/>
                 <pathelement path="swidgets/swidgets.jar"/>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
             </classpath>
         </java>
     </target>
@@ -61,7 +61,7 @@
             <classpath>
                 <pathelement path="examples"/>
                 <pathelement path="swidgets/swidgets.jar"/>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
             </classpath>
         </java>
     </target>
@@ -71,7 +71,7 @@
             <classpath>
                 <pathelement path="examples"/>
                 <pathelement path="swidgets/swidgets.jar"/>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
             </classpath>
         </java>
     </target>
@@ -81,7 +81,7 @@
             <classpath>
                 <pathelement path="examples"/>
                 <pathelement path="swidgets/swidgets.jar"/>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
             </classpath>
         </java>
     </target>
@@ -91,7 +91,7 @@
             <classpath>
                 <pathelement path="examples"/>
                 <pathelement path="swidgets/swidgets.jar"/>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
             </classpath>
         </java>
     </target>
@@ -101,7 +101,7 @@
             <classpath>
                 <pathelement path="examples"/>
                 <pathelement path="swidgets/swidgets.jar"/>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
             </classpath>
         </java>
     </target>
@@ -111,7 +111,7 @@
             <classpath>
                 <pathelement path="examples"/>
                 <pathelement path="swidgets/swidgets.jar"/>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
             </classpath>
         </java>
     </target>
@@ -121,7 +121,7 @@
             <classpath>
                 <pathelement path="examples"/>
                 <pathelement path="swidgets/swidgets.jar"/>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
             </classpath>
         </java>
     </target>
@@ -131,7 +131,7 @@
             <classpath>
                 <pathelement path="examples"/>
                 <pathelement path="swidgets/swidgets.jar"/>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
             </classpath>
         </java>
     </target>
@@ -141,7 +141,7 @@
             <classpath>
                 <pathelement path="examples"/>
                 <pathelement path="swidgets/swidgets.jar"/>
-                <pathelement path="../../../java/sodium/sodium.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
             </classpath>
         </java>
     </target>
