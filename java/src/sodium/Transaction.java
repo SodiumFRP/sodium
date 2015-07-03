@@ -6,6 +6,9 @@ import java.util.PriorityQueue;
 import java.util.Set;
 import java.util.HashSet;
 
+/**
+ * Functions for controlling transactions.
+ */
 public final class Transaction {
     // Coarse-grained lock that's held during the whole transaction.
     static final Object transactionLock = new Object();
@@ -64,9 +67,8 @@ public final class Transaction {
 	/**
 	 * Run the specified code inside a single transaction.
 	 *
-	 * In most cases this is not needed, because all APIs will create their own
-	 * transaction automatically. It is useful where you want to run multiple
-	 * reactive operations atomically.
+	 * In most cases this is not needed, because the primitives always create their own
+	 * transaction automatically, but it is needed in some circumstances.
 	 */
 	public static void runVoid(Runnable code) {
         synchronized (transactionLock) {
@@ -89,9 +91,8 @@ public final class Transaction {
 	 * Run the specified code inside a single transaction, with the contained
 	 * code returning a value of the parameter type A.
 	 *
-	 * In most cases this is not needed, because all APIs will create their own
-	 * transaction automatically. It is useful where you want to run multiple
-	 * reactive operations atomically.
+	 * In most cases this is not needed, because the primitives always create their own
+	 * transaction automatically, but it is needed in some circumstances.
 	 */
 	public static <A> A run(Lambda0<A> code) {
         synchronized (transactionLock) {

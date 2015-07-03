@@ -7,7 +7,7 @@ package sodium;
  */
 public final class CellSink<A> extends Cell<A> {
     /**
-     * Construct a writeable cell with the specified initial value.
+     * Construct a writable cell with the specified initial value.
      */
     public CellSink(A initValue) {
     	super(new StreamSink<A>(), initValue);

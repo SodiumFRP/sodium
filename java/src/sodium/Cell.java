@@ -56,8 +56,8 @@ public class Cell<A> {
     /**
      * Sample the cell's current value.
      * <p>
-     * It may be used inside the functions passed to primitives that return {@link Stream}s,
-     * namely {@link Stream#map(Lambda1)} in which case it is equivalent to snapshotting the cell,
+     * It may be used inside the functions passed to primitives that apply them to {@link Stream}s,
+     * including {@link Stream#map(Lambda1)} in which case it is equivalent to snapshotting the cell,
      * {@link Stream#snapshot(Cell, Lambda2)}, {@link Stream#filter(Lambda1)},
      * {@link Stream#merge(Stream, Lambda2)}, and {@link Stream#coalesce(Lambda2)}.
      * It should generally be avoided in favour of {@link listen(Handler)} so you don't
@@ -365,7 +365,7 @@ public class Cell<A> {
                         // value().listen will always cause a sample to be fetched from the
                         // one we just switched to. The caller will be fetching our output
                         // using value().listen, and value() throws away all firings except
-                        // for the last one. Therefore, anything from the old input behaviour
+                        // for the last one. Therefore, anything from the old input cell
                         // that might have happened during this transaction will be suppressed.
                         if (currentListener != null)
                             currentListener.unlisten();
@@ -433,7 +433,7 @@ public class Cell<A> {
 	}
 
     /**
-     * Transform a cell with a generalized state loop (a mealy machine). The function
+     * Transform a cell with a generalized state loop (a Mealy machine). The function
      * is passed the input and the old state and returns the new state and output value.
      * @param f Function to apply for each update. It must be <em>referentially transparent</em>.
      */
@@ -443,9 +443,7 @@ public class Cell<A> {
     }
 
     /**
-     * Transform a cell with a generalized state loop (a mealy machine). The function
-     * is passed the input and the old state and returns the new state and output value.
-     * Variant that takes a lazy initial state.
+     * A variant of {@link collect(Object, Lambda2)} that takes a lazy initial state.
      * @param f Function to apply for each update. It must be <em>referentially transparent</em>.
      */
     public final <B,S> Cell<B> collect(final Lazy<S> initState, final Lambda2<A, S, Tuple2<B, S>> f)

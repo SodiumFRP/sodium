@@ -175,9 +175,9 @@ public class Stream<A> {
 	 * Variant of {@link snapshot(Cell, Lambda2)} that captures the cell's value
 	 * at the time of the event firing, ignoring the stream's value.
 	 */
-	public final <B> Stream<B> snapshot(Cell<B> beh)
+	public final <B> Stream<B> snapshot(Cell<B> c)
 	{
-	    return snapshot(beh, new Lambda2<A,B,B>() {
+	    return snapshot(c, new Lambda2<A,B,B>() {
 	    	public B apply(A a, B b) {
 	    		return b;
 	    	}
@@ -185,9 +185,8 @@ public class Stream<A> {
 	}
 
 	/**
-	 * Sample the behavior at the time of the event firing. Note that the 'current value'
-     * of the behavior that's sampled is the value as at the start of the transaction
-     * before any state changes of the current transaction are applied through 'hold's.
+	 * Return a stream whose events are the result of the combination using the specified
+	 * function of the input stream's event value and the value of the cell at that time.
      * <P>
      * There is an implicit delay: State updates caused by event firings being held with
      * {@link Stream#hold(Object)} don't become visible as the cell's current value until
@@ -195,13 +194,13 @@ public class Stream<A> {
      * always sees the value of a cell as it was before any state changes from the current
      * transaction.
      */
-	public final <B,C> Stream<C> snapshot(final Cell<B> b, final Lambda2<A,B,C> f)
+	public final <B,C> Stream<C> snapshot(final Cell<B> c, final Lambda2<A,B,C> f)
 	{
 	    final Stream<A> ev = this;
 		final StreamSink<C> out = new StreamSink<C>();
         Listener l = listen_(out.node, new TransactionHandler<A>() {
         	public void run(Transaction trans2, A a) {
-	            out.send(trans2, f.apply(a, b.sampleNoTrans()));
+	            out.send(trans2, f.apply(a, c.sampleNoTrans()));
 	        }
         });
         return out.unsafeAddCleanup(l);
@@ -214,11 +213,11 @@ public class Stream<A> {
      * In the case where two event occurrences are simultaneous (i.e. both
      * within the same transaction), both will be delivered in the same
      * transaction with a left bias: All events from the left stream (this) will arrive
-     * before events from <em>eb</em>.
+     * before events from <em>s</em>.
      */
-	public Stream<A> merge(final Stream<A> eb)
+	public Stream<A> merge(final Stream<A> s)
 	{
-	    return Stream.<A>merge(this, eb);
+	    return Stream.<A>merge(this, s);
 	}
 
 	private static <A> Stream<A> merge(final Stream<A> ea, final Stream<A> eb)
@@ -244,7 +243,7 @@ public class Stream<A> {
 	}
 
 	/**
-	 * Push each event onto a new transaction guaranteed to come before any externally
+	 * Push each event onto a new transaction guaranteed to come before the next externally
 	 * initiated transaction. Same as {@link split(Stream)} but it works on a single value.
 	 */
 	public final Stream<A> defer()
@@ -269,7 +268,7 @@ public class Stream<A> {
 
 	/**
 	 * Push each event in the list onto a newly created transaction guaranteed
-	 * to come before any externally initiated transaction.
+	 * to come before the next externally initiated transaction.
 	 */
     public static final <A, C extends Collection<A>> Stream<A> split(Stream<C> s)
     {
@@ -294,7 +293,7 @@ public class Stream<A> {
     }
 
     /**
-     * If the stream contains simultaneous events (where more than event occurs in a
+     * If the stream contains simultaneous events (where more than one event occurs in a
      * single transaction), combine them into one using the specified combining function
      * so that the returned stream is guaranteed only ever to have one event per transaction.
      * <p>
@@ -396,7 +395,7 @@ public class Stream<A> {
     }
 
     /**
-     * Transform an event with a generalized state loop (a mealy machine). The function
+     * Transform an event with a generalized state loop (a Mealy machine). The function
      * is passed the input and the old state and returns the new state and output value.
      * @param f Function to apply to update the state. It may construct FRP logic or use
      *    {@link Cell#sample()} in which case it is equivalent to {@link Stream#snapshot(Cell)}ing the

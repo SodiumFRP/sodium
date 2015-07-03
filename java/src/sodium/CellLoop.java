@@ -1,7 +1,7 @@
 package sodium;
 
 /**
- * A forward reference for a {@link Cell} equivalent to the Cell that was referenced. 
+ * A forward reference for a {@link Cell} equivalent to the Cell that is referenced. 
  */
 public final class CellLoop<A> extends LazyCell<A> {
     public CellLoop() {
