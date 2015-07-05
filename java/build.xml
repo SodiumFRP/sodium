@@ -1,4 +1,4 @@
-<project default="jar-doc" xmlns:ivy="antlib:org.apache.ivy.ant">
+<project default="jar" xmlns:ivy="antlib:org.apache.ivy.ant">
 
     <target name="resolve" description="Retrieve dependencies with Ivy." depends="init-ivy">
       <ivy:resolve log="download-only"/>
@@ -23,10 +23,7 @@
         <javac includeantruntime="false" debug="true" srcdir="src" destdir="build/src" source="1.8" target="1.8"/>
     </target>
 
-    <target name="jar-doc" depends="jar,doc">
-    </target>
-
-    <target name="jar" depends="compile">
+    <target name="jar" depends="compile,doc">
         <mkdir dir="build/jar" />
         <jar destfile="sodium.jar" basedir="build/src">
             <manifest>
@@ -35,7 +32,11 @@
         </jar>
     </target>
 
-    <target name="doc">
+    <target name="check-doc">
+        <available file="doc/index.html" property="doc-present"/>
+    </target>
+
+    <target name="doc" depends="check-doc" unless="doc-present">
         <mkdir dir="doc" />
         <javadoc source="1.8" sourcepath="src" destdir="doc" packagenames="sodium.*,sodium.time.*" public="true"/>
     </target>
@@ -80,7 +81,11 @@
     <property name="ivy.jar.dir" value="${ivy.home}/lib" />
     <property name="ivy.jar.file" value="${ivy.jar.dir}/ivy.jar" />
 
-    <target name="download-ivy" unless="offline">
+    <target name="check-ivy-jar">
+        <available file="${ivy.jar.file}" property="ivy-jar-present"/>
+    </target>
+
+    <target name="download-ivy" depends="check-ivy-jar" unless="ivy-jar-present">
 
         <mkdir dir="${ivy.jar.dir}"/>
         <!-- download Ivy from web site so that it can be used even without any special installation -->

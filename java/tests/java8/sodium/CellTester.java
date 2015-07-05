@@ -410,28 +410,6 @@ public class CellTester extends TestCase {
         assertEquals((int)6, (int)sum_out.sample());
     }
 
-    public void testCollect()
-    {
-        StreamSink<Integer> ea = new StreamSink();
-        List<Integer> out = new ArrayList();
-        Cell<Integer> sum = ea.hold(100).collect(0,
-            //(a,s) -> new Tuple2(a+s, a+s)
-            new Lambda2<Integer, Integer, Tuple2<Integer,Integer>>() {
-                public Tuple2<Integer,Integer> apply(Integer a, Integer s) {
-                    return new Tuple2<Integer,Integer>(a+s, a+s);
-                }
-            }
-        );
-        Listener l = sum.listen((x) -> { out.add(x); });
-        ea.send(5);
-        ea.send(7);
-        ea.send(1);
-        ea.send(2);
-        ea.send(3);
-        l.unlisten();
-        assertEquals(Arrays.asList(100,105,112,113,115,118), out);
-    }
-
     public void testAccum()
     {
         StreamSink<Integer> ea = new StreamSink();

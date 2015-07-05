@@ -432,45 +432,6 @@ public class Cell<A> {
         return out.unsafeAddCleanup(l1);
 	}
 
-    /**
-     * Transform a cell with a generalized state loop (a Mealy machine). The function
-     * is passed the input and the old state and returns the new state and output value.
-     * @param f Function to apply for each update. It must be <em>referentially transparent</em>.
-     */
-    public final <B,S> Cell<B> collect(final S initState, final Lambda2<A, S, Tuple2<B, S>> f)
-    {
-        return collect(new Lazy<S>(initState), f);
-    }
-
-    /**
-     * A variant of {@link collect(Object, Lambda2)} that takes a lazy initial state.
-     * @param f Function to apply for each update. It must be <em>referentially transparent</em>.
-     */
-    public final <B,S> Cell<B> collect(final Lazy<S> initState, final Lambda2<A, S, Tuple2<B, S>> f)
-    {
-        return Transaction.<Cell<B>>apply(trans0 -> {
-            final Stream<A> ea = updates(trans0).coalesce(new Lambda2<A,A,A>() {
-                public A apply(A fst, A snd) { return snd; }
-            });
-            final Lazy<Tuple2<B,S>> zbs = Lazy.<A,S,Tuple2<B,S>>lift(
-                f, sampleLazy(), initState);
-            StreamLoop<Tuple2<B,S>> ebs = new StreamLoop<Tuple2<B,S>>();
-            Cell<Tuple2<B,S>> bbs = ebs.holdLazy(zbs);
-            Cell<S> bs = bbs.map(new Lambda1<Tuple2<B,S>,S>() {
-                public S apply(Tuple2<B,S> x) {
-                    return x.b;
-                }
-            });
-            Stream<Tuple2<B,S>> ebs_out = ea.snapshot(bs, f);
-            ebs.loop(ebs_out);
-            return bbs.map(new Lambda1<Tuple2<B,S>,B>() {
-                public B apply(Tuple2<B,S> x) {
-                    return x.a;
-                }
-            });
-        });
-    }
-
 	@Override
 	protected void finalize() throws Throwable {
 	    if (cleanup != null)

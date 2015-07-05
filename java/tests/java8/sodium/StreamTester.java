@@ -177,13 +177,8 @@ public class StreamTester extends TestCase {
     {
         StreamSink<Integer> ea = new StreamSink();
         List<Integer> out = new ArrayList();
-        Stream<Integer> sum = ea.collect(100,
-            //(a,s) -> new Tuple2(a+s, a+s)
-            new Lambda2<Integer, Integer, Tuple2<Integer,Integer>>() {
-                public Tuple2<Integer,Integer> apply(Integer a, Integer s) {
-                    return new Tuple2<Integer,Integer>(a+s, a+s);
-                }
-            }
+        Stream<Integer> sum = ea.collect(0,
+            (a,s) -> new Tuple2(a+s+100, a+s)
         );
         Listener l = sum.listen((x) -> { out.add(x); });
         ea.send(5);
