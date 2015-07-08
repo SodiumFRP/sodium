@@ -21,11 +21,7 @@ public class SButton extends JButton {
             }
         });
         // Do it at the end of the transaction so it works with looped cells
-        Transaction.run((Transaction trans) -> {
-            trans.last(
-                () -> setEnabled(enabled.sample())
-            );
-        });
+        Transaction.post(() -> setEnabled(enabled.sample()));
         l = Operational.updates(enabled).listen(
             ena -> {
                 if (SwingUtilities.isEventDispatchThread())

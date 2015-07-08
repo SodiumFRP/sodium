@@ -19,13 +19,11 @@ public class SLabel extends JLabel
         });
         // Set the text at the end of the transaction so SLabel works
         // with CellLoops.
-        Transaction.run((Transaction trans) -> {
-            trans.last(
-                () -> SwingUtilities.invokeLater(() -> {
-                    setText(text.sample());
-                })
-            );
-        });
+        Transaction.post(
+            () -> SwingUtilities.invokeLater(() -> {
+                setText(text.sample());
+            })
+        );
     }
 
     private final Listener l;

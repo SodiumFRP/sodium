@@ -251,7 +251,7 @@ public class Stream<A> {
 	    final StreamSink<A> out = new StreamSink<A>();
 	    Listener l1 = listen_(out.node, new TransactionHandler<A>() {
 	        public void run(Transaction trans, final A a) {
-	            trans.post(new Runnable() {
+	            trans.post_(new Runnable() {
                     public void run() {
                         Transaction trans = new Transaction();
                         try {
@@ -275,7 +275,7 @@ public class Stream<A> {
 	    final StreamSink<A> out = new StreamSink<A>();
 	    Listener l1 = s.listen_(out.node, new TransactionHandler<C>() {
 	        public void run(Transaction trans, final C as) {
-	            trans.post(new Runnable() {
+	            trans.post_(new Runnable() {
                     public void run() {
                         for (A a : as) {
                             Transaction trans = new Transaction();

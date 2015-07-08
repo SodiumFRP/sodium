@@ -100,11 +100,7 @@ public class STextArea extends JTextArea
         getDocument().addDocumentListener(dl);
 
         // Do it at the end of the transaction so it works with looped cells
-        Transaction.run((Transaction trans) -> {
-            trans.last(
-                () -> setEnabled(enabled.sample())
-            );
-        });
+        Transaction.post(() -> setEnabled(enabled.sample()));
         l = sText.listen(text -> {
             SwingUtilities.invokeLater(() -> {
                 setText(text);
