@@ -116,18 +116,6 @@ public class StreamTester extends TestCase {
         assertEquals(Arrays.asList('H','I'), out);
     }
 
-    public void testFilterNotNull()
-    {
-        StreamSink<String> e = new StreamSink();
-        List<String> out = new ArrayList();
-        Listener l = e.filterNotNull().listen(s -> { out.add(s); });
-        e.send("tomato");
-        e.send(null);
-        e.send("peach");
-        l.unlisten();
-        assertEquals(Arrays.asList("tomato","peach"), out);
-    }
-
     public void testFilterOptional()
     {
         StreamSink<Optional<String>> e = new StreamSink();

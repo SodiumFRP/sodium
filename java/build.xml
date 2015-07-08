@@ -13,6 +13,7 @@
         <delete dir="build"/>
         <delete dir="doc"/>
         <delete file="sodium.jar"/>
+        <delete file="sodium-java1.5.jar"/>
         <delete>
             <fileset dir="." includes="TEST-*.txt"/>
         </delete>
@@ -44,7 +45,7 @@
 
     <target name="compile-old">
         <mkdir dir="build/1.5/src" />
-        <javac includeantruntime="false" debug="true" srcdir="src-1.5" destdir="build/1.5/src" source="1.5" target="1.5"/>
+        <javac includeantruntime="false" debug="true" srcdir="src-java1.5" destdir="build/1.5/src" source="1.5" target="1.5"/>
         <javac includeantruntime="false" debug="true" srcdir="src" destdir="build/1.5/src" source="1.5" target="1.5"/>
     </target>
 
@@ -54,16 +55,14 @@
         <mkdir dir="build/1.8/jar" />
         <jar destfile="sodium.jar" basedir="build/1.8/src">
             <manifest>
-                <attribute name="Main-Class" value="oata.HelloWorld" />
             </manifest>
         </jar>
     </target>
 
     <target name="jar-old" depends="compile-old,doc">
         <mkdir dir="build/1.5/jar" />
-        <jar destfile="sodium-1.5.jar" basedir="build/1.5/src">
+        <jar destfile="sodium-java1.5.jar" basedir="build/1.5/src">
             <manifest>
-                <attribute name="Main-Class" value="oata.HelloWorld" />
             </manifest>
         </jar>
     </target>

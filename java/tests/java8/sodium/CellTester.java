@@ -3,6 +3,7 @@ package sodium;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 
 import junit.framework.TestCase;
 
@@ -320,15 +321,15 @@ public class CellTester extends TestCase {
 
 	static class SB
 	{
-	    SB(Character a, Character b, Cell<Character> sw)
+	    SB(Optional<Character> a, Optional<Character> b, Optional<Cell<Character>> sw)
 	    {
 	        this.a = a;
 	        this.b = b;
 	        this.sw = sw;
 	    }
-	    Character a;
-	    Character b;
-	    Cell<Character> sw;
+	    Optional<Character> a;
+	    Optional<Character> b;
+	    Optional<Cell<Character>> sw;
 	}
 
 	public void testSwitchB()
@@ -336,29 +337,29 @@ public class CellTester extends TestCase {
 	    StreamSink<SB> esb = new StreamSink();
 	    // Split each field out of SB so we can update multiple behaviours in a
 	    // single transaction.
-	    Cell<Character> ba = esb.map(s -> s.a).filterNotNull().hold('A');
-	    Cell<Character> bb = esb.map(s -> s.b).filterNotNull().hold('a');
-	    Cell<Cell<Character>> bsw = esb.map(s -> s.sw).filterNotNull().hold(ba);
+	    Cell<Character> ba = Stream.filterOptional(esb.map(s -> s.a)).hold('A');
+	    Cell<Character> bb = Stream.filterOptional(esb.map(s -> s.b)).hold('a');
+	    Cell<Cell<Character>> bsw = Stream.filterOptional(esb.map(s -> s.sw)).hold(ba);
 	    Cell<Character> bo = Cell.switchC(bsw);
 		List<Character> out = new ArrayList<Character>();
 	    Listener l = bo.listen(c -> { out.add(c); });
-	    esb.send(new SB('B','b',null));
-	    esb.send(new SB('C','c',bb));
-	    esb.send(new SB('D','d',null));
-	    esb.send(new SB('E','e',ba));
-	    esb.send(new SB('F','f',null));
-	    esb.send(new SB(null,null,bb));
-	    esb.send(new SB(null,null,ba));
-	    esb.send(new SB('G','g',bb));
-	    esb.send(new SB('H','h',ba));
-	    esb.send(new SB('I','i',ba));
+	    esb.send(new SB(Optional.of('B'),Optional.of('b'),Optional.empty()));
+	    esb.send(new SB(Optional.of('C'),Optional.of('c'),Optional.of(bb)));
+	    esb.send(new SB(Optional.of('D'),Optional.of('d'),Optional.empty()));
+	    esb.send(new SB(Optional.of('E'),Optional.of('e'),Optional.of(ba)));
+	    esb.send(new SB(Optional.of('F'),Optional.of('f'),Optional.empty()));
+	    esb.send(new SB(Optional.empty(),Optional.empty(),Optional.of(bb)));
+	    esb.send(new SB(Optional.empty(),Optional.empty(),Optional.of(ba)));
+	    esb.send(new SB(Optional.of('G'),Optional.of('g'),Optional.of(bb)));
+	    esb.send(new SB(Optional.of('H'),Optional.of('h'),Optional.of(ba)));
+	    esb.send(new SB(Optional.of('I'),Optional.of('i'),Optional.of(ba)));
 	    l.unlisten();
 	    assertEquals(Arrays.asList('A','B','c','d','E','F','f','F','g','H','I'), out);
 	}
 
 	static class SE
 	{
-	    SE(Character a, Character b, Stream<Character> sw)
+	    SE(Character a, Character b, Optional<Stream<Character>> sw)
 	    {
 	        this.a = a;
 	        this.b = b;
@@ -366,27 +367,27 @@ public class CellTester extends TestCase {
 	    }
 	    Character a;
 	    Character b;
-	    Stream<Character> sw;
+	    Optional<Stream<Character>> sw;
 	}
 
     public void testSwitchE()
     {
         StreamSink<SE> ese = new StreamSink();
-        Stream<Character> ea = ese.map(s -> s.a).filterNotNull();
-        Stream<Character> eb = ese.map(s -> s.b).filterNotNull();
-        Cell<Stream<Character>> bsw = ese.map(s -> s.sw).filterNotNull().hold(ea);
+        Stream<Character> ea = ese.map(s -> s.a);
+        Stream<Character> eb = ese.map(s -> s.b);
+        Cell<Stream<Character>> bsw = Stream.filterOptional(ese.map(s -> s.sw)).hold(ea);
         List<Character> out = new ArrayList();
         Stream<Character> eo = Cell.switchS(bsw);
 	    Listener l = eo.listen(c -> { out.add(c); });
-	    ese.send(new SE('A','a',null));
-	    ese.send(new SE('B','b',null));
-	    ese.send(new SE('C','c',eb));
-	    ese.send(new SE('D','d',null));
-	    ese.send(new SE('E','e',ea));
-	    ese.send(new SE('F','f',null));
-	    ese.send(new SE('G','g',eb));
-	    ese.send(new SE('H','h',ea));
-	    ese.send(new SE('I','i',ea));
+	    ese.send(new SE('A','a',Optional.empty()));
+	    ese.send(new SE('B','b',Optional.empty()));
+	    ese.send(new SE('C','c',Optional.of(eb)));
+	    ese.send(new SE('D','d',Optional.empty()));
+	    ese.send(new SE('E','e',Optional.of(ea)));
+	    ese.send(new SE('F','f',Optional.empty()));
+	    ese.send(new SE('G','g',Optional.of(eb)));
+	    ese.send(new SE('H','h',Optional.of(ea)));
+	    ese.send(new SE('I','i',Optional.of(ea)));
 	    l.unlisten();
 	    assertEquals(Arrays.asList('A','B','C','d','e','F','G','h','I'), out);
     }

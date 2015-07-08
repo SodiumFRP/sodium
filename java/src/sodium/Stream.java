@@ -357,18 +357,6 @@ public class Stream<A> {
     }
 
     /**
-     * Return a stream that only outputs event occurrences whose values are not a Java null pointer.
-     * We recommend you use {@link filterOptional(Stream)} instead, because {@link java.util.Optional}
-     * should always be used to represent anything nullable.
-     */
-    public final Stream<A> filterNotNull()
-    {
-        return filter(new Lambda1<A,Boolean>() {
-        	public Boolean apply(A a) { return a != null; }
-        });
-    }
-
-    /**
      * Return a stream that only outputs event occurrences that have present
      * values, removing the {@link java.util.Optional} wrapper, discarding empty values.
      */
@@ -389,9 +377,11 @@ public class Stream<A> {
      */
     public final Stream<A> gate(Cell<Boolean> c)
     {
-        return snapshot(c, new Lambda2<A,Boolean,A>() {
-        	public A apply(A a, Boolean pred) { return pred ? a : null; }
-        }).filterNotNull();
+        return Stream.filterOptional(
+            snapshot(c, new Lambda2<A,Boolean,Optional<A>>() {
+                public Optional<A> apply(A a, Boolean pred) { return pred ? Optional.of(a) : Optional.<A>empty(); }
+            })
+        );
     }
 
     /**
