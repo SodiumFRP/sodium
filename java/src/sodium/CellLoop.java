@@ -14,7 +14,7 @@ public final class CellLoop<A> extends LazyCell<A> {
      * This requires you to create an explicit transaction with {@link Transaction#run(Lambda0)}
      * or {@link Transaction#runVoid(Runnable)}.
      */
-    public void loop(Cell<A> a_out)
+    public void loop(final Cell<A> a_out)
     {
         final CellLoop<A> me = this;
         Transaction.apply(new Lambda1<Transaction, Unit>() {

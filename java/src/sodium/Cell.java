@@ -97,11 +97,13 @@ public class Cell<A> {
 
     final Lazy<A> sampleLazy(Transaction trans) {
         final Cell<A> me = this;
-        LazySample<A> s = new LazySample<A>(me);
-        trans.last(() -> {
-            s.value = me.valueUpdate != null ? me.valueUpdate : me.sampleNoTrans();
-            s.hasValue = true;
-            s.cell = null;
+        final LazySample<A> s = new LazySample<A>(me);
+        trans.last(new Runnable() {
+            public void run() {
+                s.value = me.valueUpdate != null ? me.valueUpdate : me.sampleNoTrans();
+                s.hasValue = true;
+                s.cell = null;
+            }
         });
         return new Lazy<A>(new Lambda0<A>() {
             public A apply() {
@@ -125,7 +127,7 @@ public class Cell<A> {
 
     final Stream<A> value(Transaction trans1)
     {
-    	StreamSink<Unit> sSpark = new StreamSink<Unit>();
+    	final StreamSink<Unit> sSpark = new StreamSink<Unit>();
         trans1.prioritized(sSpark.node, new Handler<Transaction>() {
             public void run(Transaction trans2) {
                 sSpark.send(trans2, Unit.UNIT);
@@ -140,7 +142,7 @@ public class Cell<A> {
      * always reflects the value of the function applied to the input Cell's value.
      * @param f Function to apply to convert the values. It must be <em>referentially transparent</em>.
      */
-	public final <B> Cell<B> map(Lambda1<A,B> f)
+	public final <B> Cell<B> map(final Lambda1<A,B> f)
 	{
 		return Transaction.apply(new Lambda1<Transaction, Cell<B>>() {
 			public Cell<B> apply(Transaction trans) {
@@ -154,7 +156,7 @@ public class Cell<A> {
 	 * function applied to the input cells' values.
 	 * @param f Function to apply. It must be <em>referentially transparent</em>.
 	 */
-	public static final <A,B,C> Cell<C> lift(Lambda2<A,B,C> f, Cell<A> a, Cell<B> b)
+	public static final <A,B,C> Cell<C> lift(final Lambda2<A,B,C> f, Cell<A> a, Cell<B> b)
 	{
 		Lambda1<A, Lambda1<B,C>> ffa = new Lambda1<A, Lambda1<B,C>>() {
 			public Lambda1<B,C> apply(final A aa) {
@@ -174,7 +176,7 @@ public class Cell<A> {
 	 * function applied to the input cells' values.
 	 * @param f Function to apply. It must be <em>referentially transparent</em>.
 	 */
-	public static final <A,B,C,D> Cell<D> lift(Lambda3<A,B,C,D> f, Cell<A> a, Cell<B> b, Cell<C> c)
+	public static final <A,B,C,D> Cell<D> lift(final Lambda3<A,B,C,D> f, Cell<A> a, Cell<B> b, Cell<C> c)
 	{
 		Lambda1<A, Lambda1<B, Lambda1<C,D>>> ffa = new Lambda1<A, Lambda1<B, Lambda1<C,D>>>() {
 			public Lambda1<B, Lambda1<C,D>> apply(final A aa) {
@@ -198,7 +200,7 @@ public class Cell<A> {
 	 * function applied to the input cells' values.
 	 * @param f Function to apply. It must be <em>referentially transparent</em>.
 	 */
-	public static final <A,B,C,D,E> Cell<E> lift(Lambda4<A,B,C,D,E> f, Cell<A> a, Cell<B> b, Cell<C> c, Cell<D> d)
+	public static final <A,B,C,D,E> Cell<E> lift(final Lambda4<A,B,C,D,E> f, Cell<A> a, Cell<B> b, Cell<C> c, Cell<D> d)
 	{
 		Lambda1<A, Lambda1<B, Lambda1<C, Lambda1<D,E>>>> ffa = new Lambda1<A, Lambda1<B, Lambda1<C, Lambda1<D,E>>>>() {
 			public Lambda1<B, Lambda1<C, Lambda1<D,E>>> apply(final A aa) {
@@ -226,7 +228,7 @@ public class Cell<A> {
 	 * function applied to the input cells' values.
 	 * @param fn Function to apply. It must be <em>referentially transparent</em>.
 	 */
-	public static final <A,B,C,D,E,F> Cell<F> lift(Lambda5<A,B,C,D,E,F> fn, Cell<A> a, Cell<B> b, Cell<C> c, Cell<D> d, Cell<E> e)
+	public static final <A,B,C,D,E,F> Cell<F> lift(final Lambda5<A,B,C,D,E,F> fn, Cell<A> a, Cell<B> b, Cell<C> c, Cell<D> d, Cell<E> e)
 	{
 		Lambda1<A, Lambda1<B, Lambda1<C, Lambda1<D, Lambda1<E, F>>>>> ffa = new Lambda1<A, Lambda1<B, Lambda1<C, Lambda1<D,Lambda1<E, F>>>>>() {
 			public Lambda1<B, Lambda1<C, Lambda1<D, Lambda1<E, F>>>> apply(final A aa) {
@@ -235,7 +237,7 @@ public class Cell<A> {
 						return new Lambda1<C, Lambda1<D, Lambda1<E, F>>>() {
 							public Lambda1<D, Lambda1<E, F>> apply(final C cc) {
                                 return new Lambda1<D, Lambda1<E, F>>() {
-                                    public Lambda1<E, F> apply(D dd) {
+                                    public Lambda1<E, F> apply(final D dd) {
                                         return new Lambda1<E, F>() {
                                             public F apply(E ee) {
                                                 return fn.apply(aa,bb,cc,dd,ee);
@@ -258,7 +260,7 @@ public class Cell<A> {
 	 * function applied to the input cells' values.
 	 * @param f Function to apply. It must be <em>referentially transparent</em>.
 	 */
-	public static final <A,B,C,D,E,F,G> Cell<G> lift(Lambda6<A,B,C,D,E,F,G> fn, Cell<A> a, Cell<B> b, Cell<C> c, Cell<D> d, Cell<E> e, Cell<F> f)
+	public static final <A,B,C,D,E,F,G> Cell<G> lift(final Lambda6<A,B,C,D,E,F,G> fn, Cell<A> a, Cell<B> b, Cell<C> c, Cell<D> d, Cell<E> e, Cell<F> f)
 	{
 		Lambda1<A, Lambda1<B, Lambda1<C, Lambda1<D, Lambda1<E, Lambda1<F, G>>>>>> ffa = new Lambda1<A, Lambda1<B, Lambda1<C, Lambda1<D,Lambda1<E, Lambda1<F, G>>>>>>() {
 			public Lambda1<B, Lambda1<C, Lambda1<D, Lambda1<E, Lambda1<F, G>>>>> apply(final A aa) {
@@ -267,11 +269,11 @@ public class Cell<A> {
 						return new Lambda1<C, Lambda1<D, Lambda1<E, Lambda1<F, G>>>>() {
 							public Lambda1<D, Lambda1<E, Lambda1<F, G>>> apply(final C cc) {
                                 return new Lambda1<D, Lambda1<E, Lambda1<F, G>>>() {
-                                    public Lambda1<E, Lambda1<F, G>> apply(D dd) {
+                                    public Lambda1<E, Lambda1<F, G>> apply(final D dd) {
                                         return new Lambda1<E, Lambda1<F, G>>() {
-                                            public Lambda1<F, G> apply(E ee) {
+                                            public Lambda1<F, G> apply(final E ee) {
                                                 return new Lambda1<F, G>() {
-                                                    public G apply(F ff) {
+                                                    public G apply(final F ff) {
                                                         return fn.apply(aa,bb,cc,dd,ee,ff);
                                                     }
                                                 };
@@ -315,10 +317,10 @@ public class Cell<A> {
                 }
 
                 Node out_target = out.node;
-                Node in_target = new Node(0);
+                final Node in_target = new Node(0);
                 Node.Target[] node_target_ = new Node.Target[1];
                 in_target.linkTo(null, out_target, node_target_);
-                Node.Target node_target = node_target_[0];
+                final Node.Target node_target = node_target_[0];
                 final ApplyHandler h = new ApplyHandler(trans0);
                 Listener l1 = bf.value(trans0).listen_(in_target, new TransactionHandler<Lambda1<A,B>>() {
                     public void run(Transaction trans1, Lambda1<A,B> f) {
@@ -355,7 +357,11 @@ public class Cell<A> {
 	{
 	    return Transaction.apply(new Lambda1<Transaction, Cell<A>>() {
 	        public Cell<A> apply(Transaction trans0) {
-                Lazy<A> za = bba.sampleLazy().map(ba -> ba.sample());
+                Lazy<A> za = bba.sampleLazy().map(new Lambda1<Cell<A>, A>() {
+                    public A apply(Cell<A> ba) {
+                        return ba.sample();
+                    }
+                });
                 final StreamSink<A> out = new StreamSink<A>();
                 TransactionHandler<Cell<A>> h = new TransactionHandler<Cell<A>>() {
                     private Listener currentListener;

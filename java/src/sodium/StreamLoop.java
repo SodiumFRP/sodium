@@ -18,18 +18,20 @@ public class StreamLoop<A> extends StreamWithSend<A> {
      * This requires you to create an explicit transaction with {@link Transaction#run(Lambda0)}
      * or {@link Transaction#runVoid(Runnable)}.
      */
-    public void loop(Stream<A> ea_out)
+    public void loop(final Stream<A> ea_out)
     {
         if (assigned)
             throw new RuntimeException("StreamLoop looped more than once");
         assigned = true;
         final StreamLoop<A> me = this;
-        Transaction.runVoid(() -> {
-            unsafeAddCleanup(ea_out.listen_(this.node, new TransactionHandler<A>() {
-                public void run(Transaction trans, A a) {
-                    me.send(trans, a);
-                }
-            }));
+        Transaction.runVoid(new Runnable() {
+            public void run() {
+                unsafeAddCleanup(ea_out.listen_(StreamLoop.this.node, new TransactionHandler<A>() {
+                    public void run(Transaction trans, A a) {
+                        me.send(trans, a);
+                    }
+                }));
+            }
         });
     }
 }

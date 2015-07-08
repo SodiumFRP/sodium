@@ -88,7 +88,7 @@ public class Stream<A> {
 	}
 
 	@SuppressWarnings("unchecked")
-	final Listener listen(Node target, Transaction trans, TransactionHandler<A> action, boolean suppressEarlierFirings) {
+	final Listener listen(Node target, Transaction trans, final TransactionHandler<A> action, boolean suppressEarlierFirings) {
 	    Node.Target[] node_target_ = new Node.Target[1];
         synchronized (Transaction.listenersLock) {
             if (node.linkTo((TransactionHandler<Unit>)action, target, node_target_))
@@ -105,7 +105,7 @@ public class Stream<A> {
                         Transaction.inCallback++;
                         try {  // Don't allow transactions to interfere with Sodium
                                // internals.
-                            action.run(trans, a);
+                            action.run(trans2, a);
                         } catch (Throwable t) {
                             t.printStackTrace();
                         }
@@ -227,7 +227,7 @@ public class Stream<A> {
         final Node right = out.node;
         Node.Target[] node_target_ = new Node.Target[1];
         left.linkTo(null, right, node_target_);
-        Node.Target node_target = node_target_[0];
+        final Node.Target node_target = node_target_[0];
         TransactionHandler<A> h = new TransactionHandler<A>() {
         	public void run(Transaction trans, A a) {
 	            out.send(trans, a);
@@ -412,19 +412,21 @@ public class Stream<A> {
      */
     public final <B,S> Stream<B> collectLazy(final Lazy<S> initState, final Lambda2<A, S, Tuple2<B, S>> f)
     {
-        return Transaction.<Stream<B>>run(() -> {
-            final Stream<A> ea = this;
-            StreamLoop<S> es = new StreamLoop<S>();
-            Cell<S> s = es.holdLazy(initState);
-            Stream<Tuple2<B,S>> ebs = ea.snapshot(s, f);
-            Stream<B> eb = ebs.map(new Lambda1<Tuple2<B,S>,B>() {
-                public B apply(Tuple2<B,S> bs) { return bs.a; }
-            });
-            Stream<S> es_out = ebs.map(new Lambda1<Tuple2<B,S>,S>() {
-                public S apply(Tuple2<B,S> bs) { return bs.b; }
-            });
-            es.loop(es_out);
-            return eb;
+        return Transaction.<Stream<B>>run(new Lambda0<Stream<B>>() {
+            public Stream<B> apply() {
+                final Stream<A> ea = Stream.this;
+                StreamLoop<S> es = new StreamLoop<S>();
+                Cell<S> s = es.holdLazy(initState);
+                Stream<Tuple2<B,S>> ebs = ea.snapshot(s, f);
+                Stream<B> eb = ebs.map(new Lambda1<Tuple2<B,S>,B>() {
+                    public B apply(Tuple2<B,S> bs) { return bs.a; }
+                });
+                Stream<S> es_out = ebs.map(new Lambda1<Tuple2<B,S>,S>() {
+                    public S apply(Tuple2<B,S> bs) { return bs.b; }
+                });
+                es.loop(es_out);
+                return eb;
+            }
         });
     }
 
@@ -445,13 +447,15 @@ public class Stream<A> {
      */
     public final <S> Cell<S> accumLazy(final Lazy<S> initState, final Lambda2<A, S, S> f)
     {
-        return Transaction.<Cell<S>>run(() -> {
-            final Stream<A> ea = this;
-            StreamLoop<S> es = new StreamLoop<S>();
-            Cell<S> s = es.holdLazy(initState);
-            Stream<S> es_out = ea.snapshot(s, f);
-            es.loop(es_out);
-            return es_out.holdLazy(initState);
+        return Transaction.<Cell<S>>run(new Lambda0<Cell<S>>() {
+            public Cell<S> apply() {
+                final Stream<A> ea = Stream.this;
+                StreamLoop<S> es = new StreamLoop<S>();
+                Cell<S> s = es.holdLazy(initState);
+                Stream<S> es_out = ea.snapshot(s, f);
+                es.loop(es_out);
+                return es_out.holdLazy(initState);
+            }
         });
     }
 
@@ -497,11 +501,13 @@ public class Stream<A> {
      * when this stream is garbage collected. Useful for functions that initiate I/O,
      * returning the result of it through a stream.
      */
-    public Stream<A> addCleanup(Listener cleanup) {
-        return Transaction.run(() -> {
-            List<Listener> fsNew = new ArrayList<Listener>(finalizers);
-            fsNew.add(cleanup);
-            return new Stream<A>(node, fsNew, firings);
+    public Stream<A> addCleanup(final Listener cleanup) {
+        return Transaction.run(new Lambda0<Stream<A>>() {
+            public Stream<A> apply() {
+                List<Listener> fsNew = new ArrayList<Listener>(finalizers);
+                fsNew.add(cleanup);
+                return new Stream<A>(node, fsNew, firings);
+            }
         });
     }
 

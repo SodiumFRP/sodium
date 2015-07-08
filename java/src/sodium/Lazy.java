@@ -28,7 +28,7 @@ public class Lazy<A> {
      * the value of the function applied to the input Lazy's value.
      * @param f Function to apply to the contained value. It must be <em>referentially transparent</em>.
      */
-    public final <B> Lazy<B> map(Lambda1<A, B> f) {
+    public final <B> Lazy<B> map(final Lambda1<A, B> f) {
         return new Lazy<B>(new Lambda0<B>() {
             public B apply() {
                 return f.apply(get());
@@ -40,7 +40,7 @@ public class Lazy<A> {
 	 * Lift a binary function into lazy values, so the returned Lazy reflects
      * the value of the function applied to the input Lazys' values.
 	 */
-	public static final <A,B,C> Lazy<C> lift(Lambda2<A,B,C> f, Lazy<A> a, Lazy<B> b)
+	public static final <A,B,C> Lazy<C> lift(final Lambda2<A,B,C> f, final Lazy<A> a, final Lazy<B> b)
 	{
 		return new Lazy<C>(new Lambda0<C>() {
             public C apply() {
@@ -53,7 +53,7 @@ public class Lazy<A> {
 	 * Lift a ternary function into lazy values, so the returned Lazy reflects
      * the value of the function applied to the input Lazys' values.
 	 */
-	public static final <A,B,C,D> Lazy<D> lift(Lambda3<A,B,C,D> f, Lazy<A> a, Lazy<B> b, Lazy<C> c)
+	public static final <A,B,C,D> Lazy<D> lift(final Lambda3<A,B,C,D> f, final Lazy<A> a, final Lazy<B> b, final Lazy<C> c)
 	{
 		return new Lazy<D>(new Lambda0<D>() {
             public D apply() {
@@ -66,7 +66,7 @@ public class Lazy<A> {
 	 * Lift a quaternary function into lazy values, so the returned Lazy reflects
      * the value of the function applied to the input Lazys' values.
 	 */
-	public static final <A,B,C,D,E> Lazy<E> lift(Lambda4<A,B,C,D,E> f, Lazy<A> a, Lazy<B> b, Lazy<C> c, Lazy<D> d)
+	public static final <A,B,C,D,E> Lazy<E> lift(final Lambda4<A,B,C,D,E> f, final Lazy<A> a, final Lazy<B> b, final Lazy<C> c, final Lazy<D> d)
 	{
 		return new Lazy<E>(new Lambda0<E>() {
             public E apply() {

@@ -18,14 +18,50 @@
         </delete>
     </target>
 
-    <target name="compile">
-        <mkdir dir="build/src" />
-        <javac includeantruntime="false" debug="true" srcdir="src" destdir="build/src" source="1.8" target="1.8"/>
+    <target name="javaCheck">
+        <echo message="ant.java.version=${ant.java.version}" />
+        <condition property="Java8OrHigher">
+            <not>
+                <or>
+                    <equals arg1="${ant.java.version}" arg2="1.1" />
+                    <equals arg1="${ant.java.version}" arg2="1.2" />
+                    <equals arg1="${ant.java.version}" arg2="1.3" />
+                    <equals arg1="${ant.java.version}" arg2="1.4" />
+                    <equals arg1="${ant.java.version}" arg2="1.5" />
+                    <equals arg1="${ant.java.version}" arg2="1.6" />
+                    <equals arg1="${ant.java.version}" arg2="1.7" />
+                </or>
+            </not>
+        </condition>
     </target>
 
-    <target name="jar" depends="compile,doc">
-        <mkdir dir="build/jar" />
-        <jar destfile="sodium.jar" basedir="build/src">
+    <target name="compile" depends="compile-old,compile-new"/>
+
+    <target name="compile-new" depends="javaCheck" if="Java8OrHigher">
+        <mkdir dir="build/1.8/src" />
+        <javac includeantruntime="false" debug="true" srcdir="src" destdir="build/1.8/src" source="1.8" target="1.8"/>
+    </target>
+
+    <target name="compile-old">
+        <mkdir dir="build/1.5/src" />
+        <javac includeantruntime="false" debug="true" srcdir="src-1.5" destdir="build/1.5/src" source="1.5" target="1.5"/>
+        <javac includeantruntime="false" debug="true" srcdir="src" destdir="build/1.5/src" source="1.5" target="1.5"/>
+    </target>
+
+    <target name="jar" depends="jar-old,jar-new"/>
+
+    <target name="jar-new" depends="compile-new,doc,javaCheck" if="Java8OrHigher">
+        <mkdir dir="build/1.8/jar" />
+        <jar destfile="sodium.jar" basedir="build/1.8/src">
+            <manifest>
+                <attribute name="Main-Class" value="oata.HelloWorld" />
+            </manifest>
+        </jar>
+    </target>
+
+    <target name="jar-old" depends="compile-old,doc">
+        <mkdir dir="build/1.5/jar" />
+        <jar destfile="sodium-1.5.jar" basedir="build/1.5/src">
             <manifest>
                 <attribute name="Main-Class" value="oata.HelloWorld" />
             </manifest>
@@ -38,7 +74,9 @@
 
     <target name="doc" depends="check-doc" unless="doc-present">
         <mkdir dir="doc" />
-        <javadoc source="1.8" sourcepath="src" destdir="doc" packagenames="sodium.*,sodium.time.*" public="true"/>
+        <javadoc source="1.8" sourcepath="src" destdir="doc" packagenames="sodium.*,sodium.time.*" public="true">
+            <!--<exclude name="java/util/*.java"/>-->
+        </javadoc>
     </target>
 
     <target name="run">

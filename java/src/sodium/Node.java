@@ -15,7 +15,7 @@ class Node implements Comparable<Node> {
 
 	public static class Target {
 	    Target(TransactionHandler<Unit> action, Node node) {
-	        this.action = new WeakReference<>(action);
+	        this.action = new WeakReference<TransactionHandler<Unit>>(action);
 	        this.node = node;
 	    }
 	    final WeakReference<TransactionHandler<Unit>> action;
@@ -23,7 +23,7 @@ class Node implements Comparable<Node> {
     }
 
 	private long rank;
-    List<Target> listeners = new ArrayList<>();
+    List<Target> listeners = new ArrayList<Target>();
 
 	/**
 	 * @return true if any changes were made. 

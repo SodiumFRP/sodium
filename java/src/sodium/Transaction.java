@@ -200,7 +200,7 @@ public final class Transaction {
      * Execute the specified code after the current transaction is closed,
      * or immediately if there is no current transaction.
      */
-	public static void post(Runnable action) {
+	public static void post(final Runnable action) {
 	    Transaction.run(new Handler<Transaction>() {
             public void run(Transaction trans) {
                 trans.post_(action);

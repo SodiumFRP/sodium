@@ -13,7 +13,7 @@ public class Operational {
      * The rule with this primitive is that you should only use it in functions
      * that do not allow the caller to detect the cell updates.
      */
-    public static final <A> Stream<A> updates(Cell<A> c)
+    public static final <A> Stream<A> updates(final Cell<A> c)
     {
         return Transaction.apply(new Lambda1<Transaction, Stream<A>>() {
         	public Stream<A> apply(Transaction trans) {
@@ -32,7 +32,7 @@ public class Operational {
      * The rule with this primitive is that you should only use it in functions
      * that do not allow the caller to detect the cell updates.
      */
-    public static final <A> Stream<A> value(Cell<A> c)
+    public static final <A> Stream<A> value(final Cell<A> c)
     {
         return Transaction.apply(new Lambda1<Transaction, Stream<A>>() {
         	public Stream<A> apply(Transaction trans) {
