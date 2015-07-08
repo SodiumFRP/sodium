@@ -478,6 +478,14 @@ public class Stream<A> {
         return out.unsafeAddCleanup(la[0]);
     }
 
+    /**
+     * This is not thread-safe, so one of these two conditions must apply:
+     * 1. We are within a transaction, since in the current implementation
+     *    a transaction locks out all other threads.
+     * 2. The object on which this is being called was created has not yet
+     *    been returned from the method where it was created, so it can't
+     *    be shared between threads.
+     */
     Stream<A> unsafeAddCleanup(Listener cleanup)
     {
         finalizers.add(cleanup);
@@ -490,9 +498,11 @@ public class Stream<A> {
      * returning the result of it through a stream.
      */
     public Stream<A> addCleanup(Listener cleanup) {
-        List<Listener> fsNew = new ArrayList<Listener>(finalizers);
-        fsNew.add(cleanup);
-        return new Stream<A>(node, fsNew, firings);
+        return Transaction.run(() -> {
+            List<Listener> fsNew = new ArrayList<Listener>(finalizers);
+            fsNew.add(cleanup);
+            return new Stream<A>(node, fsNew, firings);
+        });
     }
 
 	@Override
