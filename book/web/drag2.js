@@ -49,7 +49,7 @@ function init() {
     mouseDown.withLatestFrom(doc, function(pos, doc) {
           return { startPos : pos, shape : find(doc, pos) };
       }).filter(function(x) { return x.shape !== null; })
-        .flatMap(function(x) {
+        .flatMapLatest(function(x) {
             var startPos = x.startPos;
             var shape = x.shape;
             return mouseMove.withLatestFrom(doc, function(pos, doc) {
