@@ -473,5 +473,19 @@ public class CellTester extends TestCase {
         l.unlisten();
         assertEquals(Arrays.asList("tea kettle", "tea caddy"), out);
     }
+
+    public void testSwitchAndDefer()
+    {
+        List<String> out = new ArrayList();
+        StreamSink<Integer> si = new StreamSink();
+        Listener l = Cell.switchS(si.map(i -> {
+            Cell<String> c = new Cell<>("A"+i);
+            return Operational.value(c).defer();
+        }).hold(new Stream<String>())).listen(x -> { out.add(x); });
+        si.send(2);
+        si.send(4);
+        l.unlisten();
+        assertEquals(Arrays.asList("A2", "A4"), out);
+    }
 }
 
