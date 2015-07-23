@@ -210,17 +210,20 @@ public class Stream<A> {
      * Merge two streams of the same type into one, so that events on either input appear
      * on the returned stream.
      * <p>
-     * In the case where two event occurrences are simultaneous (i.e. both
-     * within the same transaction), both will be delivered in the same
-     * transaction with a left bias: All events from the left stream (this) will arrive
-     * before events from <em>s</em>.
+     * In the case where two events are simultaneous (i.e. both
+     * within the same transaction), the event from <em>s</em> will take precedence, and
+     * the event from <em>this</em> will be dropped.
+     * If you want to specify your own combining function, use {@link Stream#merge(Stream, Lambda2)}.
+     * merge(s) is equivalent to merge(s, (l, r) -&gt; r).
      */
 	public Stream<A> merge(final Stream<A> s)
 	{
-	    return Stream.<A>merge(this, s);
+	    return merge(s, new Lambda2<A,A,A>() {
+            public A apply(A left, A right) { return right; }
+        });
 	}
 
-	private static <A> Stream<A> merge(final Stream<A> ea, final Stream<A> eb)
+	private static <A> Stream<A> merge_(final Stream<A> ea, final Stream<A> eb)
 	{
 	    final StreamSink<A> out = new StreamSink<A>();
         final Node left = new Node(0);
@@ -241,6 +244,52 @@ public class Stream<A> {
             }
         });
 	}
+
+    /**
+     * A variant of {@link merge(Stream)} that uses the specified function to combine simultaneous
+     * events.
+     * <p>
+     * If the events are simultaneous (that is, one event from this and one from <em>s</em>
+     * occurring in the same transaction), combine them into one using the specified combining function
+     * so that the returned stream is guaranteed only ever to have one event per transaction.
+     * The event from <em>this</em> will appear at the left input of the combining function, and
+     * the event from <em>s</em> will appear at the right.
+     * @param f Function to combine the values. It may construct FRP logic or use
+     *    {@link Cell#sample()}. Apart from this the function must be <em>referentially transparent</em>.
+     */
+    public Stream<A> merge(final Stream<A> s, final Lambda2<A,A,A> f)
+    {
+	    return Transaction.apply(new Lambda1<Transaction, Stream<A>>() {
+	    	public Stream<A> apply(Transaction trans) {
+                return Stream.<A>merge_(Stream.this, s).coalesce(trans, f);
+	    	}
+	    });
+    }
+
+    /**
+     * Coalesce simultaneous events on a single stream into one. This is only useful in the
+     * situation where {@link StreamSink#send(Object)} has been called multiple times in a transaction on the same
+     * {@link StreamSink}. The combining function should be <em>associative</em>.
+     * @param f Function to combine the values. It may construct FRP logic or use
+     *    {@link Cell#sample()}. Apart from this the function must be <em>referentially transparent</em>.
+     */
+    public final Stream<A> coalesce(final Lambda2<A,A,A> f)
+    {
+        return Transaction.apply(new Lambda1<Transaction, Stream<A>>() {
+            public Stream<A> apply(Transaction trans) {
+                    return coalesce(trans, f);
+            }
+        });
+    }
+
+	private final Stream<A> coalesce(Transaction trans1, final Lambda2<A,A,A> f)
+	{
+	    final Stream<A> ev = this;
+	    final StreamSink<A> out = new StreamSink<A>();
+        TransactionHandler<A> h = new CoalesceHandler<A>(f, out);
+        Listener l = listen(out.node, trans1, h, false);
+        return out.unsafeAddCleanup(l);
+    }
 
 	/**
 	 * Push each event onto a new transaction guaranteed to come before the next externally
@@ -293,34 +342,6 @@ public class Stream<A> {
     }
 
     /**
-     * If the stream contains simultaneous events (where more than one event occurs in a
-     * single transaction), combine them into one using the specified combining function
-     * so that the returned stream is guaranteed only ever to have one event per transaction.
-     * <p>
-     * If the event firings are ordered, then the first will appear at the left
-     * input of the combining function.
-     * @param f Function to combine the values. It must be <em>associative</em>. It may construct FRP logic or use
-     *    {@link Cell#sample()}. Apart from this the function must be <em>referentially transparent</em>.
-     */
-	public final Stream<A> coalesce(final Lambda2<A,A,A> f)
-	{
-	    return Transaction.apply(new Lambda1<Transaction, Stream<A>>() {
-	    	public Stream<A> apply(Transaction trans) {
-	    		return coalesce(trans, f);
-	    	}
-	    });
-	}
-
-	final Stream<A> coalesce(Transaction trans1, final Lambda2<A,A,A> f)
-	{
-	    final Stream<A> ev = this;
-	    final StreamSink<A> out = new StreamSink<A>();
-        TransactionHandler<A> h = new CoalesceHandler<A>(f, out);
-        Listener l = listen(out.node, trans1, h, false);
-        return out.unsafeAddCleanup(l);
-    }
-
-    /**
      * Clean up the output by discarding any firing other than the last one. 
      */
     final Stream<A> lastFiringOnly(Transaction trans)
@@ -331,18 +352,7 @@ public class Stream<A> {
     }
 
     /**
-     * A variant of {@link merge(Stream)} that combines simultaneous
-     * event occurrences using {@link coalesce(Lambda2)} with the specified function.
-     * @param f Function to combine the values. It must be <em>associative</em>. It may construct FRP logic or use
-     *    {@link Cell#sample()}. Apart from this the function must be <em>referentially transparent</em>.
-     */
-    public Stream<A> merge(Stream<A> eb, Lambda2<A,A,A> f)
-    {
-        return merge(eb).coalesce(f);
-    }
-
-    /**
-     * Return a stream that only outputs event occurrences for which the predicate returns true.
+     * Return a stream that only outputs events for which the predicate returns true.
      */
     public final Stream<A> filter(final Lambda1<A,Boolean> predicate)
     {
@@ -357,7 +367,7 @@ public class Stream<A> {
     }
 
     /**
-     * Return a stream that only outputs event occurrences that have present
+     * Return a stream that only outputs events that have present
      * values, removing the {@link java.util.Optional} wrapper, discarding empty values.
      */
     public static final <A> Stream<A> filterOptional(final Stream<Optional<A>> ev)
@@ -372,7 +382,7 @@ public class Stream<A> {
     }
 
     /**
-     * Return a stream that only outputs event occurrences from the input stream
+     * Return a stream that only outputs events from the input stream
      * when the specified cell's value is true.
      */
     public final Stream<A> gate(Cell<Boolean> c)

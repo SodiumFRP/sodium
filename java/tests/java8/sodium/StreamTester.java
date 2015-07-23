@@ -52,56 +52,55 @@ public class StreamTester extends TestCase {
 
     public void testMergeSimultaneous()
     {
-        StreamSink<Integer> e = new StreamSink();
+        StreamSink<Integer> s1 = new StreamSink();
+        StreamSink<Integer> s2 = new StreamSink();
         List<Integer> out = new ArrayList();
-        Listener l = e.merge(e).listen(x -> { out.add(x); });
-        e.send(7);
-        e.send(9);
-        l.unlisten();
-        assertEquals(Arrays.asList(7,7,9,9), out);
-    }
-
-    public void testMergeLeftBias()
-    {
-        StreamSink<String> e1 = new StreamSink();
-        StreamSink<String> e2 = new StreamSink();
-        List<String> out = new ArrayList();
-        Listener l = e1.merge(e2).listen(x -> { out.add(x); });
+        Listener l = s1.merge(s2).listen(x -> { out.add(x); });
         Transaction.runVoid(() -> {
-            e1.send("left1a");
-            e1.send("left1b");
-            e2.send("right1a");
-            e2.send("right1b");
+            s1.send(7);
+            s2.send(60);
         });
         Transaction.runVoid(() -> {
-            e2.send("right2a");
-            e2.send("right2b");
-            e1.send("left2a");
-            e1.send("left2b");
+            s1.send(9);
+        });
+        Transaction.runVoid(() -> {
+            s1.send(7);
+            s1.send(60);
+            s2.send(8);
+            s2.send(90);
+        });
+        Transaction.runVoid(() -> {
+            s2.send(8);
+            s2.send(90);
+            s1.send(7);
+            s1.send(60);
+        });
+        Transaction.runVoid(() -> {
+            s2.send(8);
+            s1.send(7);
+            s2.send(90);
+            s1.send(60);
         });
         l.unlisten();
-        assertEquals(Arrays.asList(
-            "left1a", "left1b",
-            "right1a", "right1b",
-            "left2a", "left2b",
-            "right2a", "right2b"
-        ), out);
+        assertEquals(Arrays.asList(60,9,90,90,90), out);
     }
 
     public void testCoalesce()
     {
-        StreamSink<Integer> e1 = new StreamSink();
-        StreamSink<Integer> e2 = new StreamSink();
+        StreamSink<Integer> s = new StreamSink();
         List<Integer> out = new ArrayList();
-        Listener l =
-             e1.merge(e1.map(x -> x * 100).merge(e2))
+        Listener l = s
             .coalesce((Integer a, Integer b) -> a+b)
             .listen((Integer x) -> { out.add(x); });
-        e1.send(2);
-        e1.send(8);
-        e2.send(40);
+        Transaction.runVoid(() -> {
+            s.send(2);
+        });
+        Transaction.runVoid(() -> {
+            s.send(8);
+            s.send(40);
+        });
         l.unlisten();
-        assertEquals(Arrays.asList(202, 808, 40), out);
+        assertEquals(Arrays.asList(2, 48), out);
     }
     
     public void testFilter()

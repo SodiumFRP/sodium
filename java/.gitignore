@@ -1,5 +1,6 @@
 build/
 doc/
 sodium.jar
+sodium-java1.5.jar
 TEST-*.txt
 *.class

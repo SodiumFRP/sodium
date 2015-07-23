@@ -52,7 +52,7 @@ occs (SwitchS c) = scan Nothing a sts
 occs (Execute s) = map (\(t, ma) -> (t, run ma t)) (occs s)
 occs (Updates c) = sts
   where (_, sts) = steps c
-occs (Value c t0) = (t0, a) : sts
+occs (Value c t0) = doCoalesce (flip const) ((t0, a) : sts)
   where (a, sts) = chopFront (steps c) t0
 occs (Split s) = concatMap split (doCoalesce (++) (occs s))
   where split (t, as) = zipWith (\n a -> (t++[n], a)) [0..] as
@@ -179,7 +179,7 @@ tests = test [
     "Value 2" ~: do
         let c = Hold 'a' (MkStream [([0], 'b'), ([1], 'c'), ([3], 'd')]) [0]
         let s = Value c [0]
-        assertEqual "s" [([0],'a'),([0],'b'),([1],'c'),([3],'d')] (occs s),
+        assertEqual "s" [([0],'b'),([1],'c'),([3],'d')] (occs s),
     "Split" ~: do
         let s1 = MkStream [([0], ['a', 'b']), ([1],['c']),([1],['d','e'])]
         let s2 = Split s1

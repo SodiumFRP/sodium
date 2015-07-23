@@ -73,83 +73,6 @@ public class CellTester extends TestCase {
 		assertEquals(Arrays.asList(109,102,107), out);
 	}
 
-	/**
-	 * This is used for tests where value() produces a single initial value on listen,
-	 * and then we double that up by causing that single initial event to be repeated.
-	 * This needs testing separately, because the code must be done carefully to achieve
-	 * this.
-	 */
-	private static Stream<Integer> doubleUp(Stream<Integer> ev)
-	{
-	    return ev.merge(ev);
-	}
-
-	public void testValuesTwiceThenMap() {
-		CellSink<Integer> b = new CellSink<Integer>(9);
-		List<Integer> out = new ArrayList<Integer>();
-		Listener l = Transaction.run(
-		    () -> doubleUp(Operational.value(b)).map(x -> x+100).listen(x -> { out.add(x); })
-        );
-		b.send(2);
-		b.send(7);
-		l.unlisten();
-		assertEquals(Arrays.asList(109,109,102,102,107,107), out);
-	}
-
-	public void testValuesThenCoalesce() {
-		CellSink<Integer> b = new CellSink<Integer>(9);
-		List<Integer> out = new ArrayList<Integer>();
-		Listener l = Transaction.run(
-		    () -> Operational.value(b).coalesce((fst, snd) -> snd).listen(x -> { out.add(x); })
-        );
-		b.send(2);
-		b.send(7);
-		l.unlisten();
-		assertEquals(Arrays.asList(9,2,7), out);
-	}
-
-	public void testValuesTwiceThenCoalesce() {
-		CellSink<Integer> b = new CellSink<Integer>(9);
-		List<Integer> out = new ArrayList<Integer>();
-		Listener l = Transaction.run(
-		    () -> doubleUp(Operational.value(b)).coalesce((fst, snd) -> fst+snd).listen(x -> { out.add(x); })
-        );
-		b.send(2);
-		b.send(7);
-		l.unlisten();
-		assertEquals(Arrays.asList(18,4,14), out);
-	}
-
-	public void testValuesThenSnapshot() {
-		CellSink<Integer> bi = new CellSink<Integer>(9);
-		CellSink<Character> bc = new CellSink<Character>('a');
-		List<Character> out = new ArrayList<Character>();
-		Listener l = Transaction.run(
-		    () -> Operational.value(bi).snapshot(bc).listen(x -> { out.add(x); })
-        );
-		bc.send('b');
-		bi.send(2);
-		bc.send('c');
-		bi.send(7);
-		l.unlisten();
-		assertEquals(Arrays.asList('a','b','c'), out);
-	}
-
-	public void testValuesTwiceThenSnapshot() {
-		CellSink<Integer> bi = new CellSink<Integer>(9);
-		CellSink<Character> bc = new CellSink<Character>('a');
-		List<Character> out = new ArrayList<Character>();
-		Listener l = Transaction.run(
-		    () -> doubleUp(Operational.value(bi)).snapshot(bc).listen(x -> { out.add(x); })
-        );
-		bc.send('b');
-		bi.send(2);
-		bc.send('c');
-		bi.send(7);
-		l.unlisten();
-		assertEquals(Arrays.asList('a','a','b','b','c','c'), out);
-	}
-
 	public void testValuesThenMerge() {
 		CellSink<Integer> bi = new CellSink<Integer>(9);
 		CellSink<Integer> bj = new CellSink<Integer>(2);
@@ -176,35 +99,11 @@ public class CellTester extends TestCase {
 		assertEquals(Arrays.asList(9,2,7), out);
 	}
 
-	public void testValuesTwiceThenFilter() {
-		CellSink<Integer> b = new CellSink<Integer>(9);
-		List<Integer> out = new ArrayList<Integer>();
-		Listener l = Transaction.run(
-		    () -> doubleUp(Operational.value(b)).filter(a -> true).listen(x -> { out.add(x); })
-        );
-		b.send(2);
-		b.send(7);
-		l.unlisten();
-		assertEquals(Arrays.asList(9,9,2,2,7,7), out);
-	}
-
 	public void testValuesThenOnce() {
 		CellSink<Integer> b = new CellSink<Integer>(9);
 		List<Integer> out = new ArrayList<Integer>();
 		Listener l = Transaction.run(
 		    () -> Operational.value(b).once().listen(x -> { out.add(x); })
-        );
-		b.send(2);
-		b.send(7);
-		l.unlisten();
-		assertEquals(Arrays.asList(9), out);
-	}
-
-	public void testValuesTwiceThenOnce() {
-		CellSink<Integer> b = new CellSink<Integer>(9);
-		List<Integer> out = new ArrayList<Integer>();
-		Listener l = Transaction.run(
-		    () -> doubleUp(Operational.value(b)).once().listen(x -> { out.add(x); })
         );
 		b.send(2);
 		b.send(7);
