@@ -11,8 +11,8 @@ public class Promise<A> {
         this.sDeliver = sDeliver;
         this.oValue = oValue;
     }
-    private Stream<A> sDeliver;
-    public Cell<Optional<A>> oValue;
+    public final Stream<A> sDeliver;
+    public final Cell<Optional<A>> oValue;
     public final Stream<A> then() {
         return Stream.filterOptional(Operational.value(oValue))
             .merge(sDeliver).once();
