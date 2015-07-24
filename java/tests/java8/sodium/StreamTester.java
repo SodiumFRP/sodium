@@ -87,10 +87,9 @@ public class StreamTester extends TestCase {
 
     public void testCoalesce()
     {
-        StreamSink<Integer> s = new StreamSink();
+        StreamSink<Integer> s = new StreamSink<>((Integer a, Integer b) -> a+b);
         List<Integer> out = new ArrayList();
         Listener l = s
-            .coalesce((Integer a, Integer b) -> a+b)
             .listen((Integer x) -> { out.add(x); });
         Transaction.runVoid(() -> {
             s.send(2);

@@ -15,8 +15,7 @@ data Stream a where
     Never    :: Stream a
     MapS     :: (a -> b) -> Stream a -> Stream b
     Snapshot :: (a -> b -> c) -> Stream a -> Cell b -> Stream c
-    Merge    :: Stream a -> Stream a -> Stream a
-    Coalesce :: (a -> a -> a) -> Stream a -> Stream a
+    Merge    :: Stream a -> Stream a -> (a -> a -> a) -> Stream a
     Filter   :: (a -> Bool) -> Stream a -> Stream a
     SwitchS  :: Cell (Stream a) -> Stream a
     Execute  :: Stream (Reactive a) -> Stream a
@@ -36,11 +35,10 @@ occs Never = []
 occs (MapS f s) = map (\(t, a) -> (t, f a)) (occs s)
 occs (Snapshot f s c) = map (\(t, a) -> (t, f a (at stsb t))) (occs s)
   where stsb = steps c
-occs (Merge sa sb) = knit (occs sa) (occs sb)
+occs (Merge sa sb f) = coalesce f (knit (occs sa) (occs sb))
   where knit ((ta, a):as) bs@((tb, _):_) | ta <= tb = (ta, a) : knit as bs
         knit as@((ta, _):_) ((tb, b):bs) = (tb, b) : knit as bs
         knit as bs = as ++ bs
-occs (Coalesce f s) = doCoalesce f (occs s)
 occs (Filter pred s) = filter (\(t, a) -> pred a) (occs s)
 occs (SwitchS c) = scan Nothing a sts
   where (a, sts) = steps c
@@ -52,15 +50,15 @@ occs (SwitchS c) = scan Nothing a sts
 occs (Execute s) = map (\(t, ma) -> (t, run ma t)) (occs s)
 occs (Updates c) = sts
   where (_, sts) = steps c
-occs (Value c t0) = doCoalesce (flip const) ((t0, a) : sts)
+occs (Value c t0) = coalesce (flip const) ((t0, a) : sts)
   where (a, sts) = chopFront (steps c) t0
-occs (Split s) = concatMap split (doCoalesce (++) (occs s))
+occs (Split s) = concatMap split (coalesce (++) (occs s))
   where split (t, as) = zipWith (\n a -> (t++[n], a)) [0..] as
 
-doCoalesce :: (a -> a -> a) -> S a -> S a
-doCoalesce f ((t1, a1):(t2, a2):as) | t1 == t2 = doCoalesce f ((t1, f a1 a2):as)
-doCoalesce f (ta:as) = ta : doCoalesce f as
-doCoalesce f [] = []
+coalesce :: (a -> a -> a) -> S a -> S a
+coalesce f ((t1, a1):(t2, a2):as) | t1 == t2 = coalesce f ((t1, f a1 a2):as)
+coalesce f (ta:as) = ta : coalesce f as
+coalesce f [] = []
 
 data Cell a where
     Constant :: a -> Cell a
@@ -71,7 +69,7 @@ data Cell a where
 
 steps :: Cell a -> C a
 steps (Constant a) = (a, [])
-steps (Hold a s t0) = (a, doCoalesce (flip const)
+steps (Hold a s t0) = (a, coalesce (flip const)
     (filter (\(t, a) -> t >= t0) (occs s)))
 steps (MapC f c) = (f a, map (\(t, a) -> (t, f a)) sts)
     where (a, sts) = steps c
@@ -85,7 +83,7 @@ steps (Apply cf ca) = (f a, knit f fsts a asts)
           knit f [] _ ((ta, a):as) = (ta, f a) : knit f [] a as
           knit _ [] _ [] = []
 steps (SwitchC c t0) = (at (steps (at (steps c) t0)) t0,
-        doCoalesce (flip const) (scan t0 a sts))
+        coalesce (flip const) (scan t0 a sts))
     where (a, sts) = steps c
           scan t0 a0 ((t1, a1):as) =
               let (b, stsb) = normalize (chopBack (chopFront (steps a0) t0) t1)
@@ -146,14 +144,10 @@ tests = test [
         let s3 = snapshot2 (flip const) s1 c
         assertEqual "s3" (occs s2) (occs s3),
     "Merge" ~: do
-        let s1 = MkStream [([0], 'a'), ([2], 'b')]
-        let s2 = MkStream [([1], 'X'), ([2], 'Y'), ([3], 'Z')]
-        let s3 = Merge s1 s2
-        assertEqual "s3" [([0],'a'),([1],'X'),([2],'b'),([2],'Y'),([3],'Z')] (occs s3),
-    "Coalesce" ~: do
-        let s1 = MkStream [([0], 1), ([1], 3), ([1], 4), ([2], 9)]
-        let s2 = Coalesce (+) s1
-        assertEqual "s2" [([0],1),([1],7),([2],9)] (occs s2),
+        let s1 = MkStream [([0], 0), ([2], 2)]
+        let s2 = MkStream [([1], 10), ([2], 20), ([3], 30)]
+        let s3 = Merge s1 s2 (+)
+        assertEqual "s3" [([0],0),([1],10),([2],22),([3],30)] (occs s3),
     "Filter" ~: do
         let s1 = MkStream [([0], 5), ([1], 6), ([2], 7)]
         let s2 = Filter odd s1

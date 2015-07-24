@@ -6,7 +6,27 @@ package sodium;
  * should downcast to {@link Stream}.
  */
 public class StreamSink<A> extends StreamWithSend<A> {
-    public StreamSink() {}
+    /**
+     * If you send more than one event in a transaction, all are dropped except
+     * for the last one.
+     */
+    public StreamSink() {
+        this(new Lambda2<A,A,A>() {
+                 public A apply(A left, A right) { return right; }
+             });
+    }
+    /**
+     * If you send more than one event in a transaction, they are combined into a
+     * single event using the specified function. The combining function should be
+     * <em>associative</em>.
+     * @param f Function to combine the values. It may construct FRP logic or use
+     *    {@link Cell#sample()}. Apart from this the function must be <em>referentially transparent</em>.
+     */
+    public StreamSink(Lambda2<A,A,A> f) {
+        this.coalescer = new CoalesceHandler<A>(f, this);
+    }
+
+    private CoalesceHandler<A> coalescer;
 
     /**
      * Send a value to be made available to consumers of the stream. send(A) may not be used inside
@@ -20,7 +40,7 @@ public class StreamSink<A> extends StreamWithSend<A> {
 			public void run(Transaction trans) {
                 if (trans.inCallback > 0)
                     throw new RuntimeException("You are not allowed to use send() inside a Sodium callback");
-                send(trans, a);
+                coalescer.run(trans, a);
             }
 		});
 	}

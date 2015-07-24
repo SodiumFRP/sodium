@@ -7,11 +7,10 @@ public abstract class Junction<ContainerA, A> {
     private int nextID;
     private StreamSink<Lambda1<Map<Integer, ContainerA>,
                                Map<Integer, ContainerA>>> sUpdate
-        = new StreamSink<>();
+        = new StreamSink<>((f1, f2) -> a -> f1.apply(f2.apply(a)));
     protected Cell<Collection<ContainerA>> clients;
     public Junction() {
         clients = sUpdate
-            .coalesce((f1, f2) -> a -> f1.apply(f2.apply(a)))
             .<Map<Integer, ContainerA>>accum(
                 new HashMap<Integer, ContainerA>(),
                 (f, m) -> f.apply(m))

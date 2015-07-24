@@ -129,7 +129,7 @@ public class Stream<A> {
 	public final <B> Stream<B> map(final Lambda1<A,B> f)
 	{
 	    final Stream<A> ev = this;
-	    final StreamSink<B> out = new StreamSink<B>();
+	    final StreamWithSend<B> out = new StreamWithSend<B>();
         Listener l = listen_(out.node, new TransactionHandler<A>() {
         	public void run(Transaction trans2, A a) {
 	            out.send(trans2, f.apply(a));
@@ -197,7 +197,7 @@ public class Stream<A> {
 	public final <B,C> Stream<C> snapshot(final Cell<B> c, final Lambda2<A,B,C> f)
 	{
 	    final Stream<A> ev = this;
-		final StreamSink<C> out = new StreamSink<C>();
+		final StreamWithSend<C> out = new StreamWithSend<C>();
         Listener l = listen_(out.node, new TransactionHandler<A>() {
         	public void run(Transaction trans2, A a) {
 	            out.send(trans2, f.apply(a, c.sampleNoTrans()));
@@ -223,9 +223,9 @@ public class Stream<A> {
         });
 	}
 
-	private static <A> Stream<A> merge_(final Stream<A> ea, final Stream<A> eb)
+	private static <A> Stream<A> merge(final Stream<A> ea, final Stream<A> eb)
 	{
-	    final StreamSink<A> out = new StreamSink<A>();
+	    final StreamWithSend<A> out = new StreamWithSend<A>();
         final Node left = new Node(0);
         final Node right = out.node;
         Node.Target[] node_target_ = new Node.Target[1];
@@ -261,31 +261,15 @@ public class Stream<A> {
     {
 	    return Transaction.apply(new Lambda1<Transaction, Stream<A>>() {
 	    	public Stream<A> apply(Transaction trans) {
-                return Stream.<A>merge_(Stream.this, s).coalesce(trans, f);
+                return Stream.<A>merge(Stream.this, s).coalesce(trans, f);
 	    	}
 	    });
-    }
-
-    /**
-     * Coalesce simultaneous events on a single stream into one. This is only useful in the
-     * situation where {@link StreamSink#send(Object)} has been called multiple times in a transaction on the same
-     * {@link StreamSink}. The combining function should be <em>associative</em>.
-     * @param f Function to combine the values. It may construct FRP logic or use
-     *    {@link Cell#sample()}. Apart from this the function must be <em>referentially transparent</em>.
-     */
-    public final Stream<A> coalesce(final Lambda2<A,A,A> f)
-    {
-        return Transaction.apply(new Lambda1<Transaction, Stream<A>>() {
-            public Stream<A> apply(Transaction trans) {
-                    return coalesce(trans, f);
-            }
-        });
     }
 
 	private final Stream<A> coalesce(Transaction trans1, final Lambda2<A,A,A> f)
 	{
 	    final Stream<A> ev = this;
-	    final StreamSink<A> out = new StreamSink<A>();
+	    final StreamWithSend<A> out = new StreamWithSend<A>();
         TransactionHandler<A> h = new CoalesceHandler<A>(f, out);
         Listener l = listen(out.node, trans1, h, false);
         return out.unsafeAddCleanup(l);
@@ -297,7 +281,7 @@ public class Stream<A> {
 	 */
 	public final Stream<A> defer()
 	{
-	    final StreamSink<A> out = new StreamSink<A>();
+	    final StreamWithSend<A> out = new StreamWithSend<A>();
 	    Listener l1 = listen_(out.node, new TransactionHandler<A>() {
 	        public void run(Transaction trans, final A a) {
 	            trans.post_(new Runnable() {
@@ -321,7 +305,7 @@ public class Stream<A> {
 	 */
     public static final <A, C extends Collection<A>> Stream<A> split(Stream<C> s)
     {
-	    final StreamSink<A> out = new StreamSink<A>();
+	    final StreamWithSend<A> out = new StreamWithSend<A>();
 	    Listener l1 = s.listen_(out.node, new TransactionHandler<C>() {
 	        public void run(Transaction trans, final C as) {
 	            trans.post_(new Runnable() {
@@ -357,7 +341,7 @@ public class Stream<A> {
     public final Stream<A> filter(final Lambda1<A,Boolean> predicate)
     {
         final Stream<A> ev = this;
-        final StreamSink<A> out = new StreamSink<A>();
+        final StreamWithSend<A> out = new StreamWithSend<A>();
         Listener l = listen_(out.node, new TransactionHandler<A>() {
         	public void run(Transaction trans2, A a) {
 	            if (predicate.apply(a)) out.send(trans2, a);
@@ -372,7 +356,7 @@ public class Stream<A> {
      */
     public static final <A> Stream<A> filterOptional(final Stream<Optional<A>> ev)
     {
-        final StreamSink<A> out = new StreamSink<A>();
+        final StreamWithSend<A> out = new StreamWithSend<A>();
         Listener l = ev.listen_(out.node, new TransactionHandler<Optional<A>>() {
         	public void run(Transaction trans2, Optional<A> oa) {
 	            if (oa.isPresent()) out.send(trans2, oa.get());
@@ -469,7 +453,7 @@ public class Stream<A> {
         // the listener.
         final Stream<A> ev = this;
         final Listener[] la = new Listener[1];
-        final StreamSink<A> out = new StreamSink<A>();
+        final StreamWithSend<A> out = new StreamWithSend<A>();
         la[0] = ev.listen_(out.node, new TransactionHandler<A>() {
         	public void run(Transaction trans, A a) {
 	            if (la[0] != null) {
@@ -517,34 +501,3 @@ public class Stream<A> {
 			l.unlisten();
 	}
 }
-
-class CoalesceHandler<A> implements TransactionHandler<A>
-{
-	public CoalesceHandler(Lambda2<A,A,A> f, StreamSink<A> out)
-	{
-	    this.f = f;
-	    this.out = out;
-	}
-	private Lambda2<A,A,A> f;
-	private StreamSink<A> out;
-    private boolean accumValid = false;
-    private A accum;
-    @Override
-    public void run(Transaction trans1, A a) {
-        if (accumValid)
-            accum = f.apply(accum, a);
-        else {
-        	final CoalesceHandler<A> thiz = this;
-            trans1.prioritized(out.node, new Handler<Transaction>() {
-            	public void run(Transaction trans2) {
-                    out.send(trans2, thiz.accum);
-                    thiz.accumValid = false;
-                    thiz.accum = null;
-                }
-            });
-            accum = a;
-            accumValid = true;
-        }
-    }
-}
-

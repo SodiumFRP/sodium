@@ -58,8 +58,8 @@ public class Cell<A> {
      * <p>
      * It may be used inside the functions passed to primitives that apply them to {@link Stream}s,
      * including {@link Stream#map(Lambda1)} in which case it is equivalent to snapshotting the cell,
-     * {@link Stream#snapshot(Cell, Lambda2)}, {@link Stream#filter(Lambda1)},
-     * {@link Stream#merge(Stream, Lambda2)}, and {@link Stream#coalesce(Lambda2)}.
+     * {@link Stream#snapshot(Cell, Lambda2)}, {@link Stream#filter(Lambda1)} and
+     * {@link Stream#merge(Stream, Lambda2)}.
      * It should generally be avoided in favour of {@link listen(Handler)} so you don't
      * miss any updates, but in many circumstances it makes sense.
      */
@@ -127,7 +127,7 @@ public class Cell<A> {
 
     final Stream<A> value(Transaction trans1)
     {
-    	final StreamSink<Unit> sSpark = new StreamSink<Unit>();
+    	final StreamWithSend<Unit> sSpark = new StreamWithSend<Unit>();
         trans1.prioritized(sSpark.node, new Handler<Transaction>() {
             public void run(Transaction trans2) {
                 sSpark.send(trans2, Unit.UNIT);
@@ -299,7 +299,7 @@ public class Cell<A> {
 	{
     	return Transaction.apply(new Lambda1<Transaction, Cell<B>>() {
     		public Cell<B> apply(Transaction trans0) {
-                final StreamSink<B> out = new StreamSink<B>();
+                final StreamWithSend<B> out = new StreamWithSend<B>();
 
                 class ApplyHandler implements Handler<Transaction> {
                     ApplyHandler(Transaction trans0) {
@@ -362,7 +362,7 @@ public class Cell<A> {
                         return ba.sample();
                     }
                 });
-                final StreamSink<A> out = new StreamSink<A>();
+                final StreamWithSend<A> out = new StreamWithSend<A>();
                 TransactionHandler<Cell<A>> h = new TransactionHandler<Cell<A>>() {
                     private Listener currentListener;
                     @Override
@@ -408,7 +408,7 @@ public class Cell<A> {
 
 	private static <A> Stream<A> switchS(final Transaction trans1, final Cell<Stream<A>> bea)
 	{
-        final StreamSink<A> out = new StreamSink<A>();
+        final StreamWithSend<A> out = new StreamWithSend<A>();
         final TransactionHandler<A> h2 = new TransactionHandler<A>() {
         	public void run(Transaction trans2, A a) {
 	            out.send(trans2, a);
