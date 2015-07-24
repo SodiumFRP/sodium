@@ -33,10 +33,6 @@ public class Promise<A> {
                 Optional<A> oa;
                 Optional<B> ob;
             };
-            Lambda1<A,Tuple> mkA = a ->
-                new Tuple(Optional.of(a), Optional.empty());
-            Lambda1<B,Tuple> mkB = b ->
-                new Tuple(Optional.empty(), Optional.of(b));
             Lambda2<Tuple,Tuple,Tuple> combine = (l, r) -> new Tuple(
                 l.oa.isPresent() ? l.oa : r.oa,
                 l.ob.isPresent() ? l.ob : r.ob);
