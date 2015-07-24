@@ -6,7 +6,7 @@ public class BackEnd {
     public final <A> Value<A> allocate(String name, A initA) {
         StreamJunction<A> j = new StreamJunction<>();
         StreamSink<A> s0 = new StreamSink<>();
-        Listener l = j.out.listen(a -> {
+        Listener l = j.out.listenWeak(a -> {
             new Thread(() -> {
                 try { Thread.sleep(50); }
                         catch (InterruptedException e) {}

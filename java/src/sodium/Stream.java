@@ -3,6 +3,7 @@ package sodium;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.HashSet;
 import java.util.Optional;
 
 /**
@@ -59,25 +60,51 @@ public class Stream<A> {
         this.firings = firings;
 	}
 
+    static HashSet<Listener> keepListenersAlive = new HashSet<Listener>();
+
 	/**
 	 * Listen for events/firings on this stream. This is the observer pattern. The
 	 * returned {@link Listener} has a {@link Listener#unlisten()} method to cause the
 	 * listener to be removed. This is an OPERATIONAL mechanism is for interfacing between
 	 * the world of I/O and for FRP.
-	 * @param action The handler to execute when there's a new value.
+	 * @param handler The handler to execute when there's a new value.
 	 *   You should make no assumptions about what thread you are called on, and the
 	 *   handler should not block. You are not allowed to use {@link CellSink#send(Object)}
 	 *   or {@link StreamSink#send(Object)} in the handler.
 	 *   An exception will be thrown, because you are not meant to use this to create
 	 *   your own primitives.
      */
-	public final Listener listen(final Handler<A> action) {
-		return listen_(Node.NULL, new TransactionHandler<A>() {
-			public void run(Transaction trans2, A a) {
-				action.run(a);
-			}
-		});
+	public final Listener listen(final Handler<A> handler) {
+        final Listener l0 = listenWeak(handler);
+        Listener l = new Listener() {
+            public void unlisten() {
+                l0.unlisten();
+                synchronized (keepListenersAlive) {
+                    keepListenersAlive.remove(this);
+                }
+            }
+        };
+        synchronized (keepListenersAlive) {
+            keepListenersAlive.add(l);
+        }
+        return l;
 	}
+
+    /**
+     * A variant of {@link listen(Handler)} that handles the first event and then
+     * automatically deregisters itself. This is useful for implementing things that
+     * work like promises.
+     */
+    public final Listener listenOnce(final Handler<A> handler) {
+        final Listener[] lRef = new Listener[1];
+        lRef[0] = listen(new Handler<A>() {
+            public void run(A a) {
+                lRef[0].unlisten();
+                handler.run(a);
+            }
+        });
+        return lRef[0];
+    }
 
 	final Listener listen_(final Node target, final TransactionHandler<A> action) {
 		return Transaction.apply(new Lambda1<Transaction, Listener>() {
@@ -86,6 +113,22 @@ public class Stream<A> {
 			}
 		});
 	}
+
+    /**
+     * A variant of {@link listen(Handler)} that will deregister the listener automatically
+     * if the listener is garbage collected. With {@link listen(Handler)}, the listener is
+     * only deregistered if {@link Listener#unlisten()} is called explicitly.
+     * <P>
+     * This method should be used for listeners that are to be passed to {@link Stream#addCleanup(Listener)}
+     * to ensure that things don't get kept alive when they shouldn't.
+     */
+    public final Listener listenWeak(final Handler<A> action) {
+		return listen_(Node.NULL, new TransactionHandler<A>() {
+			public void run(Transaction trans2, A a) {
+				action.run(a);
+			}
+		});
+    }
 
 	@SuppressWarnings("unchecked")
 	final Listener listen(Node target, Transaction trans, final TransactionHandler<A> action, boolean suppressEarlierFirings) {
@@ -511,6 +554,9 @@ public class Stream<A> {
      * Attach a listener to this stream so that its {@link Listener#unlisten()} is invoked
      * when this stream is garbage collected. Useful for functions that initiate I/O,
      * returning the result of it through a stream.
+     * <P>
+     * You must use this only with listeners returned by {@link listenWeak(Handler)} so that
+     * things don't get kept alive when they shouldn't.
      */
     public Stream<A> addCleanup(final Listener cleanup) {
         return Transaction.run(new Lambda0<Stream<A>>() {

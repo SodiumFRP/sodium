@@ -27,7 +27,7 @@ public class Lookup {
     public static final
     Lambda1<Stream<String>, Stream<Optional<String>>> lookup = sWord -> {
         StreamSink<Optional<String>> sDefinition = new StreamSink<>();
-        Listener l = sWord.listen(wrd -> {
+        Listener l = sWord.listenWeak(wrd -> {
             new Thread() {
                 public void run() {
                     System.out.println("look up "+wrd);

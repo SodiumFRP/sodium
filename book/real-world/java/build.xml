@@ -53,4 +53,22 @@
         </java>
     </target>
 
+    <target name="promise1" depends="compile">
+        <java classname="promise1" fork="true">
+            <classpath>
+                <pathelement path="build/"/>
+                <pathelement path="../../../java/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="promise2" depends="compile">
+        <java classname="promise2" fork="true">
+            <classpath>
+                <pathelement path="build/"/>
+                <pathelement path="../../../java/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
 </project>
