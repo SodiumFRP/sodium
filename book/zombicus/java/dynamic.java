@@ -21,12 +21,6 @@ public class dynamic {
                 }, out, c);
         return out;
     }
-    static <A> Stream<A> merges(Collection<Stream<A>> in) {
-        Stream<A> sOut = new Stream<>();
-        for (Stream<A> c : in)
-            sOut = sOut.merge(c);
-        return sOut;
-    }
     public static Stream<Unit> periodicTimer(
             Cell<Double> time, Stream<Unit> sTick, double period) {
         CellLoop<Double> tAlarm = new CellLoop<>();
@@ -129,10 +123,10 @@ public class dynamic {
                                         sequence(st.chars.values()));
             this.scene = Cell.switchC(cchars);
             Cell<Stream<Integer>> csBite = state.map(st ->
-                                        merges(st.sBites.values()));
+                                        Stream.merge(st.sBites.values()));
             this.sBite = Cell.switchS(csBite);
             Cell<Stream<Integer>> csDestroy = state.map(st ->
-                                        merges(st.sDestroys.values()));
+                                     Stream.merge(st.sDestroys.values()));
             this.sDestroy = Cell.switchS(csDestroy);
         }
         final Cell<List<Character>> scene;

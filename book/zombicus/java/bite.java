@@ -17,12 +17,6 @@ public class bite {
                 }, out, c);
         return out;
     }
-    static <A> Stream<A> merges(Collection<Stream<A>> in) {
-        Stream<A> sOut = new Stream<>();
-        for (Stream<A> c : in)
-            sOut = sOut.merge(c);
-        return sOut;
-    }
     static class CreateCharacters {
         CreateCharacters(Cell<Double> time,
                     Stream<Unit> sTick, World world,
@@ -49,7 +43,7 @@ public class bite {
                     id++;
                 }
             this.scene = sequence(chars);
-            this.sBite = merges(sBites);
+            this.sBite = Stream.merge(sBites);
         }
         final Cell<List<Character>> scene;
         final Stream<Integer> sBite;

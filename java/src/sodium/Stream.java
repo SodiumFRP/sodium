@@ -216,7 +216,7 @@ public class Stream<A> {
      * If you want to specify your own combining function, use {@link Stream#merge(Stream, Lambda2)}.
      * merge(s) is equivalent to merge(s, (l, r) -&gt; r).
      */
-	public Stream<A> merge(final Stream<A> s)
+	public final Stream<A> merge(final Stream<A> s)
 	{
 	    return merge(s, new Lambda2<A,A,A>() {
             public A apply(A left, A right) { return right; }
@@ -257,13 +257,40 @@ public class Stream<A> {
      * @param f Function to combine the values. It may construct FRP logic or use
      *    {@link Cell#sample()}. Apart from this the function must be <em>referentially transparent</em>.
      */
-    public Stream<A> merge(final Stream<A> s, final Lambda2<A,A,A> f)
+    public final Stream<A> merge(final Stream<A> s, final Lambda2<A,A,A> f)
     {
 	    return Transaction.apply(new Lambda1<Transaction, Stream<A>>() {
 	    	public Stream<A> apply(Transaction trans) {
                 return Stream.<A>merge(Stream.this, s).coalesce(trans, f);
 	    	}
 	    });
+    }
+
+    /**
+     * Variant of {@link merge(Stream)} that merges a collection of streams.
+     */
+    public static <A> Stream<A> merge(Collection<Stream<A>> ss) {
+        return Stream.<A>merge(ss, new Lambda2<A,A,A>() {
+            public A apply(A left, A right) { return right; }
+        });
+    }
+
+    /**
+     * Variant of {@link merge(Stream,Lambda2)} that merges a collection of streams.
+     */
+    public static <A> Stream<A> merge(Collection<Stream<A>> ss, final Lambda2<A,A,A> f) {
+        Stream<A>[] ss_ = (Stream<A>[])ss.toArray(new Stream[ss.size()]);
+        return merge(ss_, 0, ss_.length, f);
+    }
+
+    private static <A> Stream<A> merge(Stream<A> sas[], int start, int end, final Lambda2<A,A,A> f) {
+        int len = end - start;
+        if (len == 0) return new Stream<A>(); else
+        if (len == 1) return sas[start]; else
+        if (len == 2) return sas[start].merge(sas[start+1], f); else {
+            int mid = (start + end) / 2;
+            return Stream.<A>merge(sas, start, mid, f).merge(Stream.<A>merge(sas, mid, end, f), f);
+        }
     }
 
 	private final Stream<A> coalesce(Transaction trans1, final Lambda2<A,A,A> f)
@@ -303,7 +330,7 @@ public class Stream<A> {
 	 * Push each event in the list onto a newly created transaction guaranteed
 	 * to come before the next externally initiated transaction.
 	 */
-    public static final <A, C extends Collection<A>> Stream<A> split(Stream<C> s)
+    public static <A, C extends Collection<A>> Stream<A> split(Stream<C> s)
     {
 	    final StreamWithSend<A> out = new StreamWithSend<A>();
 	    Listener l1 = s.listen_(out.node, new TransactionHandler<C>() {
@@ -354,7 +381,7 @@ public class Stream<A> {
      * Return a stream that only outputs events that have present
      * values, removing the {@link java.util.Optional} wrapper, discarding empty values.
      */
-    public static final <A> Stream<A> filterOptional(final Stream<Optional<A>> ev)
+    public static <A> Stream<A> filterOptional(final Stream<Optional<A>> ev)
     {
         final StreamWithSend<A> out = new StreamWithSend<A>();
         Listener l = ev.listen_(out.node, new TransactionHandler<Optional<A>>() {
