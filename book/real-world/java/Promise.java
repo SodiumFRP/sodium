@@ -7,8 +7,8 @@ public class Promise<A> {
         this.oValue = this.sDeliver.map(a -> Optional.of(a))
                                    .hold(Optional.empty());
     }
-    private Promise(Stream<A> sDeliver, Cell<Optional<A>> oValue) {
-        this.sDeliver = sDeliver;
+    private Promise(Cell<Optional<A>> oValue) {
+        this.sDeliver = Stream.filterOptional(Operational.updates(oValue));
         this.oValue = oValue;
     }
     public final Stream<A> sDeliver;
@@ -24,41 +24,13 @@ public class Promise<A> {
     }
     public static <A,B,C> Promise<C> lift(final Lambda2<A, B, C> f,
                                           Promise<A> pa, Promise<B> pb) {
-        return Transaction.run(() -> {
-            class Tuple {
-                Tuple(Optional<A> oa, Optional<B> ob) {
-                    this.oa = oa;
-                    this.ob = ob;
-                }
-                Optional<A> oa;
-                Optional<B> ob;
-            };
-            Lambda2<Tuple,Tuple,Tuple> combine = (l, r) -> new Tuple(
-                l.oa.isPresent() ? l.oa : r.oa,
-                l.ob.isPresent() ? l.ob : r.ob);
-            Lambda1<Tuple,Optional<C>> result = t ->
-                t.oa.isPresent() && t.ob.isPresent()
-                    ? Optional.of(f.apply(t.oa.get(), t.ob.get()))
-                    : Optional.empty();
-            Stream<Tuple> sA = pa.sDeliver.map(a ->
-                new Tuple(Optional.of(a), Optional.empty()));
-            Cell<Tuple> vA = pa.oValue.map(oa ->
-                new Tuple(oa, Optional.empty()));
-            Stream<Tuple> sB = pb.sDeliver.map(b ->
-                new Tuple(Optional.empty(), Optional.of(b)));
-            Cell<Tuple> vB = pb.oValue.map(ob ->
-                new Tuple(Optional.empty(), ob));
-            Stream<Tuple> sAArrives = sA.snapshot(vB, combine);
-            Stream<Tuple> sBArrives = sB.snapshot(vA, combine);
-            Stream<Tuple> sSimultaneous = sA.merge(sB, combine);
-            Stream<C> sDeliver = Stream.filterOptional(
-                    sAArrives.merge(sBArrives)
-                             .merge(sSimultaneous)
-                             .map(result)
-                ).once();
-            Cell<Optional<C>> oValue = Cell.lift(
-                combine, vA, vB).map(result);
-            return new Promise<C>(sDeliver, oValue);
-        });
+        return Transaction.run(() -> new Promise<C>(
+            Cell.lift(
+                (oa, ob) ->
+                    oa.isPresent() && ob.isPresent()
+                        ? Optional.of(f.apply(oa.get(), ob.get()))
+                        : Optional.empty(),
+                pa.oValue, pb.oValue)));
     }
 }
+
