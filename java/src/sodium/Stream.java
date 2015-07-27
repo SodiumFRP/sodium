@@ -514,8 +514,8 @@ public class Stream<A> {
     }
 
     /**
-     * Return a stream that outputs only one value: the next event occurrence of the
-     * input stream.
+     * Return a stream that outputs only one value: the next event of the
+     * input stream, starting from the transaction in which once() was invoked.
      */
     public final Stream<A> once()
     {
