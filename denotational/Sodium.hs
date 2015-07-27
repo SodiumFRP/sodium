@@ -7,7 +7,7 @@ import Control.Applicative
 
 type T = [Int]
 
-type S a = [(T, a)]         -- for non-decreasing T values
+type S a = [(T, a)]         -- for increasing T values
 type C a = (a, [(T, a)])    -- for increasing T values
 
 data Stream a where
