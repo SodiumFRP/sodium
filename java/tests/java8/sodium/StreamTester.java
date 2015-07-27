@@ -52,8 +52,8 @@ public class StreamTester extends TestCase {
 
     public void testMergeSimultaneous()
     {
-        StreamSink<Integer> s1 = new StreamSink();
-        StreamSink<Integer> s2 = new StreamSink();
+        StreamSink<Integer> s1 = new StreamSink((l,r) -> r);
+        StreamSink<Integer> s2 = new StreamSink((l,r) -> r);
         List<Integer> out = new ArrayList();
         Listener l = s1.merge(s2).listen(x -> { out.add(x); });
         Transaction.runVoid(() -> {

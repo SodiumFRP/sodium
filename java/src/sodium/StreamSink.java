@@ -7,13 +7,16 @@ package sodium;
  */
 public class StreamSink<A> extends StreamWithSend<A> {
     /**
-     * If you send more than one event in a transaction, all are dropped except
-     * for the last one.
+     * Construct a StreamSink that allows send() to be called once on it per transaction.
+     * If you call send() more than once, it will throw an exception. If you need to do
+     * this, then use {@link StreamSink(Lambda2)}.
      */
     public StreamSink() {
         this(new Lambda2<A,A,A>() {
-                 public A apply(A left, A right) { return right; }
-             });
+             public A apply(A left, A right) {
+                 throw new RuntimeException("send() called more than once per transaction, which isn't allowed. Did you want to combine the events? Then pass a combining function to your StreamSink constructor.");
+             }
+         });
     }
     /**
      * If you send more than one event in a transaction, they are combined into a
