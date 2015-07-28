@@ -424,14 +424,15 @@ namespace sodium {
         };
     };
 
-    template <class P EQ_DEF_PART>
     class transaction : public impl::transaction_
     {
         private:
-            transaction(const transaction<P>& other) {}
-            transaction<P>& operator = (const transaction<P>& other) { return *this; };
+            // Disallow copying
+            transaction(const transaction& other) : impl::transaction_(def_part::part()) {}
+            // Disallow copying
+            transaction& operator = (const transaction& other) { return *this; };
         public:
-            transaction() : transaction_(P::part()) {}
+            transaction() : impl::transaction_(def_part::part()) {}
             /*!
              * The destructor will close the transaction, so normally close() isn't needed.
              * But, in some cases you might want to close it earlier, and close() will do this for you.

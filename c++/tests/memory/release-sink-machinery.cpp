@@ -30,7 +30,7 @@ int main(int argc, char* argv[])
     behavior<string>* s[N];
     {
         printf("constructing\n");
-        transaction<def_part> t;
+        transaction t;
         for (int i = 0; i < N; i++) {
             ss[i] = new behavior_sink<behavior<string>>(behavior<string>(string()));
             s[i] = new behavior<string>(switch_b(*ss[i]));

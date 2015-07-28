@@ -22,7 +22,7 @@ int main(int argc, char* argv[])
     behavior<string>* os[N];
     std::function<void()> unlistens[N];
     {
-        transaction<def_part> t;
+        transaction t;
         for (int i = 0; i < N; i++) {
             as[i] = new behavior<string>("hello");
             bs[i] = new behavior_sink<string>("world");

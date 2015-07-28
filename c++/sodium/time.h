@@ -10,18 +10,22 @@ namespace sodium {
      * A timer that fires at the specified time.
      * The T class provides the implementation of a timer system.
      */
-    template <class P EQ_DEF_PART, class T>
-    event<unit, P> at(const T& timeSys, const behavior<boost::optional<typename T::time>, P>& tAlarm) {
+    template <class T>
+    event<typename T::time> at(const T& timeSys, const behavior<boost::optional<typename T::time>>& tAlarm) {
         using namespace boost;
         std::shared_ptr<optional<typename T::timer>> current(new optional<typename T::timer>);
-        event_sink<unit, P> eOut;
+        event_sink<typename T::time> eOut;
         auto kill = tAlarm.value().listen([current, eOut, timeSys] (const optional<typename T::time>& ot) {
             if (*current)
                 timeSys.cancel_timer(current->get());
-            *current = ot ? optional<typename T::timer>(
-                                timeSys.set_timer(ot.get(), [eOut] () { eOut.send(unit()); })
-                            )
-                          : optional<typename T::timer>();
+            if (ot) {
+                typename T::time t = ot.get();
+                *current = optional<typename T::timer>(
+                                timeSys.set_timer(ot.get(), [eOut, t] () { eOut.send(t); })
+                            );
+            }
+            else
+                *current = optional<typename T::timer>();
         });
         return eOut.add_cleanup(kill);
     }
@@ -50,25 +54,25 @@ namespace sodium {
     /*!
      * A behavior that always has the current clock time.
      */
-    template <class P EQ_DEF_PART, class T>
-    behavior<typename T::time,P> clock(const T& t)
+    template <class T>
+    behavior<typename T::time> clock(const T& t)
     {
-        return behavior<typename T::time,P>(SODIUM_SHARED_PTR<impl::behavior_impl>(
+        return behavior<typename T::time>(SODIUM_SHARED_PTR<impl::behavior_impl>(
             new impl::behavior_impl_time<T>(t)
         ));
     }
 
-    template <class P EQ_DEF_PART, class T>
-    event<unit, P> periodic_timer(const T& t, const behavior<typename T::time>& period) {
+    template <class T>
+    event<typename T::time> periodic_timer(const T& t, const behavior<typename T::time>& period) {
         using namespace boost;
         behavior_loop<optional<typename T::time>> tAlarm;
-        event<unit, P> eAlarm = at(t, tAlarm);
+        event<typename T::time> eAlarm = at(t, tAlarm);
         behavior<typename T::time> now = clock(t);
         tAlarm.loop(
-            eAlarm.template snapshot<optional<typename T::time>, optional<typename T::time>>(
-                tAlarm,
-                [period] (const unit&, const optional<typename T::time>& ota) {
-                    return optional<typename T::time>(ota.get() + period.sample());
+            eAlarm.template snapshot<typename T::time, optional<typename T::time>>(
+                period,
+                [] (const typename T::time& t, const typename T::time& p) {
+                    return optional<typename T::time>(t + p);
                 })
             .hold(optional<typename T::time>(now.sample())));
         return eAlarm;

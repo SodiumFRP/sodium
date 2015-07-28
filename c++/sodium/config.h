@@ -39,7 +39,6 @@
 #endif
 
 #if defined(SODIUM_NO_CXX11)
-#define EQ_DEF_PART
 #define SODIUM_SHARED_PTR   boost::shared_ptr
 namespace sodium {
     template <class T>
@@ -55,7 +54,6 @@ namespace sodium {
 #define SODIUM_TUPLE_GET    boost::get
 #define SODIUM_FORWARD_LIST std::list
 #else
-#define EQ_DEF_PART = sodium::def_part
 #define SODIUM_SHARED_PTR   std::shared_ptr
 #define SODIUM_MAKE_SHARED  std::make_shared
 #define SODIUM_WEAK_PTR     std::weak_ptr

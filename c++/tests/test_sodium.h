@@ -18,11 +18,6 @@ class test_sodium : public CppUnit::TestFixture {
     CPPUNIT_TEST(event1);
     CPPUNIT_TEST(map);
     CPPUNIT_TEST(merge_non_simultaneous);
-    CPPUNIT_TEST(merge_left_bias);
-    CPPUNIT_TEST(merge_left_bias_2a);
-    CPPUNIT_TEST(merge_left_bias_2b);
-    CPPUNIT_TEST(merge_simultaneous);
-    CPPUNIT_TEST(coalesce);
     CPPUNIT_TEST(filter);
     CPPUNIT_TEST(filter_optional1);
     CPPUNIT_TEST(loop_event1);
@@ -39,18 +34,13 @@ class test_sodium : public CppUnit::TestFixture {
     CPPUNIT_TEST(value_const);
     CPPUNIT_TEST(constant_behavior);
     CPPUNIT_TEST(value_then_map);
-    CPPUNIT_TEST(value_twice_then_map);
     CPPUNIT_TEST(value_then_coalesce);
-    CPPUNIT_TEST(value_twice_then_coalesce);
     CPPUNIT_TEST(value_then_snapshot);
-    CPPUNIT_TEST(value_twice_then_snapshot);
     CPPUNIT_TEST(value_then_merge);
     CPPUNIT_TEST(value_then_filter1);
     CPPUNIT_TEST(value_then_filter2a);
     CPPUNIT_TEST(value_then_filter2b);
-    CPPUNIT_TEST(value_twice_then_filter);
     CPPUNIT_TEST(value_then_once);
-    CPPUNIT_TEST(value_twice_then_once);
     CPPUNIT_TEST(value_late_listen);
     CPPUNIT_TEST(value_then_switch);
     CPPUNIT_TEST(mapB1);
@@ -84,16 +74,6 @@ public:
     void event1();
     void map();
     void merge_non_simultaneous();
-    void merge_left_bias();
-    void merge_left_bias_2_common(
-        sodium::event_sink<std::string> e1,
-        sodium::event_sink<std::string> e2,
-        sodium::event_sink<std::string> e3,
-        sodium::event<std::string> e,
-        std::shared_ptr<std::vector<std::string> > out);
-    void merge_left_bias_2a();
-    void merge_left_bias_2b();
-    void merge_simultaneous();
     void coalesce();
     void filter();
     void filter_optional1();
@@ -110,18 +90,13 @@ public:
     void value_const();
     void constant_behavior();
     void value_then_map();
-    void value_twice_then_map();
     void value_then_coalesce();
-    void value_twice_then_coalesce();
     void value_then_snapshot();
-    void value_twice_then_snapshot();
     void value_then_merge();
     void value_then_filter1();
     void value_then_filter2a();
     void value_then_filter2b();
-    void value_twice_then_filter();
     void value_then_once();
-    void value_twice_then_once();
     void value_late_listen();
     void value_then_switch();
     void mapB1();
