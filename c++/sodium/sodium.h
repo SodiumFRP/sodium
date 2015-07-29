@@ -594,6 +594,23 @@ namespace sodium {
                 return event<A>(value_(trans.impl())).coalesce();
             }
 
+            /*!
+             * Listen for updates to the value of this cell. This is the observer pattern. The
+             * returned {@link Listener} has a {@link Listener#unlisten()} method to cause the
+             * listener to be removed. This is an OPERATIONAL mechanism is for interfacing between
+             * the world of I/O and for FRP.
+             * @param action The handler to execute when there's a new value.
+             *   You should make no assumptions about what thread you are called on, and the
+             *   handler should not block. You are not allowed to use {@link CellSink#send(Object)}
+             *   or {@link StreamSink#send(Object)} in the handler.
+             *   An exception will be thrown, because you are not meant to use this to create
+             *   your own primitives.
+             */
+            std::function<void()> listen(const std::function<void(const A&)>& handle) const {
+                transaction trans;
+                return event<A>(value_(trans.impl())).coalesce().listen(handle);
+            }
+
             /**
              * Transform a behavior with a generalized state loop (a mealy machine). The function
              * is passed the input and the old state and returns the new state and output value.
