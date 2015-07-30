@@ -1959,19 +1959,16 @@ namespace sodium {
     struct stream : event<A> {
         stream() {}
         stream(const event<A>& other) : event<A>(other) {}
-        virtual ~stream() {}
     };
     template <class A>
     struct stream_sink : event_sink<A> {
         stream_sink() {}
         stream_sink(const event_sink<A>& other) : event_sink<A>(other) {}
-        virtual ~stream_sink() {}
     };
     template <class A>
     struct stream_loop : event_loop<A> {
         stream_loop() {}
         stream_loop(const event_loop<A>& other) : stream_loop<A>(other) {}
-        virtual ~stream_loop() {}
     };
     template <class A>
     struct cell : behavior<A> {
@@ -1981,6 +1978,10 @@ namespace sodium {
     template <class A>
     struct cell_sink : behavior_sink<A> {
         cell_sink(const A& initValue) : behavior_sink<A>(initValue) {}
+    };
+    template <class A>
+    struct cell_loop : behavior_loop<A> {
+        cell_loop() {}
     };
 }  // end namespace sodium
 #endif
