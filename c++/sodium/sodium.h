@@ -1249,7 +1249,11 @@ namespace sodium {
         public:
             event_sink()
             {
-                *reinterpret_cast<event<A>*>(this) = impl.construct();
+                *static_cast<event<A>*>(this) = event<A>(impl.construct()).coalesce();
+            }
+
+            event_sink(const std::function<A(const A&, const A&)>& f) {
+                *static_cast<event<A>*>(this) = event<A>(impl.construct()).coalesce(f);
             }
 
             void send(const A& a) const {
@@ -1963,6 +1967,7 @@ namespace sodium {
     template <class A>
     struct stream_sink : event_sink<A> {
         stream_sink() {}
+        stream_sink(const std::function<A(const A&, const A&)>& f) : event_sink<A>(f) {}
         stream_sink(const event_sink<A>& other) : event_sink<A>(other) {}
     };
     template <class A>
