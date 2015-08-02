@@ -568,7 +568,7 @@ schedulePost :: [Reactive ()] -> Reactive ()
 schedulePost tasks = Reactive $ modify $ \as -> as { asPost = Seq.fromList tasks >< asPost as }
 
 data Listen a = Listen { runListen_ :: Maybe (MVar Node) -> Bool -> (a -> Reactive ()) -> Reactive (IO ())
-                       , listenerKeepAlive  :: IORef ()
+                       , listenerKeepAlive :: Weak (IORef ())
                        }
 
 -- | Unwrap an event's listener machinery.
@@ -754,8 +754,8 @@ finalizeEvent ea unlisten = ea { getListenRaw = gl }
 finalizeListen :: Listen a -> IO () -> IO (Listen a)
 {-# NOINLINE finalizeListen #-}
 finalizeListen l unlisten = do
-    mkWeakIORef (listenerKeepAlive l) unlisten
-    return l
+    wRef <- mkWeakIORef (listenerKeepAlive l) unlisten
+    return $ l { listenerKeepAlive = wRef }
 
 -- | Add a finalizer to a Reactive.
 finalizeSample :: Sample a -> IO () -> IO (Sample a)
