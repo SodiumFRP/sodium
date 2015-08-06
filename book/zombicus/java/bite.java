@@ -3,6 +3,7 @@ import java.awt.Point;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
+import java.util.Set;
 import sodium.*;
 
 public class bite {
@@ -19,8 +20,8 @@ public class bite {
     }
     static class CreateCharacters {
         CreateCharacters(Cell<Double> time,
-                    Stream<Unit> sTick, World world,
-                    Cell<List<Character>> scene, Stream<Integer> sBite) {
+                Stream<Unit> sTick, World world,
+                Cell<List<Character>> scene, Stream<Set<Integer>> sBite) {
             List<Cell<Character>> chars = new ArrayList<>();
             List<Stream<Integer>> sBites = new ArrayList<>();
             int id = 0;
@@ -43,10 +44,10 @@ public class bite {
                     id++;
                 }
             this.scene = sequence(chars);
-            this.sBite = Stream.orElse(sBites);
+            this.sBite = Helper.mergeToSet(sBites);
         }
         final Cell<List<Character>> scene;
-        final Stream<Integer> sBite;
+        final Stream<Set<Integer>> sBite;
     }
     public static void main(String[] args)
     {
@@ -57,7 +58,7 @@ public class bite {
                                             Dimension windowSize) -> {
                 World world = new World(windowSize);
                 CellLoop<List<Character>> scene = new CellLoop<>();
-                StreamLoop<Integer> sBite = new StreamLoop<>();
+                StreamLoop<Set<Integer>> sBite = new StreamLoop<>();
                 CreateCharacters cc = new CreateCharacters(
                     time, sTick, world, scene, sBite);
                 scene.loop(cc.scene);

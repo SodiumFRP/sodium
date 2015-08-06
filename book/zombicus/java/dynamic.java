@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import sodium.*;
 
 public class dynamic {
@@ -67,16 +68,18 @@ public class dynamic {
             sDestroys.put(nextID, sDestroy);
             return new State(nextID+1, chars, sBites, sDestroys);
         }
-        State remove(int id) {
+        State remove(Set<Integer> ids) {
             Map<Integer, Cell<Character>> chars =
                                          new HashMap<>(this.chars);
             Map<Integer, Stream<Integer>> sBites =
                                          new HashMap<>(this.sBites);
             Map<Integer, Stream<Integer>> sDestroys =
                                          new HashMap<>(this.sDestroys);
-            chars.remove(id);
-            sBites.remove(id);
-            sDestroys.remove(id);
+            for (Integer id : ids) {
+                chars.remove(id);
+                sBites.remove(id);
+                sDestroys.remove(id);
+            }
             return new State(nextID, chars, sBites, sDestroys);
         }
     }
@@ -90,9 +93,9 @@ public class dynamic {
     }
     static class CreateCharacters {
         CreateCharacters(Cell<Double> time,
-                    Stream<Unit> sTick, World world,
-                    Cell<List<Character>> scene, Stream<Integer> sBite,
-                    Stream<Integer> sDestroy) {
+                Stream<Unit> sTick, World world,
+                Cell<List<Character>> scene, Stream<Set<Integer>> sBite,
+                Stream<Set<Integer>> sDestroy) {
             State initState = new State();
             HomoZombicus z = new HomoZombicus(initState.nextID,
                 new Point(36,332), time, sTick, scene);
@@ -113,8 +116,8 @@ public class dynamic {
                                 world));
                     }
                 );
-            Stream<Lambda1<State, State>> sRemove = sDestroy.map(id ->
-                                                    st -> st.remove(id));
+            Stream<Lambda1<State, State>> sRemove
+                             = sDestroy.map(ids -> st -> st.remove(ids));
             Stream<Lambda1<State, State>> sChange = sAdd.merge(sRemove,
                 (f1, f2) -> a -> f1.apply(f2.apply(a))); 
             state.loop(sChange.snapshot(state, (f, st) -> f.apply(st))
@@ -122,16 +125,16 @@ public class dynamic {
             Cell<Cell<List<Character>>> cchars = state.map(st ->
                                         sequence(st.chars.values()));
             this.scene = Cell.switchC(cchars);
-            Cell<Stream<Integer>> csBite = state.map(st ->
-                                        Stream.orElse(st.sBites.values()));
+            Cell<Stream<Set<Integer>>> csBite = state.map(st ->
+                               Helper.mergeToSet(st.sBites.values()));
             this.sBite = Cell.switchS(csBite);
-            Cell<Stream<Integer>> csDestroy = state.map(st ->
-                                     Stream.orElse(st.sDestroys.values()));
+            Cell<Stream<Set<Integer>>> csDestroy = state.map(st ->
+                               Helper.mergeToSet(st.sDestroys.values()));
             this.sDestroy = Cell.switchS(csDestroy);
         }
         final Cell<List<Character>> scene;
-        final Stream<Integer> sBite;
-        final Stream<Integer> sDestroy;
+        final Stream<Set<Integer>> sBite;
+        final Stream<Set<Integer>> sDestroy;
     }
 
     public static void main(String[] args)
@@ -159,8 +162,8 @@ public class dynamic {
                                             Dimension windowSize) -> {
                 World world = new World(windowSize, obstacles);
                 CellLoop<List<Character>> scene = new CellLoop<>();
-                StreamLoop<Integer> sBite = new StreamLoop<>();
-                StreamLoop<Integer> sDestroy = new StreamLoop<>();
+                StreamLoop<Set<Integer>> sBite = new StreamLoop<>();
+                StreamLoop<Set<Integer>> sDestroy = new StreamLoop<>();
                 CreateCharacters cc = new CreateCharacters(
                     time, sTick, world, scene, sBite, sDestroy);
                 scene.loop(cc.scene);

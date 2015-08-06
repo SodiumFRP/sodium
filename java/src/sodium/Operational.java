@@ -1,6 +1,5 @@
 package sodium;
 
-import java.util.Collection;
 import java.util.LinkedList;
 
 
@@ -51,8 +50,8 @@ public class Operational {
 	 */
 	public static <A> Stream<A> defer(Stream<A> s)
 	{
-	    return split(s.map(new Lambda1<A,Collection<A>>() {
-	        public Collection<A> apply(A a) {
+	    return split(s.map(new Lambda1<A,Iterable<A>>() {
+	        public Iterable<A> apply(A a) {
                 LinkedList<A> l = new LinkedList<A>();
                 l.add(a);
                 return l;
@@ -67,7 +66,7 @@ public class Operational {
 	 * new transaction, so the resulting stream's events could be simultaneous with
 	 * events output by split() or {@link defer(Stream)} invoked elsewhere in the code.
 	 */
-    public static <A, C extends Collection<A>> Stream<A> split(Stream<C> s) {
+    public static <A, C extends Iterable<A>> Stream<A> split(Stream<C> s) {
 	    final StreamWithSend<A> out = new StreamWithSend<A>();
 	    Listener l1 = s.listen_(out.node, new TransactionHandler<C>() {
 	        public void run(Transaction trans, C as) {

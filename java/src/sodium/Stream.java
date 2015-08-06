@@ -1,10 +1,10 @@
 package sodium;
 
 import java.util.ArrayList;
-import java.util.Collection;
 import java.util.List;
 import java.util.HashSet;
 import java.util.Optional;
+import java.util.Vector;
 
 /**
  * Represents a stream of discrete events/firings containing values of type A. 
@@ -315,7 +315,7 @@ public class Stream<A> {
     /**
      * Variant of {@link orElse(Stream)} that merges a collection of streams.
      */
-    public static <A> Stream<A> orElse(Collection<Stream<A>> ss) {
+    public static <A> Stream<A> orElse(Iterable<Stream<A>> ss) {
         return Stream.<A>merge(ss, new Lambda2<A,A,A>() {
             public A apply(A left, A right) { return right; }
         });
@@ -324,16 +324,18 @@ public class Stream<A> {
     /**
      * Variant of {@link merge(Stream,Lambda2)} that merges a collection of streams.
      */
-    public static <A> Stream<A> merge(Collection<Stream<A>> ss, final Lambda2<A,A,A> f) {
-        Stream<A>[] ss_ = (Stream<A>[])ss.toArray(new Stream[ss.size()]);
-        return merge(ss_, 0, ss_.length, f);
+    public static <A> Stream<A> merge(Iterable<Stream<A>> ss, final Lambda2<A,A,A> f) {
+        Vector<Stream<A>> v = new Vector<Stream<A>>();
+        for (Stream<A> s : ss)
+            v.add(s);
+        return merge(v, 0, v.size(), f);
     }
 
-    private static <A> Stream<A> merge(Stream<A> sas[], int start, int end, final Lambda2<A,A,A> f) {
+    private static <A> Stream<A> merge(Vector<Stream<A>> sas, int start, int end, final Lambda2<A,A,A> f) {
         int len = end - start;
         if (len == 0) return new Stream<A>(); else
-        if (len == 1) return sas[start]; else
-        if (len == 2) return sas[start].merge(sas[start+1], f); else {
+        if (len == 1) return sas.get(start); else
+        if (len == 2) return sas.get(start).merge(sas.get(start+1), f); else {
             int mid = (start + end) / 2;
             return Stream.<A>merge(sas, start, mid, f).merge(Stream.<A>merge(sas, mid, end, f), f);
         }
