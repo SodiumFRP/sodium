@@ -15,7 +15,7 @@ public class Promise<A> {
     public final Cell<Optional<A>> oValue;
     public final Stream<A> then() {
         return Stream.filterOptional(Operational.value(oValue))
-            .merge(sDeliver).once();
+            .orElse(sDeliver).once();
     }
     public final void thenDo(Handler<A> h) {
         Transaction.runVoid(() ->

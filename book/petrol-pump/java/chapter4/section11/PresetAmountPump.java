@@ -49,7 +49,7 @@ public class PresetAmountPump implements Pump {
             .setSaleComplete(np.sSaleComplete)
             .setPresetLCD(ke.value.map(v ->
                 Formatters.formatSaleCost((double)v)))
-            .setBeep(np.sBeep.merge(ke.sBeep));
+            .setBeep(np.sBeep.orElse(ke.sBeep));
     }
 }
 

@@ -27,7 +27,7 @@ public class FrButton extends Fridget {
                     : Optional.empty()));
             Cell<Boolean> pressed =
                 sPressed.map(u -> true)
-                        .merge(sReleased.map(u -> false))
+                        .orElse(sReleased.map(u -> false))
                         .hold(false);
             sClicked.loop(sReleased.gate(pressed)); 
             Font font = new Font("Helvetica", Font.PLAIN, 13);

@@ -43,7 +43,7 @@ public class SSpinner extends JPanel {
 
         Stream<Integer> sPlusDelta = plus.sClicked.map(u -> 1);
         Stream<Integer> sMinusDelta = minus.sClicked.map(u -> -1);
-        Stream<Integer> sDelta = sPlusDelta.merge(sMinusDelta);
+        Stream<Integer> sDelta = sPlusDelta.orElse(sMinusDelta);
         sSetValue.loop(
             sDelta.snapshot(
                 this.value,

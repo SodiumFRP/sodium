@@ -48,7 +48,7 @@ public class FrFlow extends Fridget {
                 drawable = Cell.lift(
                     (drA, drB) -> drA.append(drB),
                     drawable, fo.drawable);
-                sChangeFocus = sChangeFocus.merge(fo.sChangeFocus);
+                sChangeFocus = sChangeFocus.orElse(fo.sChangeFocus);
             }
             return new Fridget.Output(drawable, desiredSize, sChangeFocus);
         });

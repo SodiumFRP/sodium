@@ -67,7 +67,7 @@ public class FrTextField extends Fridget {
                             return x_-1;
                     return txt.length();
                 })
-                .merge(sTextUpdate.map(tu -> tu.newX))
+                .orElse(sTextUpdate.map(tu -> tu.newX))
                 .hold(0));
             text.loop(sTextUpdate.map(tu -> tu.txt).hold(initText));
             Cell<Dimension> desiredSize = text.map(txt ->

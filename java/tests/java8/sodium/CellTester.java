@@ -379,7 +379,7 @@ public class CellTester extends TestCase {
         StreamSink<Integer> si = new StreamSink();
         Listener l = Cell.switchS(si.map(i -> {
             Cell<String> c = new Cell<>("A"+i);
-            return Operational.value(c).defer();
+            return Operational.defer(Operational.value(c));
         }).hold(new Stream<String>())).listen(x -> { out.add(x); });
         si.send(2);
         si.send(4);

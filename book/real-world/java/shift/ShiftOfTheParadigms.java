@@ -186,7 +186,7 @@ class FRP implements Paradigm {
                 sMouse.filter(me -> me.type == Type.UP)
                       .map(me -> sIdle);
             Stream<Document> sDocUpdate = Cell.switchS(
-                sStartDrag.merge(sEndDrag).hold(sIdle)
+                sStartDrag.orElse(sEndDrag).hold(sIdle)
             );
             doc.loop(sDocUpdate.hold(initDoc));
             return sDocUpdate.listen(doc_ -> dl.documentUpdated(doc_));

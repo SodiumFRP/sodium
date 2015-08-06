@@ -42,7 +42,7 @@ public class StreamTester extends TestCase {
         StreamSink<Integer> e1 = new StreamSink();
         StreamSink<Integer> e2 = new StreamSink();
         List<Integer> out = new ArrayList();
-        Listener l = e1.merge(e2).listen(x -> { out.add(x); });
+        Listener l = e2.orElse(e1).listen(x -> { out.add(x); });
         e1.send(7);
         e2.send(9);
         e1.send(8);
@@ -55,7 +55,7 @@ public class StreamTester extends TestCase {
         StreamSink<Integer> s1 = new StreamSink((l,r) -> r);
         StreamSink<Integer> s2 = new StreamSink((l,r) -> r);
         List<Integer> out = new ArrayList();
-        Listener l = s1.merge(s2).listen(x -> { out.add(x); });
+        Listener l = s2.orElse(s1).listen(x -> { out.add(x); });
         Transaction.runVoid(() -> {
             s1.send(7);
             s2.send(60);
@@ -208,7 +208,7 @@ public class StreamTester extends TestCase {
         StreamSink<Character> e = new StreamSink();
         Cell<Character> b = e.hold(' ');
         List<Character> out = new ArrayList();
-        Listener l = e.defer().snapshot(b).listen((x) -> { out.add(x); });
+        Listener l = Operational.defer(e).snapshot(b).listen((x) -> { out.add(x); });
         e.send('C');
         e.send('B');
         e.send('A');

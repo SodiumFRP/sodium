@@ -20,15 +20,15 @@ public class NotifyPointOfSale {
              Stream<Unit> sClearSale,
              Fill fi) {
         Cell<Boolean> locked =
-                lc.sStart.map(u -> true).merge(
+                lc.sStart.map(u -> true).orElse(
                 sClearSale.map(u -> false)).hold(false);
         sStart = lc.sStart.gate(locked.map(l -> !l));
         sEnd   = lc.sEnd.gate(locked);
         fuelFlowing =
-                sStart.map(f -> Optional.of(f)).merge(
+                sStart.map(f -> Optional.of(f)).orElse(
                 sEnd.map(f -> Optional.empty())).hold(Optional.empty());
         fillActive =
-             sStart.map(f -> Optional.of(f)).merge(
+             sStart.map(f -> Optional.of(f)).orElse(
              sClearSale.map(f -> Optional.empty())).hold(Optional.empty());
         sBeep = sClearSale;
         sSaleComplete = Stream.filterOptional(sEnd.snapshot(

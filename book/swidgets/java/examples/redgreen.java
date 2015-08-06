@@ -12,7 +12,7 @@ public class redgreen {
         SButton green = new SButton("green");
         Stream<String> sRed = red.sClicked.map(u -> "red");
         Stream<String> sGreen = green.sClicked.map(u -> "green");
-        Stream<String> sColor = sRed.merge(sGreen);
+        Stream<String> sColor = sRed.orElse(sGreen);
         Cell<String> color = sColor.hold("");
         SLabel lbl = new SLabel(color);
         frame.add(red);

@@ -197,7 +197,7 @@ class FRP1 implements Paradigm {
                 sMouse.filter(me -> me.type == Type.UP)
                       .map(me -> sIdle);
             Stream<Document> sDocUpdate = Cell.switchS(
-                sStartDrag.merge(sEndDrag).hold(sIdle)
+                sStartDrag.orElse(sEndDrag).hold(sIdle)
             );
             doc.loop(sDocUpdate.hold(initDoc));
             return sDocUpdate.listen(doc_ -> dl.documentUpdated(doc_));
@@ -239,7 +239,7 @@ class FRP2 implements Paradigm {
                             Cell<Point> move = sMove.hold(me1.pt);
                             Stream<Pair> sPair = sMove.snapshot(axisLock,
                                     (m, l) -> new Pair(m, l))
-                                .merge(sAxisLock.snapshot(move,
+                                .orElse(sAxisLock.snapshot(move,
                                     (l, m) -> new Pair(m, l)));
                             Stream<Document> sMoves = sPair.snapshot(doc,
                                 (p, doc2) -> doc2.insert(id,
@@ -254,7 +254,7 @@ class FRP2 implements Paradigm {
                 sMouse.filter(me -> me.type == Type.UP)
                       .map(me -> sIdle);
             Stream<Document> sDocUpdate = Cell.switchS(
-                sStartDrag.merge(sEndDrag).hold(sIdle)
+                sStartDrag.orElse(sEndDrag).hold(sIdle)
             );
             doc.loop(sDocUpdate.hold(initDoc));
             return sDocUpdate.listen(doc_ -> dl.documentUpdated(doc_));

@@ -1,7 +1,8 @@
 {-# LANGUAGE OverloadedStrings #-}
-module Suite where
+module OperationalTests where
 
-import Test
+import Type
+import Operational
 
 
 base_send1 :: Test
@@ -12,13 +13,14 @@ base_send1 = Test "Base" "send1" [
     Transactional [Send s "a"] [],
     Transactional [Send s "b"] [],
     Unlisten l,
-    AssertEqual (List ["a", "b"]) out
+    AssertEqual (lit ["a", "b" :: String]) out
    ]
   where
     s = "s"
     out = "out"
     l = "l"
 
-suite :: [Test]
-suite = [base_send1]
+operationalTests :: [Test]
+operationalTests =
+    [base_send1]
 

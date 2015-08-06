@@ -250,19 +250,22 @@ public class Stream<A> {
 	}
 
     /**
-     * Merge two streams of the same type into one, so that events on either input appear
-     * on the returned stream.
+     * Variant of {@link Stream#merge(Stream, Lambda2)} that merges two streams and will drop an event
+     * in the simultaneous case.
      * <p>
      * In the case where two events are simultaneous (i.e. both
-     * within the same transaction), the event from <em>s</em> will take precedence, and
-     * the event from <em>this</em> will be dropped.
+     * within the same transaction), the event from <em>this</em> will take precedence, and
+     * the event from <em>s</em> will be dropped.
      * If you want to specify your own combining function, use {@link Stream#merge(Stream, Lambda2)}.
-     * merge(s) is equivalent to merge(s, (l, r) -&gt; r).
+     * s1.orElse(s2) is equivalent to s1.merge(s2, (l, r) -&gt; l).
+     * <p>
+     * The name orElse() is used instead of merge() to make it really clear that care should
+     * be taken, because events can be dropped.
      */
-	public final Stream<A> merge(final Stream<A> s)
+	public final Stream<A> orElse(final Stream<A> s)
 	{
 	    return merge(s, new Lambda2<A,A,A>() {
-            public A apply(A left, A right) { return right; }
+            public A apply(A left, A right) { return left; }
         });
 	}
 
@@ -289,8 +292,8 @@ public class Stream<A> {
 	}
 
     /**
-     * A variant of {@link merge(Stream)} that uses the specified function to combine simultaneous
-     * events.
+     * Merge two streams of the same type into one, so that events on either input appear
+     * on the returned stream.
      * <p>
      * If the events are simultaneous (that is, one event from this and one from <em>s</em>
      * occurring in the same transaction), combine them into one using the specified combining function
@@ -310,9 +313,9 @@ public class Stream<A> {
     }
 
     /**
-     * Variant of {@link merge(Stream)} that merges a collection of streams.
+     * Variant of {@link orElse(Stream)} that merges a collection of streams.
      */
-    public static <A> Stream<A> merge(Collection<Stream<A>> ss) {
+    public static <A> Stream<A> orElse(Collection<Stream<A>> ss) {
         return Stream.<A>merge(ss, new Lambda2<A,A,A>() {
             public A apply(A left, A right) { return right; }
         });
@@ -343,56 +346,6 @@ public class Stream<A> {
         TransactionHandler<A> h = new CoalesceHandler<A>(f, out);
         Listener l = listen(out.node, trans1, h, false);
         return out.unsafeAddCleanup(l);
-    }
-
-	/**
-	 * Push each event onto a new transaction guaranteed to come before the next externally
-	 * initiated transaction. Same as {@link split(Stream)} but it works on a single value.
-	 */
-	public final Stream<A> defer()
-	{
-	    final StreamWithSend<A> out = new StreamWithSend<A>();
-	    Listener l1 = listen_(out.node, new TransactionHandler<A>() {
-	        public void run(Transaction trans, final A a) {
-	            trans.post_(new Runnable() {
-                    public void run() {
-                        Transaction trans = new Transaction();
-                        try {
-                            out.send(trans, a);
-                        } finally {
-                            trans.close();
-                        }
-                    }
-	            });
-	        }
-	    });
-	    return out.unsafeAddCleanup(l1);
-	}
-
-	/**
-	 * Push each event in the list onto a newly created transaction guaranteed
-	 * to come before the next externally initiated transaction.
-	 */
-    public static <A, C extends Collection<A>> Stream<A> split(Stream<C> s)
-    {
-	    final StreamWithSend<A> out = new StreamWithSend<A>();
-	    Listener l1 = s.listen_(out.node, new TransactionHandler<C>() {
-	        public void run(Transaction trans, final C as) {
-	            trans.post_(new Runnable() {
-                    public void run() {
-                        for (A a : as) {
-                            Transaction trans = new Transaction();
-                            try {
-                                out.send(trans, a);
-                            } finally {
-                                trans.close();
-                            }
-                        }
-                    }
-	            });
-	        }
-	    });
-	    return out.unsafeAddCleanup(l1);
     }
 
     /**

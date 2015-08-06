@@ -43,7 +43,7 @@ public class bite {
                     id++;
                 }
             this.scene = sequence(chars);
-            this.sBite = Stream.merge(sBites);
+            this.sBite = Stream.orElse(sBites);
         }
         final Cell<List<Character>> scene;
         final Stream<Integer> sBite;

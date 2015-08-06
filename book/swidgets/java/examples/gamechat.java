@@ -13,7 +13,7 @@ public class gamechat {
         Stream<String> sOnegai = onegai.sClicked.map(u ->
             "Onegai shimasu");
         Stream<String> sThanks = thanks.sClicked.map(u -> "Thank you");
-        Stream<String> sCanned = sOnegai.merge(sThanks);
+        Stream<String> sCanned = sOnegai.orElse(sThanks);
         STextField text = new STextField(sCanned, "");
         frame.add(text);
         frame.add(onegai);

@@ -30,9 +30,11 @@ public class AccumulatePulsesPump implements Pump {
             Stream<Integer> sPulses,
             Cell<Double> calibration) {
         CellLoop<Integer> total = new CellLoop<>();
-        total.loop(sPulses.snapshot(total,
-            (pulses_, total_) -> pulses_ + total_)
-               .merge(sClearAccumulator.map(f -> 0))
+        total.loop(sClearAccumulator.map(f -> 0)
+               .orElse(
+                   sPulses.snapshot(total, (pulses_, total_) ->
+                       pulses_ + total_)
+               )
                .hold(0));
         return Cell.lift(
             (total_, calibration_) -> total_ * calibration_,

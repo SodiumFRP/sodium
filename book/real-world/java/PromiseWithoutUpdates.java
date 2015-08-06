@@ -15,7 +15,7 @@ public class PromiseWithoutUpdates<A> {
     public final Cell<Optional<A>> oValue;
     public final Stream<A> then() {
         return Stream.filterOptional(Operational.value(oValue))
-            .merge(sDeliver).once();
+            .orElse(sDeliver).once();
     }
     public final void thenDo(Handler<A> h) {
         Transaction.runVoid(() ->
@@ -52,8 +52,8 @@ public class PromiseWithoutUpdates<A> {
             Stream<Tuple> sBArrives = sB.snapshot(vA, combine);
             Stream<Tuple> sSimultaneous = sA.merge(sB, combine);
             Stream<C> sDeliver = Stream.filterOptional(
-                    sAArrives.merge(sBArrives)
-                             .merge(sSimultaneous)
+                    sAArrives.orElse(sBArrives)
+                             .orElse(sSimultaneous)
                              .map(result)
                 ).once();
             Cell<Optional<C>> oValue = Cell.lift(

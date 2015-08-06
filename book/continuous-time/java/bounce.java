@@ -20,7 +20,7 @@ public class bounce extends Shapes {
             Cell<Signal> posx = Signal.integrate(velx, leftWall);
             Cell<Signal> posy = Signal.integrate(vely, roof);
             sBounceX.loop(bounceAt(sys, velx, posx, leftWall)
-                          .merge(bounceAt(sys, velx, posx, rightWall)));
+                          .orElse(bounceAt(sys, velx, posx, rightWall)));
             sBounceY.loop(bounceAt(sys, vely, posy, floor));
             return translate(
                 scale(circle(Color.red), new Cell<Double>(ballRadius)),

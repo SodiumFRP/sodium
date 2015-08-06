@@ -1,10 +1,14 @@
 package sodium;
 
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.List;
+import java.util.Map;
 import java.util.PriorityQueue;
 import java.util.Set;
-import java.util.HashSet;
+
 
 /**
  * Functions for controlling transactions.
@@ -45,7 +49,7 @@ public final class Transaction {
 	private final PriorityQueue<Entry> prioritizedQ = new PriorityQueue<Entry>();
 	private final Set<Entry> entries = new HashSet<Entry>();
 	private final List<Runnable> lastQ = new ArrayList<Runnable>();
-	private List<Runnable> postQ;
+	private Map<Integer, Handler<Transaction>> postQ;
 
 	Transaction() {
 	}
@@ -190,10 +194,20 @@ public final class Transaction {
 	/**
      * Add an action to run after all last() actions.
      */
-	void post_(Runnable action) {
+	void post_(int childIx, final Handler<Transaction> action) {
 	    if (postQ == null)
-	        postQ = new ArrayList<Runnable>();
-	    postQ.add(action);
+	        postQ = new HashMap<Integer, Handler<Transaction>>();
+	    // If an entry exists already, combine the old one with the new one.
+	    final Handler<Transaction> existing = postQ.get(childIx);
+	    Handler<Transaction> neu =
+	        existing == null ? action
+	                         : new Handler<Transaction>() {
+                                   public void run(Transaction trans) {
+                                       existing.run(trans);
+                                       action.run(trans);
+                                   }
+                               };
+	    postQ.put(childIx, neu);
 	}
 
 	/**
@@ -203,7 +217,13 @@ public final class Transaction {
 	public static void post(final Runnable action) {
 	    Transaction.run(new Handler<Transaction>() {
             public void run(Transaction trans) {
-                trans.post_(action);
+                // -1 will mean it runs before anything split/deferred, and will run
+                // outside a transaction context.
+                trans.post_(-1, new Handler<Transaction>() {
+                    public void run(Transaction trans) {
+                        action.run();
+                    }
+                });
             }
 	    });
 	}
@@ -234,9 +254,34 @@ public final class Transaction {
 			action.run();
 		lastQ.clear();
 		if (postQ != null) {
-            for (Runnable action : postQ)
-                action.run();
-            postQ.clear();
+		    while (!postQ.isEmpty()) {
+		        Iterator<Map.Entry<Integer, Handler<Transaction>>> iter = postQ.entrySet().iterator();
+		        if (iter.hasNext()) {
+		            Map.Entry<Integer, Handler<Transaction>> e = iter.next();
+		            int ix = e.getKey();
+                    Handler<Transaction> h = e.getValue();
+                    iter.remove();
+                    Transaction parent = currentTransaction;
+                    try {
+                        if (ix >= 0) {
+                            Transaction trans = new Transaction();
+                            currentTransaction = trans;
+                            try {
+                                h.run(trans);
+                            } finally {
+                                trans.close();
+                            }
+                        }
+                        else {
+                            currentTransaction = null;
+                            h.run(null);
+                        }
+                    }
+                    finally {
+                        currentTransaction = parent;
+                    }
+		        }
+		    }
 		}
 	}
 }

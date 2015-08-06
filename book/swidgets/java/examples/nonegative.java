@@ -19,7 +19,7 @@ public class nonegative {
             view.add(minus);
             Stream<Integer> sPlusDelta = plus.sClicked.map(u -> 1);
             Stream<Integer> sMinusDelta = minus.sClicked.map(u -> -1);
-            Stream<Integer> sDelta = sPlusDelta.merge(sMinusDelta);
+            Stream<Integer> sDelta = sPlusDelta.orElse(sMinusDelta);
             Stream<Integer> sUpdate = sDelta.snapshot(value,
                     (delta, value_) -> delta + value_
                 ).filter(n -> n >= 0);

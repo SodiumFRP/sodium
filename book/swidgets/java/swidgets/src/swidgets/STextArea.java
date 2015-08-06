@@ -77,10 +77,10 @@ public class STextArea extends JTextArea
     }
 
     private void setup(Stream<String> sText, String initText, Cell<Boolean> enabled) {
-        allow = sText.map(u -> 1).merge(sDecrement).accum(0, (d, b) -> b + d).map(b -> b == 0);
+        allow = sText.map(u -> 1).orElse(sDecrement).accum(0, (d, b) -> b + d).map(b -> b == 0);
 
         final StreamSink<String> sUserText = new StreamSink<String>();
-        this.text = sUserText.gate(allow).merge(sText).hold(initText);
+        this.text = sUserText.gate(allow).orElse(sText).hold(initText);
         DocumentListener dl = new DocumentListener() {
             public void changedUpdate(DocumentEvent e) {
                 update();

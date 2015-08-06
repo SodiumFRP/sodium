@@ -42,7 +42,7 @@ public class Keypad {
                 }
             )
         );
-        value.loop(sKeyUpdate.merge(sClear.map(u -> 0))
+        value.loop(sKeyUpdate.orElse(sClear.map(u -> 0))
                              .hold(0));
         sBeep = sKeyUpdate.map(k -> Unit.UNIT);
     }

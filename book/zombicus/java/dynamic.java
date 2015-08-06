@@ -123,10 +123,10 @@ public class dynamic {
                                         sequence(st.chars.values()));
             this.scene = Cell.switchC(cchars);
             Cell<Stream<Integer>> csBite = state.map(st ->
-                                        Stream.merge(st.sBites.values()));
+                                        Stream.orElse(st.sBites.values()));
             this.sBite = Cell.switchS(csBite);
             Cell<Stream<Integer>> csDestroy = state.map(st ->
-                                     Stream.merge(st.sDestroys.values()));
+                                     Stream.orElse(st.sDestroys.values()));
             this.sDestroy = Cell.switchS(csDestroy);
         }
         final Cell<List<Character>> scene;

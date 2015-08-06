@@ -4,7 +4,7 @@ import java.util.Optional;
 public class BackEnd {
     public BackEnd() {}
     public final <A> Value<A> allocate(String name, A initA) {
-        StreamJunction<A> j = new StreamJunction<>();
+        StreamJunction<A> j = new StreamJunction<>((l, r) -> l);
         StreamSink<A> s0 = new StreamSink<>();
         Listener l = j.out.listenWeak(a -> {
             new Thread(() -> {

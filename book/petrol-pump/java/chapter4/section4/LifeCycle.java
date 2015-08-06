@@ -31,22 +31,23 @@ public class LifeCycle {
     public LifeCycle(Stream<UpDown> sNozzle1,
                      Stream<UpDown> sNozzle2,
                      Stream<UpDown> sNozzle3) {
-        Stream<Fuel> eLiftNozzle = whenLifted(sNozzle1, Fuel.ONE).merge(
-                                   whenLifted(sNozzle2, Fuel.TWO).merge(
-                                   whenLifted(sNozzle3, Fuel.THREE)));
+        Stream<Fuel> eLiftNozzle =
+            whenLifted(sNozzle1, Fuel.ONE).orElse(
+            whenLifted(sNozzle2, Fuel.TWO).orElse(
+            whenLifted(sNozzle3, Fuel.THREE)));
         CellLoop<Optional<Fuel>> fillActive = new CellLoop<>();
         this.fillActive = fillActive;
         this.sStart = Stream.filterOptional(
             eLiftNozzle.snapshot(fillActive, (newFuel, fillActive_) ->
                 fillActive_.isPresent() ? Optional.empty()
                                         : Optional.of(newFuel)));
-        this.sEnd = whenSetDown(sNozzle1, Fuel.ONE, fillActive).merge(
-                    whenSetDown(sNozzle2, Fuel.TWO, fillActive).merge(
+        this.sEnd = whenSetDown(sNozzle1, Fuel.ONE, fillActive).orElse(
+                    whenSetDown(sNozzle2, Fuel.TWO, fillActive).orElse(
                     whenSetDown(sNozzle3, Fuel.THREE, fillActive)));
         fillActive.loop(
-            sStart.map(f -> Optional.of(f))
-                  .merge(sEnd.map(e -> Optional.empty()))
-                  .hold(Optional.empty())
+            sEnd.map(e -> Optional.<Fuel>empty())
+                .orElse(sStart.map(f -> Optional.of(f)))
+                .hold(Optional.empty())
         );
     }
 }

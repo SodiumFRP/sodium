@@ -38,7 +38,7 @@ public class Fill {
                                       : Optional.empty());
 
         return Stream.filterOptional(
-            sPrice1.merge(sPrice2.merge(sPrice3))
+            sPrice1.orElse(sPrice2.orElse(sPrice3))
         ).hold(0.0);
     }
 }

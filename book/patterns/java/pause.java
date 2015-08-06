@@ -15,7 +15,7 @@ public class pause {
             Stream<Unit> sResume, Cell<Double> clock) {
         Cell<Optional<Double>> pauseTime =
             sPause.snapshot(clock, (u, t) -> Optional.<Double>of(t))
-                .merge(sResume.map(u -> Optional.<Double>empty()))
+                .orElse(sResume.map(u -> Optional.<Double>empty()))
                 .hold(Optional.<Double>empty());
         Cell<Double> lostTime = sResume.<Double>accum(
             0.0,

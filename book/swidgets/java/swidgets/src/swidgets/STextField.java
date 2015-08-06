@@ -30,12 +30,12 @@ public class STextField extends JTextField
 
         allow = sText.map(u -> 1)  // Block local changes until remote change has
                                    // been completed in the GUI
-                     .merge(sDecrement)
+                     .orElse(sDecrement)
                      .accum(0, (d, b) -> b + d).map(b -> b == 0);
 
         final StreamSink<String> sUserChangesSnk = new StreamSink<String>();
         this.sUserChanges = sUserChangesSnk;
-        this.text = sUserChangesSnk.gate(allow).merge(sText).hold(initText);
+        this.text = sUserChangesSnk.gate(allow).orElse(sText).hold(initText);
         DocumentListener dl = new DocumentListener() {
             private String text = null;
             public void changedUpdate(DocumentEvent e) {
