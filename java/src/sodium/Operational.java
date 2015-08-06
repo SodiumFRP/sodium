@@ -4,8 +4,7 @@ import java.util.LinkedList;
 
 
 /**
- * Operational primitives that must be used with care because they
- * break non-detectability of cell steps/updates.
+ * Operational primitives that must be used with care.
  */
 public class Operational {
     /**

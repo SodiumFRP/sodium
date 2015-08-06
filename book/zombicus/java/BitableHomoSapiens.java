@@ -15,7 +15,8 @@ public class BitableHomoSapiens {
     {
         HomoSapiens h = new HomoSapiens(world, self, posInit,
             time, sTick);
-        Stream<Set<Integer>> sBiteMe = sBite.filter(ids -> ids.contains(self));
+        Stream<Set<Integer>> sBiteMe = sBite.filter(ids ->
+            ids.contains(self));
         Stream<HomoZombicus> sBecome = sBiteMe.snapshot(
             h.character,
             (id, ch) -> new HomoZombicus(
