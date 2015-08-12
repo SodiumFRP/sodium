@@ -17,7 +17,7 @@ class StreamWithSend<A> extends Stream<A> {
         synchronized (Transaction.listenersLock) {
             listeners = new HashSet<Node.Target>(node.listeners);
         }
-		for (final Node.Target target : node.listeners) {
+		for (final Node.Target target : listeners) {
             trans.prioritized(target.node, new Handler<Transaction>() {
                 public void run(Transaction trans2) {
                     Transaction.inCallback++;
