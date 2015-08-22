@@ -36,6 +36,26 @@
         </javac>
     </target>
 
+    <target name="airline1" depends="compile-examples">
+        <java classname="airline1" fork="true">
+            <classpath>
+                <pathelement path="examples"/>
+                <pathelement path="swidgets/swidgets.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="airline2" depends="compile-examples">
+        <java classname="airline2" fork="true">
+            <classpath>
+                <pathelement path="examples"/>
+                <pathelement path="swidgets/swidgets.jar"/>
+                <pathelement path="../../../java/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
     <target name="clearfield" depends="compile-examples">
         <java classname="clearfield" fork="true">
             <classpath>
