@@ -2,15 +2,6 @@ import sodium.*;
 import java.util.Optional;
 
 public class pause {
-    public static <A> Stream<Unit> changeTo(Cell<A> a, A target) {
-        return Stream.filterOptional(
-            Operational.updates(a).snapshot(a,
-                (neu, old) -> neu.equals(target) && !neu.equals(old)
-                    ? Optional.of(Unit.UNIT)
-                    : Optional.empty()
-            ));
-    }
-
     public static Cell<Double> pausableClock(Stream<Unit> sPause,
             Stream<Unit> sResume, Cell<Double> clock) {
         Cell<Optional<Double>> pauseTime =
