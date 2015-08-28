@@ -16,18 +16,8 @@
         </javac>
     </target>
 
-    <target name="lookup" depends="compile">
-        <java classname="lookup.Lookup" fork="true">
-            <classpath>
-                <pathelement path="build/"/>
-                <pathelement path="../../swidgets/java/swidgets/swidgets.jar"/>
-                <pathelement path="../../../java/sodium.jar"/>
-            </classpath>
-        </java>
-    </target>
-
-    <target name="promise1" depends="compile">
-        <java classname="promise1" fork="true">
+    <target name="battle" depends="compile">
+        <java classname="battle.BattleOfTheParadigms" fork="true">
             <classpath>
                 <pathelement path="build/"/>
                 <pathelement path="../../../java/sodium.jar"/>
@@ -35,8 +25,17 @@
         </java>
     </target>
 
-    <target name="promise2" depends="compile">
-        <java classname="promise2" fork="true">
+    <target name="shift" depends="compile">
+        <java classname="shift.ShiftOfTheParadigms" fork="true">
+            <classpath>
+                <pathelement path="build/"/>
+                <pathelement path="../../../java/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
+    <target name="shift2" depends="compile">
+        <java classname="shift2.ShiftOfTheParadigms2" fork="true">
             <classpath>
                 <pathelement path="build/"/>
                 <pathelement path="../../../java/sodium.jar"/>

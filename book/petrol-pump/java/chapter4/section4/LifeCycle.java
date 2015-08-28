@@ -31,14 +31,14 @@ public class LifeCycle {
     public LifeCycle(Stream<UpDown> sNozzle1,
                      Stream<UpDown> sNozzle2,
                      Stream<UpDown> sNozzle3) {
-        Stream<Fuel> eLiftNozzle =
+        Stream<Fuel> sLiftNozzle =
             whenLifted(sNozzle1, Fuel.ONE).orElse(
             whenLifted(sNozzle2, Fuel.TWO).orElse(
             whenLifted(sNozzle3, Fuel.THREE)));
         CellLoop<Optional<Fuel>> fillActive = new CellLoop<>();
         this.fillActive = fillActive;
         this.sStart = Stream.filterOptional(
-            eLiftNozzle.snapshot(fillActive, (newFuel, fillActive_) ->
+            sLiftNozzle.snapshot(fillActive, (newFuel, fillActive_) ->
                 fillActive_.isPresent() ? Optional.empty()
                                         : Optional.of(newFuel)));
         this.sEnd = whenSetDown(sNozzle1, Fuel.ONE, fillActive).orElse(
