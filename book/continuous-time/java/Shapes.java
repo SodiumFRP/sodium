@@ -1,6 +1,6 @@
 import java.awt.Color;
 import java.awt.Graphics;
-import sodium.*;
+import nz.sodium.*;
 
 public class Shapes {
     public static Cell<Drawable> circle(Color color) {

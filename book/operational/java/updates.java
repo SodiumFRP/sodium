@@ -1,4 +1,4 @@
-import sodium.*;
+import nz.sodium.*;
 
 public class updates {
     public static void main(String[] args) {

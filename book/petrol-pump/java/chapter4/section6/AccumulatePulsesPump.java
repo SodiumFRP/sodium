@@ -2,7 +2,7 @@ package chapter4.section6;
 
 import pump.*;
 import chapter4.section4.LifeCycle;
-import sodium.*;
+import nz.sodium.*;
 import java.util.Optional;
 
 public class AccumulatePulsesPump implements Pump {

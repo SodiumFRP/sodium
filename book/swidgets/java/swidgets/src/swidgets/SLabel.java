@@ -1,6 +1,6 @@
 package swidgets;
 
-import sodium.*;
+import nz.sodium.*;
 import javax.swing.*;
 import javax.swing.SwingUtilities;
 import java.util.concurrent.ArrayBlockingQueue;

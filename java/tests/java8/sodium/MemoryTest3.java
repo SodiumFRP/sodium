@@ -1,4 +1,4 @@
-package sodium;
+package nz.sodium;
 
 public class MemoryTest3
 {

@@ -2,7 +2,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.Calendar;
 import swidgets.*;
-import sodium.*;
+import nz.sodium.*;
 
 public class airline1 {
     public static void main(String[] args) {

@@ -27,7 +27,7 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Optional;
 import java.util.List;
-import sodium.*;
+import nz.sodium.*;
 
 
 class PumpFace extends Component {

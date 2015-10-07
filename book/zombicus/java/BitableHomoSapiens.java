@@ -1,7 +1,7 @@
 import java.awt.Point;
 import java.util.List;
 import java.util.Set;
-import sodium.*;
+import nz.sodium.*;
 
 public class BitableHomoSapiens {
     public BitableHomoSapiens(

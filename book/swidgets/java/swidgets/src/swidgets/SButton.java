@@ -1,6 +1,6 @@
 package swidgets;
 
-import sodium.*;
+import nz.sodium.*;
 import javax.swing.JButton;
 import javax.swing.SwingUtilities;
 import java.awt.event.ActionEvent;

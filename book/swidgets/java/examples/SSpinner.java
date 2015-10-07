@@ -1,7 +1,7 @@
 import javax.swing.*;
 import java.awt.*;
 import swidgets.*;
-import sodium.*;
+import nz.sodium.*;
 
 public class SSpinner extends JPanel {
     SSpinner(int initialValue) {

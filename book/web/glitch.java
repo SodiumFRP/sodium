@@ -1,4 +1,4 @@
-import sodium.*;
+import nz.sodium.*;
 
 public class glitch {
     public static void main(String[] args) {

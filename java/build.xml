@@ -73,7 +73,7 @@
 
     <target name="doc" depends="check-doc" unless="doc-present">
         <mkdir dir="doc" />
-        <javadoc source="1.8" sourcepath="src" destdir="doc" packagenames="sodium.*,sodium.time.*" public="true">
+        <javadoc source="1.8" sourcepath="src" destdir="doc" packagenames="nz.sodium.*,nz.sodium.time.*" public="true">
             <!--<exclude name="java/util/*.java"/>-->
         </javadoc>
     </target>

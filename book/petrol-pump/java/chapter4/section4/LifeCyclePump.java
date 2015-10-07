@@ -1,7 +1,7 @@
 package chapter4.section4;
 
 import pump.*;
-import sodium.*;
+import nz.sodium.*;
 import java.util.Optional;
 
 public class LifeCyclePump implements Pump {

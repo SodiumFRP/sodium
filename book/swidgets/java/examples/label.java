@@ -1,7 +1,7 @@
 import javax.swing.*;
 import java.awt.FlowLayout;
 import swidgets.*;
-import sodium.*;
+import nz.sodium.*;
 
 public class label {
     public static void main(String[] args) {

@@ -8,7 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
-import sodium.*;
+import nz.sodium.*;
 
 public class dynamic {
     static <A> Cell<List<A>> sequence(Collection<Cell<A>> in) {

@@ -8,7 +8,7 @@ import chapter4.section7.Fill;
 import chapter4.section7.ShowDollarsPump;
 import chapter4.section8.NotifyPointOfSale;
 import chapter4.section9.Keypad;
-import sodium.*;
+import nz.sodium.*;
 import java.util.Optional;
 
 public class PresetAmountPump implements Pump {

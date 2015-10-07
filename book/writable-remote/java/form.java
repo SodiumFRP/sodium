@@ -1,5 +1,5 @@
 import swidgets.*;
-import sodium.*;
+import nz.sodium.*;
 import java.util.Optional;
 import java.awt.FlowLayout;
 import java.awt.GridBagLayout;

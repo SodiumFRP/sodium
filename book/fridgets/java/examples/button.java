@@ -1,6 +1,6 @@
 import fridgets.*;
 import javax.swing.*;
-import sodium.*;
+import nz.sodium.*;
 
 public class button {
     public static void main(String[] args) {

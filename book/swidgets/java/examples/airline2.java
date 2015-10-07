@@ -2,7 +2,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.util.Calendar;
 import swidgets.*;
-import sodium.*;
+import nz.sodium.*;
 
 class Rule {
     public Rule(Lambda2<Calendar, Calendar, Boolean> f) {

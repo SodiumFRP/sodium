@@ -1,7 +1,7 @@
 import fridgets.*;
 import javax.swing.*;
 import java.util.ArrayList;
-import sodium.*;
+import nz.sodium.*;
 
 public class flow {
     public static void main(String[] args) {

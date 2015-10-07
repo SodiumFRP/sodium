@@ -1,4 +1,4 @@
-import sodium.*;
+import nz.sodium.*;
 import java.util.Optional;
 
 public class simple {

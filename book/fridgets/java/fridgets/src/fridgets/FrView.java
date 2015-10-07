@@ -10,7 +10,7 @@ import java.awt.event.MouseEvent;
 import java.awt.*;
 import javax.swing.*;
 import java.util.Optional;
-import sodium.*;
+import nz.sodium.*;
 
 public class FrView extends JPanel {
     public FrView(JFrame frame, Fridget fr) {

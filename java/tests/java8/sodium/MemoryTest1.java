@@ -1,4 +1,4 @@
-package sodium;
+package nz.sodium;
 
 import java.util.Optional;
 

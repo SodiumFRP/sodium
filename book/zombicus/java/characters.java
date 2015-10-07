@@ -3,7 +3,7 @@ import java.awt.Point;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
-import sodium.*;
+import nz.sodium.*;
 
 public class characters {
     static <A> Cell<List<A>> sequence(Collection<Cell<A>> in) {

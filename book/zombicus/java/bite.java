@@ -4,7 +4,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.List;
 import java.util.Set;
-import sodium.*;
+import nz.sodium.*;
 
 public class bite {
     static <A> Cell<List<A>> sequence(Collection<Cell<A>> in) {

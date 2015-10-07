@@ -1,4 +1,4 @@
-import sodium.*;
+import nz.sodium.*;
 import java.util.ArrayList;
 
 public class promise2 {

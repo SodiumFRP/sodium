@@ -1,4 +1,4 @@
-import sodium.*;
+import nz.sodium.*;
 import java.util.Collection;
 
 public class CellJunction<A> extends Junction<Cell<A>, A> {

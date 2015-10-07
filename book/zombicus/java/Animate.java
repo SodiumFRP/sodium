@@ -18,7 +18,7 @@ import java.awt.Toolkit;
 import java.awt.image.*;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
-import sodium.*;
+import nz.sodium.*;
 
 public class Animate extends JPanel {
     private final Dimension windowSize = new Dimension(700, 500);

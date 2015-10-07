@@ -3,7 +3,7 @@ package fridgets;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.event.MouseEvent;
-import sodium.*;
+import nz.sodium.*;
 
 public class FrTranslate extends Fridget {
     public FrTranslate(Fridget fr, Cell<Dimension> offset) {

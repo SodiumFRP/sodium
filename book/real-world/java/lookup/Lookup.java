@@ -8,7 +8,7 @@ import java.net.InetAddress;
 import java.net.Socket;
 import java.net.UnknownHostException;
 import swidgets.*;
-import sodium.*;
+import nz.sodium.*;
 import java.util.Optional;
 
 class IsBusy<A,B> {

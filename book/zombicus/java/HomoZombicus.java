@@ -2,7 +2,7 @@ import java.awt.Point;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Optional;
-import sodium.*;
+import nz.sodium.*;
 
 public class HomoZombicus {
     public HomoZombicus(

@@ -2,7 +2,7 @@ import java.awt.Point;
 import java.util.List;
 import java.util.Optional;
 import java.util.Random;
-import sodium.*;
+import nz.sodium.*;
 
 public class SimpleHomoSapiens {
     public SimpleHomoSapiens(

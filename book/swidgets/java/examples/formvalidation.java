@@ -2,7 +2,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.lang.reflect.Array;
 import swidgets.*;
-import sodium.*;
+import nz.sodium.*;
 
 public class formvalidation {
     public static void main(String[] args) {

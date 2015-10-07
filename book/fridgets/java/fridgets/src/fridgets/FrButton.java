@@ -3,7 +3,7 @@ package fridgets;
 import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.util.Optional;
-import sodium.*;
+import nz.sodium.*;
 
 public class FrButton extends Fridget {
     public FrButton(Cell<String> label) {

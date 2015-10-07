@@ -1,4 +1,4 @@
-import sodium.*;
+import nz.sodium.*;
 import java.util.List;
 import java.util.Arrays;
 

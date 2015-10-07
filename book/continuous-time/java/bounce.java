@@ -1,6 +1,6 @@
 import java.awt.Color;
-import sodium.*;
-import sodium.time.*;
+import nz.sodium.*;
+import nz.sodium.time.*;
 
 public class bounce extends Shapes {
     public static void main(String[] args) {

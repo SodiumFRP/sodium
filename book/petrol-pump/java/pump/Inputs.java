@@ -1,6 +1,6 @@
 package pump;
 
-import sodium.*;
+import nz.sodium.*;
 
 public class Inputs {
     public Inputs(

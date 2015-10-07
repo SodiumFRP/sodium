@@ -1,6 +1,6 @@
 import javax.swing.*;
 import java.awt.*;
-import sodium.*;
+import nz.sodium.*;
 
 public class spinme {
     public static void main(String[] args) {

@@ -2,7 +2,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
 import swidgets.*;
-import sodium.*;
+import nz.sodium.*;
 
 public class translate {
     public static void main(String[] args) {

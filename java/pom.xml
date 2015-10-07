@@ -1,0 +1,32 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" 
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>nz.sodium</groupId>
+  <artifactId>sodium</artifactId>
+  <version>1.0.0</version>  
+  <packaging>jar</packaging>
+  <name>Sodium FRP system</name>
+  <description>A Functional Reactive Programming (FRP) system for Java</description>
+  <url>http://sodium.nz</url>
+  <licenses>
+    <license>
+      <name>BSD3</name>
+      <url>https://github.com/SodiumFRP/sodium/blob/master/COPYING</url>
+    </license>
+  </licenses>
+  <developers>
+    <developer>
+      <name>Stephen Blackheath</name>
+      <email>sodium3.stephen@blacksapphire.com</email>
+      <organization>Sodium FRP system</organization>
+      <organizationUrl>http://sodium.nz</organizationUrl>
+    </developer>
+  </developers>
+  <scm>
+    <connection>scm:git:git@github.com:sodiumFRP/sodium.git</connection>
+    <developerConnection>scm:git:git@github.com:sodiumFRP/sodium.git</developerConnection>
+    <url>git@github.com:sodiumFRP/sodium.git</url>
+  </scm>
+</project>

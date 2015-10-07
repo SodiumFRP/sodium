@@ -1,6 +1,6 @@
 package swidgets;
 
-import sodium.*;
+import nz.sodium.*;
 import java.util.Calendar;
 import java.util.GregorianCalendar;
 import java.util.Optional;

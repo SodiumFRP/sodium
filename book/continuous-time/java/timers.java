@@ -1,5 +1,5 @@
-import sodium.*;
-import sodium.time.*;
+import nz.sodium.*;
+import nz.sodium.time.*;
 import java.util.Optional;
 
 public class timers {

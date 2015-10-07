@@ -3,7 +3,7 @@ package fridgets;
 import java.awt.Dimension;
 import java.util.Collection;
 import java.util.Optional;
-import sodium.*;
+import nz.sodium.*;
 
 public class FrFlow extends Fridget {
     public enum Direction { HORIZONTAL, VERTICAL };

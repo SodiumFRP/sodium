@@ -1,5 +1,5 @@
 import java.awt.Color;
-import sodium.*;
+import nz.sodium.*;
 
 public class cross extends Shapes {
     public static void main(String[] args) {

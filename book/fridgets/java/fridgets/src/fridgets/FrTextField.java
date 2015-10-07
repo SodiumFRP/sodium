@@ -3,7 +3,7 @@ package fridgets;
 import java.awt.*;
 import java.awt.event.MouseEvent;
 import java.util.Optional;
-import sodium.*;
+import nz.sodium.*;
 
 class TextUpdate {
     TextUpdate(String txt, int newX) {

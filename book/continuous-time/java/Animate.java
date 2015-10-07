@@ -4,8 +4,8 @@ import java.awt.Graphics;
 import java.awt.Toolkit;
 import javax.swing.JFrame;
 import javax.swing.JPanel;
-import sodium.*;
-import sodium.time.*;
+import nz.sodium.*;
+import nz.sodium.time.*;
 
 public class Animate extends JPanel {
     public Animate(Animation anim, Dimension windowSize) {

@@ -1,6 +1,6 @@
 package pump;
 
-import sodium.*;
+import nz.sodium.*;
 import java.awt.event.ItemEvent;
 import java.awt.event.ItemListener;
 import javax.swing.*;

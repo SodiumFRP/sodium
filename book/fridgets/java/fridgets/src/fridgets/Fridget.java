@@ -4,7 +4,7 @@ import java.awt.Dimension;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.util.Optional;
-import sodium.*;
+import nz.sodium.*;
 
 public abstract class Fridget {
     public static class Output {

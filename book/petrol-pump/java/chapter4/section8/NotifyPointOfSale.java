@@ -4,7 +4,7 @@ import pump.*;
 import chapter4.section4.LifeCycle;
 import chapter4.section4.LifeCycle.End;
 import chapter4.section7.Fill;
-import sodium.*;
+import nz.sodium.*;
 import java.util.Optional;
 
 public class NotifyPointOfSale {
