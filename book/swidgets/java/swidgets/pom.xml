@@ -1,0 +1,81 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" 
+xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" 
+xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+  <modelVersion>4.0.0</modelVersion>
+  <groupId>nz.sodium.swidgets</groupId>
+  <artifactId>sodium-swidgets</artifactId>
+  <version>1.0.0</version>  
+  <packaging>jar</packaging>
+  <name>An FRP wrapper for Swing</name>
+  <description>A toy library that wraps Swing widgets with a Sodium-based FRP interface</description>
+  <url>http://github.com/SodiumFRP/sodium</url>
+  <licenses>
+    <license>
+      <name>BSD3</name>
+      <url>https://github.com/SodiumFRP/sodium/blob/master/COPYING</url>
+    </license>
+  </licenses>
+  <developers>
+    <developer>
+      <name>Stephen Blackheath</name>
+      <email>sodium3.stephen@blacksapphire.com</email>
+      <organization>Sodium FRP system</organization>
+      <organizationUrl>http://sodium.nz</organizationUrl>
+    </developer>
+  </developers>
+  <build>
+    <sourceDirectory>${basedir}/src</sourceDirectory>
+    <plugins>
+      <plugin>
+        <artifactId>maven-compiler-plugin</artifactId>
+        <version>3.1</version>
+        <configuration>
+          <source>1.8</source>
+          <target>1.8</target>
+        </configuration>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-source-plugin</artifactId>
+        <version>2.2.1</version>
+        <executions>
+          <execution>
+            <id>attach-sources</id>
+            <goals>
+              <goal>jar-no-fork</goal>
+            </goals>
+          </execution>
+        </executions>
+      </plugin>
+      <plugin>
+        <groupId>org.apache.maven.plugins</groupId>
+        <artifactId>maven-javadoc-plugin</artifactId>
+        <version>2.10.3</version>
+        <executions>
+          <execution>
+            <id>attach-javadocs</id>
+            <goals>
+              <goal>jar</goal>
+            </goals>
+          </execution>
+        </executions>
+        <configuration>
+          <show>public</show>
+        </configuration>
+      </plugin>
+    </plugins>
+  </build>
+  <scm>
+    <connection>scm:git:git@github.com:SodiumFRP/sodium.git</connection>
+    <developerConnection>scm:git:git@github.com:SodiumFRP/sodium.git</developerConnection>
+    <url>git@github.com:SodiumFRP/sodium.git</url>
+  </scm>
+  <dependencies>
+    <dependency>
+      <groupId>nz.sodium</groupId>
+      <artifactId>sodium</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+  </dependencies>
+</project>

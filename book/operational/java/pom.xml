@@ -1,10 +1,10 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>nz.sodium.battle</groupId>
-  <artifactId>sodium-battle</artifactId>
+  <groupId>nz.sodium.operational</groupId>
+  <artifactId>sodium-operational</artifactId>
   <version>1.0.0</version>
-  <name>sodium-battle</name>
+  <name>sodium-operational</name>
   <url>http://maven.apache.org</url>
   <build>
     <sourceDirectory>${basedir}</sourceDirectory>
@@ -21,7 +21,7 @@
   </build>
   <profiles>
     <profile>
-      <id>battle</id>
+      <id>stream</id>
       <build>
         <plugins>
           <plugin>  
@@ -35,7 +35,7 @@
               <goal>java</goal>  
              </goals>  
              <configuration>  
-              <mainClass>battle.BattleOfTheParadigms</mainClass>  
+              <mainClass>stream</mainClass>  
              </configuration>  
             </execution>  
            </executions>  
@@ -44,7 +44,7 @@
       </build>
     </profile>
     <profile>
-      <id>shift</id>
+      <id>cell</id>
       <build>
         <plugins>
           <plugin>  
@@ -58,7 +58,7 @@
               <goal>java</goal>  
              </goals>  
              <configuration>  
-              <mainClass>shift.ShiftOfTheParadigms</mainClass>  
+              <mainClass>cell</mainClass>  
              </configuration>  
             </execution>  
            </executions>  
@@ -67,7 +67,7 @@
       </build>
     </profile>
     <profile>
-      <id>shift2</id>
+      <id>updates</id>
       <build>
         <plugins>
           <plugin>  
@@ -81,7 +81,76 @@
               <goal>java</goal>  
              </goals>  
              <configuration>  
-              <mainClass>shift2.ShiftOfTheParadigms2</mainClass>
+              <mainClass>updates</mainClass>
+             </configuration>  
+            </execution>  
+           </executions>  
+          </plugin>  
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>value1</id>
+      <build>
+        <plugins>
+          <plugin>  
+           <groupId>org.codehaus.mojo</groupId>  
+           <artifactId>exec-maven-plugin</artifactId>  
+           <version>1.1.1</version>  
+           <executions>  
+            <execution>  
+             <phase>test</phase>  
+             <goals>  
+              <goal>java</goal>  
+             </goals>  
+             <configuration>  
+              <mainClass>value1</mainClass>
+             </configuration>  
+            </execution>  
+           </executions>  
+          </plugin>  
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>value2</id>
+      <build>
+        <plugins>
+          <plugin>  
+           <groupId>org.codehaus.mojo</groupId>  
+           <artifactId>exec-maven-plugin</artifactId>  
+           <version>1.1.1</version>  
+           <executions>  
+            <execution>  
+             <phase>test</phase>  
+             <goals>  
+              <goal>java</goal>  
+             </goals>  
+             <configuration>  
+              <mainClass>value2</mainClass>
+             </configuration>  
+            </execution>  
+           </executions>  
+          </plugin>  
+        </plugins>
+      </build>
+    </profile>
+    <profile>
+      <id>split</id>
+      <build>
+        <plugins>
+          <plugin>  
+           <groupId>org.codehaus.mojo</groupId>  
+           <artifactId>exec-maven-plugin</artifactId>  
+           <version>1.1.1</version>  
+           <executions>  
+            <execution>  
+             <phase>test</phase>  
+             <goals>  
+              <goal>java</goal>  
+             </goals>  
+             <configuration>  
+              <mainClass>split</mainClass>
              </configuration>  
             </execution>  
            </executions>  

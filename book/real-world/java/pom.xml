@@ -1,10 +1,10 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
   <modelVersion>4.0.0</modelVersion>
-  <groupId>nz.sodium.battle</groupId>
-  <artifactId>sodium-battle</artifactId>
+  <groupId>nz.sodium.real-world</groupId>
+  <artifactId>sodium-real-world</artifactId>
   <version>1.0.0</version>
-  <name>sodium-battle</name>
+  <name>sodium-real-world</name>
   <url>http://maven.apache.org</url>
   <build>
     <sourceDirectory>${basedir}</sourceDirectory>
@@ -21,7 +21,7 @@
   </build>
   <profiles>
     <profile>
-      <id>battle</id>
+      <id>lookup</id>
       <build>
         <plugins>
           <plugin>  
@@ -35,7 +35,7 @@
               <goal>java</goal>  
              </goals>  
              <configuration>  
-              <mainClass>battle.BattleOfTheParadigms</mainClass>  
+              <mainClass>lookup.Lookup</mainClass>  
              </configuration>  
             </execution>  
            </executions>  
@@ -44,7 +44,7 @@
       </build>
     </profile>
     <profile>
-      <id>shift</id>
+      <id>promise1</id>
       <build>
         <plugins>
           <plugin>  
@@ -58,7 +58,7 @@
               <goal>java</goal>  
              </goals>  
              <configuration>  
-              <mainClass>shift.ShiftOfTheParadigms</mainClass>  
+              <mainClass>promise1</mainClass>  
              </configuration>  
             </execution>  
            </executions>  
@@ -67,7 +67,7 @@
       </build>
     </profile>
     <profile>
-      <id>shift2</id>
+      <id>promise2</id>
       <build>
         <plugins>
           <plugin>  
@@ -81,7 +81,7 @@
               <goal>java</goal>  
              </goals>  
              <configuration>  
-              <mainClass>shift2.ShiftOfTheParadigms2</mainClass>
+              <mainClass>promise2</mainClass>  
              </configuration>  
             </execution>  
            </executions>  
@@ -94,6 +94,11 @@
     <dependency>
       <groupId>nz.sodium</groupId>
       <artifactId>sodium</artifactId>
+      <version>1.0.0</version>
+    </dependency>
+    <dependency>
+      <groupId>nz.sodium.swidgets</groupId>
+      <artifactId>sodium-swidgets</artifactId>
       <version>1.0.0</version>
     </dependency>
   </dependencies>
