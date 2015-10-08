@@ -40,13 +40,13 @@
 
     <target name="compile-new" depends="javaCheck" if="Java8OrHigher">
         <mkdir dir="build/1.8/src" />
-        <javac includeantruntime="false" debug="true" srcdir="src" destdir="build/1.8/src" source="1.8" target="1.8"/>
+        <javac includeantruntime="false" debug="true" srcdir="src/main/java" destdir="build/1.8/src" source="1.8" target="1.8"/>
     </target>
 
     <target name="compile-old">
         <mkdir dir="build/1.5/src" />
         <javac includeantruntime="false" debug="true" srcdir="src-java1.5" destdir="build/1.5/src" source="1.5" target="1.5"/>
-        <javac includeantruntime="false" debug="true" srcdir="src" destdir="build/1.5/src" source="1.5" target="1.5"/>
+        <javac includeantruntime="false" debug="true" srcdir="src/main/java" destdir="build/1.5/src" source="1.5" target="1.5"/>
     </target>
 
     <target name="jar" depends="jar-old,jar-new"/>
@@ -73,7 +73,7 @@
 
     <target name="doc" depends="check-doc" unless="doc-present">
         <mkdir dir="doc" />
-        <javadoc source="1.8" sourcepath="src" destdir="doc" packagenames="nz.sodium.*,nz.sodium.time.*" public="true">
+        <javadoc source="1.8" sourcepath="src/main/java" destdir="doc" packagenames="nz.sodium.*,nz.sodium.time.*" public="true">
             <!--<exclude name="java/util/*.java"/>-->
         </javadoc>
     </target>
@@ -84,7 +84,7 @@
 
     <target name="tests-classes" depends="jar,resolve">
         <mkdir dir="build/tests/java8"/>
-        <javac includeantruntime="false" debug="true" srcdir="tests/java8" destdir="build/tests/java8">
+        <javac includeantruntime="false" debug="true" srcdir="src/test/java" destdir="build/tests/java8">
             <classpath>
                 <path refid="test.classpath"/>
                 <pathelement location="sodium.jar"/>
@@ -104,7 +104,7 @@
 
             <batchtest>
                 <fileset dir="build/tests/java8">
-                    <include name="sodium/*Tester.class" />
+                    <include name="nz/sodium/*Tester.class" />
                 </fileset>
             </batchtest>
         </junit>

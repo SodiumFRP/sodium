@@ -6,7 +6,7 @@ import System.IO
 
 main = do
     let tests = operationalTests ++ map fromSemantic semanticTests
-    generate "../java/tests/java8/sodium/CommonTester.java" (Java.format tests)
+    generate "../java/src/test/java/nz/sodium/TestCommon.java" (Java.format tests)
 
 generate :: FilePath -> String -> IO ()
 generate fn text = do

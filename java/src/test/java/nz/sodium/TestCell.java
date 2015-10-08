@@ -7,7 +7,7 @@ import java.util.Optional;
 
 import junit.framework.TestCase;
 
-public class CellTester extends TestCase {
+public class TestCell extends TestCase {
 	@Override
 	protected void tearDown() throws Exception {
 		System.gc();

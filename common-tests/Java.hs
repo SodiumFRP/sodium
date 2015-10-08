@@ -13,7 +13,7 @@ format tests = execWriter $ do
         tell w
         tell "\n"
     tell "\n"
-    tell "package sodium;\n\
+    tell "package nz.sodium;\n\
          \\n\
          \import java.util.ArrayList;\n\
          \import java.util.Arrays;\n\
@@ -22,7 +22,7 @@ format tests = execWriter $ do
          \\n\
          \import junit.framework.TestCase;\n\
          \\n\
-         \public class CommonTester extends TestCase {\n"
+         \public class TestCommon extends TestCase {\n"
     forM_ tests $ \(Test group name sts) -> do
         tell $ "\n  public void test_"++group++"_"++name++"() {\n"
         forM_ sts $ \st -> case st of

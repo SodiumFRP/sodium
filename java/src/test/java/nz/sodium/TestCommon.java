@@ -11,7 +11,7 @@ import java.util.Optional;
 
 import junit.framework.TestCase;
 
-public class CommonTester extends TestCase {
+public class TestCommon extends TestCase {
 
   public void test_Base_send1() {
     StreamSink<String> s = Transaction.run(() -> {

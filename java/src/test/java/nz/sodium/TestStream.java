@@ -7,7 +7,7 @@ import java.util.Optional;
 
 import junit.framework.TestCase;
 
-public class StreamTester extends TestCase {
+public class TestStream extends TestCase {
 	@Override
 	protected void tearDown() throws Exception {
 		System.gc();
