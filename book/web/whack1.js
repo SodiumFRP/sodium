@@ -1,4 +1,4 @@
-function mkMole(id, clock, sClick, x, y)
+function mkMole(id, x, y, clock, sClick)
 {
     var tRise = 100;
     var tWhack = 15;
@@ -30,27 +30,30 @@ function mkMole(id, clock, sClick, x, y)
             ctx.stroke();
         }
     }
-    var state = new Rx.BehaviorSubject({ phase : 'rising', t0 : 0 }),
+    var state = new Rx.BehaviorSubject({ phase : 'rising',
+                                         t0 : clock.getValue() }),
         sUp = clock.withLatestFrom(state,
                 function (t, state) {
-                    return state.phase == 'rising' && t >= tRise
+                    return state.phase == 'rising' &&
+                               t - state.t0 >= tRise
                        ? { phase : 'up', t0 : t }
                        : null;
                 })
             .filter(function (state) { return state !== null; });
         sWhack = sClick.withLatestFrom(clock, state,
                 function (_, t, state) {
+                    var dt = t - state.t0;
                     return state.phase == 'rising'
                         ? { phase : 'whacked',
-                            t0 : t - (1 - t / tRise) * tWhack }
+                            t0 : t - (1 - dt / tRise) * tWhack }
                         : null;
                 })
             .filter(function (state) { return state !== null; });
     sUp.merge(sWhack).subscribe(state);
-    var drawable = new Rx.BehaviorSubject(function(_) { });
-    clock.withLatestFrom(state, function (t, state) {
+    var drawable = clock.withLatestFrom(state, function (t, state) {
             return state.phase == 'rising' ? function (ctx) {
-                       drawMole(ctx, x, y, false, t / tRise); } :
+                       var dt = t - state.t0;
+                       drawMole(ctx, x, y, false, dt / tRise); } :
                    state.phase == 'up' ? function (ctx) {
                        drawMole(ctx, x, y, true, 1); } :
                    function (ctx) {
@@ -58,7 +61,7 @@ function mkMole(id, clock, sClick, x, y)
                        if (dt < tWhack)
                            drawMole(ctx, x, y, false,
                                1 - dt / tWhack); };
-        }).subscribe(drawable);
+        });
     var sDestroy = clock
             .withLatestFrom(state,
                 function (t, st) {
@@ -93,12 +96,11 @@ function init() {
                     var y = 25+(canvas.height-50) * Math.random();
                     var sClick = sMouseDown.filter(function (pt) {
                         return pt.x >= x - 20 && pt.x <= x + 20 &&
-                               pt.y >= y - 20 && pt.y <= y + 20;
+                               pt.y >= y - 20 && pt.y <= y + 30;
                     });
                     var newMoles = state.moles.slice();
-                    newMoles.push(mkMole(state.nextID,
-                        clock.map(function (t) { return t - t0; }),
-                        sClick, x, y));
+                    newMoles.push(mkMole(state.nextID, x, y,
+                                           clock, sClick));
                     state = { nextID : state.nextID+1,
                               moles : newMoles };
                     console.log("add mole "+state.nextID+
@@ -133,7 +135,7 @@ function init() {
                         });
                 drawables = i == 0
                     ? thiz
-                    : drawables.withLatestFrom(thiz,
+                    : drawables.combineLatest(thiz,
                         function (d1, d2) { return d1.concat(d2); });
             }
             return drawables;
