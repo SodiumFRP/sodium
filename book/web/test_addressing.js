@@ -14,8 +14,8 @@ function init() {
             sendIn = function (a) { observer.onNext(a); };
         }).publish();
     sIn.connect();
-    var sEgress = addressing(sAdd, sRemove, sIn);
-    sEgress.subscribe(function (o) {
+    var sCreated = addressing(sAdd, sRemove, sIn);
+    sCreated.subscribe(function (o) {
         console.log("key: "+o.key+" extra: "+o.extra);
         o.sAddressee.subscribe(function (value) {
             console.log("["+o.key+"] "+value);

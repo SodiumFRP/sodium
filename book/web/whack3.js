@@ -94,91 +94,6 @@ function sequence(xs)
     }
 }
 
-function insert(tree, key, value) {
-    return tree === null ?   { left : null, right : null,
-                               key : key, value : value } :
-        key === tree.key ?   { left : tree.left, right : tree.right,
-                               key : key, value : value } :
-        key < tree.key ?     { left : insert(tree.left, key, value),
-                               right : tree.right,
-                               key : tree.key, value : tree.value }
-                           : { left : tree.left,
-                               right : insert(tree.right, key, value),
-                               key : tree.key, value : tree.value };
-}
-
-function lookup(tree, key) {
-    return tree === null ? null :
-        key == tree.key ? tree.value :
-        key < tree.key  ? lookup(tree.left, key)
-                        : lookup(tree.right, key);
-}
-
-function remove(tree, key) {
-    if (tree === null) return null; else
-    if (key === tree.key) {
-        if (tree.left === null) return tree.right; else
-        if (tree.right === null) return tree.left; else {
-            function minimum(tree) {
-                return tree.left === null ? tree
-                                          : minimum(tree.left);
-            }
-            var m = minimum(tree.right);
-            return { left : tree.left,
-                     right : remove(tree.right, m.key),
-                     key : m.key, value : m.value };
-        }
-    }
-    else
-    if (key < tree.key)
-        return { left : remove(tree.left, key),
-                 right : tree.right,
-                 key : tree.key, value : tree.value };
-    else
-        return { left : tree.left,
-                 right : remove(tree.right, key),
-                 key : tree.key, value : tree.value };
-}
-
-function valuesToList(tree) {
-    var vals = [];
-    function traverse(tree) {
-        if (tree != null) {
-            traverse(tree.left);
-            vals.push(tree.value);
-            traverse(tree.right);
-        }
-    }
-    traverse(tree);
-    return vals;
-}
-
-function mkRouter(sSource, dests) {
-    return sSource.withLatestFrom(dests, function (msg, dests) {
-        return { send : lookup(dests, msg.key),
-                 value : msg.value };
-    }).subscribe(function (msg) {
-        if (msg.send !== null)
-            msg.send(msg.value);
-    });
-}
-
-function addRoute(dests, key) {
-    var send;
-    var sOut = Rx.Observable.create(function (observer) {
-        send = function(a) { observer.onNext(a); }
-    }).publish();
-    sOut.connect();
-    return {
-        dests : insert(dests, key, send),
-        sOut : sOut
-    };
-}
-
-function removeRoute(dests, key) {
-    return remove(dests, key);
-}
-
 function init() {
     var canvas = document.getElementById("myCanvas"),
         getXY = function(e) {
@@ -196,50 +111,59 @@ function init() {
     function slotAt(x, y) {
         return Math.floor(x / 60) + Math.floor(y / 60) * slotsX;
     }
-    var state = new Rx.BehaviorSubject({ moles : null, dests : null }),
-        sAddMole = clock
-            .filter(function (_) { return Math.random() < 0.02; })
-            .withLatestFrom(state, clock,
-                function (_, state, t0) {
-                    var id = Math.floor(slots * Math.random()),
+    var sAdd0 = new Rx.Subject(),
+        sRemove0 = new Rx.Subject(),
+        sIn0 = new Rx.Subject(),
+        sCreated = addressing(sAdd0, sRemove0, sIn0),
+        moles = new Rx.BehaviorSubject([]);
+    clock.filter(function (_) { return Math.random() < 0.02; })
+         .map(function (_) {
+             var id = Math.floor(slots * Math.random());
+             return { key : id, extra : id };
+         })
+         .subscribe(sAdd0);
+    var sAddMole = sCreated
+            .withLatestFrom(moles, clock,
+                function (created, moles, t0) {
+                    var sClick = created.sAddressee,
+                        id = created.extra,
                         x = slotX(id), y = slotY(id);
-                    var route = addRoute(state.dests, id);
-                    var sClick = route.sOut;
                     console.log("add mole "+id);
                     var mole = mkMole(id, x, y, clock, sClick);
-                    return { moles : insert(state.moles, id, mole),
-                             dests : route.dests };
+                    moles = moles.slice();
+                    moles.push(mole);
+                    return moles;
                 }),
-        sDestroy = state.flatMapLatest(
-            function (state) {
+        sDestroy = moles.flatMapLatest(
+            function (moles) {
                 var sDestroy = Rx.Observable.of();
-                var moles = valuesToList(state.moles);
                 for (var i = 0; i < moles.length; i++)
                     sDestroy = sDestroy.merge(moles[i].sDestroy);
                 return sDestroy;
             });
-        sRemoveMole = sDestroy.withLatestFrom(state,
-            function (id, state) {
+        sRemoveMole = sDestroy.withLatestFrom(moles,
+            function (id, moles) {
+                var newMoles = [];
+                for (var i = 0; i < moles.length; i++)
+                    if (moles[i].id != id)
+                        newMoles.push(moles[i]);
                 console.log("remove mole "+id);
-                return { moles : remove(state.moles, id),
-                         dests : removeRoute(state.dests, id) };
+                return newMoles;
             });
-    sAddMole.merge(sRemoveMole).subscribe(state);
+    sDestroy.subscribe(sRemove0);
+    sAddMole.merge(sRemoveMole).subscribe(moles);
     var drawables = new Rx.BehaviorSubject([]);
-    state.flatMapLatest(
-        function (state) {
+    moles.flatMapLatest(
+        function (moles) {
             var drawables = [];
-            var moles = valuesToList(state.moles);
             for (var i = 0; i < moles.length; i++)
                 drawables.push(moles[i].drawable);
             return sequence(drawables);
         }).subscribe(drawables);
-    var sClick = sMouseDown.map(function (pt) {
-                return { key : slotAt(pt.x, pt.y),
-                         value : true };
-            }),
-        dests = state.map(function (state) { return state.dests; });
-    var dispose = mkRouter(sClick, dests);
+    sMouseDown.map(function (pt) {
+            return { key : slotAt(pt.x, pt.y),
+                     value : true };
+        }).subscribe(sIn0);
     clock.subscribe(function(t) {
         var ctx = canvas.getContext("2d");
         ctx.fillStyle = '#00af00';
