@@ -70,7 +70,7 @@ function mkMole(id, x, y, clock, sClick)
                         || (st.phase == 'whacked' && dur >= tWhack)
                                      ? id : null;
                 })
-            .filter(function (id) { return id != null; });
+            .filter(function (id) { return id !== null; });
     return {
         id : id,
         drawable : drawable,
@@ -118,7 +118,7 @@ function init() {
             function (id, state) {
                 var newMoles = [];
                 for (var i = 0; i < state.moles.length; i++)
-                    if (state.moles[i].id != id)
+                    if (state.moles[i].id !== id)
                         newMoles.push(state.moles[i]);
                 console.log("remove mole "+id+" ("+newMoles.length+")");
                 return { nextID : state.nextID, moles : newMoles };
