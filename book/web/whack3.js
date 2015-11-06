@@ -1,8 +1,8 @@
 function mkMole(id, x, y, clock, sClick)
 {
-    var tRise = 100;
-    var tWhack = 15;
-    var tUp = 500;
+    var tRise = 100,
+        tWhack = 15,
+        tUp = 500;
     function drawFace(ctx, x, y, color) {
         ctx.beginPath();
         ctx.arc(x,y,20,0,2*Math.PI);
@@ -39,7 +39,7 @@ function mkMole(id, x, y, clock, sClick)
                        ? { phase : 'up', t0 : t }
                        : null;
                 })
-            .filter(function (state) { return state !== null; });
+            .filter(function (state) { return state !== null; }),
         sWhack = sClick.withLatestFrom(clock, state,
                 function (_, t, state) {
                     var dt = t - state.t0;
@@ -48,9 +48,9 @@ function mkMole(id, x, y, clock, sClick)
                             t0 : t - (1 - dt / tRise) * tWhack }
                         : null;
                 })
-            .filter(function (state) { return state !== null; });
-    sUp.merge(sWhack).subscribe(state);
-    var drawable = state.map(function (state) {
+            .filter(function (state) { return state !== null; }),
+        subscr1 = sUp.merge(sWhack).subscribe(state);
+        drawable = state.map(function (state) {
             return state.phase == 'rising' ? function (ctx, t) {
                        var dt = t - state.t0;
                        drawMole(ctx, x, y, false, dt / tRise); } :
@@ -61,8 +61,8 @@ function mkMole(id, x, y, clock, sClick)
                        if (dt < tWhack)
                            drawMole(ctx, x, y, false,
                                1 - dt / tWhack); };
-        });
-    var sDestroy = clock
+        }),
+        sDestroy = clock
             .withLatestFrom(state,
                 function (t, st) {
                     var dur = t - st.t0;
@@ -70,11 +70,12 @@ function mkMole(id, x, y, clock, sClick)
                         || (st.phase == 'whacked' && dur >= tWhack)
                                      ? id : null;
                 })
-            .filter(function (id) { return id != null; });
+            .filter(function (id) { return id !== null; });
     return {
         id : id,
         drawable : drawable,
-        sDestroy : sDestroy
+        sDestroy : sDestroy,
+        dispose  : function () { subscr1.dispose(); }
     };
 }
 
@@ -147,6 +148,8 @@ function init() {
                 for (var i = 0; i < moles.length; i++)
                     if (moles[i].id != id)
                         newMoles.push(moles[i]);
+                    else
+                        setTimeout(moles[i].dispose, 0);
                 console.log("remove mole "+id);
                 return newMoles;
             });

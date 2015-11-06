@@ -5,9 +5,9 @@ import nz.sodium.*;
 import java.util.Optional;
 
 public class LifeCycle {
-    public Stream<Fuel> sStart;
-    public Cell<Optional<Fuel>> fillActive;
-    public Stream<End> sEnd;
+    public final Stream<Fuel> sStart;
+    public final Cell<Optional<Fuel>> fillActive;
+    public final Stream<End> sEnd;
 
     public enum End { END }
 
