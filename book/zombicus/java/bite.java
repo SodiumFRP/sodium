@@ -11,10 +11,10 @@ public class bite {
         Cell<List<A>> out = new Cell<>(new ArrayList<A>());
         for (Cell<A> c : in)
             out = Cell.lift(
-                (l0, a) -> {
-                    List<A> l = new ArrayList<A>(l0);
-                    l.add(a);
-                    return l;
+                (list0, a) -> {
+                    List<A> list = new ArrayList<A>(list0);
+                    list.add(a);
+                    return list;
                 }, out, c);
         return out;
     }
