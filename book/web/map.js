@@ -62,7 +62,7 @@ function tileY(tile) { return Math.floor(tile / xTiles) * tileHeight; }
 function init() {
     var canvas = document.getElementById("myCanvas"),
         scrollOrigin = dragging(canvas),
-        tilesNeeded = scrollOrigin.map(function (so) {
+        sTilesNeeded = scrollOrigin.map(function (so) {
             var tiles = [],
                 x0 = Math.floor(so.x / tileWidth),
                 y0 = Math.floor(so.y / tileHeight),
@@ -77,7 +77,7 @@ function init() {
             return tiles;
         }),
         tilePromises = new Rx.BehaviorSubject([]);
-    tilesNeeded.withLatestFrom(tilePromises,
+    sTilesNeeded.withLatestFrom(tilePromises,
         function (needed, promises) {
             var newPromises = [],
                 promises = promises.slice();
