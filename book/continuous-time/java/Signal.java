@@ -9,7 +9,7 @@ public class Signal {
         this.c = c;
     }
     public final double t0, a, b, c;
-    public double at(double t) {
+    public double valueAt(double t) {
         double x = t - t0;
         return a*x*x + b*x + c;
     }
@@ -40,7 +40,7 @@ public class Signal {
                                     Cell<Signal> sig, double initial) {
         Stream<Signal> sSig = Operational.updates(sig);
         return sSig.accum(sig.sample().integrate(initial),
-            (neu, old) -> neu.integrate(old.at(neu.t0)));
+            (neu, old) -> neu.integrate(old.valueAt(neu.t0)));
     }
 }
 
