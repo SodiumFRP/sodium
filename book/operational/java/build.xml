@@ -23,6 +23,15 @@
         </java>
     </target>
 
+    <target name="sametrans" depends="compile">
+        <java classname="sametrans" fork="true">
+            <classpath>
+                <pathelement path="build/"/>
+                <pathelement path="../../../java/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
     <target name="cell" depends="compile">
         <java classname="cell" fork="true">
             <classpath>
