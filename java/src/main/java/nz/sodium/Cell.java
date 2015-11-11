@@ -134,7 +134,9 @@ public class Cell<A> {
             }
         });
     	Stream<A> sInitial = sSpark.<A>snapshot(this);
-        return updates(trans1).orElse(sInitial);
+        return sInitial.merge(updates(trans1), new Lambda2<A,A,A>() {
+            public A apply(A left, A right) { return right; }
+        });
     }
 
     /**
