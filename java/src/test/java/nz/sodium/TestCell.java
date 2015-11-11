@@ -231,7 +231,7 @@ public class TestCell extends TestCase {
 	    Optional<Cell<Character>> sw;
 	}
 
-	public void testSwitchB()
+	public void testSwitchC()
 	{
 	    StreamSink<SB> esb = new StreamSink();
 	    // Split each field out of SB so we can update multiple behaviours in a
@@ -269,7 +269,7 @@ public class TestCell extends TestCase {
 	    Optional<Stream<Character>> sw;
 	}
 
-    public void testSwitchE()
+    public void testSwitchS()
     {
         StreamSink<SE> ese = new StreamSink();
         Stream<Character> ea = ese.map(s -> s.a);

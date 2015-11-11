@@ -122,7 +122,7 @@ public class Cell<A> {
 
     final Stream<A> updates(Transaction trans)
     {
-        return str.lastFiringOnly(trans);
+        return str;
     }
 
     final Stream<A> value(Transaction trans1)
@@ -336,7 +336,7 @@ public class Cell<A> {
                             h.run(trans1);
                     }
                 });
-                return out.unsafeAddCleanup(l1).unsafeAddCleanup(l2).unsafeAddCleanup(
+                return out.lastFiringOnly(trans0).unsafeAddCleanup(l1).unsafeAddCleanup(l2).unsafeAddCleanup(
                     new Listener() {
                         public void unlisten() {
                             in_target.unlinkTo(node_target);
@@ -368,10 +368,8 @@ public class Cell<A> {
                     @Override
                     public void run(Transaction trans2, Cell<A> ba) {
                         // Note: If any switch takes place during a transaction, then the
-                        // value().listen will always cause a sample to be fetched from the
-                        // one we just switched to. The caller will be fetching our output
-                        // using value().listen, and value() throws away all firings except
-                        // for the last one. Therefore, anything from the old input cell
+                        // lastFiringOnly() below will always cause a sample to be fetched
+                        // from the one we just switched to. So anything from the old input cell
                         // that might have happened during this transaction will be suppressed.
                         if (currentListener != null)
                             currentListener.unlisten();
@@ -389,7 +387,7 @@ public class Cell<A> {
                     }
                 };
                 Listener l1 = bba.value(trans0).listen_(out.node, h);
-                return out.unsafeAddCleanup(l1).holdLazy(za);
+                return out.lastFiringOnly(trans0).unsafeAddCleanup(l1).holdLazy(za);
             }
         });
 	}

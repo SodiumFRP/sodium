@@ -104,7 +104,9 @@
 
             <batchtest>
                 <fileset dir="build/tests/java8">
-                    <include name="nz/sodium/*Tester.class" />
+                    <include name="nz/sodium/TestCell.class" />
+                    <include name="nz/sodium/TestStream.class" />
+                    <include name="nz/sodium/TestCommon.class" />
                 </fileset>
             </batchtest>
         </junit>
