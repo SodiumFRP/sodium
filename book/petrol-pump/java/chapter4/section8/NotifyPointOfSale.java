@@ -21,7 +21,8 @@ public class NotifyPointOfSale {
              Fill fi) {
         Cell<Boolean> locked =
                 lc.sStart.map(u -> true).orElse(
-                sClearSale.map(u -> false)).hold(false);
+                    sClearSale.map(u -> false)
+                ).hold(false);
         sStart = lc.sStart.gate(locked.map(l -> !l));
         sEnd   = lc.sEnd.gate(locked);
         fuelFlowing =
