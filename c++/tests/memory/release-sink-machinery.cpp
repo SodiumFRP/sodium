@@ -1,5 +1,6 @@
 #include <sodium/sodium.h>
 #include <unistd.h>
+#include <string>
 
 using namespace sodium;
 using namespace std;
