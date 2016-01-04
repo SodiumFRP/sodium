@@ -1,9 +1,9 @@
 (ns sodium.s-widgets
   (:require [sodium.core :refer :all])
   (:require [clojure.string :as s])
-  (:import [nz.sodium Cell  CellLoop Listener Stream StreamSink Operational Transaction Unit])
-  (:import [javax.swing JButton JFrame JLabel JTextField SwingUtilities])
-  (:import [java.awt FlowLayout])
+  (:import [nz.sodium Cell  CellLoop Listener Stream StreamLoop StreamSink Operational Transaction Unit])
+  (:import [javax.swing JButton JFrame JLabel JPanel JTextField SwingUtilities])
+  (:import [java.awt FlowLayout GridBagLayout GridBagConstraints])
   (:import [java.awt.event ActionListener])
   (:import [javax.swing.event DocumentEvent DocumentListener]))
 
@@ -53,7 +53,7 @@
         label (proxy [JLabel] [""]
                 (removeNotify []
                   (.unlisten @l)
-                  (proxy-super removeNofify)))]
+                  (proxy-super removeNotify)))]
     (reset! l (.listen (Operational/updates c-text)
                        (handler [t] (if (SwingUtilities/isEventDispatchThread)
                                       (.setText label t)
@@ -112,7 +112,7 @@
        label (s-label (:cell msg))]
    (doto frame
      (.setLayout (FlowLayout.))
-                                        ;(.setDefaultCloseOperation JFrame/EXIT_ON_CLOSE)
+     (.setDefaultCloseOperation JFrame/DISPOSE_ON_CLOSE)
      (.add (:jtext msg))
      (.add label)
      (.setSize 400 160)
@@ -127,7 +127,7 @@
        label (s-label reversed)]
    (doto frame
      (.setLayout (FlowLayout.))
-                                        ;(.setDefaultCloseOperation JFrame/EXIT_ON_CLOSE)
+     (.setDefaultCloseOperation JFrame/DISPOSE_ON_CLOSE)
      (.add (:jtext msg))
      (.add label)
      (.setSize 400 160)
@@ -144,7 +144,7 @@
         text (s-text-field s-canned "")]
     (doto frame
       (.setLayout (FlowLayout.))
-                                        ;(.setDefaultCloseOperation JFrame/EXIT_ON_CLOSE)
+      (.setDefaultCloseOperation JFrame/DISPOSE_ON_CLOSE)
       (.add (:jtext text))
       (.add (:jbutton onegai))
       (.add (:jbutton thanks))
@@ -163,8 +163,7 @@
         lbl (s-label color)]
     (doto frame
       (.setLayout (FlowLayout.))
-                                        ;(.setDefaultCloseOperation
-                   ;JFrame/EXIT_ON_CLOSE)
+      (.setDefaultCloseOperation JFrame/DISPOSE_ON_CLOSE)
       (.add (:jbutton red))
       (.add (:jbutton green))
       (.add lbl)
@@ -183,8 +182,7 @@
         lbl-latin (s-label latin)]
     (doto frame
       (.setLayout (FlowLayout.))
-                                        ;(.setDefaultCloseOperation
-                                        ;JFrame/EXIT_ON_CLOSE)
+      (.setDefaultCloseOperation JFrame/DISPOSE_ON_CLOSE)
       (.add (:jtext english))
       (.add (:jbutton translate))
       (.add lbl-latin)
@@ -207,8 +205,7 @@
                              (.loop value (.hold s-update 0))
                              (doto view
                                (.setLayout (FlowLayout.))
-                                        ;(.setDefaultCloseOperation
-                                        ;JFrame/EXIT_ON_CLOSE)
+                               (.setDefaultCloseOperation JFrame/DISPOSE_ON_CLOSE)
                                (.add lbl-value)
                                (.add (:jbutton plus))
                                (.add (:jbutton minus))))))
@@ -232,16 +229,86 @@
         lbl-sum (s-label (.map sum (apply1 [i] (str i))))]
     (doto frame
       (.setLayout (FlowLayout.))
-     ;(.setDefaultCloseOperation JFrame/EXIT_ON_CLOSE)
+      (.setDefaultCloseOperation JFrame/DISPOSE_ON_CLOSE)
       (.add (:jtext txt-a))
       (.add (:jtext txt-b))
       (.add lbl-sum)
       (.setSize 400 160)
       (.setVisible true))))
-      
+
+(defmacro set-grid! [constraints field value]
+  `(set! (. ~constraints ~(symbol (name field)))
+         ~(if (keyword? value)
+            `(. java.awt.GridBagConstraints
+                ~(symbol (name value)))
+            value)))
+
+(defmacro grid-bag-layout [container & body]
+  (let [c (gensym "c")
+        cntr (gensym "cntr")]
+    `(let [~c (new java.awt.GridBagConstraints)
+           ~cntr ~container]
+       ~@(loop [result '() body body]
+           (if (empty? body)
+             (reverse result)
+             (let [expr (first body)]
+               (if (keyword? expr)
+                 (recur (cons `(set-grid! ~c ~expr
+                                          ~(second body))
+                              result)
+                        (next (next body)))
+                 (recur (cons `(.add ~cntr ~expr ~c)
+                              result)
+                        (next body)))))))))
+
+(defn s-spinner
+  [initial-value]
+  (let [s-set-value (StreamLoop.)
+        text-field (s-text-field (.map s-set-value (apply1 [v] (str v))) (str initial-value) 5)
+        parse-int (fn [t] (try
+                           (Integer/parseInt t)
+                           (catch NumberFormatException e
+                             0)))
+        value (.map (:cell text-field) (apply1 [txt] (parse-int txt)))
+        plus (s-button "+")
+        minus (s-button "-")
+        spinner (JPanel. (GridBagLayout.))
+        s-plus-delta (.map (:s-clicked plus) (apply1 [u] 1))
+        s-minus-delta (.map (:s-clicked minus) (apply1 [u] -1))
+        s-delta (.orElse s-plus-delta s-minus-delta )]
+    (doto spinner
+      (grid-bag-layout
+       :gridx 0 :gridy 0
+       :gridwidth 1 :gridheight 2
+       :fill :BOTH
+       :weightx 1.0
+       (:jtext text-field)
+       :gridx 1 :gridy 0
+       :gridwidth 1 :gridheight 1
+       (:jbutton plus)
+       :gridx 1 :gridy 1
+       (:jbutton minus)))
+    (.loop s-set-value (.snapshot s-delta value (apply2 [delta value]
+                                                        (println (str delta ":" value))
+                                                        (+ delta value))))
+    {:jpanel spinner :cell value}))
+
+(defn spinme
+  []
+  (let [view (JFrame.)]
+    (Transaction/runVoid (fn []
+                           (let [spnr (s-spinner 0)]
+                             (.add view (:jpanel spnr)))))
+    (doto view
+      (.setLayout (FlowLayout.))
+      (.setDefaultCloseOperation JFrame/DISPOSE_ON_CLOSE)
+      (.setSize 400 160)
+      (.setVisible true))))
+
 
 (defn -main
   [& args]
+  (spinme)
   (add)
   (spinner)
   (translate)
