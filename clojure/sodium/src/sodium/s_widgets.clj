@@ -2,7 +2,7 @@
   (:require [sodium.core :refer :all])
   (:require [clojure.string :as s])
   (:import [nz.sodium Cell  CellLoop Listener Stream StreamLoop StreamSink Operational Transaction Unit])
-  (:import [javax.swing JButton JFrame JLabel JPanel JTextField SwingUtilities])
+  (:import [javax.swing JButton JComponent JFrame JLabel JPanel JTextField SwingUtilities])
   (:import [java.awt FlowLayout GridBagLayout GridBagConstraints])
   (:import [java.awt.event ActionListener])
   (:import [javax.swing.event DocumentEvent DocumentListener]))
@@ -64,9 +64,15 @@
 
 (defn s-text-field
   ([init-text] (s-text-field (Stream.) init-text 15))
-  ;([^String init-text ^Long width] (s-text-field (Stream.) init-text width))
-  ([^Stream s-text ^String init-text] (s-text-field s-text init-text 15))
-  ([^Stream s-text ^String init-text ^long width] (s-text-field s-text init-text width (Cell. true)))
+  ([string-or-stream string-or-width]
+     (if (string? string-or-stream)
+       (s-text-field (Stream.) string-or-stream string-or-width (Cell. true))
+       (s-text-field string-or-stream string-or-width 15 (Cell. true))))
+  ([string-or-stream string-or-width cell-or-width]
+     (if (string? string-or-stream)
+       (s-text-field (Stream.) string-or-stream string-or-width cell-or-width)
+       (s-text-field string-or-stream string-or-width cell-or-width (Cell. true))))
+  ;(s-text-field s-text init-text width (Cell. true)))
   ([^Stream s-text ^String init-text ^long width ^Cell enabled]
    (let [s-decrement (StreamSink.)
          allow (.map
@@ -103,7 +109,7 @@
                                                     (println "dispatch else")
                                                     (SwingUtilities/invokeLater (fn []
                                                                                 (.setEnabled s-text-field ena)))))))))
-     {:jtext s-text-field :cell text :stream s-user-changes :dl dl})))
+     {:jcomp s-text-field :jtext s-text-field :cell text :stream s-user-changes :dl dl})))
   
 (defn label
   []
@@ -291,7 +297,7 @@
     (.loop s-set-value (.snapshot s-delta value (apply2 [delta value]
                                                         (println (str delta ":" value))
                                                         (+ delta value))))
-    {:jpanel spinner :cell value}))
+    {:jcomp spinner :jpanel spinner :cell value}))
 
 (defn spinme
   []
@@ -305,9 +311,121 @@
       (.setSize 400 160)
       (.setVisible true))))
 
+(defn form-validation
+  []
+  (let [view (JFrame. "formvalidation")]
+    (Transaction/runVoid
+     (fn []
+       (let [max-emails 4
+             gridbag (GridBagLayout.)
+             all-valid (Cell. true)
+             valids (atom {})
+             x (atom {:row0 { :label (JLabel. "Name")
+                             :component (s-text-field "" 30)}
+                      :row1 { :label (JLabel. "No of email addresses")
+                             :component (s-spinner 1)}})]
+         (reset! valids (conj @valids {:valid0
+                                     (.map (:cell (:component (:row0 @x))) (apply1 [t]
+                                                                                   (cond
+                                                        (= "" (s/trim t))
+                                                        "<-- enter something"
+                                                        (< 0 (.indexOf (s/trim t)))
+                                                        "<-- must contain space"
+                                                        :else "")))
+                                     :valid1   (.map (:cell (:component (:row1 @x))) (apply1 [n]
+                                                                                             (if (or (< n max-emails)
+                                                               (> n max-emails))
+                                                         (str "<-- must be 1 to " max-emails)
+                                                         "")))
+                                     }))
+       
+         (dotimes [row max-emails]
+           (let [email (+ row 1)
+                 enabled (.map (:cell (:component (:row1 @x)))
+                               (apply1 [n] (< row n)))
+                 k-row (keyword (str "row" (+ row 2)))
+                 k-valid (keyword (str "valid" (+ row 2)))]
+             (reset! x (conj @x {k-row
+                                 {:label (JLabel. (str "Email #" email))
+                                  :component (s-text-field "" 30 enabled) }}))
+             (reset! valids (conj @valids {k-valid
+                                           (Cell/lift (apply2 [e n]
+                                                             (cond
+                                                              (>= row n)
+                                                              ""
+                                                              (= "" (s/trim e))
+                                                              "<-- enter something"
+                                                              (< 0 (.indexOf e "@"))
+                                                              "<-- must contain @"
+                                                              :else ""))
+                                                     (:cell (:component (k-row @x)))
+                                                     (:cell (:component (:row2 @x))))
+                                           } ))))
+         (doto view
+           (.setLayout gridbag)
+           (grid-bag-layout
+            :gridwidth 1 :gridheight 1
+            :fill :BOTH
+            ))
+         (dotimes [row (+ max-emails 2)]
+           (let [k-row (keyword (str "row" row))
+                 k-valid (keyword (str "valid" row))]
+             (doto view
+               (grid-bag-layout
+                :weightx 0
+                :gridx 0 :gridy row
+                (:label (k-row @x))
+                :weightx 1.0
+                :gridx 1
+                (:jcomp (:component (k-row @x)))
+                :weightx 0
+                :gridx 2
+                (s-label (k-valid @valids))))
+             (Cell/lift (apply2 [a b]
+                                (and a b))
+                        all-valid
+                        (.map (k-valid @valids) (apply1 [t] (= "" t))))))
+         (doto view
+           (grid-bag-layout
+            :weightx 1.0
+            :gridx 0 :gridy 6
+            :gridwidth 3
+            :fill :NONE
+            (:jbutton (s-button "OK" all-valid))))
+         (pr @valids))))
+    (doto view
+      (.setSize 600 200)
+      (.setVisible true))))
 
+ (form-validation)
+
+
+
+(let [x (atom { :row0 { :foo :bar}})]
+  
+  (dotimes [row 4]
+    (let [email (+ row 1)
+          enabled true
+          k-row (keyword (str "row" email))]
+      (reset! x (conj @x {k-row {:label (JLabel. (str "Email #" email))
+                                 :component '() } }))
+      (println (str "::: " (update-in @x [k-row :component] :bar )))))
+    (println @x))
+       
+(def n 5)
+
+
+(if (or (< n 1) (> n 4))
+  (println "not ok")
+  (println "ok"))
+
+
+                                   
+
+                               
 (defn -main
   [& args]
+  ;(form-validation)
   (spinme)
   (add)
   (spinner)
