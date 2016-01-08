@@ -55,11 +55,13 @@
                   (.unlisten @l)
                   (proxy-super removeNotify)))]
     (reset! l (.listen (Operational/updates c-text)
-                       (handler [t] (if (SwingUtilities/isEventDispatchThread)
+                       (handler [t] (println (str "Operational/updates handler t=" t))
+                                (if (SwingUtilities/isEventDispatchThread)
                                       (.setText label t)
-                                      (SwingUtilities/invokeLater (fn [t] (.setText label ) t))))))
+                                      (SwingUtilities/invokeLater (fn [t] (println "invokeLater")(.setText label ) t))))))
     (Transaction/post (fn [] (SwingUtilities/invokeLater (fn []
-                                                         (.setText label (.sample c-text))))))
+                                                          (println "invokeLaterLater")
+                                                          (.setText label (.sample c-text))))))
     label))
 
 (defn s-text-field
@@ -318,23 +320,24 @@
      (fn []
        (let [max-emails 4
              gridbag (GridBagLayout.)
-             all-valid (Cell. true)
+             all-valid (atom (Cell. true))
              valids (atom {})
              x (atom {:row0 { :label (JLabel. "Name")
                              :component (s-text-field "" 30)}
                       :row1 { :label (JLabel. "No of email addresses")
                              :component (s-spinner 1)}})]
          (reset! valids (conj @valids {:valid0
-                                     (.map (:cell (:component (:row0 @x))) (apply1 [t]
-                                                                                   (cond
-                                                        (= "" (s/trim t))
-                                                        "<-- enter something"
-                                                        (< 0 (.indexOf (s/trim t)))
-                                                        "<-- must contain space"
-                                                        :else "")))
+                                       (.map (:cell (:component (:row0 @x)))
+                                             (apply1 [t]
+                                                     (cond
+                                                      (= "" (s/trim t))
+                                                      "<-- enter something"
+                                                      (< (.indexOf (s/trim t) " ") 0)
+                                                      "<-- must contain space"
+                                                      :else "")))
                                      :valid1   (.map (:cell (:component (:row1 @x))) (apply1 [n]
-                                                                                             (if (or (< n max-emails)
-                                                               (> n max-emails))
+                                                                                             (if (or (< n 1)
+                                                                                                     (> n max-emails))
                                                          (str "<-- must be 1 to " max-emails)
                                                          "")))
                                      }))
@@ -350,87 +353,67 @@
                                   :component (s-text-field "" 30 enabled) }}))
              (reset! valids (conj @valids {k-valid
                                            (Cell/lift (apply2 [e n]
-                                                             (cond
-                                                              (>= row n)
-                                                              ""
-                                                              (= "" (s/trim e))
-                                                              "<-- enter something"
-                                                              (< 0 (.indexOf e "@"))
-                                                              "<-- must contain @"
-                                                              :else ""))
+                                                              (println (str "e: " e "n: " n))
+                                                              (cond
+                                                               (>= row n)
+                                                               ""
+                                                               (= "" (s/trim e))
+                                                               "<-- enter something"
+                                                               (< (.indexOf e "@") 0)
+                                                               "<-- must contain @"
+                                                               :else ""))
                                                      (:cell (:component (k-row @x)))
-                                                     (:cell (:component (:row2 @x))))
+                                                     (:cell (:component (:row1 @x))))
                                            } ))))
          (doto view
            (.setLayout gridbag)
-           (grid-bag-layout
-            :gridwidth 1 :gridheight 1
+           (comment grid-bag-layout
             :fill :BOTH
+            :gridwidth 1 :gridheight 1
             ))
          (dotimes [row (+ max-emails 2)]
            (let [k-row (keyword (str "row" row))
                  k-valid (keyword (str "valid" row))]
+             (println (str row "-> " k-row " -> " k-valid))
              (doto view
                (grid-bag-layout
-                :weightx 0
+                :fill :BOTH
+                :gridwidth 1 :gridheight 1
+                :weightx 0.0
                 :gridx 0 :gridy row
                 (:label (k-row @x))
                 :weightx 1.0
                 :gridx 1
                 (:jcomp (:component (k-row @x)))
-                :weightx 0
+                :weightx 0.0
                 :gridx 2
                 (s-label (k-valid @valids))))
-             (Cell/lift (apply2 [a b]
-                                (and a b))
-                        all-valid
-                        (.map (k-valid @valids) (apply1 [t] (= "" t))))))
+             (reset! all-valid (Cell/lift (apply2 [a b]
+                                                  (and a b))
+                                          @all-valid
+                                          (.map (k-valid @valids) (apply1 [t] (= "" t)))))))
          (doto view
            (grid-bag-layout
             :weightx 1.0
             :gridx 0 :gridy 6
             :gridwidth 3
             :fill :NONE
-            (:jbutton (s-button "OK" all-valid))))
+            (:jbutton (s-button "OK" @all-valid))))
          (pr @valids))))
     (doto view
       (.setSize 600 200)
       (.setVisible true))))
 
- (form-validation)
-
-
-
-(let [x (atom { :row0 { :foo :bar}})]
-  
-  (dotimes [row 4]
-    (let [email (+ row 1)
-          enabled true
-          k-row (keyword (str "row" email))]
-      (reset! x (conj @x {k-row {:label (JLabel. (str "Email #" email))
-                                 :component '() } }))
-      (println (str "::: " (update-in @x [k-row :component] :bar )))))
-    (println @x))
-       
-(def n 5)
-
-
-(if (or (< n 1) (> n 4))
-  (println "not ok")
-  (println "ok"))
-
-
-                                   
-
                                
 (defn -main
   [& args]
-  ;(form-validation)
-  (spinme)
-  (add)
-  (spinner)
-  (translate)
-  (redgreen)
-  (gamechat)
-  (frp-reverse)
-  (label))
+  (form-validation)
+  ;(spinme)
+  ;(add)
+  ;(spinner)
+  ;(translate)
+  ;(redgreen)
+  ;(gamechat)
+  ;(frp-reverse)
+                                        ;(label)
+  )
