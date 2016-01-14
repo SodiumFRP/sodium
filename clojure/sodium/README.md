@@ -11,12 +11,14 @@ lein compile
 
 ## Usage
 
-lein test
-lein run -m sodium.memory-test-1
-lein run -m sodium.memory-test-3
-lein run -m sodium.memory-test-4
-lein run -m sodium.memory-test-5
-lein run -m sodium.s-widgets
+	lein test
+	lein run -m sodium.memory-test-1
+	lein run -m sodium.memory-test-3
+	lein run -m sodium.memory-test-4
+	lein run -m sodium.memory-test-5
+	lein run -m sodium.s-widgets 
+	for all s-widger or any combination of the following parameters for individual widgets
+	lein run -m soduium.s-widgets form-validation spinme spinner translate redgreen gamechat frp-reverse label
 
 ### Any Other Sections
 ### That You Think

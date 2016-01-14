@@ -5,7 +5,8 @@
   (:import [javax.swing JButton JComponent JFrame JLabel JPanel JTextField SwingUtilities])
   (:import [java.awt FlowLayout GridBagLayout GridBagConstraints])
   (:import [java.awt.event ActionListener])
-  (:import [javax.swing.event DocumentEvent DocumentListener]))
+  (:import [javax.swing.event DocumentEvent DocumentListener])
+  (:gen-class))
 
 (defn update-text [source sink]
   (let [text (.getText source)]
@@ -38,7 +39,6 @@
        (Transaction/post (fn []
                            (.setEnabled button (.sample enabled))))
        (reset! l (.listen (Operational/updates enabled) (handler [ena]
-                                                                 (.println *err* "in s-button handler")
                                                                  (if (SwingUtilities/isEventDispatchThread)
                                                                    (.setEnabled button ena)
                                                                    (SwingUtilities/invokeLater (fn []
@@ -49,18 +49,17 @@
 
 (defn s-label
   [c-text]
-  (let [l (atom false)
+  (let [l (atom 0)
         label (proxy [JLabel] [""]
                 (removeNotify []
                   (.unlisten @l)
                   (proxy-super removeNotify)))]
     (reset! l (.listen (Operational/updates c-text)
-                       (handler [t] (println (str "Operational/updates handler t=" t))
+                       (handler [t]
                                 (if (SwingUtilities/isEventDispatchThread)
-                                      (.setText label t)
-                                      (SwingUtilities/invokeLater (fn [t] (println "invokeLater")(.setText label ) t))))))
+                                  (.setText label t)
+                                  (SwingUtilities/invokeLater (fn [t] (.setText label ) t))))))
     (Transaction/post (fn [] (SwingUtilities/invokeLater (fn []
-                                                          (println "invokeLaterLater")
                                                           (.setText label (.sample c-text))))))
     label))
 
@@ -105,10 +104,8 @@
                         (.listen (Operational/updates enabled)
                                  (handler [ena] (if (SwingUtilities/isEventDispatchThread)
                                                   (do
-                                                    (println "dispatch thread")
                                                     (.setEnabled s-text-field ena))
                                                   (do
-                                                    (println "dispatch else")
                                                     (SwingUtilities/invokeLater (fn []
                                                                                 (.setEnabled s-text-field ena)))))))))
      {:jcomp s-text-field :jtext s-text-field :cell text :stream s-user-changes :dl dl})))
@@ -205,7 +202,7 @@
                                lbl-value (s-label (.map value (apply1 [i] (str i))))
                                plus (s-button "+")
                                minus (s-button "-")
-                                 s-plus-delta (.map (:s-clicked plus) (apply1 [u] (println "plus")
+                                 s-plus-delta (.map (:s-clicked plus) (apply1 [u]
                                                                               1))
                                s-minus-delta (.map (:s-clicked minus) (apply1 [u] -1))
                                s-delta (.orElse s-plus-delta s-minus-delta)
@@ -232,8 +229,7 @@
                              0)))
         a (.map (:cell txt-a) (apply1 [t] (parse-int t)))
         b (.map (:cell txt-b) (apply1 [t] (parse-int t)))
-        sum (Cell/lift (apply2 [a_ b_] (println (str a_ " + " b_))
-                                                (+ a_ b_)) a b)
+        sum (Cell/lift (apply2 [a_ b_] (+ a_ b_)) a b)
         lbl-sum (s-label (.map sum (apply1 [i] (str i))))]
     (doto frame
       (.setLayout (FlowLayout.))
@@ -297,7 +293,6 @@
        :gridx 1 :gridy 1
        (:jbutton minus)))
     (.loop s-set-value (.snapshot s-delta value (apply2 [delta value]
-                                                        (println (str delta ":" value))
                                                         (+ delta value))))
     {:jcomp spinner :jpanel spinner :cell value}))
 
@@ -353,7 +348,6 @@
                                   :component (s-text-field "" 30 enabled) }}))
              (reset! valids (conj @valids {k-valid
                                            (Cell/lift (apply2 [e n]
-                                                              (println (str "e: " e "n: " n))
                                                               (cond
                                                                (>= row n)
                                                                ""
@@ -374,7 +368,6 @@
          (dotimes [row (+ max-emails 2)]
            (let [k-row (keyword (str "row" row))
                  k-valid (keyword (str "valid" row))]
-             (println (str row "-> " k-row " -> " k-valid))
              (doto view
                (grid-bag-layout
                 :fill :BOTH
@@ -398,22 +391,30 @@
             :gridx 0 :gridy 6
             :gridwidth 3
             :fill :NONE
-            (:jbutton (s-button "OK" @all-valid))))
-         (pr @valids))))
+            (:jbutton (s-button "OK" @all-valid)))))))
     (doto view
+      (.setDefaultCloseOperation JFrame/DISPOSE_ON_CLOSE)
       (.setSize 600 200)
       (.setVisible true))))
 
                                
 (defn -main
   [& args]
-  (form-validation)
-  ;(spinme)
-  ;(add)
-  ;(spinner)
-  ;(translate)
-  ;(redgreen)
-  ;(gamechat)
-  ;(frp-reverse)
-                                        ;(label)
-  )
+  (if (= nil args)
+    (do
+      (form-validation)
+      (spinme)
+      (add)
+      (spinner)
+      (translate)
+      (redgreen)
+      (gamechat)
+      (frp-reverse)
+      (label))
+    (doall
+     (map 
+      (fn [s]
+        ((ns-resolve 'sodium.s-widgets (symbol s)))) args))))
+
+
+
