@@ -858,6 +858,14 @@ namespace sodium {
             }
 
             /*!
+             * Map a function over this event that always outputs a constant value.
+             */
+            template <class B>
+            event<B> map_to(const B& value) {
+                return map<B>([value] (const A&) { return value; });
+            }
+
+            /*!
              * Merge two streams of the same type into one, so that events on either input appear
              * on the returned stream.
              * <p>
