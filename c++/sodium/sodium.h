@@ -815,6 +815,20 @@ namespace sodium {
             };
 
             /*!
+             * A variant of listen that handles the first event and then
+             * automatically deregisters itself. This is useful for implementing things that
+             * work like promises.
+             */
+            std::function<void()> listen_once(const std::function<void(const A&)>& handle) const {
+                std::shared_ptr<std::function<void()>> lRef(new std::function<void()>);
+                *lRef = listen([handle, lRef] (const A& a) {
+                    handle(a);
+                    (*lRef)();
+                });
+                return *lRef;
+            }
+
+            /*!
              * Map a function over this event to modify the output value. The function must be
              * pure (referentially transparent), that is, it must not have effects.
              */
