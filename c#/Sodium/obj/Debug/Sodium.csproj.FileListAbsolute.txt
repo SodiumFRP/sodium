@@ -3,3 +3,7 @@ C:\Users\ml\Documents\GitHub\sodium\c#\Sodium\obj\Debug\Sodium.dll
 C:\Users\ml\Documents\GitHub\sodium\c#\Sodium\bin\Debug\Sodium.dll
 C:\Users\ml\Documents\GitHub\sodium\c#\Sodium\bin\Debug\Sodium.pdb
 C:\Users\ml\Documents\GitHub\sodium\c#\Sodium\obj\Debug\Sodium.pdb
+C:\Users\jam40\Documents\GitHub\sodium\c#\Sodium\bin\Debug\Sodium.dll
+C:\Users\jam40\Documents\GitHub\sodium\c#\Sodium\bin\Debug\Sodium.pdb
+C:\Users\jam40\Documents\GitHub\sodium\c#\Sodium\obj\Debug\Sodium.dll
+C:\Users\jam40\Documents\GitHub\sodium\c#\Sodium\obj\Debug\Sodium.pdb

@@ -1,0 +1,13 @@
+C:\Users\jam40\Documents\GitHub\sodium\c#\src\Sodium\Sodium\bin\Debug\Sodium.dll
+C:\Users\jam40\Documents\GitHub\sodium\c#\src\Sodium\Sodium\bin\Debug\Sodium.pdb
+C:\Users\jam40\Documents\GitHub\sodium\c#\src\Sodium\Sodium\bin\Debug\Priority Queue.dll
+C:\Users\jam40\Documents\GitHub\sodium\c#\src\Sodium\Sodium\bin\Debug\Priority Queue.pdb
+C:\Users\jam40\Documents\GitHub\sodium\c#\src\Sodium\Sodium\obj\Debug\Sodium.dll
+C:\Users\jam40\Documents\GitHub\sodium\c#\src\Sodium\Sodium\obj\Debug\Sodium.pdb
+\\192.168.0.18\users\jam40\Documents\GitHub\sodium\c#\src\Sodium\Sodium\bin\Debug\Sodium.dll
+\\192.168.0.18\users\jam40\Documents\GitHub\sodium\c#\src\Sodium\Sodium\bin\Debug\Sodium.pdb
+\\192.168.0.18\users\jam40\Documents\GitHub\sodium\c#\src\Sodium\Sodium\bin\Debug\Priority Queue.dll
+\\192.168.0.18\users\jam40\Documents\GitHub\sodium\c#\src\Sodium\Sodium\bin\Debug\Priority Queue.pdb
+\\192.168.0.18\users\jam40\Documents\GitHub\sodium\c#\src\Sodium\Sodium\obj\Debug\Sodium.csprojResolveAssemblyReference.cache
+\\192.168.0.18\users\jam40\Documents\GitHub\sodium\c#\src\Sodium\Sodium\obj\Debug\Sodium.dll
+\\192.168.0.18\users\jam40\Documents\GitHub\sodium\c#\src\Sodium\Sodium\obj\Debug\Sodium.pdb

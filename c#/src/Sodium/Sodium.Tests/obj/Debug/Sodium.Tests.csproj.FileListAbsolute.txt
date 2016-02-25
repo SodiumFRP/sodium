@@ -1,0 +1,11 @@
+C:\Users\jam40\Documents\GitHub\sodium\c#\src\Sodium\Sodium.Tests\bin\Debug\Sodium.Tests.dll
+C:\Users\jam40\Documents\GitHub\sodium\c#\src\Sodium\Sodium.Tests\bin\Debug\Sodium.Tests.pdb
+C:\Users\jam40\Documents\GitHub\sodium\c#\src\Sodium\Sodium.Tests\bin\Debug\nunit.framework.dll
+C:\Users\jam40\Documents\GitHub\sodium\c#\src\Sodium\Sodium.Tests\bin\Debug\Sodium.dll
+C:\Users\jam40\Documents\GitHub\sodium\c#\src\Sodium\Sodium.Tests\bin\Debug\Priority Queue.dll
+C:\Users\jam40\Documents\GitHub\sodium\c#\src\Sodium\Sodium.Tests\bin\Debug\Sodium.pdb
+C:\Users\jam40\Documents\GitHub\sodium\c#\src\Sodium\Sodium.Tests\bin\Debug\nunit.framework.xml
+C:\Users\jam40\Documents\GitHub\sodium\c#\src\Sodium\Sodium.Tests\bin\Debug\Priority Queue.pdb
+C:\Users\jam40\Documents\GitHub\sodium\c#\src\Sodium\Sodium.Tests\obj\Debug\Sodium.Tests.csprojResolveAssemblyReference.cache
+C:\Users\jam40\Documents\GitHub\sodium\c#\src\Sodium\Sodium.Tests\obj\Debug\Sodium.Tests.dll
+C:\Users\jam40\Documents\GitHub\sodium\c#\src\Sodium\Sodium.Tests\obj\Debug\Sodium.Tests.pdb
