@@ -75,12 +75,17 @@ namespace Sodium
                 }
                 finally
                 {
-                    if (transWas == null)
+                    try
                     {
-                        currentTransaction?.Close();
+                        if (transWas == null)
+                        {
+                            currentTransaction?.Close();
+                        }
                     }
-
-                    currentTransaction = transWas;
+                    finally
+                    {
+                        currentTransaction = transWas;
+                    }
                 }
             }
         }
