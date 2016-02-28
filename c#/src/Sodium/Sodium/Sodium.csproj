@@ -50,6 +50,7 @@
     <Compile Include="CellSink.cs" />
     <Compile Include="CellSinkInternal.cs" />
     <Compile Include="CoalesceHandler.cs" />
+    <Compile Include="MaybeExtensionMethods.cs" />
     <Compile Include="StreamExtensionMethods.cs" />
     <Compile Include="CellLoop.cs" />
     <Compile Include="IMaybe.cs" />

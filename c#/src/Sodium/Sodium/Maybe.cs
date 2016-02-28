@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Sodium
 {
@@ -41,6 +42,36 @@ namespace Sodium
             TResult IMaybe<T>.Match<TResult>(Func<T, TResult> hasValueFunc, Func<TResult> nothingFunc)
             {
                 return hasValueFunc(this.value);
+            }
+
+            private bool Equals(JustClass<T> other)
+            {
+                return EqualityComparer<T>.Default.Equals(this.value, other.value);
+            }
+
+            public override bool Equals(object obj)
+            {
+                if (ReferenceEquals(null, obj))
+                {
+                    return false;
+                }
+
+                if (ReferenceEquals(this, obj))
+                {
+                    return true;
+                }
+
+                if (obj.GetType() != this.GetType())
+                {
+                    return false;
+                }
+
+                return this.Equals((JustClass<T>)obj);
+            }
+
+            public override int GetHashCode()
+            {
+                return EqualityComparer<T>.Default.GetHashCode(this.value);
             }
         }
 
