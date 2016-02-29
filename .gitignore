@@ -224,3 +224,7 @@ info.plist
 
 # Scala
 target/
+
+# IntelliJ Idea
+**/.idea/workspace.xml
+**/.idea/tasks.xml
