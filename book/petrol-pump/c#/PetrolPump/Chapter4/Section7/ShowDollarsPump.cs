@@ -21,16 +21,11 @@ namespace PetrolPump.Chapter4.Section7
                             m.Equals(Maybe.Just(Fuel.Two)) ? Delivery.Fast2 :
                                 m.Equals(Maybe.Just(Fuel.Three)) ? Delivery.Fast3 :
                                     Delivery.Off))
-                .SetSaleCostLcd(fi.DollarsDelivered.Map(
-                    q => q.ToString("#0.00")))
-                .SetSaleQuantityLcd(fi.LitersDelivered.Map(
-                    q => q.ToString("#0.00")))
-                .SetPriceLcd1(PriceLcd(lc.FillActive, fi.Price, Fuel.One,
-                    inputs))
-                .SetPriceLcd2(PriceLcd(lc.FillActive, fi.Price, Fuel.Two,
-                    inputs))
-                .SetPriceLcd3(PriceLcd(lc.FillActive, fi.Price, Fuel.Three,
-                    inputs));
+                .SetSaleCostLcd(fi.DollarsDelivered.Map(Formatters.FormatSaleCost))
+                .SetSaleQuantityLcd(fi.LitersDelivered.Map(Formatters.FormatSaleQuantity))
+                .SetPriceLcd1(PriceLcd(lc.FillActive, fi.Price, Fuel.One, inputs))
+                .SetPriceLcd2(PriceLcd(lc.FillActive, fi.Price, Fuel.Two, inputs))
+                .SetPriceLcd3(PriceLcd(lc.FillActive, fi.Price, Fuel.Three, inputs));
         }
 
         public static Cell<string> PriceLcd(
@@ -57,7 +52,7 @@ namespace PetrolPump.Chapter4.Section7
             }
             return fillActive.Lift(fillPrice, idlePrice,
                 (fuelSelectedMaybe, fillPriceLocal, idlePriceLocal) =>
-                    fuelSelectedMaybe.Match(f => f == fuel ? fillPriceLocal.ToString("#0.000") : string.Empty, () => idlePriceLocal.ToString("#0.000")));
+                    fuelSelectedMaybe.Match(f => f == fuel ? Formatters.FormatPrice(fillPriceLocal, 4) : string.Empty, () => Formatters.FormatPrice(idlePriceLocal, 4)));
         }
     }
 }

@@ -28,16 +28,11 @@ namespace PetrolPump.Chapter4.Section8
                             m.Equals(Maybe.Just(Fuel.Two)) ? Delivery.Fast2 :
                                 m.Equals(Maybe.Just(Fuel.Three)) ? Delivery.Fast3 :
                                     Delivery.Off))
-                .SetSaleCostLcd(fi.DollarsDelivered.Map(
-                    q => q.ToString("#0.00")))
-                .SetSaleQuantityLcd(fi.LitersDelivered.Map(
-                    q => q.ToString("0.00")))
-                .SetPriceLcd1(ShowDollarsPump.PriceLcd(np.FillActive, fi.Price,
-                    Fuel.One, inputs))
-                .SetPriceLcd2(ShowDollarsPump.PriceLcd(np.FillActive, fi.Price,
-                    Fuel.Two, inputs))
-                .SetPriceLcd3(ShowDollarsPump.PriceLcd(np.FillActive, fi.Price,
-                    Fuel.Three, inputs))
+                .SetSaleCostLcd(fi.DollarsDelivered.Map(Formatters.FormatSaleCost))
+                .SetSaleQuantityLcd(fi.LitersDelivered.Map(Formatters.FormatSaleQuantity))
+                .SetPriceLcd1(ShowDollarsPump.PriceLcd(np.FillActive, fi.Price, Fuel.One, inputs))
+                .SetPriceLcd2(ShowDollarsPump.PriceLcd(np.FillActive, fi.Price, Fuel.Two, inputs))
+                .SetPriceLcd3(ShowDollarsPump.PriceLcd(np.FillActive, fi.Price, Fuel.Three, inputs))
                 .SetBeep(np.SBeep)
                 .SetSaleComplete(np.SSaleComplete);
         }

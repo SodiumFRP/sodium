@@ -7,6 +7,7 @@ using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using System.Windows.Media.Imaging;
 using System.Windows.Resources;
 using PetrolPump.Chapter4.Section11;
 using PetrolPump.Chapter4.Section4;
@@ -21,13 +22,233 @@ namespace PetrolPump
 {
     public partial class PetrolPumpWindow : IDisposable
     {
+        private readonly string assemblyName;
+
+        private readonly Func<Grid> largeNumberImage0;
+        private readonly Func<Grid> smallNumberImage0;
+        private readonly Func<Grid> largeNumberImage1;
+        private readonly Func<Grid> smallNumberImage1;
+        private readonly Func<Grid> largeNumberImage2;
+        private readonly Func<Grid> smallNumberImage2;
+        private readonly Func<Grid> largeNumberImage3;
+        private readonly Func<Grid> smallNumberImage3;
+        private readonly Func<Grid> largeNumberImage4;
+        private readonly Func<Grid> smallNumberImage4;
+        private readonly Func<Grid> largeNumberImage5;
+        private readonly Func<Grid> smallNumberImage5;
+        private readonly Func<Grid> largeNumberImage6;
+        private readonly Func<Grid> smallNumberImage6;
+        private readonly Func<Grid> largeNumberImage7;
+        private readonly Func<Grid> smallNumberImage7;
+        private readonly Func<Grid> largeNumberImage8;
+        private readonly Func<Grid> smallNumberImage8;
+        private readonly Func<Grid> largeNumberImage9;
+        private readonly Func<Grid> smallNumberImage9;
+        private readonly Func<Grid> largeDotImage;
+        private readonly Func<Grid> smallDotImage;
+        private readonly Func<Grid> largeDashImage;
+        private readonly Func<Grid> smallDashImage;
+
         private Implementation implementation;
 
         public PetrolPumpWindow()
         {
+            this.assemblyName = this.GetType().Assembly.FullName;
+
             this.InitializeComponent();
 
+            Func<Image>[] largeSegments = new Func<Image>[8];
+            Func<Image>[] smallSegments = new Func<Image>[8];
+            for (int i = 0; i < 8; i++)
+            {
+                int n = i;
+
+                largeSegments[i] = () =>
+                {
+                    Image image = new Image();
+                    BitmapImage source = new BitmapImage();
+                    source.BeginInit();
+                    source.UriSource = new Uri("pack://application:,,,/" + this.assemblyName + ";component/images/large" + n + ".png");
+                    source.EndInit();
+                    image.Source = source;
+                    image.Width = source.PixelWidth;
+                    image.Height = source.PixelHeight;
+                    return image;
+                };
+
+                smallSegments[i] = () =>
+                {
+                    Image image = new Image();
+                    BitmapImage source = new BitmapImage();
+                    source.BeginInit();
+                    source.UriSource = new Uri("pack://application:,,,/" + this.assemblyName + ";component/images/small" + n + ".png");
+                    source.EndInit();
+                    image.Source = source;
+                    image.Width = source.PixelWidth;
+                    image.Height = source.PixelHeight;
+                    return image;
+                };
+            }
+
+            IReadOnlyList<IReadOnlyList<int>> layouts = new[]
+            {
+                new[] { 0, 1, 2, 4, 5, 6 },
+                new[] { 2, 5 },
+                new[] { 0, 1, 3, 5, 6 },
+                new[] { 0, 2, 3, 5, 6 },
+                new[] { 2, 3, 4, 5 },
+                new[] { 0, 2, 3, 4, 6 },
+                new[] { 0, 1, 2, 3, 4, 6 },
+                new[] { 2, 5, 6 },
+                new[] { 0, 1, 2, 3, 4, 5, 6 },
+                new[] { 2, 3, 4, 5, 6 }
+            };
+            Func<Grid>[] largeNumberImages = new Func<Grid>[10];
+            Func<Grid>[] smallNumberImages = new Func<Grid>[10];
+            for (int i = 0; i < 10; i++)
+            {
+                IReadOnlyList<int> layout = layouts[i];
+
+                largeNumberImages[i] = () =>
+                {
+                    Grid grid = new Grid();
+                    foreach (int n in layout)
+                    {
+                        grid.Children.Add(largeSegments[n]());
+                    }
+                    return grid;
+                };
+
+                smallNumberImages[i] = () =>
+                {
+                    Grid grid = new Grid();
+                    foreach (int n in layout)
+                    {
+                        grid.Children.Add(smallSegments[n]());
+                    }
+                    return grid;
+                };
+            }
+
+            Func<Grid> largeDotImage = () =>
+            {
+                Grid grid = new Grid();
+                grid.Children.Add(largeSegments[7]());
+                return grid;
+            };
+
+            Func<Grid> smallDotImage = () =>
+            {
+                Grid grid = new Grid();
+                grid.Children.Add(smallSegments[7]());
+                return grid;
+            };
+
+            Func<Grid> largeDashImage = () =>
+            {
+                Grid grid = new Grid();
+                grid.Children.Add(largeSegments[3]());
+                return grid;
+            };
+
+            Func<Grid> smallDashImage = () =>
+            {
+                Grid grid = new Grid();
+                grid.Children.Add(smallSegments[3]());
+                return grid;
+            };
+
+            this.largeNumberImage0 = largeNumberImages[0];
+            this.smallNumberImage0 = smallNumberImages[0];
+            this.largeNumberImage1 = largeNumberImages[1];
+            this.smallNumberImage1 = smallNumberImages[1];
+            this.largeNumberImage2 = largeNumberImages[2];
+            this.smallNumberImage2 = smallNumberImages[2];
+            this.largeNumberImage3 = largeNumberImages[3];
+            this.smallNumberImage3 = smallNumberImages[3];
+            this.largeNumberImage4 = largeNumberImages[4];
+            this.smallNumberImage4 = smallNumberImages[4];
+            this.largeNumberImage5 = largeNumberImages[5];
+            this.smallNumberImage5 = smallNumberImages[5];
+            this.largeNumberImage6 = largeNumberImages[6];
+            this.smallNumberImage6 = smallNumberImages[6];
+            this.largeNumberImage7 = largeNumberImages[7];
+            this.smallNumberImage7 = smallNumberImages[7];
+            this.largeNumberImage8 = largeNumberImages[8];
+            this.smallNumberImage8 = smallNumberImages[8];
+            this.largeNumberImage9 = largeNumberImages[9];
+            this.smallNumberImage9 = smallNumberImages[9];
+            this.largeDotImage = largeDotImage;
+            this.smallDotImage = smallDotImage;
+            this.largeDashImage = largeDashImage;
+            this.smallDashImage = smallDashImage;
+
             Transaction.RunVoid(() => { this.implementation = new Implementation(this); });
+        }
+
+        private Grid GetImage(char c, bool isLarge)
+        {
+            switch (c)
+            {
+                case '-':
+                    return isLarge ? this.largeDashImage() : this.smallDashImage();
+                case '0':
+                    return isLarge ? this.largeNumberImage0() : this.smallNumberImage0();
+                case '1':
+                    return isLarge ? this.largeNumberImage1() : this.smallNumberImage1();
+                case '2':
+                    return isLarge ? this.largeNumberImage2() : this.smallNumberImage2();
+                case '3':
+                    return isLarge ? this.largeNumberImage3() : this.smallNumberImage3();
+                case '4':
+                    return isLarge ? this.largeNumberImage4() : this.smallNumberImage4();
+                case '5':
+                    return isLarge ? this.largeNumberImage5() : this.smallNumberImage5();
+                case '6':
+                    return isLarge ? this.largeNumberImage6() : this.smallNumberImage6();
+                case '7':
+                    return isLarge ? this.largeNumberImage7() : this.smallNumberImage7();
+                case '8':
+                    return isLarge ? this.largeNumberImage8() : this.smallNumberImage8();
+                case '9':
+                    return isLarge ? this.largeNumberImage9() : this.smallNumberImage9();
+                case '.':
+                    return isLarge ? this.largeDotImage() : this.smallDotImage();
+            }
+
+            return null;
+        }
+
+        private void SetLcdDigits(StackPanel placeholder, string text, int maxDigits, bool isLarge)
+        {
+            placeholder.Children.Clear();
+            Func<IEnumerable<Grid>, Grid, IEnumerable<Grid>> defaultAppend = (gg, g) => gg.Concat(new[] { g });
+            // ReSharper disable once PossibleMultipleEnumeration
+            Func<IEnumerable<Grid>, IEnumerable<Grid>> defaultComplete = g => g;
+            var initialState = new { Append = defaultAppend, Grids = new Grid[0].AsEnumerable(), Complete = defaultComplete };
+            foreach (Grid g in text.ToArray().Reverse().Aggregate(initialState, (s, c) =>
+            {
+                Grid imageGrid = this.GetImage(c, isLarge);
+                if (c == '.')
+                {
+                    Grid container = new Grid();
+                    container.Children.Add(imageGrid);
+                    return new
+                    {
+                        Append = (Func<IEnumerable<Grid>, Grid, IEnumerable<Grid>>)((gg, g) =>
+                        {
+                            container.Children.Add(g);
+                            return s.Append(gg, container);
+                        }),
+                        s.Grids,
+                        Complete = (Func<IEnumerable<Grid>, IEnumerable<Grid>>)(g => g.Concat(new[] { imageGrid }))
+                    };
+                }
+                return new { Append = defaultAppend, Grids = s.Append(s.Grids, imageGrid), Complete = defaultComplete };
+            }, s => s.Complete(s.Grids)).Where(i => i != null).Take(maxDigits).Reverse())
+            {
+                placeholder.Children.Add(g);
+            }
         }
 
         public void Dispose()
@@ -194,29 +415,29 @@ namespace PetrolPump
                     });
                 }));
 
-                TextBlock presetLcdTextBlock = new TextBlock();
-                petrolPump.PresetPlaceholder.Children.Add(presetLcdTextBlock);
-                this.listeners.Add(presetLcd.Listen(t => petrolPump.Dispatcher.InvokeIfNecessary(() => presetLcdTextBlock.Text = t)));
+                StackPanel presetLcdStackPanel = new StackPanel { Orientation = Orientation.Horizontal };
+                petrolPump.PresetPlaceholder.Children.Add(presetLcdStackPanel);
+                this.listeners.Add(presetLcd.Listen(t => petrolPump.Dispatcher.InvokeIfNecessary(() => petrolPump.SetLcdDigits(presetLcdStackPanel, t, 5, true))));
 
-                TextBlock saleCostTextBlock = new TextBlock();
-                petrolPump.DollarsPlaceholder.Children.Add(saleCostTextBlock);
-                this.listeners.Add(saleCostLcd.Listen(t => petrolPump.Dispatcher.InvokeIfNecessary(() => saleCostTextBlock.Text = t)));
+                StackPanel saleCostStackPanel = new StackPanel { Orientation = Orientation.Horizontal };
+                petrolPump.DollarsPlaceholder.Children.Add(saleCostStackPanel);
+                this.listeners.Add(saleCostLcd.Listen(t => petrolPump.Dispatcher.InvokeIfNecessary(() => petrolPump.SetLcdDigits(saleCostStackPanel, t, 5, true))));
 
-                TextBlock saleQuantityLcdTextBlock = new TextBlock();
-                petrolPump.LitersPlaceholder.Children.Add(saleQuantityLcdTextBlock);
-                this.listeners.Add(saleQuantityLcd.Listen(t => petrolPump.Dispatcher.InvokeIfNecessary(() => saleQuantityLcdTextBlock.Text = t)));
+                StackPanel saleQuantityLcdStackPanel = new StackPanel { Orientation = Orientation.Horizontal };
+                petrolPump.LitersPlaceholder.Children.Add(saleQuantityLcdStackPanel);
+                this.listeners.Add(saleQuantityLcd.Listen(t => petrolPump.Dispatcher.InvokeIfNecessary(() => petrolPump.SetLcdDigits(saleQuantityLcdStackPanel, t, 5, true))));
 
-                TextBlock priceLcd1TextBlock = new TextBlock();
-                petrolPump.Fuel1Placeholder.Children.Add(priceLcd1TextBlock);
-                this.listeners.Add(priceLcd1.Listen(t => petrolPump.Dispatcher.InvokeIfNecessary(() => priceLcd1TextBlock.Text = t)));
+                StackPanel priceLcd1StackPanel = new StackPanel { Orientation = Orientation.Horizontal };
+                petrolPump.Fuel1Placeholder.Children.Add(priceLcd1StackPanel);
+                this.listeners.Add(priceLcd1.Listen(t => petrolPump.Dispatcher.InvokeIfNecessary(() => petrolPump.SetLcdDigits(priceLcd1StackPanel, t, 5, false))));
 
-                TextBlock priceLcd2TextBlock = new TextBlock();
-                petrolPump.Fuel2Placeholder.Children.Add(priceLcd2TextBlock);
-                this.listeners.Add(priceLcd2.Listen(t => petrolPump.Dispatcher.InvokeIfNecessary(() => priceLcd2TextBlock.Text = t)));
+                StackPanel priceLcd2StackPanel = new StackPanel { Orientation = Orientation.Horizontal };
+                petrolPump.Fuel2Placeholder.Children.Add(priceLcd2StackPanel);
+                this.listeners.Add(priceLcd2.Listen(t => petrolPump.Dispatcher.InvokeIfNecessary(() => petrolPump.SetLcdDigits(priceLcd2StackPanel, t, 5, false))));
 
-                TextBlock priceLcd3TextBlock = new TextBlock();
-                petrolPump.Fuel3Placeholder.Children.Add(priceLcd3TextBlock);
-                this.listeners.Add(priceLcd3.Listen(t => petrolPump.Dispatcher.InvokeIfNecessary(() => priceLcd3TextBlock.Text = t)));
+                StackPanel priceLcd3StackPanel = new StackPanel { Orientation = Orientation.Horizontal };
+                petrolPump.Fuel3Placeholder.Children.Add(priceLcd3StackPanel);
+                this.listeners.Add(priceLcd3.Listen(t => petrolPump.Dispatcher.InvokeIfNecessary(() => petrolPump.SetLcdDigits(priceLcd3StackPanel, t, 5, false))));
 
                 Dictionary<CellLoop<UpDown>, Image> nozzles = new Dictionary<CellLoop<UpDown>, Image>
                 {
@@ -241,7 +462,30 @@ namespace PetrolPump
 
                 this.listeners.Add(sSaleComplete.Listen(sale =>
                 {
-                    //TODO: show dialog
+                    Task.Run(() =>
+                    {
+                        petrolPump.Dispatcher.InvokeIfNecessary(() =>
+                        {
+                            SaleCompleteDialog dialog = new SaleCompleteDialog(
+                                sale.Fuel.ToString(),
+                                Formatters.FormatPrice(sale.Price, null),
+                                Formatters.FormatSaleCost(sale.Cost),
+                                Formatters.FormatSaleQuantity(sale.Quantity));
+                            csClearSale.Send(dialog.SOkClicked);
+                            dialog.Show();
+                            IListener l = null;
+                            // ReSharper disable once RedundantAssignment
+                            l = dialog.SOkClicked.Listen(_ =>
+                            {
+                                petrolPump.Dispatcher.InvokeIfNecessary(() => dialog.Close());
+
+                                // ReSharper disable once AccessToModifiedClosure
+                                using (l)
+                                {
+                                }
+                            });
+                        });
+                    });
                 }));
 
                 Task.Run(async () =>
@@ -293,20 +537,5 @@ namespace PetrolPump
                 return r.Stream;
             }
         }
-    }
-
-    public enum Key
-    {
-        One,
-        Two,
-        Three,
-        Four,
-        Five,
-        Six,
-        Seven,
-        Eight,
-        Nine,
-        Zero,
-        Clear
     }
 }

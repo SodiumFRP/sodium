@@ -30,18 +30,13 @@ namespace PetrolPump.Chapter4.Section11
             keypadActive.Loop(pr.KeypadActive);
             return new Outputs()
                 .SetDelivery(pr.Delivery)
-                .SetSaleCostLcd(fi.DollarsDelivered.Map(
-                    q => q.ToString("#0.00")))
-                .SetSaleQuantityLcd(fi.LitersDelivered.Map(
-                    q => q.ToString("#0.00")))
-                .SetPriceLcd1(ShowDollarsPump.PriceLcd(np.FillActive, fi.Price,
-                    Fuel.One, inputs))
-                .SetPriceLcd2(ShowDollarsPump.PriceLcd(np.FillActive, fi.Price,
-                    Fuel.Two, inputs))
-                .SetPriceLcd3(ShowDollarsPump.PriceLcd(np.FillActive, fi.Price,
-                    Fuel.Three, inputs))
+                .SetSaleCostLcd(fi.DollarsDelivered.Map(Formatters.FormatSaleCost))
+                .SetSaleQuantityLcd(fi.LitersDelivered.Map(Formatters.FormatSaleQuantity))
+                .SetPriceLcd1(ShowDollarsPump.PriceLcd(np.FillActive, fi.Price, Fuel.One, inputs))
+                .SetPriceLcd2(ShowDollarsPump.PriceLcd(np.FillActive, fi.Price, Fuel.Two, inputs))
+                .SetPriceLcd3(ShowDollarsPump.PriceLcd(np.FillActive, fi.Price, Fuel.Three, inputs))
                 .SetSaleComplete(np.SSaleComplete)
-                .SetPresetLcd(ke.Value.Map(v => v.ToString("#0.00")))
+                .SetPresetLcd(ke.Value.Map(Formatters.FormatPresetAmount))
                 .SetBeep(np.SBeep.OrElse(ke.SBeep));
         }
     }

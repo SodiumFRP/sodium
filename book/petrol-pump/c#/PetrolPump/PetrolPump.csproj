@@ -75,11 +75,16 @@
     <Compile Include="DispatcherExtensionMethods.cs" />
     <Compile Include="FillState.cs" />
     <Compile Include="FillStateType.cs" />
+    <Compile Include="Formatters.cs" />
     <Compile Include="Fuel.cs" />
     <Compile Include="Inputs.cs" />
     <Compile Include="IPump.cs" />
+    <Compile Include="Key.cs" />
     <Compile Include="Outputs.cs" />
     <Compile Include="Sale.cs" />
+    <Compile Include="SaleCompleteDialog.xaml.cs">
+      <DependentUpon>SaleCompleteDialog.xaml</DependentUpon>
+    </Compile>
     <Compile Include="SButton.cs" />
     <Compile Include="SComboBox.cs" />
     <Compile Include="STextField.cs" />
@@ -97,6 +102,10 @@
       <DependentUpon>PetrolPumpWindow.xaml</DependentUpon>
       <SubType>Code</SubType>
     </Compile>
+    <Page Include="SaleCompleteDialog.xaml">
+      <SubType>Designer</SubType>
+      <Generator>MSBuild:Compile</Generator>
+    </Page>
   </ItemGroup>
   <ItemGroup>
     <Compile Include="Properties\AssemblyInfo.cs">
@@ -154,7 +163,56 @@
       <Link>sounds\slow.wav</Link>
     </Resource>
   </ItemGroup>
-  <ItemGroup />
+  <ItemGroup>
+    <Resource Include="..\..\images\large0.png">
+      <Link>images\large0.png</Link>
+    </Resource>
+    <Resource Include="..\..\images\large1.png">
+      <Link>images\large1.png</Link>
+    </Resource>
+    <Resource Include="..\..\images\large2.png">
+      <Link>images\large2.png</Link>
+    </Resource>
+    <Resource Include="..\..\images\large3.png">
+      <Link>images\large3.png</Link>
+    </Resource>
+    <Resource Include="..\..\images\large4.png">
+      <Link>images\large4.png</Link>
+    </Resource>
+    <Resource Include="..\..\images\large5.png">
+      <Link>images\large5.png</Link>
+    </Resource>
+    <Resource Include="..\..\images\large6.png">
+      <Link>images\large6.png</Link>
+    </Resource>
+    <Resource Include="..\..\images\large7.png">
+      <Link>images\large7.png</Link>
+    </Resource>
+    <Resource Include="..\..\images\small0.png">
+      <Link>images\small0.png</Link>
+    </Resource>
+    <Resource Include="..\..\images\small1.png">
+      <Link>images\small1.png</Link>
+    </Resource>
+    <Resource Include="..\..\images\small2.png">
+      <Link>images\small2.png</Link>
+    </Resource>
+    <Resource Include="..\..\images\small3.png">
+      <Link>images\small3.png</Link>
+    </Resource>
+    <Resource Include="..\..\images\small4.png">
+      <Link>images\small4.png</Link>
+    </Resource>
+    <Resource Include="..\..\images\small5.png">
+      <Link>images\small5.png</Link>
+    </Resource>
+    <Resource Include="..\..\images\small6.png">
+      <Link>images\small6.png</Link>
+    </Resource>
+    <Resource Include="..\..\images\small7.png">
+      <Link>images\small7.png</Link>
+    </Resource>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.

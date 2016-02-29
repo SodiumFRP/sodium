@@ -21,7 +21,7 @@ namespace PetrolPump.Chapter4.Section6
                             m.Equals(Maybe.Just(Fuel.Two)) ? Delivery.Fast2 :
                                 m.Equals(Maybe.Just(Fuel.Three)) ? Delivery.Fast3 :
                                     Delivery.Off))
-                .SetSaleQuantityLcd(litersDelivered.Map(q => q.ToString("#0.00")));
+                .SetSaleQuantityLcd(litersDelivered.Map(Formatters.FormatSaleQuantity));
         }
 
         public static Cell<double> Accumulate(
