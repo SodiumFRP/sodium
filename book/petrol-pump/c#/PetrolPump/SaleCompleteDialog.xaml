@@ -6,7 +6,7 @@
         xmlns:petrolPump="clr-namespace:PetrolPump"
         mc:Ignorable="d"
         Title="SaleCompleteDialog" SizeToContent="WidthAndHeight" ResizeMode="NoResize">
-    <Grid>
+    <Grid Margin="15">
         <Grid.RowDefinitions>
             <RowDefinition Height="Auto" />
             <RowDefinition Height="Auto" />
@@ -18,14 +18,14 @@
             <ColumnDefinition Width="Auto" />
             <ColumnDefinition Width="Auto" />
         </Grid.ColumnDefinitions>
-        <TextBlock Grid.Row="0" Grid.Column="0" Text="Fuel " />
-        <TextBlock x:Name="FuelTextBlock" Grid.Row="0" Grid.Column="1" />
-        <TextBlock Grid.Row="1" Grid.Column="0" Text="Price " />
-        <TextBlock x:Name="PriceTextBlock" Grid.Row="1" Grid.Column="1" />
-        <TextBlock Grid.Row="2" Grid.Column="0" Text="Dollars delivered " />
-        <TextBlock x:Name="DollarsDeliveredTextBlock" Grid.Row="2" Grid.Column="1" />
-        <TextBlock Grid.Row="3" Grid.Column="0" Text="Liters delivered " />
-        <TextBlock x:Name="LitersDeliveredTextBlock" Grid.Row="3" Grid.Column="1" />
-        <petrolPump:SButton x:Name="OkButton" Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Content="OK" HorizontalAlignment="Center" Width="75" />
+        <TextBlock Grid.Row="0" Grid.Column="0" Text="Fuel:" />
+        <TextBlock x:Name="FuelTextBlock" Grid.Row="0" Grid.Column="1" Margin="5,0,0,0" />
+        <TextBlock Grid.Row="1" Grid.Column="0" Text="Price:" Margin="0,5,0,0" />
+        <TextBlock x:Name="PriceTextBlock" Grid.Row="1" Grid.Column="1" Margin="5,5,0,0" />
+        <TextBlock Grid.Row="2" Grid.Column="0" Text="Dollars delivered:" Margin="0,5,0,0" />
+        <TextBlock x:Name="DollarsDeliveredTextBlock" Grid.Row="2" Grid.Column="1" Margin="5,5,0,0" />
+        <TextBlock Grid.Row="3" Grid.Column="0" Text="Liters delivered:" Margin="0,5,0,0" />
+        <TextBlock x:Name="LitersDeliveredTextBlock" Grid.Row="3" Grid.Column="1" Margin="5,5,0,0" />
+        <petrolPump:SButton x:Name="OkButton" Grid.Row="4" Grid.Column="0" Grid.ColumnSpan="2" Content="OK" HorizontalAlignment="Center" Width="75" Margin="0,15,0,0" />
     </Grid>
 </Window>

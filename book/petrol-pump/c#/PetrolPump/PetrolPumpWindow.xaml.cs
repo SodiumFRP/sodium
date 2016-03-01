@@ -471,6 +471,7 @@ namespace PetrolPump
                                 Formatters.FormatPrice(sale.Price, null),
                                 Formatters.FormatSaleCost(sale.Cost),
                                 Formatters.FormatSaleQuantity(sale.Quantity));
+                            dialog.Owner = petrolPump;
                             csClearSale.Send(dialog.SOkClicked);
                             dialog.Show();
                             IListener l = null;

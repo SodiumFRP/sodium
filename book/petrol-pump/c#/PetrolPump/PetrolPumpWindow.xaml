@@ -16,20 +16,48 @@
         <Border Grid.Row="0" BorderThickness="0,2,0,2" BorderBrush="Black">
             <StackPanel Orientation="Vertical" Margin="15">
                 <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="Logic" />
-                    <Grid x:Name="LogicComboBoxPlaceholder" />
+                    <TextBlock Text="Logic:" />
+                    <Grid x:Name="LogicComboBoxPlaceholder" Margin="5,0,0,0" />
                 </StackPanel>
-                <StackPanel Orientation="Horizontal">
-                    <TextBlock Text="Price1" />
-                    <Grid x:Name="Price1Placeholder" />
-                    <TextBlock Text="Price2" />
-                    <Grid x:Name="Price2Placeholder" />
-                    <TextBlock Text="Price3" />
-                    <Grid x:Name="Price3Placeholder" />
+                <StackPanel Orientation="Horizontal" Margin="0,15,0,0">
+                    <TextBlock Text="Price 1:" />
+                    <Grid x:Name="Price1Placeholder" Margin="5,0,0,0" />
+                    <TextBlock Text="Price 2:" Margin="25,0,0,0" />
+                    <Grid x:Name="Price2Placeholder" Margin="5,0,0,0" />
+                    <TextBlock Text="Price 3:" Margin="25,0,0,0" />
+                    <Grid x:Name="Price3Placeholder" Margin="5,0,0,0" />
                 </StackPanel>
             </StackPanel>
         </Border>
         <Canvas Grid.Row="1" Width="640" Height="440">
+            <Canvas.Resources>
+                <Style x:Key="LcdLabel" TargetType="{x:Type TextBlock}">
+                    <Setter Property="HorizontalAlignment" Value="Center" />
+                    <Setter Property="FontWeight" Value="Bold" />
+                    <Setter Property="Margin" Value="0,2,0,0" />
+                </Style>
+                <Style x:Key="LcdBorder" TargetType="{x:Type Border}">
+                    <Setter Property="CornerRadius" Value="10" />
+                    <Setter Property="BorderBrush" Value="Black" />
+                    <Setter Property="BorderThickness" Value="2" />
+                    <Setter Property="Background" Value="#888C60" />
+                    <Setter Property="HorizontalAlignment" Value="Center" />
+                </Style>
+                <Style x:Key="LargeLcdBorder" TargetType="{x:Type Border}" BasedOn="{StaticResource LcdBorder}">
+                    <Setter Property="Width" Value="190" />
+                    <Setter Property="Height" Value="62" />
+                    <Setter Property="Padding" Value="0,0,7,0" />
+                </Style>
+                <Style x:Key="SmallLcdBorder" TargetType="{x:Type Border}" BasedOn="{StaticResource LcdBorder}">
+                    <Setter Property="Width" Value="110" />
+                    <Setter Property="Height" Value="54" />
+                    <Setter Property="Padding" Value="0,0,2,0" />
+                </Style>
+                <Style x:Key="LcdPlaceholder" TargetType="{x:Type Grid}">
+                    <Setter Property="HorizontalAlignment" Value="Right" />
+                    <Setter Property="VerticalAlignment" Value="Center" />
+                </Style>
+            </Canvas.Resources>
             <Image Source="images\logo.png" Canvas.Left="5" Canvas.Top="15" />
             <Grid Canvas.Left="250" Canvas.Top="15" Height="425">
                 <Grid.RowDefinitions>
@@ -38,16 +66,16 @@
                 </Grid.RowDefinitions>
                 <StackPanel Grid.Row="0" Orientation="Vertical" HorizontalAlignment="Center">
                     <StackPanel Orientation="Vertical">
-                        <Border CornerRadius="10" BorderBrush="Black" BorderThickness="2" Background="#888C60" Width="190" Height="62" HorizontalAlignment="Center">
-                            <Grid x:Name="DollarsPlaceholder" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                        <Border Style="{StaticResource LargeLcdBorder}">
+                            <Grid x:Name="DollarsPlaceholder" Style="{StaticResource LcdPlaceholder}" />
                         </Border>
-                        <TextBlock Text="D O L L A R S" HorizontalAlignment="Center" FontWeight="Bold" Margin="0,2,0,0" />
+                        <TextBlock Text="D O L L A R S" Style="{StaticResource LcdLabel}" />
                     </StackPanel>
                     <StackPanel Orientation="Vertical" Margin="0,10,0,0">
-                        <Border CornerRadius="10" BorderBrush="Black" BorderThickness="2" Background="#888C60" Width="190" Height="62" HorizontalAlignment="Center">
-                            <Grid x:Name="LitersPlaceholder" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                        <Border Style="{StaticResource LargeLcdBorder}">
+                            <Grid x:Name="LitersPlaceholder" Style="{StaticResource LcdPlaceholder}" />
                         </Border>
-                        <TextBlock Text="L I T E R S" HorizontalAlignment="Center" FontWeight="Bold" Margin="0,2,0,0" />
+                        <TextBlock Text="L I T E R S" Style="{StaticResource LcdLabel}" />
                     </StackPanel>
                 </StackPanel>
                 <Grid Grid.Row="1" Margin="0,30,0,0" HorizontalAlignment="Center">
@@ -63,22 +91,22 @@
                         <ColumnDefinition Width="Auto" />
                     </Grid.ColumnDefinitions>
                     <StackPanel Grid.Row="0" Grid.Column="0" Orientation="Vertical">
-                        <Border CornerRadius="10" BorderBrush="Black" BorderThickness="2" Background="#888C60" Width="110" Height="52" HorizontalAlignment="Center">
-                            <Grid x:Name="Fuel1Placeholder" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                        <Border Style="{StaticResource SmallLcdBorder}">
+                            <Grid x:Name="Fuel1Placeholder" Style="{StaticResource LcdPlaceholder}" />
                         </Border>
-                        <TextBlock Text="F U E L   1" HorizontalAlignment="Center" FontWeight="Bold" Margin="0,2,0,0" />
+                        <TextBlock Text="F U E L   1" Style="{StaticResource LcdLabel}" />
                     </StackPanel>
                     <StackPanel Grid.Row="0" Grid.Column="2" Orientation="Vertical">
-                        <Border CornerRadius="10" BorderBrush="Black" BorderThickness="2" Background="#888C60" Width="110" Height="52" HorizontalAlignment="Center">
-                            <Grid x:Name="Fuel2Placeholder" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                        <Border Style="{StaticResource SmallLcdBorder}">
+                            <Grid x:Name="Fuel2Placeholder" Style="{StaticResource LcdPlaceholder}" />
                         </Border>
-                        <TextBlock Text="F U E L   2" HorizontalAlignment="Center" FontWeight="Bold" Margin="0,2,0,0" />
+                        <TextBlock Text="F U E L   2" Style="{StaticResource LcdLabel}" />
                     </StackPanel>
                     <StackPanel Grid.Row="0" Grid.Column="4" Orientation="Vertical">
-                        <Border CornerRadius="10" BorderBrush="Black" BorderThickness="2" Background="#888C60" Width="110" Height="52" HorizontalAlignment="Center">
-                            <Grid x:Name="Fuel3Placeholder" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                        <Border Style="{StaticResource SmallLcdBorder}">
+                            <Grid x:Name="Fuel3Placeholder" Style="{StaticResource LcdPlaceholder}" />
                         </Border>
-                        <TextBlock Text="F U E L   3" HorizontalAlignment="Center" FontWeight="Bold" Margin="0,2,0,0" />
+                        <TextBlock Text="F U E L   3" Style="{StaticResource LcdLabel}" />
                     </StackPanel>
                     <Canvas Grid.Row="1" Grid.Column="0">
                         <Grid Canvas.Left="20" Canvas.Top="15">
@@ -99,10 +127,10 @@
             </Grid>
             <StackPanel Orientation="Vertical" Canvas.Left="20" Canvas.Top="128">
                 <StackPanel Orientation="Vertical">
-                    <Border CornerRadius="10" BorderBrush="Black" BorderThickness="2" Background="#888C60" Width="190" Height="62" HorizontalAlignment="Center">
-                        <Grid x:Name="PresetPlaceholder" HorizontalAlignment="Right" VerticalAlignment="Center" />
+                    <Border Style="{StaticResource LargeLcdBorder}">
+                        <Grid x:Name="PresetPlaceholder" Style="{StaticResource LcdPlaceholder}" />
                     </Border>
-                    <TextBlock Text="P R E S E T" HorizontalAlignment="Center" FontWeight="Bold" Margin="0,2,0,0" />
+                    <TextBlock Text="P R E S E T" Style="{StaticResource LcdLabel}" />
                 </StackPanel>
                 <Grid Margin="0,15,0,0" HorizontalAlignment="Center">
                     <Grid.Resources>
