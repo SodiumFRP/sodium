@@ -6,10 +6,10 @@ namespace SWidgets
 {
     public class SSpinner : Grid
     {
-        public SSpinner(int initialValue)
+        private SSpinner(int initialValue)
         {
             StreamLoop<int> sSetValue = new StreamLoop<int>();
-            STextBox textField = new STextBox(sSetValue.Map(v => v.ToString()), initialValue.ToString());
+            STextBox textField = new STextBox(sSetValue.Map(v => v.ToString()), initialValue.ToString()) { VerticalContentAlignment = VerticalAlignment.Center };
             this.Value = textField.Text.Map(t =>
             {
                 int result;
@@ -48,5 +48,10 @@ namespace SWidgets
         }
 
         public Cell<int> Value { get; }
+
+        public static SSpinner Create(int initialValue)
+        {
+            return Transaction.Run(() => new SSpinner(initialValue));
+        }
     }
 }
