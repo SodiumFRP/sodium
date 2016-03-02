@@ -13,5 +13,45 @@
         private Unit()
         {
         }
+
+        protected bool Equals(Unit other)
+        {
+            return true;
+        }
+
+        public override bool Equals(object obj)
+        {
+            if (ReferenceEquals(null, obj))
+            {
+                return false;
+            }
+
+            if (ReferenceEquals(this, obj))
+            {
+                return true;
+            }
+
+            if (obj.GetType() != this.GetType())
+            {
+                return false;
+            }
+
+            return true;
+        }
+
+        public override int GetHashCode()
+        {
+            return 1;
+        }
+
+        public static bool operator ==(Unit x, Unit y)
+        {
+            return x == null == (y == null);
+        }
+
+        public static bool operator !=(Unit x, Unit y)
+        {
+            return x == null != (y == null);
+        }
     }
 }
