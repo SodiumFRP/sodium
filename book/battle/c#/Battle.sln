@@ -1,0 +1,34 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 14
+VisualStudioVersion = 14.0.23107.0
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Battle", "Battle\Battle.csproj", "{C15EFCBE-CC9A-4293-A3C7-0DBEAE76E9C9}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shift", "Shift\Shift.csproj", "{434E7266-8071-4695-B7FD-EF90145E22D8}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Shift2", "Shift2\Shift2.csproj", "{DB18F685-A877-4305-B751-A0E85457596B}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{C15EFCBE-CC9A-4293-A3C7-0DBEAE76E9C9}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{C15EFCBE-CC9A-4293-A3C7-0DBEAE76E9C9}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{C15EFCBE-CC9A-4293-A3C7-0DBEAE76E9C9}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{C15EFCBE-CC9A-4293-A3C7-0DBEAE76E9C9}.Release|Any CPU.Build.0 = Release|Any CPU
+		{434E7266-8071-4695-B7FD-EF90145E22D8}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{434E7266-8071-4695-B7FD-EF90145E22D8}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{434E7266-8071-4695-B7FD-EF90145E22D8}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{434E7266-8071-4695-B7FD-EF90145E22D8}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DB18F685-A877-4305-B751-A0E85457596B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DB18F685-A877-4305-B751-A0E85457596B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DB18F685-A877-4305-B751-A0E85457596B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DB18F685-A877-4305-B751-A0E85457596B}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+EndGlobal
