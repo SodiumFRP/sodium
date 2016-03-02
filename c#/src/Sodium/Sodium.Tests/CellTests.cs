@@ -489,8 +489,32 @@ namespace Sodium.Tests
                     });
                 }
             }
-            IReadOnlyList<int> expected = new[] {500}.Concat(Enumerable.Range(0, 100).SelectMany(n => new[] { 500 + 20 * n + 4, 500 + 20 * n + 8, 500 + 20 * n + 20 })).ToArray();
+            IReadOnlyList<int> expected = new[] { 500 }.Concat(Enumerable.Range(0, 100).SelectMany(n => new[] { 500 + 20 * n + 4, 500 + 20 * n + 8, 500 + 20 * n + 20 })).ToArray();
             CollectionAssert.AreEqual(expected, @out);
+        }
+
+        [Test]
+        public void TestLiftListChangesWhileListening()
+        {
+            IReadOnlyList<CellSink<int>> cellSinks = Enumerable.Range(0, 50).Select(_ => new CellSink<int>(1)).ToArray();
+            Cell<int> sum = cellSinks.Lift(v => v.Sum());
+            List<int> @out = new List<int>();
+            IListener l = Transaction.Run(() =>
+            {
+                cellSinks[4].Send(5);
+                IListener lLocal = sum.Listen(@out.Add);
+                cellSinks[5].Send(5);
+                return lLocal;
+            });
+            cellSinks[7].Send(5);
+            Transaction.RunVoid(() =>
+            {
+                cellSinks[14].Send(5);
+                cellSinks[23].Send(5);
+                cellSinks[35].Send(5);
+            });
+            l.Unlisten();
+            CollectionAssert.AreEqual(new[] { 58, 62, 74 }, @out);
         }
     }
 }
