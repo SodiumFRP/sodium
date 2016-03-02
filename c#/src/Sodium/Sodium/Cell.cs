@@ -37,7 +37,7 @@ namespace Sodium
     public class Cell<T> : IDisposable
     {
         internal readonly Stream<T> Stream;
-        internal readonly MaybeValue<T> ValueUpdate = new MaybeValue<T>();
+        internal readonly MutableMaybeValue<T> ValueUpdate = new MutableMaybeValue<T>();
 
         private IListener cleanup;
 
