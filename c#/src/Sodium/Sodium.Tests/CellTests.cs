@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using NUnit.Framework;
 
 namespace Sodium.Tests
@@ -423,6 +424,73 @@ namespace Sodium.Tests
                 ss4.S.Send(9);
             }
             CollectionAssert.AreEqual(new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 }, @out);
+        }
+
+        [Test]
+        public void TestLiftList()
+        {
+            IReadOnlyList<CellSink<int>> cellSinks = Enumerable.Range(0, 50).Select(_ => new CellSink<int>(1)).ToArray();
+            Cell<int> sum = cellSinks.Lift(v => v.Sum());
+            List<int> @out = new List<int>();
+            using (sum.Listen(@out.Add))
+            {
+                cellSinks[4].Send(5);
+                cellSinks[5].Send(5);
+                Transaction.RunVoid(() =>
+                {
+                    cellSinks[7].Send(5);
+                    cellSinks[14].Send(5);
+                    cellSinks[23].Send(5);
+                    cellSinks[35].Send(5);
+                });
+            }
+            CollectionAssert.AreEqual(new[] { 50, 54, 58, 74 }, @out);
+        }
+
+        [Test]
+        public void TestLiftListLarge()
+        {
+            IReadOnlyList<CellSink<int>> cellSinks = Enumerable.Range(0, 500).Select(_ => new CellSink<int>(1)).ToArray();
+            Cell<int> sum = cellSinks.Lift(v => v.Sum());
+            List<int> @out = new List<int>();
+            using (sum.Listen(@out.Add))
+            {
+                cellSinks[4].Send(5);
+                cellSinks[5].Send(5);
+                Transaction.RunVoid(() =>
+                {
+                    cellSinks[7].Send(5);
+                    cellSinks[14].Send(5);
+                    cellSinks[23].Send(5);
+                    cellSinks[35].Send(5);
+                });
+            }
+            CollectionAssert.AreEqual(new[] { 500, 504, 508, 524 }, @out);
+        }
+
+        [Test]
+        public void TestLiftListLargeManyUpdates()
+        {
+            IReadOnlyList<CellSink<int>> cellSinks = Enumerable.Range(0, 500).Select(_ => new CellSink<int>(1)).ToArray();
+            Cell<int> sum = cellSinks.Lift(v => v.Sum());
+            List<int> @out = new List<int>();
+            using (sum.Listen(@out.Add))
+            {
+                for (int i = 0; i < 100; i++)
+                {
+                    int n = i;
+                    cellSinks[n * 5].Send(5);
+                    cellSinks[n * 5 + 1].Send(5);
+                    Transaction.RunVoid(() =>
+                    {
+                        cellSinks[n * 5 + 2].Send(5);
+                        cellSinks[n * 5 + 3].Send(5);
+                        cellSinks[n * 5 + 4].Send(5);
+                    });
+                }
+            }
+            IReadOnlyList<int> expected = new[] {500}.Concat(Enumerable.Range(0, 100).SelectMany(n => new[] { 500 + 20 * n + 4, 500 + 20 * n + 8, 500 + 20 * n + 20 })).ToArray();
+            CollectionAssert.AreEqual(expected, @out);
         }
     }
 }
