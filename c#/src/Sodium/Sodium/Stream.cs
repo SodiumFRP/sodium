@@ -306,7 +306,7 @@ namespace Sodium
         ///     Return a stream whose events are the result of the combination using the specified
         ///     function of the input stream's value and the value of the cell at the time of the stream event firing.
         /// </summary>
-        /// <typeparam name="T2">The type of the cell.</typeparam>
+        /// <typeparam name="T1">The type of the cell.</typeparam>
         /// <typeparam name="TResult">The return type.</typeparam>
         /// <param name="c">The cell to combine with.</param>
         /// <param name="f">A function to convert the stream value and cell value into a return value.</param>
@@ -314,10 +314,79 @@ namespace Sodium
         ///     A stream whose events are the result of the combination using the specified function of the input stream's
         ///     value and the value of the cell at the time of the stream event firing.
         /// </returns>
-        public Stream<TResult> Snapshot<T2, TResult>(Cell<T2> c, Func<T, T2, TResult> f)
+        public Stream<TResult> Snapshot<T1, TResult>(Cell<T1> c, Func<T, T1, TResult> f)
         {
             Stream<TResult> @out = new Stream<TResult>();
             IListener l = this.Listen_(@out.Node, (trans2, a) => @out.Send(trans2, f(a, c.SampleNoTransaction())));
+            return @out.UnsafeAddCleanup(l);
+        }
+
+        /// <summary>
+        ///     Return a stream whose events are the result of the combination using the specified
+        ///     function of the input stream's value and the value of the cells at the time of the stream event firing.
+        /// </summary>
+        /// <typeparam name="T1">The type of the first cell.</typeparam>
+        /// <typeparam name="T2">The type of the second cell.</typeparam>
+        /// <typeparam name="TResult">The return type.</typeparam>
+        /// <param name="c1">The first cell to combine with.</param>
+        /// <param name="c2">The second cell to combine with.</param>
+        /// <param name="f">A function to convert the stream value and cell value into a return value.</param>
+        /// <returns>
+        ///     A stream whose events are the result of the combination using the specified function of the input stream's
+        ///     value and the value of the cells at the time of the stream event firing.
+        /// </returns>
+        public Stream<TResult> Snapshot<T1, T2, TResult>(Cell<T1> c1, Cell<T2> c2, Func<T, T1, T2, TResult> f)
+        {
+            Stream<TResult> @out = new Stream<TResult>();
+            IListener l = this.Listen_(@out.Node, (trans2, a) => @out.Send(trans2, f(a, c1.SampleNoTransaction(), c2.SampleNoTransaction())));
+            return @out.UnsafeAddCleanup(l);
+        }
+
+        /// <summary>
+        ///     Return a stream whose events are the result of the combination using the specified
+        ///     function of the input stream's value and the value of the cells at the time of the stream event firing.
+        /// </summary>
+        /// <typeparam name="T1">The type of the first cell.</typeparam>
+        /// <typeparam name="T2">The type of the second cell.</typeparam>
+        /// <typeparam name="T3">The type of the third cell.</typeparam>
+        /// <typeparam name="TResult">The return type.</typeparam>
+        /// <param name="c1">The first cell to combine with.</param>
+        /// <param name="c2">The second cell to combine with.</param>
+        /// <param name="c3">The third cell to combine with.</param>
+        /// <param name="f">A function to convert the stream value and cell value into a return value.</param>
+        /// <returns>
+        ///     A stream whose events are the result of the combination using the specified function of the input stream's
+        ///     value and the value of the cells at the time of the stream event firing.
+        /// </returns>
+        public Stream<TResult> Snapshot<T1, T2, T3, TResult>(Cell<T1> c1, Cell<T2> c2, Cell<T3> c3, Func<T, T1, T2, T3, TResult> f)
+        {
+            Stream<TResult> @out = new Stream<TResult>();
+            IListener l = this.Listen_(@out.Node, (trans2, a) => @out.Send(trans2, f(a, c1.SampleNoTransaction(), c2.SampleNoTransaction(), c3.SampleNoTransaction())));
+            return @out.UnsafeAddCleanup(l);
+        }
+
+        /// <summary>
+        ///     Return a stream whose events are the result of the combination using the specified
+        ///     function of the input stream's value and the value of the cells at the time of the stream event firing.
+        /// </summary>
+        /// <typeparam name="T1">The type of the first cell.</typeparam>
+        /// <typeparam name="T2">The type of the second cell.</typeparam>
+        /// <typeparam name="T3">The type of the third cell.</typeparam>
+        /// <typeparam name="T4">The type of the fourth cell.</typeparam>
+        /// <typeparam name="TResult">The return type.</typeparam>
+        /// <param name="c1">The first cell to combine with.</param>
+        /// <param name="c2">The second cell to combine with.</param>
+        /// <param name="c3">The third cell to combine with.</param>
+        /// <param name="c4">The fourth cell to combine with.</param>
+        /// <param name="f">A function to convert the stream value and cell value into a return value.</param>
+        /// <returns>
+        ///     A stream whose events are the result of the combination using the specified function of the input stream's
+        ///     value and the value of the cells at the time of the stream event firing.
+        /// </returns>
+        public Stream<TResult> Snapshot<T1, T2, T3, T4, TResult>(Cell<T1> c1, Cell<T2> c2, Cell<T3> c3, Cell<T4> c4, Func<T, T1, T2, T3, T4, TResult> f)
+        {
+            Stream<TResult> @out = new Stream<TResult>();
+            IListener l = this.Listen_(@out.Node, (trans2, a) => @out.Send(trans2, f(a, c1.SampleNoTransaction(), c2.SampleNoTransaction(), c3.SampleNoTransaction(), c4.SampleNoTransaction())));
             return @out.UnsafeAddCleanup(l);
         }
 
