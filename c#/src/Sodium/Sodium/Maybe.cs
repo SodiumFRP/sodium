@@ -15,7 +15,7 @@ namespace Sodium
             return NothingClass<T>.Value;
         }
 
-        private class JustClass<T> : IMaybe<T>
+        private sealed class JustClass<T> : IMaybe<T>
         {
             private readonly T value;
 
@@ -27,11 +27,6 @@ namespace Sodium
             public override string ToString()
             {
                 return "Just: " + this.value;
-            }
-
-            public TResult Accept<TResult>(IVisitor<TResult> visitor)
-            {
-                return visitor.Visit(this);
             }
 
             void IMaybe<T>.Match(Action<T> hasValueAction, Action nothingAction)
@@ -75,7 +70,7 @@ namespace Sodium
             }
         }
 
-        private class NothingClass<T> : IMaybe<T>
+        private sealed class NothingClass<T> : IMaybe<T>
         {
             public static readonly NothingClass<T> Value = new NothingClass<T>();
 
@@ -86,11 +81,6 @@ namespace Sodium
             public override string ToString()
             {
                 return "Nothing";
-            }
-
-            public TResult Accept<TResult>(IVisitor<TResult> visitor)
-            {
-                return visitor.Visit(this);
             }
 
             void IMaybe<T>.Match(Action<T> hasValueAction, Action nothingAction)
@@ -122,11 +112,6 @@ namespace Sodium
             {
                 return 1;
             }
-        }
-
-        public interface IVisitor<out TResult>
-        {
-            TResult Visit<T>(IMaybe<T> value);
         }
     }
 }

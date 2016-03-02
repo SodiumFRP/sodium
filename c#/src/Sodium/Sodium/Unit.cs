@@ -3,7 +3,7 @@
     /// <summary>
     ///     A class representing the unit type (similar to <code>void</code>).
     /// </summary>
-    public class Unit
+    public sealed class Unit
     {
         /// <summary>
         ///     The singleton value of type <see cref="Unit" />.
@@ -12,11 +12,6 @@
 
         private Unit()
         {
-        }
-
-        protected bool Equals(Unit other)
-        {
-            return true;
         }
 
         public override bool Equals(object obj)
