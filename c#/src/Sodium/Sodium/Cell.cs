@@ -164,6 +164,27 @@ namespace Sodium
 
         /// <summary>
         ///     Listen for updates to the value of this cell.  The returned <see cref="IListener" /> may be
+        ///     disposed to stop listening, or it will automatically stop listening when it is garbage collected.
+        ///     This is an OPERATIONAL mechanism for interfacing between the world of I/O and FRP.
+        /// </summary>
+        /// <param name="handler">The handler to execute for each value.</param>
+        /// <returns>An <see cref="IListener" /> which may be disposed to stop listening.</returns>
+        /// <remarks>
+        ///     <para>
+        ///         No assumptions should be made about what thread the handler is called on and it should not block.
+        ///         Neither <see cref="StreamSink{T}.Send" /> nor <see cref="CellSink{T}.Send" /> may be called from the
+        ///         handler.
+        ///         They will throw an exception because this method is not meant to be used to create new primitives.
+        ///     </para>
+        ///     <para>
+        ///         If the <see cref="IListener" /> is not disposed, it will continue to listen until this cell is either
+        ///         disposed or garbage collected or the listener itself is garbage collected.
+        ///     </para>
+        /// </remarks>
+        public IListener ListenWeak(Action<T> handler) => Transaction.Apply(trans => this.Value(trans).ListenWeak(handler));
+
+        /// <summary>
+        ///     Listen for updates to the value of this cell.  The returned <see cref="IListener" /> may be
         ///     disposed to stop listening.  This is an OPERATIONAL mechanism for interfacing between
         ///     the world of I/O and FRP.
         /// </summary>
@@ -177,7 +198,7 @@ namespace Sodium
         ///         They will throw an exception because this method is not meant to be used to create new primitives.
         ///     </para>
         ///     <para>
-        ///         If the <see cref="IListener" /> is not disposed, it will continue to listen until this stream is either
+        ///         If the <see cref="IListener" /> is not disposed, it will continue to listen until this cell is either
         ///         disposed or garbage collected.
         ///     </para>
         /// </remarks>

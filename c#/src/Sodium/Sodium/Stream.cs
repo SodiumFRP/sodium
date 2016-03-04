@@ -110,7 +110,7 @@ namespace Sodium
         /// <summary>
         ///     Listen for events/firings on this stream.  The returned <see cref="IListener" /> may be
         ///     disposed to stop listening, or it will automatically stop listening when it is garbage collected.
-        ///     This is an operational mechanism for interfacing between the world of I/O and FRP.
+        ///     This is an OPERATIONAL mechanism for interfacing between the world of I/O and FRP.
         /// </summary>
         /// <param name="handler">The handler to execute for values fired by the stream.</param>
         /// <returns>An <see cref="IListener" /> which may be disposed to stop listening.</returns>
