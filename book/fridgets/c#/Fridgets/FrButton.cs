@@ -1,0 +1,69 @@
+﻿using System.Windows;
+using System.Windows.Input;
+using System.Windows.Media;
+using Sodium;
+
+namespace Fridgets
+{
+    public class FrButton : Fridget
+    {
+        public FrButton(Cell<string> label)
+            : this(label, new StreamLoop<Unit>())
+        {
+        }
+
+        private FrButton(Cell<string> label, StreamLoop<Unit> sClicked)
+            : base((size, sMouse, sKey, focus, idSupply) =>
+            {
+                Stream<Unit> sPressed = sMouse.Snapshot(size,
+                    (e, mSize) => mSize.Match(
+                        s =>
+                        {
+                            MouseButtonEventArgs b = e.Args as MouseButtonEventArgs;
+                            Point p = e.GetPosition();
+                            return b != null && b.ChangedButton == MouseButton.Left && b.ButtonState == MouseButtonState.Pressed
+                                   && p.X >= 2 && p.X < s.Width - 2 && p.Y >= 2 && p.Y < s.Height - 2
+                                ? Maybe.Just(Unit.Value)
+                                : Maybe.Nothing<Unit>();
+                        },
+                        Maybe.Nothing<Unit>)).FilterMaybe();
+                Stream<Unit> sReleased = sMouse.Snapshot(size,
+                    (e, mSize) => mSize.Match(
+                        s =>
+                        {
+                            MouseButtonEventArgs b = e.Args as MouseButtonEventArgs;
+                            return b != null && b.ChangedButton == MouseButton.Left && b.ButtonState == MouseButtonState.Released
+                                ? Maybe.Just(Unit.Value)
+                                : Maybe.Nothing<Unit>();
+                        },
+                        Maybe.Nothing<Unit>)).FilterMaybe();
+                Cell<bool> pressed = sPressed.Map(_ => true).OrElse(sReleased.Map(_ => false)).Hold(false);
+                sClicked.Loop(sReleased.Gate(pressed));
+                Typeface typeface = new Typeface(new FontFamily("Helvetica"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
+                Cell<Size> desiredSize = label.Map(l =>
+                {
+                    Size labelSize = FontUtilities.MeasureString(l, typeface, 13);
+                    return new Size(labelSize.Width + 14, labelSize.Height + 10);
+                });
+                return new Output(
+                    label.Lift(
+                        size, pressed,
+                        (l, mSize, p) => new DrawableDelegate(d =>
+                        {
+                            mSize.Match(sz =>
+                            {
+                                d.DrawRectangle(p ? Brushes.DarkGray : Brushes.LightGray, new Pen(Brushes.Black, 1), new Rect(new Point(2, 2), new Size(sz.Width - 5, sz.Height - 5)));
+                                FormattedText t = FontUtilities.GetStandardFormattedText(l, typeface, 13, Brushes.Black);
+                                d.DrawText(t, new Point((sz.Width - t.Width) / 2, (sz.Height - t.Height) / 2));
+                            }, () => { });
+                        })),
+                    desiredSize,
+                    Stream.Never<long>());
+            })
+        {
+            this.SClicked = sClicked;
+        }
+
+        public Stream<Unit> SClicked { get; }
+    }
+}

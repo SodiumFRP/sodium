@@ -1,0 +1,20 @@
+﻿<Window x:Class="TextField.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        mc:Ignorable="d"
+        Title="Fridgets Examples: Text Field" SizeToContent="WidthAndHeight" ResizeMode="NoResize">
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+        <Grid Grid.Row="0" x:Name="Container" Width="360" Height="120" />
+        <Border Grid.Row="1" Height="300" BorderBrush="Black" BorderThickness="1">
+            <ScrollViewer x:Name="ScrollViewer">
+                <StackPanel x:Name="StackPanel" Orientation="Vertical" />
+            </ScrollViewer>
+        </Border>
+    </Grid>
+</Window>
