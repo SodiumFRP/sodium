@@ -86,5 +86,55 @@ namespace Sodium.Tests.Memory
             Assert.AreEqual(beforeListenerCount, afterListenerCount, "Before == After");
             Assert.IsTrue(duringListenerCount > beforeListenerCount, "During > Before");
         }
+
+        [Test]
+        public void TestNestedMapGarbageCollection()
+        {
+            int? beforeStreamCount = null;
+            int? beforeListenerCount = null;
+            int? duringStreamCount = null;
+            int? duringListenerCount = null;
+            int? afterStreamCount = null;
+            int? afterListenerCount = null;
+
+            StreamSink<int> s = new StreamSink<int>();
+            List<string> @out = new List<string>();
+
+            dotMemory.Check(memory => beforeStreamCount = memory.GetObjects(where => where.Type.Is<Stream<int>>()).ObjectsCount + memory.GetObjects(where => where.Type.Is<Stream<string>>()).ObjectsCount);
+            dotMemory.Check(memory => beforeListenerCount = memory.GetObjects(where => where.Interface.Is<IListener>()).ObjectsCount);
+
+            ((Action)(() =>
+            {
+                Stream<string> m = s.Map(x => x + 2).Map(x => 2 * x).Map(x => x + 1).Map(x => x.ToString());
+                using (m.Listen(@out.Add))
+                {
+                    dotMemory.Check(memory => duringStreamCount = memory.GetObjects(where => where.Type.Is<Stream<int>>()).ObjectsCount + memory.GetObjects(where => where.Type.Is<Stream<string>>()).ObjectsCount);
+                    dotMemory.Check(memory => duringListenerCount = memory.GetObjects(where => where.Interface.Is<IListener>()).ObjectsCount);
+                    s.Send(5);
+                    s.Send(3);
+                }
+                CollectionAssert.AreEqual(new[] { "15", "11" }, @out);
+            }))();
+
+            dotMemory.Check(memory => afterStreamCount = memory.GetObjects(where => where.Type.Is<Stream<int>>()).ObjectsCount + memory.GetObjects(where => where.Type.Is<Stream<string>>()).ObjectsCount);
+            dotMemory.Check(memory => afterListenerCount = memory.GetObjects(where => where.Interface.Is<IListener>()).ObjectsCount);
+
+            // although all listeners and streams have been cleand up, the nodes will not be disconnected until the stream fires next
+            Assert.AreEqual(1, s.Node.Listeners.Count);
+            s.Send(1);
+            Assert.AreEqual(0, s.Node.Listeners.Count);
+
+            Assert.IsNotNull(beforeStreamCount);
+            Assert.IsNotNull(beforeListenerCount);
+            Assert.IsNotNull(duringStreamCount);
+            Assert.IsNotNull(duringListenerCount);
+            Assert.IsNotNull(afterStreamCount);
+            Assert.IsNotNull(afterListenerCount);
+
+            Assert.AreEqual(beforeStreamCount, afterStreamCount, "Before Streams == After Streams");
+            Assert.AreEqual(beforeListenerCount, afterListenerCount, "Before Listeners == After Listeners");
+            Assert.IsTrue(duringStreamCount > beforeStreamCount, "During Streams > Before Streams");
+            Assert.IsTrue(duringListenerCount > beforeListenerCount, "During Listeners > Before Listeners");
+        }
     }
 }
