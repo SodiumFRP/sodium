@@ -53,6 +53,8 @@
   <ItemGroup>
     <Compile Include="Animate.cs" />
     <Compile Include="AnimationDelegate.cs" />
+    <Compile Include="CompositionTargetSecondsTimerSystem.cs" />
+    <Compile Include="CompositionTargetTimerSystem.cs" />
     <Compile Include="Signal.cs" />
     <Compile Include="DrawableDelegate.cs" />
     <Compile Include="PointExtensionMethods.cs" />

@@ -1,24 +1,22 @@
-﻿using System;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows;
+﻿using System.Windows;
 using System.Windows.Media;
 using Sodium;
-using Sodium.Time;
 
 namespace Shared
 {
     public class Animate : UIElement
     {
+        private readonly CompositionTargetSecondsTimerSystem timerSystem;
         private readonly Cell<DrawableDelegate> drawable;
         private readonly Size size;
 
         public Animate(AnimationDelegate animation, Size size)
         {
+            this.timerSystem = CompositionTargetSecondsTimerSystem.Create(e => this.Dispatcher.Invoke(() => { throw e; }));
             Point extents = new Point(size.Width / 2, size.Height / 2);
             this.drawable = Transaction.Run(() =>
                 Shapes.Translate(
-                    animation(new SecondsTimerSystem(e => this.Dispatcher.Invoke(() => { throw e; })), extents),
+                    animation(this.timerSystem, extents),
                     Cell.Constant(extents)));
             this.size = size;
         }
@@ -32,24 +30,7 @@ namespace Shared
 
         public static void RunAnimation(Animate animate)
         {
-            Task.Run(() =>
-            {
-                DateTime tLast = DateTime.Now;
-                while (true)
-                {
-                    DateTime t = DateTime.Now;
-                    DateTime tIdeal = tLast + TimeSpan.FromMilliseconds(15);
-                    TimeSpan toWait = tIdeal - t;
-                    if (toWait > TimeSpan.Zero)
-                    {
-                        Thread.Sleep(toWait);
-                    }
-                    Transaction.RunVoid(() => { });
-                    animate.Dispatcher.Invoke(animate.InvalidateVisual);
-                    tLast = tIdeal;
-                }
-                // ReSharper disable once FunctionNeverReturns
-            });
+            animate.timerSystem.AddAnimation(animate);
         }
     }
 }
