@@ -2,7 +2,7 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/sodium-swidgets.iml" filepath="$PROJECT_DIR$/sodium-swidgets.iml" />
+      <module fileurl="file://$PROJECT_DIR$/sodium-fridgets.iml" filepath="$PROJECT_DIR$/sodium-fridgets.iml" />
     </modules>
   </component>
 </project>
