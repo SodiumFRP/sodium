@@ -68,11 +68,13 @@
     <Compile Include="Node.cs" />
     <Compile Include="Operational.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Time\ITimerSystem.cs" />
     <Compile Include="Time\SystemClockTimerSystem.cs" />
     <Compile Include="Time\ITimer.cs" />
     <Compile Include="Time\ITimerSystemImplementation.cs" />
     <Compile Include="Time\SecondsTimerSystem.cs" />
     <Compile Include="Time\TimerSystem.cs" />
+    <Compile Include="Time\TimerSystemImplementationImplementationBase.cs" />
     <Compile Include="Transaction.cs" />
     <Compile Include="Unit.cs" />
   </ItemGroup>

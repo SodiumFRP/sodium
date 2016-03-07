@@ -8,6 +8,8 @@ namespace Sodium.Time
     /// <typeparam name="T">The underlying type of the timer's time values.</typeparam>
     public interface ITimerSystemImplementation<T>
     {
+        void Start(Action<Exception> handleException);
+
         /// <summary>
         ///     Set a timer that will execute the specified callback at the specified time.
         /// </summary>

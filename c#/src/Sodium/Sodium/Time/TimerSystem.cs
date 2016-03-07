@@ -3,11 +3,12 @@ using System.Collections.Generic;
 
 namespace Sodium.Time
 {
-    public class TimerSystem<T> where T : IComparable<T>
+    public class TimerSystem<T> : ITimerSystem<T> where T : IComparable<T>
     {
-        public TimerSystem(ITimerSystemImplementation<T> implementation)
+        public TimerSystem(ITimerSystemImplementation<T> implementation, Action<Exception> handleException)
         {
             this.implementation = implementation;
+            this.implementation.Start(handleException);
             CellSink<T> timeSink = new CellSink<T>(this.implementation.Now);
             this.Time = timeSink;
             Transaction.OnStart(() =>
@@ -46,9 +47,9 @@ namespace Sodium.Time
         private readonly ITimerSystemImplementation<T> implementation;
 
         /// <summary>
-        ///     A cell giving the current clock time.
+        ///     Gets a cell giving the current clock time.
         /// </summary>
-        public readonly Cell<T> Time;
+        public Cell<T> Time { get; }
 
         private class Event
         {
