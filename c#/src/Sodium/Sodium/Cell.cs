@@ -343,7 +343,7 @@ namespace Sodium
                 bool isASet = false;
                 // ReSharper disable once PossibleNullReferenceException
                 Action<Transaction> h = trans1 => trans1.Prioritized(@out.Node, trans2 => @out.Send(trans2, f(a)));
-                IListener l1 = bf.Value(trans0).Listen_(inTarget, (trans1, ff) =>
+                IListener l1 = bf.Value(trans0).Listen(inTarget, (trans1, ff) =>
                 {
                     f = ff;
                     if (isASet)
@@ -351,7 +351,7 @@ namespace Sodium
                         h(trans1);
                     }
                 });
-                IListener l2 = this.Value(trans0).Listen_(inTarget, (trans1, aa) =>
+                IListener l2 = this.Value(trans0).Listen(inTarget, (trans1, aa) =>
                 {
                     a = aa;
                     isASet = true;

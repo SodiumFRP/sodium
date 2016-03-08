@@ -241,7 +241,7 @@ namespace Sodium
         /// </summary>
         /// <param name="index">The order index in which to run the action.</param>
         /// <param name="action">The action to run after all last actions.</param>
-        internal void Post_(int index, Action<Transaction> action)
+        internal void Post(int index, Action<Transaction> action)
         {
             // If an entry exists already, combine the old one with the new one.
             Action<Transaction> @new;
@@ -274,7 +274,7 @@ namespace Sodium
         {
             // -1 will mean it runs before anything split/deferred, and will run
             // outside a transaction context.
-            Run(trans => trans.Post_(-1, _ => action()));
+            Run(trans => trans.Post(-1, _ => action()));
         }
 
         internal void SetNeedsRegenerating()

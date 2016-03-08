@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 using NUnit.Framework;
 
 namespace Sodium.Tests
@@ -65,6 +66,29 @@ namespace Sodium.Tests
                 b.Send(7);
             }
             CollectionAssert.AreEqual(new[] { 9, 2, 7 }, @out);
+        }
+
+        [Test]
+        public void TestListenOnce()
+        {
+            CellSink<int> b = new CellSink<int>(9);
+            List<int> @out = new List<int>();
+            using (Transaction.Run(() => Operational.Value(b).ListenOnce(@out.Add)))
+            {
+                b.Send(2);
+                b.Send(7);
+            }
+            CollectionAssert.AreEqual(new[] { 9 }, @out);
+        }
+
+        [Test]
+        public async Task TestListenOnceTask()
+        {
+            CellSink<int> b = new CellSink<int>(9);
+            int result = await Transaction.Run(() => Operational.Value(b).ListenOnce());
+            b.Send(2);
+            b.Send(7);
+            Assert.AreEqual(9, result);
         }
 
         [Test]

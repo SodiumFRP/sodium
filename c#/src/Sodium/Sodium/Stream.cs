@@ -130,7 +130,7 @@ namespace Sodium
         ///         disposed, pass the returned listener to this stream's <see cref="AddCleanup" /> method.
         ///     </para>
         /// </remarks>
-        public IListener ListenWeak(Action<T> handler) => this.Listen_(Node<T>.Null, (trans2, a) => handler(a));
+        public IListener ListenWeak(Action<T> handler) => this.Listen(Node<T>.Null, (trans2, a) => handler(a));
 
         /// <summary>
         ///     Attach a listener to this stream so it gets disposed when this stream is disposed.
@@ -155,15 +155,17 @@ namespace Sodium
         /// <returns></returns>
         public IListener ListenOnce(Action<T> handler)
         {
-            IListener[] listenerReference = new IListener[1];
-            listenerReference[0] = this.Listen(a =>
+            IListener listener = null;
+            listener = this.Listen(a =>
             {
-                using (listenerReference[0])
+                // ReSharper disable once AccessToModifiedClosure
+                using (listener)
                 {
                 }
+
                 handler(a);
             });
-            return listenerReference[0];
+            return listener;
         }
 
         /// <summary>
@@ -208,7 +210,7 @@ namespace Sodium
             return tcs.Task;
         }
 
-        internal IListener Listen_(Node target, Action<Transaction, T> action) => Transaction.Apply(trans1 => this.Listen(target, trans1, action, false));
+        internal IListener Listen(Node target, Action<Transaction, T> action) => Transaction.Apply(trans1 => this.Listen(target, trans1, action, false));
 
         internal IListener Listen(Node target, Transaction trans, Action<Transaction, T> action, bool suppressEarlierFirings)
         {
@@ -262,7 +264,7 @@ namespace Sodium
         public Stream<TResult> Map<TResult>(Func<T, TResult> f)
         {
             Stream<TResult> @out = new Stream<TResult>();
-            IListener l = this.Listen_(@out.Node, (trans2, a) => @out.Send(trans2, f(a)));
+            IListener l = this.Listen(@out.Node, (trans2, a) => @out.Send(trans2, f(a)));
             return @out.UnsafeAddCleanup(l);
         }
 
@@ -317,7 +319,7 @@ namespace Sodium
         public Stream<TResult> Snapshot<T1, TResult>(Cell<T1> c, Func<T, T1, TResult> f)
         {
             Stream<TResult> @out = new Stream<TResult>();
-            IListener l = this.Listen_(@out.Node, (trans2, a) => @out.Send(trans2, f(a, c.SampleNoTransaction())));
+            IListener l = this.Listen(@out.Node, (trans2, a) => @out.Send(trans2, f(a, c.SampleNoTransaction())));
             return @out.UnsafeAddCleanup(l);
         }
 
@@ -338,7 +340,7 @@ namespace Sodium
         public Stream<TResult> Snapshot<T1, T2, TResult>(Cell<T1> c1, Cell<T2> c2, Func<T, T1, T2, TResult> f)
         {
             Stream<TResult> @out = new Stream<TResult>();
-            IListener l = this.Listen_(@out.Node, (trans2, a) => @out.Send(trans2, f(a, c1.SampleNoTransaction(), c2.SampleNoTransaction())));
+            IListener l = this.Listen(@out.Node, (trans2, a) => @out.Send(trans2, f(a, c1.SampleNoTransaction(), c2.SampleNoTransaction())));
             return @out.UnsafeAddCleanup(l);
         }
 
@@ -361,7 +363,7 @@ namespace Sodium
         public Stream<TResult> Snapshot<T1, T2, T3, TResult>(Cell<T1> c1, Cell<T2> c2, Cell<T3> c3, Func<T, T1, T2, T3, TResult> f)
         {
             Stream<TResult> @out = new Stream<TResult>();
-            IListener l = this.Listen_(@out.Node, (trans2, a) => @out.Send(trans2, f(a, c1.SampleNoTransaction(), c2.SampleNoTransaction(), c3.SampleNoTransaction())));
+            IListener l = this.Listen(@out.Node, (trans2, a) => @out.Send(trans2, f(a, c1.SampleNoTransaction(), c2.SampleNoTransaction(), c3.SampleNoTransaction())));
             return @out.UnsafeAddCleanup(l);
         }
 
@@ -386,7 +388,7 @@ namespace Sodium
         public Stream<TResult> Snapshot<T1, T2, T3, T4, TResult>(Cell<T1> c1, Cell<T2> c2, Cell<T3> c3, Cell<T4> c4, Func<T, T1, T2, T3, T4, TResult> f)
         {
             Stream<TResult> @out = new Stream<TResult>();
-            IListener l = this.Listen_(@out.Node, (trans2, a) => @out.Send(trans2, f(a, c1.SampleNoTransaction(), c2.SampleNoTransaction(), c3.SampleNoTransaction(), c4.SampleNoTransaction())));
+            IListener l = this.Listen(@out.Node, (trans2, a) => @out.Send(trans2, f(a, c1.SampleNoTransaction(), c2.SampleNoTransaction(), c3.SampleNoTransaction(), c4.SampleNoTransaction())));
             return @out.UnsafeAddCleanup(l);
         }
 
@@ -423,8 +425,8 @@ namespace Sodium
             Node<T> right = @out.Node;
             Node<T>.Target nodeTarget = left.Link((t, v) => { }, right).Item2;
             Action<Transaction, T> h = @out.Send;
-            IListener l1 = this.Listen_(left, h);
-            IListener l2 = s.Listen_(right, h);
+            IListener l1 = this.Listen(left, h);
+            IListener l2 = s.Listen(right, h);
             return @out.UnsafeAddCleanup(l1).UnsafeAddCleanup(l2).UnsafeAddCleanup(new Listener(() => left.Unlink(nodeTarget)));
         }
 
@@ -480,7 +482,7 @@ namespace Sodium
         public Stream<T> Filter(Func<T, bool> predicate)
         {
             Stream<T> @out = new Stream<T>();
-            IListener l = this.Listen_(@out.Node, (trans2, a) =>
+            IListener l = this.Listen(@out.Node, (trans2, a) =>
             {
                 if (predicate(a))
                 {
@@ -582,7 +584,7 @@ namespace Sodium
             // the listener.
             Stream<T> @out = new Stream<T>();
             IListener l = null;
-            l = this.Listen_(@out.Node, (trans, a) =>
+            l = this.Listen(@out.Node, (trans, a) =>
             {
                 // ReSharper disable AccessToModifiedClosure
                 if (l != null)

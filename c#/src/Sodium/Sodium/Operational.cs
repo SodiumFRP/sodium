@@ -64,12 +64,12 @@ namespace Sodium
         public static Stream<T> Split<T, TCollection>(Stream<TCollection> s) where TCollection : IEnumerable<T>
         {
             Stream<T> @out = new Stream<T>();
-            IListener l1 = s.Listen_(@out.Node, (trans, aa) =>
+            IListener l1 = s.Listen(@out.Node, (trans, aa) =>
             {
                 int childIx = 0;
                 foreach (T a in aa)
                 {
-                    trans.Post_(childIx, trans1 => @out.Send(trans1, a));
+                    trans.Post(childIx, trans1 => @out.Send(trans1, a));
                     childIx++;
                 }
             });
