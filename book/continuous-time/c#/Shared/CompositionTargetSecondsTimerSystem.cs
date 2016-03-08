@@ -22,17 +22,19 @@ namespace Shared
             };
         }
 
-        public void AddAnimation(Animate animation)
-        {
-            this.animationsToRun.Add(animation);
-        }
+        public void AddAnimation(Animate animation) => this.animationsToRun.Add(animation);
 
-        public static CompositionTargetSecondsTimerSystem Create(Action<Exception> handleException) => new CompositionTargetSecondsTimerSystem(new Implementation(), handleException);
+        public static CompositionTargetSecondsTimerSystem Create(double startTime, Action<Exception> handleException) => new CompositionTargetSecondsTimerSystem(new Implementation(startTime), handleException);
 
         private class Implementation : TimerSystemImplementationImplementationBase<double>
         {
             private double now;
             private readonly object nowLock = new object();
+
+            public Implementation(double startTime)
+            {
+                this.now = startTime;
+            }
 
             protected override TimeSpan SubtractTimes(double first, double second) => TimeSpan.FromSeconds(first - second);
 

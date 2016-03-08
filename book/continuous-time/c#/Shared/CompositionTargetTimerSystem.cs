@@ -1,25 +1,40 @@
 using System;
+using System.Collections.Concurrent;
+using System.Windows.Media;
 using Sodium.Time;
 
 namespace Shared
 {
     public class CompositionTargetTimerSystem : TimerSystem<TimeSpan>
     {
-        private readonly Implementation implementation;
+        private readonly ConcurrentBag<Animate> animationsToRun = new ConcurrentBag<Animate>();
 
         private CompositionTargetTimerSystem(Implementation implementation, Action<Exception> handleException)
             : base(implementation, handleException)
         {
-            this.implementation = implementation;
+            CompositionTarget.Rendering += (sender, args) =>
+            {
+                implementation.SetNow(((RenderingEventArgs)args).RenderingTime);
+                foreach (Animate animation in this.animationsToRun.ToArray())
+                {
+                    animation.InvalidateVisual();
+                }
+            };
         }
 
-        public static CompositionTargetTimerSystem Create(Action<Exception> handleException) => new CompositionTargetTimerSystem(new Implementation(), handleException);
-        public void SetNow(TimeSpan now) => this.implementation.SetNow(now);
+        public void AddAnimation(Animate animation) => this.animationsToRun.Add(animation);
+
+        public static CompositionTargetTimerSystem Create(TimeSpan startTime, Action<Exception> handleException) => new CompositionTargetTimerSystem(new Implementation(startTime), handleException);
 
         private class Implementation : TimerSystemImplementationImplementationBase<TimeSpan>
         {
             private TimeSpan now;
             private readonly object nowLock = new object();
+
+            public Implementation(TimeSpan startTime)
+            {
+                this.now = startTime;
+            }
 
             protected override TimeSpan SubtractTimes(TimeSpan first, TimeSpan second) => first - second;
 

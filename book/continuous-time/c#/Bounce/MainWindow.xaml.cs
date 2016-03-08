@@ -37,7 +37,7 @@ namespace Bounce
                     return Shapes.Translate(Shapes.Scale(Shapes.Circle(Colors.Red), Cell.Constant(ballRadius)), time.Lift(posx, posy, (t, x, y) => new Point(x.ValueAt(t), y.ValueAt(t))));
                 }, this.Placeholder.RenderSize);
                 this.Placeholder.Children.Add(animate);
-                Animate.RunAnimation(animate);
+                animate.Start();
             };
         }
 

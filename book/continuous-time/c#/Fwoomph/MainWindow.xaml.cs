@@ -26,7 +26,7 @@ namespace Fwoomph
                         }));
                 }, this.Placeholder.RenderSize);
                 this.Placeholder.Children.Add(animate);
-                Animate.RunAnimation(animate);
+                animate.Start();
             };
         }
     }

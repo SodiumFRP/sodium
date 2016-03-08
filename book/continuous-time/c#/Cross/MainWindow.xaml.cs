@@ -33,7 +33,7 @@ namespace Cross
                     return Shapes.Over(greenBall, blueBall);
                 }, this.Placeholder.RenderSize);
                 this.Placeholder.Children.Add(animate);
-                Animate.RunAnimation(animate);
+                animate.Start();
             };
         }
     }
