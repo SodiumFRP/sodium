@@ -504,6 +504,39 @@ namespace Sodium
         }
 
         /// <summary>
+        ///     Return a stream that only outputs events which have a different value than the previous event.
+        /// </summary>
+        /// <returns>A stream that only outputs events which have a different value than the previous event.</returns>
+        public Stream<T> Calm()
+        {
+            return this.Calm(EqualityComparer<T>.Default);
+        }
+
+        /// <summary>
+        ///     Return a stream that only outputs events which have a different value than the previous event.
+        /// </summary>
+        /// <param name="comparer">The equality comparer to use to determine if two items are equal.</param>
+        /// <returns>A stream that only outputs events which have a different value than the previous event.</returns>
+        public Stream<T> Calm(IEqualityComparer<T> comparer)
+        {
+            return this.Calm(new Lazy<IMaybe<T>>(Maybe.Nothing<T>), comparer);
+        }
+
+        internal Stream<T> Calm(Lazy<IMaybe<T>> init, IEqualityComparer<T> comparer)
+        {
+            return this.CollectLazy(init, (a, lastA) =>
+            {
+                if (lastA.Match(v => comparer.Equals(v, a), () => false))
+                {
+                    return Tuple.Create(Maybe.Nothing<T>(), lastA);
+                }
+
+                IMaybe<T> ma = Maybe.Just(a);
+                return Tuple.Create(ma, ma);
+            }).FilterMaybe();
+        }
+
+        /// <summary>
         ///     Transform a stream with a generalized state loop (a Mealy machine).
         ///     The function is passed the input and the old state and returns the new state and output value.
         /// </summary>

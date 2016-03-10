@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Sodium
 {
@@ -363,6 +364,27 @@ namespace Sodium
                 return @out.LastFiringOnly(trans0).UnsafeAddCleanup(l1).UnsafeAddCleanup(l2).UnsafeAddCleanup(
                     new Listener(() => inTarget.Unlink(nodeTarget))).HoldLazy(new Lazy<TResult>(() => bf.SampleNoTransaction()(this.SampleNoTransaction())));
             });
+        }
+
+        /// <summary>
+        ///     Return a cell whose stream only receives events which have a different value than the previous event.
+        /// </summary>
+        /// <returns>A cell whose stream only receives events which have a different value than the previous event.</returns>
+        public Cell<T> Calm()
+        {
+            return this.Calm(EqualityComparer<T>.Default);
+        }
+
+        /// <summary>
+        ///     Return a cell whose stream only receives events which have a different value than the previous event.
+        /// </summary>
+        /// <param name="comparer">The equality comparer to use to determine if two items are equal.</param>
+        /// <returns>A cell whose stream only receives events which have a different value than the previous event.</returns>
+        public Cell<T> Calm(IEqualityComparer<T> comparer)
+        {
+            Lazy<T> initA = this.SampleLazy();
+            Lazy<IMaybe<T>> mInitA = initA.Map<T, IMaybe<T>>(Maybe.Just);
+            return Operational.Updates(this).Calm(mInitA, comparer).HoldLazy(initA);
         }
 
         private class LazySample
