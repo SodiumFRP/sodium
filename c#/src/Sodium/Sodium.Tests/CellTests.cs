@@ -211,6 +211,42 @@ namespace Sodium.Tests
         }
 
         [Test]
+        public void TestCalm()
+        {
+            CellSink<int> b = new CellSink<int>(2);
+            List<int> @out = new List<int>();
+            using (Transaction.Run(() => b.Calm().Listen(@out.Add)))
+            {
+                b.Send(2);
+                b.Send(2);
+                b.Send(4);
+                b.Send(2);
+                b.Send(4);
+                b.Send(4);
+                b.Send(2);
+                b.Send(2);
+            }
+            CollectionAssert.AreEqual(new[] { 2, 4, 2, 4, 2 }, @out);
+        }
+
+        [Test]
+        public void TestCalm2()
+        {
+            CellSink<int> b = new CellSink<int>(2);
+            List<int> @out = new List<int>();
+            using (Transaction.Run(() => b.Calm().Listen(@out.Add)))
+            {
+                b.Send(4);
+                b.Send(2);
+                b.Send(4);
+                b.Send(4);
+                b.Send(2);
+                b.Send(2);
+            }
+            CollectionAssert.AreEqual(new[] { 2, 4, 2, 4, 2 }, @out);
+        }
+
+        [Test]
         public void TestApply()
         {
             CellSink<Func<long, string>> bf = new CellSink<Func<long, string>>(b => "1 " + b);

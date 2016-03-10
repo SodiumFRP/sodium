@@ -265,6 +265,44 @@ namespace Sodium.Tests
         }
 
         [Test]
+        public void TestCalm()
+        {
+            StreamSink<int> s = new StreamSink<int>();
+            List<int> @out = new List<int>();
+            using (s.Calm().Listen(@out.Add))
+            {
+                s.Send(2);
+                s.Send(2);
+                s.Send(2);
+                s.Send(4);
+                s.Send(2);
+                s.Send(4);
+                s.Send(4);
+                s.Send(2);
+                s.Send(2);
+            }
+            CollectionAssert.AreEqual(new[] { 2, 4, 2, 4, 2 }, @out);
+        }
+
+        [Test]
+        public void TestCalm2()
+        {
+            StreamSink<int> s = new StreamSink<int>();
+            List<int> @out = new List<int>();
+            using (s.Calm().Listen(@out.Add))
+            {
+                s.Send(2);
+                s.Send(4);
+                s.Send(2);
+                s.Send(4);
+                s.Send(4);
+                s.Send(2);
+                s.Send(2);
+            }
+            CollectionAssert.AreEqual(new[] { 2, 4, 2, 4, 2 }, @out);
+        }
+
+        [Test]
         public void TestCollect()
         {
             StreamSink<int> sa = new StreamSink<int>();
