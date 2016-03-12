@@ -19,15 +19,22 @@ toScreenSpace sPos = Signal.map2 (\(w, h) (x, y) ->
 
 insidePolygon : (Float, Float) -> List (Float, Float) -> Bool
 insidePolygon (x, y) coords =
-    let [lastCoord] = List.drop (List.length coords - 1) coords
+    let maybeFirstCoord = List.head coords
+        maybeRestOfCoords = List.tail coords
         (inside, _) =
-          List.foldl (\(x2, y2) (inside, (x1, y1)) ->
-            let inside' = if ((y1 < y && y2 >= y) || (y2 < y && y1 >= y))
-                             && (x1+(y-y1) / (y2-y1) * (x2-x1) < x)
-                             then not inside
-                             else inside
-            in (inside', (x2, y2))
-          ) (False, lastCoord) coords
+          case maybeFirstCoord of
+            Nothing -> (False, (0,0))
+            Just firstCoord ->
+              case maybeRestOfCoords of
+                Nothing -> (False, (0,0))
+                Just restOfCoords ->
+                  List.foldl (\ (x2, y2) (inside, (x1, y1)) ->
+                    let inside' = if ((y1 < y && y2 >= y) || (y2 < y && y1 >= y))
+                    && (x1+(y-y1) / (y2-y1) * (x2-x1) < x)
+                      then not inside
+                      else inside
+                    in (inside', (x2, y2))
+                  ) (False, firstCoord) (restOfCoords ++ [firstCoord])
     in inside
 
 main : Signal Element
