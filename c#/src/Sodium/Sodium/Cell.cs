@@ -37,8 +37,8 @@ namespace Sodium
     /// <typeparam name="T">The type of the value.</typeparam>
     public class Cell<T> : IDisposable
     {
-        internal readonly Stream<T> Stream;
-        internal readonly MutableMaybeValue<T> ValueUpdate = new MutableMaybeValue<T>();
+        private readonly Stream<T> stream;
+        private readonly MutableMaybeValue<T> valueUpdate = new MutableMaybeValue<T>();
 
         private IListener cleanup;
 
@@ -50,32 +50,32 @@ namespace Sodium
         /// <param name="valueProperty">The constant value of the cell.</param>
         internal Cell(T valueProperty)
         {
-            this.Stream = new Stream<T>();
+            this.stream = new Stream<T>();
             this.ValueProperty = valueProperty;
         }
 
         internal Cell(Stream<T> stream, T initialValue)
         {
-            this.Stream = stream;
+            this.stream = stream;
             this.valueProperty = initialValue;
             this.UsingInitialValue = true;
 
             Transaction.Run(trans1 =>
             {
-                this.cleanup = this.Stream.Listen(Node<T>.Null, trans1, (trans2, a) =>
+                this.cleanup = this.stream.Listen(Node<T>.Null, trans1, (trans2, a) =>
                 {
-                    this.ValueUpdate.Get().Match(
+                    this.valueUpdate.Get().Match(
                         v => { },
                         () =>
                         {
                             trans2.Last(() =>
                             {
-                                this.ValueUpdate.Get().Match(v => this.ValueProperty = v, () => { });
-                                this.ValueUpdate.Reset();
+                                this.valueUpdate.Get().Match(v => this.ValueProperty = v, () => { });
+                                this.valueUpdate.Reset();
                             });
                         });
 
-                    this.ValueUpdate.Set(a);
+                    this.valueUpdate.Set(a);
                 }, false);
             });
         }
@@ -141,7 +141,7 @@ namespace Sodium
             LazySample s = new LazySample(this);
             trans.Last(() =>
             {
-                s.Value = this.ValueUpdate.Get().Match(v => v, this.SampleNoTransaction);
+                s.Value = this.valueUpdate.Get().Match(v => v, this.SampleNoTransaction);
                 s.HasValue = true;
                 s.Cell = null;
             });
@@ -153,7 +153,7 @@ namespace Sodium
             return this.ValueProperty;
         }
 
-        internal Stream<T> Updates(Transaction trans) => this.Stream;
+        internal Stream<T> Updates(Transaction trans) => this.stream;
 
         internal Stream<T> Value(Transaction trans1)
         {
@@ -383,7 +383,7 @@ namespace Sodium
         public Cell<T> Calm(IEqualityComparer<T> comparer)
         {
             Lazy<T> initA = this.SampleLazy();
-            Lazy<IMaybe<T>> mInitA = initA.Map<T, IMaybe<T>>(Maybe.Just);
+            Lazy<IMaybe<T>> mInitA = initA.Map(Maybe.Just);
             return Operational.Updates(this).Calm(mInitA, comparer).HoldLazy(initA);
         }
 
