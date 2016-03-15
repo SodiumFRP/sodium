@@ -22,10 +22,11 @@ type StreamTests() =
     [<Test>]
     member __.``Test Map``() =
         use s = Stream.sink ()
+        use m = s |> Stream.map ((+) 2 >> string)
         let out = List<_>()
         (
-            use l = (s |> Stream.map (((+) 2) >> string) |> Stream.listen out.Add)
+            use l = (m |> Stream.listen out.Add)
             s.Send 5
             s.Send 3
         )
-        CollectionAssert.AreEqual(["7";"5"], out)
+        CollectionAssert.AreEqual(["7"; "5"], out)
