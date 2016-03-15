@@ -39,8 +39,7 @@ namespace Sodium
     {
         private readonly Stream<T> stream;
         private readonly MutableMaybeValue<T> valueUpdate = new MutableMaybeValue<T>();
-
-        private IListener cleanup;
+        private readonly IListener cleanup;
 
         private T valueProperty;
 
@@ -60,9 +59,8 @@ namespace Sodium
             this.valueProperty = initialValue;
             this.UsingInitialValue = true;
 
-            Transaction.Run(trans1 =>
-            {
-                this.cleanup = this.stream.Listen(Node<T>.Null, trans1, (trans2, a) =>
+            this.cleanup = Transaction.Apply(trans1 =>
+                this.stream.Listen(Node<T>.Null, trans1, (trans2, a) =>
                 {
                     this.valueUpdate.Get().Match(
                         v => { },
@@ -76,8 +74,7 @@ namespace Sodium
                         });
 
                     this.valueUpdate.Set(a);
-                }, false);
-            });
+                }, false));
         }
 
         internal T ValueProperty
