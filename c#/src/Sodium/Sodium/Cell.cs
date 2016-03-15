@@ -47,11 +47,11 @@ namespace Sodium
         /// <summary>
         ///     Creates a cell with a constant value.
         /// </summary>
-        /// <param name="valueProperty">The constant value of the cell.</param>
-        internal Cell(T valueProperty)
+        /// <param name="value">The constant value of the cell.</param>
+        internal Cell(T value)
         {
             this.stream = new Stream<T>();
-            this.ValueProperty = valueProperty;
+            this.ValueProperty = value;
         }
 
         internal Cell(Stream<T> stream, T initialValue)
