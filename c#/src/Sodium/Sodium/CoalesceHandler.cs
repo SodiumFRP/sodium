@@ -2,9 +2,9 @@ using System;
 
 namespace Sodium
 {
-    internal static class CoalesceHandler<T>
+    internal static class CoalesceHandler
     {
-        internal static Action<Transaction, T> Create(Func<T, T, T> f, Stream<T> @out)
+        internal static Action<Transaction, T> Create<T>(Func<T, T, T> f, Stream<T> @out)
         {
             bool accumValid = false;
             T accum = default(T);
@@ -17,6 +17,9 @@ namespace Sodium
                 }
                 else
                 {
+                    accum = a;
+                    accumValid = true;
+
                     trans1.Prioritized(@out.Node, trans2 =>
                     {
                         // ReSharper disable once AccessToModifiedClosure
@@ -24,8 +27,6 @@ namespace Sodium
                         accumValid = false;
                         accum = default(T);
                     });
-                    accum = a;
-                    accumValid = true;
                 }
             };
         }

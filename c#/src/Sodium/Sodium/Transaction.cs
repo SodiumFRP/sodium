@@ -11,9 +11,7 @@ namespace Sodium
     public sealed class Transaction
     {
         // Coarse-grained lock that's held during the whole transaction.
-        internal static readonly object TransactionLock = new object();
-        // Fine-grained lock that protects listeners and nodes.
-        internal static readonly object ListenersLock = new object();
+        private static readonly object TransactionLock = new object();
 
         private static Transaction currentTransaction;
         internal static int InCallback;
@@ -32,7 +30,7 @@ namespace Sodium
         ///     Return the current transaction as an option type.
         /// </summary>
         /// <returns>The current transaction as an option type.</returns>
-        public static IMaybe<Transaction> GetCurrentTransaction()
+        internal static IMaybe<Transaction> GetCurrentTransaction()
         {
             lock (TransactionLock)
             {
@@ -44,7 +42,7 @@ namespace Sodium
         ///     Return whether or not there is a current transaction.
         /// </summary>
         /// <returns><code>true</code> if there is a current transaction, <code>false</code> otherwise.</returns>
-        public static bool HasCurrentTransaction()
+        internal static bool HasCurrentTransaction()
         {
             lock (TransactionLock)
             {
@@ -115,12 +113,17 @@ namespace Sodium
                 }
                 finally
                 {
-                    if (transWas == null)
+                    try
                     {
-                        currentTransaction?.Close();
+                        if (transWas == null)
+                        {
+                            currentTransaction?.Close();
+                        }
                     }
-
-                    currentTransaction = transWas;
+                    finally
+                    {
+                        currentTransaction = transWas;
+                    }
                 }
             }
         }
@@ -170,12 +173,17 @@ namespace Sodium
                 }
                 finally
                 {
-                    if (transWas == null)
+                    try
                     {
-                        currentTransaction?.Close();
+                        if (transWas == null)
+                        {
+                            currentTransaction?.Close();
+                        }
                     }
-
-                    currentTransaction = transWas;
+                    finally
+                    {
+                        currentTransaction = transWas;
+                    }
                 }
             }
         }
@@ -355,8 +363,8 @@ namespace Sodium
         {
             private static long nextSeq;
 
-            public readonly Action<Transaction> Action;
             public readonly Node Rank;
+            public readonly Action<Transaction> Action;
             private readonly long seq;
 
             public Entry(Node rank, Action<Transaction> action)
@@ -369,19 +377,7 @@ namespace Sodium
             public int CompareTo(Entry other)
             {
                 int answer = this.Rank.CompareTo(other.Rank);
-                if (answer == 0)
-                {
-                    // Same rank: preserve chronological sequence.
-                    if (this.seq < other.seq)
-                    {
-                        answer = -1;
-                    }
-                    else if (this.seq > other.seq)
-                    {
-                        answer = 1;
-                    }
-                }
-                return answer;
+                return answer != 0 ? answer : this.seq.CompareTo(other.seq);
             }
         }
     }

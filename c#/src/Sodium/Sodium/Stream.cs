@@ -28,10 +28,10 @@ namespace Sodium
     /// <typeparam name="T">The type of values fired by the stream.</typeparam>
     public class Stream<T> : IDisposable
     {
+        internal readonly Node<T> Node;
         private readonly List<IListener> disposables;
         private readonly List<T> firings;
-        private readonly HashSet<IDisposable> keepListenersAlive = new HashSet<IDisposable>();
-        internal readonly Node<T> Node;
+        private readonly HashSet<IListener> keepListenersAlive = new HashSet<IListener>();
 
         internal Stream()
         {
@@ -188,10 +188,11 @@ namespace Sodium
         {
             TaskCompletionSource<T> tcs = new TaskCompletionSource<T>();
 
-            IListener[] listenerReference = new IListener[1];
-            listenerReference[0] = this.Listen(a =>
+            IListener listener = null;
+            listener = this.Listen(a =>
             {
-                using (listenerReference[0])
+                // ReSharper disable once AccessToModifiedClosure
+                using (listener)
                 {
                 }
 
@@ -200,7 +201,7 @@ namespace Sodium
 
             token.Register(() =>
             {
-                using (listenerReference[0])
+                using (listener)
                 {
                 }
 
@@ -214,15 +215,11 @@ namespace Sodium
 
         internal IListener Listen(Node target, Transaction trans, Action<Transaction, T> action, bool suppressEarlierFirings)
         {
-            Node<T>.Target nodeTarget;
-            lock (Transaction.ListenersLock)
+            Tuple<bool, Node<T>.Target> t = this.Node.Link(action, target);
+            Node<T>.Target nodeTarget = t.Item2;
+            if (t.Item1)
             {
-                Tuple<bool, Node<T>.Target> t = this.Node.Link(action, target);
-                nodeTarget = t.Item2;
-                if (t.Item1)
-                {
-                    trans.SetNeedsRegenerating();
-                }
+                trans.SetNeedsRegenerating();
             }
             List<T> firings = this.firings.ToList();
             if (!suppressEarlierFirings && firings.Any())
@@ -459,7 +456,7 @@ namespace Sodium
         private Stream<T> Coalesce(Transaction trans1, Func<T, T, T> f)
         {
             Stream<T> @out = new Stream<T>();
-            Action<Transaction, T> h = CoalesceHandler<T>.Create(f, @out);
+            Action<Transaction, T> h = CoalesceHandler.Create(f, @out);
             IListener l = this.Listen(@out.Node, trans1, h, false);
             return @out.UnsafeAddCleanup(l);
         }
@@ -655,12 +652,8 @@ namespace Sodium
             }
             this.firings.Add(a);
 
-            HashSet<Node<T>.Target> listeners;
-            lock (Transaction.ListenersLock)
-            {
-                listeners = new HashSet<Node<T>.Target>(this.Node.Listeners);
-            }
-            foreach (Node<T>.Target target in listeners)
+            HashSet<Node<T>.Target> targets = new HashSet<Node<T>.Target>(this.Node.GetListeners());
+            foreach (Node<T>.Target target in targets)
             {
                 trans.Prioritized(target.Node, trans2 =>
                 {
@@ -679,10 +672,7 @@ namespace Sodium
                         else
                         {
                             // If it has been garbage collected, remove it.
-                            lock (Transaction.ListenersLock)
-                            {
-                                this.Node.Listeners.Remove(target);
-                            }
+                            this.Node.RemoveListener(target);
                         }
                     }
                     finally
@@ -719,10 +709,7 @@ namespace Sodium
 
             public void Unlisten()
             {
-                lock (Transaction.ListenersLock)
-                {
-                    this.stream?.Node.Unlink(this.target);
-                }
+                this.stream?.Node.Unlink(this.target);
             }
         }
     }

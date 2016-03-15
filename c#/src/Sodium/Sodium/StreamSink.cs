@@ -27,7 +27,7 @@ namespace Sodium
         /// <param name="coalesce">Function to combine values when <see cref="Send" /> is called more than once per transaction.</param>
         public StreamSink(Func<T, T, T> coalesce)
         {
-            this.coalescer = CoalesceHandler<T>.Create(coalesce, this);
+            this.coalescer = CoalesceHandler.Create(coalesce, this);
         }
 
         /// <summary>

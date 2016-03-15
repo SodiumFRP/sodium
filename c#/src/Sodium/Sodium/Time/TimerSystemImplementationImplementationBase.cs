@@ -144,22 +144,7 @@ namespace Sodium.Time
             public int CompareTo(SimpleTimer o)
             {
                 int timeComparison = this.Time.CompareTo(o.Time);
-                if (timeComparison != 0)
-                {
-                    return timeComparison;
-                }
-
-                if (this.seq < o.seq)
-                {
-                    return -1;
-                }
-
-                if (this.seq > o.seq)
-                {
-                    return 1;
-                }
-
-                return 0;
+                return timeComparison != 0 ? timeComparison : this.seq.CompareTo(o.seq);
             }
 
             public void Dispose()

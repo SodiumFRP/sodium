@@ -120,9 +120,9 @@ namespace Sodium.Tests.Memory
             dotMemory.Check(memory => afterListenerCount = memory.GetObjects(where => where.Interface.Is<IListener>()).ObjectsCount);
 
             // although all listeners and streams have been cleand up, the nodes will not be disconnected until the stream fires next
-            Assert.AreEqual(1, s.Node.Listeners.Count);
+            Assert.AreEqual(1, s.Node.GetListeners().Count);
             s.Send(1);
-            Assert.AreEqual(0, s.Node.Listeners.Count);
+            Assert.AreEqual(0, s.Node.GetListeners().Count);
 
             Assert.IsNotNull(beforeStreamCount);
             Assert.IsNotNull(beforeListenerCount);

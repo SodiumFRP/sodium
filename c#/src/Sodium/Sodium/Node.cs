@@ -6,6 +6,9 @@ namespace Sodium
 {
     internal abstract class Node : IComparable<Node>
     {
+        // Fine-grained lock that protects listeners and nodes.
+        protected static readonly object ListenersLock = new object();
+
         private long rank;
 
         internal Node(long rank)
@@ -17,17 +20,7 @@ namespace Sodium
 
         public int CompareTo(Node other)
         {
-            if (this.rank < other.rank)
-            {
-                return -1;
-            }
-
-            if (this.rank > other.rank)
-            {
-                return 1;
-            }
-
-            return 0;
+            return this.rank.CompareTo(other.rank);
         }
 
         protected static bool EnsureBiggerThan(Node node, long limit, HashSet<Node> visited)
@@ -39,7 +32,7 @@ namespace Sodium
 
             visited.Add(node);
             node.rank = limit + 1;
-            foreach (Node n in node.GetListenerNodes())
+            foreach (Node n in node.GetListenerNodesUnsafe())
             {
                 EnsureBiggerThan(n, node.rank, visited);
             }
@@ -47,7 +40,7 @@ namespace Sodium
             return true;
         }
 
-        protected abstract IEnumerable<Node> GetListenerNodes();
+        protected abstract IEnumerable<Node> GetListenerNodesUnsafe();
 
         public class Target
         {
@@ -64,7 +57,7 @@ namespace Sodium
     {
         public static readonly Node<T> Null = new Node<T>(long.MaxValue);
 
-        internal readonly List<Target> Listeners = new List<Target>();
+        private readonly List<Target> listeners = new List<Target>();
 
         internal Node(long rank)
             : base(rank)
@@ -82,20 +75,18 @@ namespace Sodium
         /// </returns>
         internal Tuple<bool, Target> Link(Action<Transaction, T> action, Node target)
         {
-            bool changed = EnsureBiggerThan(target, this.Rank, new HashSet<Node>());
-            Target t = new Target(action, target);
-            this.Listeners.Add(t);
-            return Tuple.Create(changed, t);
+            lock (ListenersLock)
+            {
+                bool changed = EnsureBiggerThan(target, this.Rank, new HashSet<Node>());
+                Target t = new Target(action, target);
+                this.listeners.Add(t);
+                return Tuple.Create(changed, t);
+            }
         }
 
         internal void Unlink(Target target)
         {
-            this.Listeners.Remove(target);
-        }
-
-        protected override IEnumerable<Node> GetListenerNodes()
-        {
-            return this.Listeners.Select(l => l.Node);
+            this.RemoveListener(target);
         }
 
         public new class Target : Node.Target
@@ -106,6 +97,30 @@ namespace Sodium
                 : base(node)
             {
                 this.Action = new WeakReference<Action<Transaction, T>>(action);
+            }
+        }
+
+        internal IReadOnlyList<Target> GetListeners()
+        {
+            lock (ListenersLock)
+            {
+                return this.listeners.ToArray();
+            }
+        }
+
+        internal void RemoveListener(Target target)
+        {
+            lock (ListenersLock)
+            {
+                this.listeners.Remove(target);
+            }
+        }
+
+        protected override IEnumerable<Node> GetListenerNodesUnsafe()
+        {
+            lock (ListenersLock)
+            {
+                return this.listeners.Select(l => l.Node);
             }
         }
     }
