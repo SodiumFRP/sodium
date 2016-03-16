@@ -82,7 +82,7 @@ namespace Sodium
         {
             Stream<T> @out = new Stream<T>();
             IListener l = s.Listen(@out.Node, (trans2, a) => a.Match(v => @out.Send(trans2, v), () => { }));
-            return @out.UnsafeAddCleanup(l);
+            return @out.AddCleanup(l);
         }
     }
 }

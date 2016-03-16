@@ -77,7 +77,7 @@ namespace Sodium
                 }, false));
         }
 
-        internal T ValueProperty
+        protected T ValueProperty
         {
             get { return this.valueProperty; }
             set
@@ -87,9 +87,9 @@ namespace Sodium
             }
         }
 
-        internal bool UsingInitialValue { get; private set; }
+        protected bool UsingInitialValue { get; private set; }
 
-        public void Dispose()
+        public virtual void Dispose()
         {
             using (this.cleanup)
             {
@@ -358,7 +358,7 @@ namespace Sodium
                         h(trans1);
                     }
                 });
-                return @out.LastFiringOnly(trans0).UnsafeAddCleanup(l1).UnsafeAddCleanup(l2).UnsafeAddCleanup(
+                return @out.LastFiringOnly(trans0).AddCleanup(l1).AddCleanup(l2).AddCleanup(
                     new Listener(() => inTarget.Unlink(nodeTarget))).HoldLazy(new Lazy<TResult>(() => bf.SampleNoTransaction()(this.SampleNoTransaction())));
             });
         }
@@ -381,7 +381,7 @@ namespace Sodium
         {
             Lazy<T> initA = this.SampleLazy();
             Lazy<IMaybe<T>> mInitA = initA.Map(Maybe.Just);
-            return Operational.Updates(this).Calm(mInitA, comparer).HoldLazy(initA);
+            return Transaction.Apply(trans => this.Updates(trans).Calm(mInitA, comparer).HoldLazy(initA));
         }
 
         private class LazySample

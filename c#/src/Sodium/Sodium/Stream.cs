@@ -40,13 +40,6 @@ namespace Sodium
             this.firings = new List<T>();
         }
 
-        private Stream(Node<T> node, List<IListener> disposables, List<T> firings)
-        {
-            this.Node = node;
-            this.disposables = disposables;
-            this.firings = firings;
-        }
-
         public void Dispose()
         {
             foreach (IListener d in this.disposables)
@@ -136,14 +129,13 @@ namespace Sodium
         ///     Attach a listener to this stream so it gets disposed when this stream is disposed.
         /// </summary>
         /// <param name="listener">The listener to dispose along with this stream.</param>
-        /// <returns>A new stream equivalent to this stream which will dispose <paramref name="listener" /> when it is disposed.</returns>
+        /// <returns>The current stream, which will dispose <paramref name="listener" /> when it is disposed.</returns>
         public Stream<T> AddCleanup(IListener listener)
         {
             return Transaction.Run(() =>
             {
-                List<IListener> fsNew = this.disposables.ToList();
-                fsNew.Add(listener);
-                return new Stream<T>(this.Node, fsNew, this.firings);
+                this.disposables.Add(listener);
+                return this;
             });
         }
 
@@ -262,7 +254,7 @@ namespace Sodium
         {
             Stream<TResult> @out = new Stream<TResult>();
             IListener l = this.Listen(@out.Node, (trans2, a) => @out.Send(trans2, f(a)));
-            return @out.UnsafeAddCleanup(l);
+            return @out.AddCleanup(l);
         }
 
         /// <summary>
@@ -317,7 +309,7 @@ namespace Sodium
         {
             Stream<TResult> @out = new Stream<TResult>();
             IListener l = this.Listen(@out.Node, (trans2, a) => @out.Send(trans2, f(a, c.SampleNoTransaction())));
-            return @out.UnsafeAddCleanup(l);
+            return @out.AddCleanup(l);
         }
 
         /// <summary>
@@ -338,7 +330,7 @@ namespace Sodium
         {
             Stream<TResult> @out = new Stream<TResult>();
             IListener l = this.Listen(@out.Node, (trans2, a) => @out.Send(trans2, f(a, c1.SampleNoTransaction(), c2.SampleNoTransaction())));
-            return @out.UnsafeAddCleanup(l);
+            return @out.AddCleanup(l);
         }
 
         /// <summary>
@@ -361,7 +353,7 @@ namespace Sodium
         {
             Stream<TResult> @out = new Stream<TResult>();
             IListener l = this.Listen(@out.Node, (trans2, a) => @out.Send(trans2, f(a, c1.SampleNoTransaction(), c2.SampleNoTransaction(), c3.SampleNoTransaction())));
-            return @out.UnsafeAddCleanup(l);
+            return @out.AddCleanup(l);
         }
 
         /// <summary>
@@ -386,7 +378,7 @@ namespace Sodium
         {
             Stream<TResult> @out = new Stream<TResult>();
             IListener l = this.Listen(@out.Node, (trans2, a) => @out.Send(trans2, f(a, c1.SampleNoTransaction(), c2.SampleNoTransaction(), c3.SampleNoTransaction(), c4.SampleNoTransaction())));
-            return @out.UnsafeAddCleanup(l);
+            return @out.AddCleanup(l);
         }
 
         /// <summary>
@@ -424,7 +416,7 @@ namespace Sodium
             Action<Transaction, T> h = @out.Send;
             IListener l1 = this.Listen(left, h);
             IListener l2 = s.Listen(right, h);
-            return @out.UnsafeAddCleanup(l1).UnsafeAddCleanup(l2).UnsafeAddCleanup(new Listener(() => left.Unlink(nodeTarget)));
+            return @out.AddCleanup(l1).AddCleanup(l2).AddCleanup(new Listener(() => left.Unlink(nodeTarget)));
         }
 
         /// <summary>
@@ -458,7 +450,7 @@ namespace Sodium
             Stream<T> @out = new Stream<T>();
             Action<Transaction, T> h = CoalesceHandler.Create(f, @out);
             IListener l = this.Listen(@out.Node, trans1, h, false);
-            return @out.UnsafeAddCleanup(l);
+            return @out.AddCleanup(l);
         }
 
         /// <summary>
@@ -486,7 +478,7 @@ namespace Sodium
                     @out.Send(trans2, a);
                 }
             });
-            return @out.UnsafeAddCleanup(l);
+            return @out.AddCleanup(l);
         }
 
         /// <summary>
@@ -629,19 +621,7 @@ namespace Sodium
                 }
                 // ReSharper restore AccessToModifiedClosure
             });
-            return @out.UnsafeAddCleanup(l);
-        }
-
-        // This is not thread-safe, so one of these two conditions must apply:
-        // 1. We are within a transaction, since in the current implementation
-        //    a transaction locks out all other threads.
-        // 2. The object on which this is being called was created has not yet
-        //    been returned from the method where it was created, so it can't
-        //    be shared between threads.
-        internal Stream<T> UnsafeAddCleanup(IListener cleanup)
-        {
-            this.disposables.Add(cleanup);
-            return this;
+            return @out.AddCleanup(l);
         }
 
         internal void Send(Transaction trans, T a)

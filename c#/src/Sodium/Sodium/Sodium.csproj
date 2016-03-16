@@ -46,9 +46,7 @@
   <ItemGroup>
     <Compile Include="Cell.cs" />
     <Compile Include="CellExtensionMethods.cs" />
-    <Compile Include="CellLoopInternal.cs" />
     <Compile Include="CellSink.cs" />
-    <Compile Include="CellSinkInternal.cs" />
     <Compile Include="CoalesceHandler.cs" />
     <Compile Include="CompositeListener.cs" />
     <Compile Include="ImmutableCompositeListener.cs" />
@@ -56,7 +54,7 @@
     <Compile Include="StreamExtensionMethods.cs" />
     <Compile Include="CellLoop.cs" />
     <Compile Include="IMaybe.cs" />
-    <Compile Include="LazyBehavior.cs" />
+    <Compile Include="LazyCell.cs" />
     <Compile Include="LazyExtensionMethods.cs" />
     <Compile Include="Listener.cs" />
     <Compile Include="Stream.cs" />

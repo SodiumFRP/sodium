@@ -201,7 +201,7 @@ namespace Sodium.Tests
         {
             StreamSink<char> s = new StreamSink<char>();
             List<char> @out = new List<char>();
-            using (s.Filter(char.IsUpper).Listen(c => { @out.Add(c); }))
+            using (s.Filter(char.IsUpper).Listen(@out.Add))
             {
                 s.Send('H');
                 s.Send('o');
@@ -213,15 +213,15 @@ namespace Sodium.Tests
         [Test]
         public void TestFilterMaybe()
         {
-            StreamSink<IMaybe<string>> e = new StreamSink<IMaybe<string>>();
+            StreamSink<IMaybe<string>> s = new StreamSink<IMaybe<string>>();
             List<string> @out = new List<string>();
-            using (e.FilterMaybe().Listen(s => { @out.Add(s); }))
+            using (s.FilterMaybe().Listen(@out.Add))
             {
-                e.Send(Maybe.Just("tomato"));
-                e.Send(Maybe.Nothing<string>());
-                e.Send(Maybe.Just("peach"));
-                e.Send(Maybe.Just<string>(null));
-                e.Send(Maybe.Just("pear"));
+                s.Send(Maybe.Just("tomato"));
+                s.Send(Maybe.Nothing<string>());
+                s.Send(Maybe.Just("peach"));
+                s.Send(Maybe.Just<string>(null));
+                s.Send(Maybe.Just("pear"));
             }
             CollectionAssert.AreEqual(new[] { "tomato", "peach", null, "pear" }, @out);
         }
