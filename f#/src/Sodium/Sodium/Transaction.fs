@@ -109,6 +109,9 @@ type Transaction() =
 
             dequeueLoop ()
 
+            for action in lastQueue do action ()
+            lastQueue.Clear()
+
             let parent = currentTransaction
             try
                 currentTransaction <- Option.None
@@ -206,7 +209,7 @@ and internal 'T Node(rank : int64) =
 
     let listeners = List<'T Target>()
 
-    static member Null = Node<'T>(Int64.MaxValue)
+    static member val Null = Node<'T>(Int64.MaxValue)
 
     member this.Link action target =
         lock Node.ListenersLock (fun () ->

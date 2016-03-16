@@ -51,13 +51,15 @@
   <Import Project="$(FSharpTargetsPath)" />
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="Lazy.fs" />
     <Compile Include="Listener.fs" />
     <Compile Include="Transaction.fs" />
     <Compile Include="StreamImpl.fs" />
     <Compile Include="CellImpl.fs" />
     <Compile Include="Stream.fs" />
-    <Content Include="packages.config" />
     <Compile Include="Cell.fs" />
+    <Compile Include="Operational.fs" />
+    <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />
