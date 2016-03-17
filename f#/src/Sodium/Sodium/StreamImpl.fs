@@ -4,9 +4,10 @@ open System
 open System.Collections.Generic
 open System.Linq
 
-type private StreamListener<'T>(stream : 'T Stream, action : Transaction -> 'T -> unit, target : 'T Target) = 
-    let unlisten() = stream.Node.Unlink target
-    member __.Action = action
+type private 'T StreamListener(stream : 'T Stream, action : Transaction -> 'T -> unit, target : 'T Target) = 
+    let unlisten() =
+        action.ToString () |> ignore
+        stream.Node.Unlink target
     
     interface IListener with
         member __.Unlisten() = unlisten()
@@ -14,26 +15,27 @@ type private StreamListener<'T>(stream : 'T Stream, action : Transaction -> 'T -
     interface IDisposable with
         member __.Dispose() = unlisten()
 
-and Stream<'T> internal () =
-    let mutable cleanup = Listener.empty
-    let firings = List<'T>()
-    let node = Node<'T>(0L)
+and 'T Stream private (node : 'T Node, cleanup : IListener, firings : 'T seq) =
+    let mutable cleanup = cleanup
+    let firings = List<'T>(firings)
     let keepListenersAlive = HashSet<IListener>()
+
+    internal new() = new Stream<'T>(Node<'T>(0L), Listener.empty, [])
     
     static member CreateCoalesceHandler (f : 'T -> 'T -> 'T) (stream : 'T Stream) = 
         let mutable accum = Option.None
-        (fun (transaction : Transaction) a -> 
-        match accum with
-        | None -> 
-            accum <- Option.Some a
-            transaction.Prioritized stream.Node (fun transaction -> 
-                match accum with
-                | None -> invalidOp "There is no value to send."
-                | Some ac -> 
-                    stream.Send(transaction, ac)
-                    accum <- Option.None)
-            accum <- Option.Some a
-        | Some ac -> accum <- Option.Some(f ac a))
+        (fun (transaction : Transaction) a ->
+            match accum with
+            | None -> 
+                accum <- Option.Some a
+                transaction.Prioritized stream.Node (fun transaction -> 
+                    match accum with
+                    | None -> invalidOp "There is no value to send."
+                    | Some ac -> 
+                        stream.Send(transaction, ac)
+                        accum <- Option.None)
+                accum <- Option.Some a
+            | Some ac -> accum <- Option.Some(f ac a))
     
     member internal __.Node : 'T Node = node
     
@@ -41,7 +43,7 @@ and Stream<'T> internal () =
         let changed, nodeTarget = node.Link action target
         if changed then transaction.SetNeedsRegenerating()
         let firings = List.ofSeq firings
-        if not suppressEarlierFirings && firings.Any() then 
+        if not suppressEarlierFirings && firings.Any() then
             transaction.Prioritized target (fun t ->
                 for a in firings do
                     Transaction.InCallback <- Transaction.InCallback + 1
@@ -53,6 +55,7 @@ and Stream<'T> internal () =
     
     member internal this.ListenWithTransaction target action = 
         Transaction.Apply(fun t -> this.ListenInternal target t action false)
+
     member internal this.ListenWeak handler = this.ListenWithTransaction Node<'T>.Null (fun _ a -> handler a)
     
     member internal this.Listen handler = 
@@ -70,22 +73,26 @@ and Stream<'T> internal () =
         lock keepListenersAlive (fun () -> keepListenersAlive.Add(listener) |> ignore)
         listener
     
-    member internal this.AddCleanup listener =
+    member internal __.AddCleanup listener =
         Transaction.Run(fun () ->
-            cleanup <- Listener.append cleanup listener
-            this)
+            let cleanupNew = Listener.append cleanup listener
+            new Stream<'T>(node, cleanupNew, firings))
+    
+    member internal this.UnsafeAddCleanup listener =
+        cleanup <- Listener.append cleanup listener
+        this
     
     member internal this.Coalesce (transaction : Transaction) (f : 'T -> 'T -> 'T) =
         let out = new Stream<'T>()
         let h = Stream.CreateCoalesceHandler f out
         let listener = this.ListenInternal out.Node transaction h false
-        out.AddCleanup listener
+        out.UnsafeAddCleanup listener
     
     member internal this.LastFiringOnly(transaction : Transaction) = 
         this.Coalesce transaction (fun _ s -> s)
     
     member internal __.Send(transaction : Transaction, a) = 
-        if firings.Any() then transaction.Last firings.Clear
+        if not (firings.Any()) then transaction.Last firings.Clear
         firings.Add(a)
         let targets = HashSet<'T Target>(node.GetListeners())
         for target in targets do
@@ -101,7 +108,7 @@ and Stream<'T> internal () =
     interface IDisposable with
         member __.Dispose() = cleanup.Unlisten()
 
-type StreamSink<'T>(coalesce : 'T -> 'T -> 'T) as this = 
+type 'T StreamSink(coalesce : 'T -> 'T -> 'T) as this = 
     inherit Stream<'T>()
     let coalesce = Stream.CreateCoalesceHandler coalesce this
     internal new() = 
@@ -113,7 +120,7 @@ type StreamSink<'T>(coalesce : 'T -> 'T -> 'T) as this =
             if Transaction.InCallback > 0 then invalidOp "Send() may not be called inside a Sodium callback."
             coalesce transaction a)
 
-type private StreamLoop<'T>() = 
+type private 'T StreamLoop() = 
     inherit Stream<'T>()
 
     let isAssignedLock = obj()
@@ -128,4 +135,4 @@ type private StreamLoop<'T>() =
         lock isAssignedLock (fun () ->
             if isAssigned then invalidOp "StreamLoop was looped more than once."
             isAssigned <- true)
-        Transaction.Run (fun () -> this.AddCleanup (stream.ListenWithTransaction this.Node (fun t a -> this.Send(t, a)))) |> ignore
+        Transaction.Run (fun () -> this.UnsafeAddCleanup (stream.ListenWithTransaction this.Node (fun t a -> this.Send(t, a)))) |> ignore

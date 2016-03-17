@@ -52,22 +52,21 @@ type Transaction() =
         | None -> false
         | Some _ -> true
 
-    static member Run f = Transaction.Apply (fun t -> f())
+    static member Run f = Transaction.Apply (fun _ -> f())
 
     static member internal Apply f =
         lock transactionLock (fun () ->
             let transWas = currentTransaction
             try
-                let t = startIfNecessary ()
-                f (t)
+                f (startIfNecessary ())
             finally
                 try
                     match transWas with
                     | None ->
                         match currentTransaction with
                         | None -> ()
-                        | Some t -> t.Close()
-                    | Some t -> ()
+                        | Some t -> t.Close ()
+                    | Some _ -> ()
                 finally
                     currentTransaction <- transWas)
 
@@ -84,21 +83,21 @@ type Transaction() =
             let foundExisting, existing = postQueue.TryGetValue(index)
             let ``new`` =
                 if foundExisting then
-                    (fun (trans : Transaction) ->
-                        existing trans
-                        action trans)
+                    (fun transaction ->
+                        existing transaction
+                        action transaction)
                 else action
             postQueue.[index] <- ``new``
 
-        member internal __.Post action =
+        member __.Post action =
             postQueueFirst.Add(action)
 
         static member Post action =
-            Transaction.Apply (fun trans -> Transaction.Post action)
+            Transaction.Apply (fun _ -> Transaction.Post action)
 
         member internal __.SetNeedsRegenerating () = toRegen <- true
 
-        member internal this.Close() =
+        member internal this.Close () =
             let rec dequeueLoop () =
                 checkRegen ()
                 if prioritizedQueue.Any() then
@@ -121,12 +120,15 @@ type Transaction() =
 
             postQueueFirst.Clear()
 
-            for KeyValue(index, action) in postQueue do
+            for KeyValue(_, action) in postQueue do
                 let parent = currentTransaction
                 try
                     let transaction = Transaction()
                     currentTransaction <- Option.Some transaction
-                    action transaction
+                    try
+                        action transaction
+                    finally
+                        transaction.Close ()
                 finally
                     currentTransaction <- parent
 
@@ -152,7 +154,7 @@ and internal Entry(rank : Node, action : Transaction -> unit) =
 
     override this.Equals(otherObj) =
         match otherObj with
-        | :? Entry as other -> this.Rank = other.Rank
+        | :? Entry as other -> this.Rank = other.Rank && this.Seq = other.Seq
         | _ -> false
 
     override this.GetHashCode() = hash this.Rank
@@ -202,7 +204,7 @@ and [<AbstractClass>] internal Node(rank : int64) =
             | _ -> invalidArg "otherObj" "Cannot compare values of different types."
 
 and [<AbstractClass>] internal Target(node : Node) =
-    member this.Node = node
+    member val Node = node
 
 and internal 'T Node(rank : int64) =
     inherit Node(rank)
@@ -219,10 +221,10 @@ and internal 'T Node(rank : int64) =
             (changed,t))
 
     member this.Unlink = this.RemoveListener
-    member this.GetListeners () = lock Node.ListenersLock (fun () -> List.ofSeq(listeners))
-    member this.RemoveListener l = lock Node.ListenersLock (fun () -> listeners.Remove(l) |> ignore)
+    member __.GetListeners () = lock Node.ListenersLock (fun () -> List.ofSeq(listeners))
+    member __.RemoveListener l = lock Node.ListenersLock (fun () -> listeners.Remove(l) |> ignore)
 
-    override this.GetListenerNodesUnsafe () = Seq.map (fun (t : 'T Target) -> t.Node) listeners |> List.ofSeq
+    override __.GetListenerNodesUnsafe () = Seq.map (fun (t : 'T Target) -> t.Node) listeners |> List.ofSeq
 
 and internal 'T Target(action : Transaction -> 'T -> unit, node : Node) =
     inherit Target(node)

@@ -1,7 +1,5 @@
 ﻿namespace Sodium
 
-open Sodium.Stream
-
 module Operational =
     
     let updates (cell : 'T Cell) = Transaction.Apply cell.Updates
@@ -15,6 +13,6 @@ module Operational =
             for a in aa do
                 transaction.Post(childIndex, (fun transaction -> out.Send(transaction, a)))
                 childIndex <- childIndex + 1)
-        out.AddCleanup listener
+        out.UnsafeAddCleanup listener
 
     let defer (stream : 'T Stream) = split (stream |> Stream.map (fun v -> [v]))

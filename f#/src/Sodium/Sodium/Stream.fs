@@ -3,9 +3,9 @@
 module Stream =
     open System.Threading.Tasks
 
-    let sink () = new StreamSink<_>()
+    let sink<'T> () = new StreamSink<'T>()
 
-    let sinkWithCoalesce coalesce = new StreamSink<_>(coalesce)
+    let sinkWithCoalesce<'T> coalesce = new StreamSink<'T>(coalesce)
 
     let send a (streamSink : 'T StreamSink) = streamSink.Send a
 
@@ -20,7 +20,7 @@ module Stream =
         let (l, _) = loop (fun s -> (f s, ()))
         l
 
-    let never () = new Stream<_>()
+    let never<'T> () = new Stream<'T>()
 
     let listen handler (stream : 'T Stream) = stream.Listen handler
 
@@ -52,7 +52,7 @@ module Stream =
         let out = new Stream<_>()
         let listener = stream.ListenWithTransaction out.Node (fun transaction a ->
             out.Send(transaction, f a))
-        out.AddCleanup listener
+        out.UnsafeAddCleanup listener
 
     let hold initialValue (stream : 'T Stream) =
         Transaction.Apply (fun _ -> new Cell<'T>(stream, initialValue))
@@ -67,7 +67,7 @@ module Stream =
         let out = new Stream<'a>()
         let listener = stream.ListenWithTransaction out.Node (fun transaction a ->
             out.Send(transaction, f a (cell.SampleNoTransaction ())))
-        out.AddCleanup listener
+        out.UnsafeAddCleanup listener
 
     let snapshotAndTakeCell cell stream = snapshot (fun _ b -> b) cell stream
 
@@ -75,43 +75,43 @@ module Stream =
         let out = new Stream<'a>()
         let listener = stream.ListenWithTransaction out.Node (fun transaction a ->
             out.Send(transaction, f a (cell1.SampleNoTransaction ()) (cell2.SampleNoTransaction ())))
-        out.AddCleanup listener
+        out.UnsafeAddCleanup listener
 
     let snapshot3 f (cell1 : 'T1 Cell) (cell2 : 'T2 Cell) (cell3 : 'T3 Cell) (stream : 'T Stream) =
         let out = new Stream<'a>()
         let listener = stream.ListenWithTransaction out.Node (fun transaction a ->
             out.Send(transaction, f a (cell1.SampleNoTransaction ()) (cell2.SampleNoTransaction ()) (cell3.SampleNoTransaction ())))
-        out.AddCleanup listener
+        out.UnsafeAddCleanup listener
 
     let snapshot4 f (cell1 : 'T1 Cell) (cell2 : 'T2 Cell) (cell3 : 'T3 Cell) (cell4 : 'T4 Cell) (stream : 'T Stream) =
         let out = new Stream<'a>()
         let listener = stream.ListenWithTransaction out.Node (fun transaction a ->
             out.Send(transaction, f a (cell1.SampleNoTransaction ()) (cell2.SampleNoTransaction ()) (cell3.SampleNoTransaction ()) (cell4.SampleNoTransaction ())))
-        out.AddCleanup listener
+        out.UnsafeAddCleanup listener
 
     let snapshot5 f (cell1 : 'T1 Cell) (cell2 : 'T2 Cell) (cell3 : 'T3 Cell) (cell4 : 'T4 Cell) (cell5 : 'T5 Cell) (stream : 'T Stream) =
         let out = new Stream<'a>()
         let listener = stream.ListenWithTransaction out.Node (fun transaction a ->
             out.Send(transaction, f a (cell1.SampleNoTransaction ()) (cell2.SampleNoTransaction ()) (cell3.SampleNoTransaction ()) (cell4.SampleNoTransaction ()) (cell5.SampleNoTransaction ())))
-        out.AddCleanup listener
+        out.UnsafeAddCleanup listener
 
     let snapshot6 f (cell1 : 'T1 Cell) (cell2 : 'T2 Cell) (cell3 : 'T3 Cell) (cell4 : 'T4 Cell) (cell5 : 'T5 Cell) (cell6 : 'T6 Cell) (stream : 'T Stream) =
         let out = new Stream<'a>()
         let listener = stream.ListenWithTransaction out.Node (fun transaction a ->
             out.Send(transaction, f a (cell1.SampleNoTransaction ()) (cell2.SampleNoTransaction ()) (cell3.SampleNoTransaction ()) (cell4.SampleNoTransaction ()) (cell5.SampleNoTransaction ()) (cell6.SampleNoTransaction ())))
-        out.AddCleanup listener
+        out.UnsafeAddCleanup listener
 
     let snapshot7 f (cell1 : 'T1 Cell) (cell2 : 'T2 Cell) (cell3 : 'T3 Cell) (cell4 : 'T4 Cell) (cell5 : 'T5 Cell) (cell6 : 'T6 Cell) (cell7 : 'T7 Cell) (stream : 'T Stream) =
         let out = new Stream<'a>()
         let listener = stream.ListenWithTransaction out.Node (fun transaction a ->
             out.Send(transaction, f a (cell1.SampleNoTransaction ()) (cell2.SampleNoTransaction ()) (cell3.SampleNoTransaction ()) (cell4.SampleNoTransaction ()) (cell5.SampleNoTransaction ()) (cell6.SampleNoTransaction ()) (cell7.SampleNoTransaction ())))
-        out.AddCleanup listener
+        out.UnsafeAddCleanup listener
 
     let snapshot8 f (cell1 : 'T1 Cell) (cell2 : 'T2 Cell) (cell3 : 'T3 Cell) (cell4 : 'T4 Cell) (cell5 : 'T5 Cell) (cell6 : 'T6 Cell) (cell7 : 'T7 Cell) (cell8 : 'T8 Cell) (stream : 'T Stream) =
         let out = new Stream<'a>()
         let listener = stream.ListenWithTransaction out.Node (fun transaction a ->
             out.Send(transaction, f a (cell1.SampleNoTransaction ()) (cell2.SampleNoTransaction ()) (cell3.SampleNoTransaction ()) (cell4.SampleNoTransaction ()) (cell5.SampleNoTransaction ()) (cell6.SampleNoTransaction ()) (cell7.SampleNoTransaction ()) (cell8.SampleNoTransaction ())))
-        out.AddCleanup listener
+        out.UnsafeAddCleanup listener
 
     let private mergeInternal (other : 'T Stream) (stream : 'T Stream) =
         let out = new Stream<'T>()
@@ -121,7 +121,7 @@ module Stream =
         let h t a = out.Send(t, a)
         let listener1 = stream.ListenWithTransaction left h
         let listener2 = other.ListenWithTransaction right h
-        ((out.AddCleanup listener1).AddCleanup listener2).AddCleanup (Listener.fromAction(fun () -> left.Unlink nodeTarget))
+        ((out.UnsafeAddCleanup listener1).UnsafeAddCleanup listener2).UnsafeAddCleanup (Listener.fromAction(fun () -> left.Unlink nodeTarget))
 
     let merge (f : 'T -> 'T -> 'T) (other : 'T Stream) (stream : 'T Stream) =
         Transaction.Apply (fun transaction ->
@@ -130,27 +130,27 @@ module Stream =
     let orElse (other : 'T Stream) (stream : 'T Stream) =
         merge (fun l _ -> l) other stream
 
-    let rec private mergeAllInternal (f : 'T -> 'T -> 'T) (streams : 'T Stream list) start ``end`` =
+    let rec private mergeAllInternal (f : 'T -> 'T -> 'T) (streams : list<#Stream<'T>>) start ``end`` =
         let n = ``end`` - start
         if n = 0 then new Stream<'T>()
-        elif n = 1 then streams.[start]
+        elif n = 1 then upcast streams.[start]
         elif n = 2 then merge f streams.[start + 1] streams.[start]
         else
             let mid = (start + ``end``) / 2
             merge f (mergeAllInternal f streams mid ``end``) (mergeAllInternal f streams start mid)
 
-    let mergeAll (f : 'T -> 'T -> 'T) (streams : 'T Stream seq) =
+    let mergeAll (f : 'T -> 'T -> 'T) (streams : seq<#Stream<'T>>) =
         let s = List.ofSeq streams
         mergeAllInternal f s 0 s.Length
 
-    let orElseAll (streams : 'T Stream seq) =
+    let orElseAll (streams : seq<#Stream<'T>>) =
         mergeAll (fun l _ -> l) streams
 
     let filter (predicate : 'T -> bool) (stream : 'T Stream) =
         let out = new Stream<'T>()
         let listener = stream.ListenWithTransaction out.Node (fun transaction a ->
             if predicate a then out.Send(transaction, a))
-        out.AddCleanup listener
+        out.UnsafeAddCleanup listener
 
     let filterOption (stream : 'T option Stream) =
         let out = new Stream<'T>()
@@ -158,7 +158,7 @@ module Stream =
             match a with
             | None -> ()
             | Some v -> out.Send(transaction, v))
-        out.AddCleanup listener
+        out.UnsafeAddCleanup listener
 
     let gate (cell : bool Cell) (stream : 'T Stream) =
         snapshot (fun a predicate -> if predicate then Option.Some a else Option.None) cell stream |> filterOption
@@ -172,7 +172,7 @@ module Stream =
     let collect (f : 'T -> 'TState -> 'a * 'TState) (initialState : 'TState) (stream : 'T Stream) =
         collectLazy f (lazy initialState) stream
         
-    let internal calmInternal (initialValue : Lazy<'T option>) (stream : 'T Stream when 'T : equality) =
+    let internal calmInternal (initialValue : 'T option Lazy) (stream : 'T Stream when 'T : equality) =
         collectLazy (fun a lastA ->
             if (match lastA with | None -> false | Some v -> v = a)
             then (Option.None, lastA)
@@ -183,7 +183,7 @@ module Stream =
     let calm (stream : 'T Stream when 'T : equality) =
         calmInternal (lazy Option.None) stream
 
-    let accumLazy (f: 'T -> 'a -> 'a) (initialState : Lazy<'a>) (stream : 'T Stream) =
+    let accumLazy (f: 'T -> 'a -> 'a) (initialState : 'a Lazy) (stream : 'T Stream) =
         let result = loopWithNoCaptures (fun stateLoop ->
             let s = stateLoop |> holdLazy initialState
             stream |> snapshot f s)
@@ -203,4 +203,4 @@ module Stream =
                 l.Unlisten()
                 listenerReference <- Option.None)
         listenerReference <- Option.Some listener
-        out.AddCleanup listener
+        out.UnsafeAddCleanup listener

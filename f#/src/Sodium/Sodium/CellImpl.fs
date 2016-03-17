@@ -81,7 +81,7 @@ type internal 'T LazyCell(stream : 'T Stream, lazyInitialValue : 'T Lazy option)
                         v
             | Some v -> v
 
-type CellSink<'T> private(streamSink : 'T StreamSink, initialValue : 'T) =
+type 'T CellSink private(streamSink : 'T StreamSink, initialValue : 'T) =
     inherit Cell<'T>(streamSink, initialValue)
 
     internal new(initialValue : 'T) =
@@ -96,7 +96,7 @@ type CellSink<'T> private(streamSink : 'T StreamSink, initialValue : 'T) =
         base.Dispose()
         (streamSink :> IDisposable).Dispose ()
 
-type private CellLoop<'T> private(streamLoop : 'T StreamLoop) =
+type private 'T CellLoop private(streamLoop : 'T StreamLoop) =
     inherit LazyCell<'T>(streamLoop, Option.None)
 
     internal new() = new CellLoop<'T>(new StreamLoop<'T>())
