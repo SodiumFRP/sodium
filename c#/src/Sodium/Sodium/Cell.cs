@@ -358,7 +358,7 @@ namespace Sodium
                         h(trans1);
                     }
                 });
-                return @out.LastFiringOnly(trans0).AddCleanup(l1).AddCleanup(l2).AddCleanup(
+                return @out.LastFiringOnly(trans0).UnsafeAddCleanup(l1).UnsafeAddCleanup(l2).UnsafeAddCleanup(
                     new Listener(() => inTarget.Unlink(nodeTarget))).HoldLazy(new Lazy<TResult>(() => bf.SampleNoTransaction()(this.SampleNoTransaction())));
             });
         }

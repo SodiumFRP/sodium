@@ -280,8 +280,44 @@ namespace Sodium.Tests
                 s.Send(4);
                 s.Send(2);
                 s.Send(2);
+                s.Send(2);
+                s.Send(2);
+                s.Send(2);
+                s.Send(4);
+                s.Send(2);
+                s.Send(4);
+                s.Send(4);
+                s.Send(2);
+                s.Send(2);
+                s.Send(2);
+                s.Send(2);
+                s.Send(2);
+                s.Send(4);
+                s.Send(2);
+                s.Send(4);
+                s.Send(4);
+                s.Send(2);
+                s.Send(2);
+                s.Send(2);
+                s.Send(2);
+                s.Send(2);
+                s.Send(4);
+                s.Send(2);
+                s.Send(4);
+                s.Send(4);
+                s.Send(2);
+                s.Send(2);
+                s.Send(2);
+                s.Send(2);
+                s.Send(2);
+                s.Send(4);
+                s.Send(2);
+                s.Send(4);
+                s.Send(4);
+                s.Send(2);
+                s.Send(2);
             }
-            CollectionAssert.AreEqual(new[] { 2, 4, 2, 4, 2 }, @out);
+            CollectionAssert.AreEqual(new[] { 2, 4, 2, 4, 2, 4, 2, 4, 2, 4, 2, 4, 2, 4, 2, 4, 2, 4, 2, 4, 2 }, @out);
         }
 
         [Test]
@@ -358,9 +394,9 @@ namespace Sodium.Tests
         public void TestHold()
         {
             StreamSink<char> s = new StreamSink<char>();
-            Cell<char> b = s.Hold(' ');
+            Cell<char> c = s.Hold(' ');
             List<char> @out = new List<char>();
-            using (b.Listen(@out.Add))
+            using (c.Listen(@out.Add))
             {
                 s.Send('C');
                 s.Send('B');
@@ -373,9 +409,9 @@ namespace Sodium.Tests
         public void TestHoldImplicitDelay()
         {
             StreamSink<char> s = new StreamSink<char>();
-            Cell<char> b = s.Hold(' ');
+            Cell<char> c = s.Hold(' ');
             List<char> @out = new List<char>();
-            using (s.Snapshot(b).Listen(@out.Add))
+            using (s.Snapshot(c).Listen(@out.Add))
             {
                 s.Send('C');
                 s.Send('B');
@@ -388,9 +424,9 @@ namespace Sodium.Tests
         public void TestDefer()
         {
             StreamSink<char> s = new StreamSink<char>();
-            Cell<char> b = s.Hold(' ');
+            Cell<char> c = s.Hold(' ');
             List<char> @out = new List<char>();
-            using (Operational.Defer(s).Snapshot(b).Listen(@out.Add))
+            using (Operational.Defer(s).Snapshot(c).Listen(@out.Add))
             {
                 s.Send('C');
                 s.Send('B');

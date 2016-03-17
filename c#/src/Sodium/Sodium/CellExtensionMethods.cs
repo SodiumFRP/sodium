@@ -28,7 +28,7 @@ namespace Sodium
                     currentListener = ca.Value(trans2).Listen(@out.Node, trans2, @out.Send, false);
                 };
                 IListener l1 = cca.Value(trans1).Listen(@out.Node, trans1, h, false);
-                return @out.AddCleanup(l1).HoldLazy(za);
+                return @out.UnsafeAddCleanup(l1).HoldLazy(za);
             });
         }
 
@@ -56,7 +56,7 @@ namespace Sodium
                     });
                 };
                 IListener l1 = csa.Updates(trans1).Listen(@out.Node, trans1, h, false);
-                return @out.AddCleanup(l1);
+                return @out.UnsafeAddCleanup(l1);
             });
         }
 
@@ -82,7 +82,7 @@ namespace Sodium
                       values[i] = v;
                       @out.Send(trans2, f(values.ToArray()));
                   }, false));
-                return @out.AddCleanup(new ImmutableCompositeListener(listeners)).HoldLazy(initialValue);
+                return @out.UnsafeAddCleanup(new ImmutableCompositeListener(listeners)).HoldLazy(initialValue);
             });
         }
     }

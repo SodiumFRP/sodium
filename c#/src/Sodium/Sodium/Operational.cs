@@ -73,7 +73,7 @@ namespace Sodium
                     childIx++;
                 }
             });
-            return @out.AddCleanup(l1);
+            return @out.UnsafeAddCleanup(l1);
         }
     }
 }
