@@ -1,20 +1,21 @@
-Sodium - Functional Reactive Programming in C#, C++, Java, Haskell and Scala
-(other languages to be added)
+Sodium - Functional Reactive Programming (FRP) library for multiple languages
 
 This is based on Flapjax, Yampa, scala.React and a number of other Functional
 Reactive Programming efforts, as well as a lot of personal experience. Enjoy.
 
 Status:
-  Haskell - complete
-  Java - complete
-  C++ - complete
+  C++ - complete - in separate sodium-cxx repository
   C# - complete
+  Java - complete
+  Kotlin - complete - in separate sodium-kotlin repository
+  Scala - complete but in need of some updating
+
+  Haskell - deprecated in favour of Heinrich Apfelmus's Reactive Banana
   Embedded-C - just an experiment
   Rust - got nowhere with it yet
-  Scala - complete
 
 Buy the book "Functional Reactive Programming" at
-  http://manning.com/blackheath
+  https://www.manning.com/books/functional-reactive-programming
 
 Drop by our blog at 
   http://reactiveprogramming.org/
