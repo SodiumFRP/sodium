@@ -2,7 +2,6 @@
 
 open NUnit.Framework
 open Sodium
-open System
 open System.Collections.Generic
 
 module CellTests =

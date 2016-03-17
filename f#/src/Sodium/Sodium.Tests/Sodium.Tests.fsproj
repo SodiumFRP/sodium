@@ -52,8 +52,9 @@
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
     <Compile Include="StreamTests.fs" />
-    <Content Include="packages.config" />
     <Compile Include="CellTests.fs" />
+    <Compile Include="CommonTests.fs" />
+    <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
     <Reference Include="mscorlib" />
