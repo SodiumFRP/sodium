@@ -14,17 +14,17 @@ type Tests() =
             | [] -> -1
             | _ -> firings |> Seq.collect (Map.toSeq >> Seq.map fst) |> Seq.max
         let out = List<_>()
-        let run t = for a in firings |> Seq.collect (Map.find t) do a ()
+        let run t = for a in firings |> Seq.collect (fun f -> match f |> Map.tryFind t with | None -> [] | Some t -> t) do a ()
         match maxKey with
         | -1 ->
+            use _l = listen out.Add
+            ()
+        | _ ->
             use _l = Transaction.Run (fun () ->
                 let l = listen out.Add
                 run 0
                 l)
             for i = 1 to maxKey do Transaction.Run (fun () -> run i)
-        | _ ->
-            use _l = listen out.Add
-            ()
         out
 
     let runSimulationWithNoFirings listen =
@@ -56,14 +56,42 @@ type Tests() =
 
     let getPermutations list = getPermutationsInternal list list.Length
 
+    let runPermutations
+        //(createListAndListener : ((string * Map<int, (unit -> unit)>) list -> (('T -> unit) -> IListener) -> (string * (int * (unit -> unit)) Map) list * (('T -> unit) -> IListener)) -> (string * Map<int, (unit -> unit)>) list * (('T -> unit) -> IListener))
+        (createListAndListener : unit -> (string * Map<int, (unit -> unit)>) list * (('T -> unit) -> IListener))
+        ``assert`` =
+        let indexes = List.init (createListAndListener () |> fst).Length id
+        for (list, listener) in (getPermutations indexes |> List.map (fun ii ->
+            let (list, listener) = createListAndListener ()
+            (ii |> List.map (fun i -> list.[i]), listener))) do
+            try
+                let out = runSimulation listener (list |> List.map snd)
+                ``assert`` out
+            with
+                | e -> printfn "Test failed for ordering { %s }." (list |> List.map fst |> String.concat ", ")
+
     [<Test>]
     member __.``Never: Test Case``() =
-        use s = Stream.sink ()
-        let out = List<_>()
-        (
-            use _l = s |> Stream.listen out.Add
-            s.Send 5
-        )
-        CollectionAssert.AreEqual([5], out)
-        s.Send 6
-        CollectionAssert.AreEqual([5], out)
+        let out = runSimulationWithNoFirings (Helper.flip Stream.listen (Stream.never<int> ()))
+        CollectionAssert.AreEqual([], out)
+
+    [<Test>]
+    member __.``MapS: Test Case``() =
+        let (s, sf) = mkStream ([(0,5);(1,10);(2,12)] |> Map.ofList)
+        let out = runSimulation (Helper.flip Stream.listen (s |> Stream.map ((+) 1))) [sf]
+        CollectionAssert.AreEqual([6;11;13], out)
+
+    [<Test>]
+    member __.``Snapshot: Test Case``() =
+        let (s1, s1f) = mkStream ([(0,'a');(3,'b');(5,'c')] |> Map.ofList)
+        let (s2, s2f) = mkStream ([(1,4);(5,7)] |> Map.ofList)
+        let c = s2 |> Stream.hold 3
+        let out = runSimulation (Helper.flip Stream.listen (s1 |> Stream.snapshotAndTakeCell c)) [s1f;s2f]
+        CollectionAssert.AreEqual([3;4;4], out)
+
+    [<Test>]
+    member __.``Merge: Test Case``() =
+        let (s1, s1f) = mkStream ([(0,0);(2,2)] |> Map.ofList)
+        let (s2, s2f) = mkStream ([(1,10);(2,20);(3,30)] |> Map.ofList)
+        let out = runSimulation (Helper.flip Stream.listen (s1 |> Stream.merge (+) s2)) [s1f;s2f]
+        CollectionAssert.AreEqual([0;10;22;30], out)
