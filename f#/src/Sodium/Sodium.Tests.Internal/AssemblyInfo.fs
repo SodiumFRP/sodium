@@ -1,4 +1,4 @@
-﻿namespace Sodium.AssemblyInfo
+﻿namespace Sodium.Tests.Internal.AssemblyInfo
 
 open System.Reflection
 open System.Runtime.CompilerServices
@@ -7,11 +7,11 @@ open System.Runtime.InteropServices
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[<assembly: AssemblyTitle("Sodium")>]
+[<assembly: AssemblyTitle("Sodium.Tests.Internal")>]
 [<assembly: AssemblyDescription("")>]
 [<assembly: AssemblyConfiguration("")>]
 [<assembly: AssemblyCompany("")>]
-[<assembly: AssemblyProduct("Sodium")>]
+[<assembly: AssemblyProduct("Sodium.Tests.Internal")>]
 [<assembly: AssemblyCopyright("Copyright ©  2016")>]
 [<assembly: AssemblyTrademark("")>]
 [<assembly: AssemblyCulture("")>]
@@ -22,8 +22,7 @@ open System.Runtime.InteropServices
 [<assembly: ComVisible(false)>]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[<assembly: Guid("46fed992-4c7c-46ae-9a0e-daccbc84d48f")>]
-[<assembly: InternalsVisibleTo("Sodium.Tests.Internal")>]
+[<assembly: Guid("24e92749-0665-41ad-9d64-7db300a0f596")>]
 
 // Version information for an assembly consists of the following four values:
 // 

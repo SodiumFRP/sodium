@@ -59,6 +59,7 @@
     <Compile Include="Stream.fs" />
     <Compile Include="Cell.fs" />
     <Compile Include="Operational.fs" />
+    <Compile Include="Time.fs" />
     <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

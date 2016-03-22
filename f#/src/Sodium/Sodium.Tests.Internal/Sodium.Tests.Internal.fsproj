@@ -5,14 +5,14 @@
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
     <SchemaVersion>2.0</SchemaVersion>
-    <ProjectGuid>de137823-76e4-4629-89db-d2a64ebd7d35</ProjectGuid>
+    <ProjectGuid>24e92749-0665-41ad-9d64-7db300a0f596</ProjectGuid>
     <OutputType>Library</OutputType>
-    <RootNamespace>Sodium.Tests</RootNamespace>
-    <AssemblyName>Sodium.Tests</AssemblyName>
+    <RootNamespace>Sodium.Tests.Internal</RootNamespace>
+    <AssemblyName>Sodium.Tests.Internal</AssemblyName>
     <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <TargetFSharpCoreVersion>4.4.0.0</TargetFSharpCoreVersion>
     <AutoGenerateBindingRedirects>true</AutoGenerateBindingRedirects>
-    <Name>Sodium.Tests</Name>
+    <Name>Sodium.Tests.Internal</Name>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
     <DebugSymbols>true</DebugSymbols>
@@ -22,7 +22,7 @@
     <OutputPath>bin\Debug\</OutputPath>
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <DocumentationFile>bin\Debug\Sodium.Tests.XML</DocumentationFile>
+    <DocumentationFile>bin\Debug\Sodium.Tests.Internal.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -31,7 +31,7 @@
     <OutputPath>bin\Release\</OutputPath>
     <DefineConstants>TRACE</DefineConstants>
     <WarningLevel>3</WarningLevel>
-    <DocumentationFile>bin\Release\Sodium.Tests.XML</DocumentationFile>
+    <DocumentationFile>bin\Release\Sodium.Tests.Internal.XML</DocumentationFile>
   </PropertyGroup>
   <PropertyGroup>
     <MinimumVisualStudioVersion Condition="'$(MinimumVisualStudioVersion)' == ''">11</MinimumVisualStudioVersion>
@@ -51,11 +51,8 @@
   <Import Project="$(FSharpTargetsPath)" />
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
-    <Compile Include="Helper.fs" />
-    <Compile Include="StreamTests.fs" />
     <Compile Include="CellTests.fs" />
-    <Compile Include="CommonTests.fs" />
-    <Compile Include="DenotationalSemanticsTests.fs" />
+    <Compile Include="NodeTests.fs" />
     <Content Include="packages.config" />
   </ItemGroup>
   <ItemGroup>

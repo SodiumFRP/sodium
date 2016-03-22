@@ -1,8 +1,7 @@
-﻿module Sodium.Tests.``Deonational Semantics``
+﻿module Sodium.Tests.``Denotational Semantics``
 
 open NUnit.Framework
 open Sodium
-open System
 open System.Collections.Generic
 
 [<TestFixture>]
@@ -68,7 +67,7 @@ type Tests() =
                 let out = runSimulation listener (list |> List.map snd)
                 ``assert`` out
             with
-                | e ->
+                | _ ->
                     printfn "Test failed for ordering { %s }." (list |> List.map fst |> String.concat ", ")
                     reraise ()
 

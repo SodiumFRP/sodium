@@ -5,6 +5,10 @@ namespace Sodium.Time
 {
     public class TimerSystem<T> : ITimerSystem<T> where T : IComparable<T>
     {
+        private readonly ITimerSystemImplementation<T> implementation;
+
+        private readonly Queue<Event> eventQueue = new Queue<Event>();
+
         public TimerSystem(ITimerSystemImplementation<T> implementation, Action<Exception> handleException)
         {
             this.implementation = implementation;
@@ -44,8 +48,6 @@ namespace Sodium.Time
             });
         }
 
-        private readonly ITimerSystemImplementation<T> implementation;
-
         /// <summary>
         ///     Gets a cell giving the current clock time.
         /// </summary>
@@ -63,13 +65,6 @@ namespace Sodium.Time
             internal readonly StreamSink<T> Alarm;
         };
 
-        private readonly Queue<Event> eventQueue = new Queue<Event>();
-
-        private class CurrentTimer
-        {
-            internal IMaybe<ITimer> Timer = Maybe.Nothing<ITimer>();
-        };
-
         /// <summary>
         ///     A timer that fires at the specified time.
         /// </summary>
@@ -78,16 +73,16 @@ namespace Sodium.Time
         public Stream<T> At(Cell<IMaybe<T>> t)
         {
             StreamSink<T> alarm = new StreamSink<T>();
-            CurrentTimer current = new CurrentTimer();
+            IMaybe<ITimer> currentTimer = Maybe.Nothing<ITimer>();
             IListener l = t.Listen(m =>
             {
-                current.Timer.Match(timer => timer.Cancel(), () => { });
-                current.Timer = m.Match(
-                    timer => Maybe.Just(this.implementation.SetTimer(timer, () =>
+                currentTimer.Match(timer => timer.Cancel(), () => { });
+                currentTimer = m.Match(
+                    time => Maybe.Just(this.implementation.SetTimer(time, () =>
                     {
                         lock (this.eventQueue)
                         {
-                            this.eventQueue.Enqueue(new Event(timer, alarm));
+                            this.eventQueue.Enqueue(new Event(time, alarm));
                         }
                         // Open and close a transaction to trigger queued
                         // events to run.
