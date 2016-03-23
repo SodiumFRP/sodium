@@ -15,12 +15,6 @@ type private 'T StreamListener(stream : 'T StreamImpl, action : Transaction -> '
     interface IDisposable with
         member __.Dispose() = unlisten()
 
-and 'T Stream internal(impl : 'T StreamImpl) =
-    member val internal Impl = impl
-
-    interface IDisposable with
-        member __.Dispose() = (impl :> IDisposable).Dispose()
-
 and internal 'T StreamImpl private (node : 'T Node, cleanup : IListener, firings : 'T seq) =
     let mutable cleanup = cleanup
     let firings = List<'T>(firings)
@@ -113,6 +107,12 @@ and internal 'T StreamImpl private (node : 'T Node, cleanup : IListener, firings
     
     interface IDisposable with
         member __.Dispose() = cleanup.Unlisten()
+
+type 'T Stream internal(impl : 'T StreamImpl) =
+    member val internal Impl = impl
+
+    interface IDisposable with
+        member __.Dispose() = (impl :> IDisposable).Dispose()
 
 type internal 'T StreamSinkImpl(coalesce : 'T -> 'T -> 'T) as this = 
     inherit StreamImpl<'T>()

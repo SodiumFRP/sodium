@@ -6,12 +6,6 @@ type private 'T LazySample =
     | HasNoValue of cell : 'T CellImpl
     | HasValue of value : 'T
 
-and 'T Cell internal(impl : 'T CellImpl) =
-    member val internal Impl = impl
-
-    interface IDisposable with
-        member __.Dispose() = (impl :> IDisposable).Dispose()
-
 and internal 'T CellImpl private (stream : 'T StreamImpl, value : 'T option, setupListener : bool) =
     let mutable value = value
     let mutable valueUpdate = Option<'T>.None
@@ -101,6 +95,12 @@ type internal 'T CellSinkImpl private(streamSink : 'T StreamSinkImpl, initialVal
     override __.Dispose () =
         base.Dispose()
         (streamSink :> IDisposable).Dispose ()
+
+type 'T Cell internal(impl : 'T CellImpl) =
+    member val internal Impl = impl
+
+    interface IDisposable with
+        member __.Dispose() = (impl :> IDisposable).Dispose()
 
 type 'T CellSink internal(impl : 'T CellSinkImpl) =
     inherit Cell<'T>(impl)
