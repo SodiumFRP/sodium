@@ -1,4 +1,4 @@
-﻿namespace SWidgets.AssemblyInfo
+﻿namespace Add.AssemblyInfo
 
 open System.Reflection
 open System.Runtime.InteropServices
@@ -6,11 +6,11 @@ open System.Runtime.InteropServices
 // General Information about an assembly is controlled through the following 
 // set of attributes. Change these attribute values to modify the information
 // associated with an assembly.
-[<assembly: AssemblyTitle("SWidgets")>]
+[<assembly: AssemblyTitle("Add")>]
 [<assembly: AssemblyDescription("")>]
 [<assembly: AssemblyConfiguration("")>]
 [<assembly: AssemblyCompany("")>]
-[<assembly: AssemblyProduct("SWidgets")>]
+[<assembly: AssemblyProduct("Add")>]
 [<assembly: AssemblyCopyright("Copyright ©  2016")>]
 [<assembly: AssemblyTrademark("")>]
 [<assembly: AssemblyCulture("")>]
@@ -21,7 +21,7 @@ open System.Runtime.InteropServices
 [<assembly: ComVisible(false)>]
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
-[<assembly: Guid("d933e7f8-d183-4d2a-98f0-e7a6a3bd03e4")>]
+[<assembly: Guid("f835ce63-49a7-48fe-b35e-6f25f7053c25")>]
 
 // Version information for an assembly consists of the following four values:
 // 

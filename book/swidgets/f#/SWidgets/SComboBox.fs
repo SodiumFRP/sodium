@@ -15,7 +15,7 @@ type SComboBox<'T>(setSelectedItem : 'T option Stream, initSelectedItem : 'T opt
                     | Some v -> box v)
         this.ItemsSource <- items
         let sDecrement = Stream.sink ()
-        let allow = setSelectedItem |> Stream.map (fun _ -> 1) |> Stream.orElse sDecrement |> Stream.accum (+) 0 |> Cell.map ((=) 0)
+        let allow = setSelectedItem |> Stream.mapConst 1 |> Stream.orElse sDecrement |> Stream.accum (+) 0 |> Cell.map ((=) 0)
         let getSelectedItem () =
             let sel = this.BaseSelectedItem
             if sel = null then Option.None else match (box sel) with | :? 'T as s -> Option.Some s | _ -> Option.None
@@ -26,15 +26,21 @@ type SComboBox<'T>(setSelectedItem : 'T option Stream, initSelectedItem : 'T opt
                 let selectedItem = getSelectedItem ()
                 this.Dispatcher.InvokeAsync(fun () -> sUserSelectedItem.Send selectedItem) |> ignore)
         let mutable selectionChangedEventHandler = subscribe ()
-        let listener = setSelectedItem |> Stream.listen (fun m ->
+        let listener = setSelectedItem |> Stream.listen (fun o ->
             this.Dispatcher.InvokeAsync(fun () ->
                 selectionChangedEventHandler.Dispose()
-                setSelectedItemImpl m
+                setSelectedItemImpl o
                 selectionChangedEventHandler <- subscribe ()
                 sDecrement.Send -1) |> ignore)
         sUserSelectedItem, selectedItem, (fun () -> listener.Unlisten ())
 
     let sUserSelectedItem, selectedItem, disposeListener = init ()
+
+    new(setSelectedItem, initSelectedItem) = new SComboBox<_>(setSelectedItem, initSelectedItem, Seq.empty)
+    new(initSelectedItem, items) = new SComboBox<_>(Stream.never (), initSelectedItem, items)
+    new(initSelectedItem) = new SComboBox<_>(Stream.never (), initSelectedItem)
+    new(items) = new SComboBox<_>(Stream.never (), Option.None, items)
+    new() = new SComboBox<_>(Seq.empty)
 
     member private __.BaseSelectedItem
         with get () = base.SelectedItem

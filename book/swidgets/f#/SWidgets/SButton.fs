@@ -17,7 +17,7 @@ type SButton(enabled : bool Cell) as this =
 
     new() = new SButton(Cell.constant true)
 
-    member __.SClicked = sClicked
+    member val SClicked = sClicked
 
     interface IDisposable with
         member __.Dispose() = listener.Unlisten ()
