@@ -12,11 +12,8 @@ type MainViewController() =
     inherit WindowViewController<MainView>()
 
     override __.OnLoaded view =
-        let txtA = new STextBox("5")
-        txtA.Width <- 100.0
-        
-        let txtB = new STextBox("10")
-        txtB.Width <- 100.0
+        let txtA = new STextBox("5", Width = 100.0)
+        let txtB = new STextBox("10", Width = 100.0)
 
         let parseIntOrZero n = match Int32.parse n with | None -> 0 | Some n -> n
         let a = txtA.Text |> Cell.map parseIntOrZero

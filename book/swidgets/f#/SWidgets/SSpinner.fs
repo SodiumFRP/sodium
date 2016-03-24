@@ -15,19 +15,13 @@ type SSpinner private(initialValue : int) as this =
         let parseIntOrZero n = match Int32.parse n with | None -> 0 | Some n -> n
         let value = textField.Text |> Cell.map parseIntOrZero
 
-        let plus = new SButton()
-        plus.Content <- "+"
-        plus.Width <- 25.0
-        let minus = new SButton()
-        minus.Content <- "+"
-        minus.Width <- 25.0
+        let plus = new SButton(Content = "+", Width = 25.0)
+        let minus = new SButton(Content = "-", Width = 25.0)
 
-        let row1 = RowDefinition()
-        row1.Height <- GridLength.Auto
-        this.RowDefinitions.Add(row1)
-        let row2 = RowDefinition()
-        row2.Height <- GridLength.Auto
-        this.RowDefinitions.Add(row2)
+        this.RowDefinitions.Add(RowDefinition(Height = GridLength.Auto))
+        this.RowDefinitions.Add(RowDefinition(Height = GridLength.Auto))
+        this.ColumnDefinitions.Add(ColumnDefinition(Width = GridLength(1.0, GridUnitType.Star)))
+        this.ColumnDefinitions.Add(ColumnDefinition(Width = GridLength.Auto))
 
         Grid.SetRow(textField, 0)
         Grid.SetColumn(textField, 0)

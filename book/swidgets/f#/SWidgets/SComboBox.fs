@@ -7,13 +7,14 @@ open Sodium
 type SComboBox<'T>(setSelectedItem : 'T option Stream, initSelectedItem : 'T option, items : 'T seq) as this =
     inherit ComboBox()
 
+    let mutable selectionChangedEventHandler = Option<IDisposable>.None
+
+    let getObjectFromSelectedItem m =
+        (match m with
+            | None -> null
+            | Some v -> box v)
+
     let init () =
-        let setSelectedItemImpl m =
-            this.BaseSelectedItem <-
-                (match m with
-                    | None -> null
-                    | Some v -> box v)
-        this.ItemsSource <- items
         let sDecrement = Stream.sink ()
         let allow = setSelectedItem |> Stream.mapConst 1 |> Stream.orElse sDecrement |> Stream.accum (+) 0 |> Cell.map ((=) 0)
         let getSelectedItem () =
@@ -25,16 +26,20 @@ type SComboBox<'T>(setSelectedItem : 'T option Stream, initSelectedItem : 'T opt
             this.SelectionChanged.Subscribe (fun _ ->
                 let selectedItem = getSelectedItem ()
                 this.Dispatcher.InvokeAsync(fun () -> sUserSelectedItem.Send selectedItem) |> ignore)
-        let mutable selectionChangedEventHandler = subscribe ()
         let listener = setSelectedItem |> Stream.listen (fun o ->
             this.Dispatcher.InvokeAsync(fun () ->
-                selectionChangedEventHandler.Dispose()
-                setSelectedItemImpl o
-                selectionChangedEventHandler <- subscribe ()
+                match selectionChangedEventHandler with | None -> () | Some h -> h.Dispose()
+                this.BaseSelectedItem <- getObjectFromSelectedItem o
+                selectionChangedEventHandler <- Option.Some (subscribe ())
                 sDecrement.Send -1) |> ignore)
-        sUserSelectedItem, selectedItem, (fun () -> listener.Unlisten ())
+        sUserSelectedItem, selectedItem, subscribe, (fun () -> listener.Unlisten ())
 
-    let sUserSelectedItem, selectedItem, disposeListener = init ()
+    let sUserSelectedItem, selectedItem, subscribe, disposeListener = init ()
+
+    do
+        base.ItemsSource <- items
+        base.SelectedItem <- getObjectFromSelectedItem initSelectedItem
+        selectionChangedEventHandler <- Option.Some (subscribe ())
 
     new(setSelectedItem, initSelectedItem) = new SComboBox<_>(setSelectedItem, initSelectedItem, Seq.empty)
     new(initSelectedItem, items) = new SComboBox<_>(Stream.never (), initSelectedItem, items)
