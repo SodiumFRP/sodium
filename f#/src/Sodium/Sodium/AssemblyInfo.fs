@@ -23,6 +23,7 @@ open System.Runtime.InteropServices
 
 // The following GUID is for the ID of the typelib if this project is exposed to COM
 [<assembly: Guid("46fed992-4c7c-46ae-9a0e-daccbc84d48f")>]
+[<assembly: InternalsVisibleTo("Sodium.Tests.Internal")>]
 
 // Version information for an assembly consists of the following four values:
 // 

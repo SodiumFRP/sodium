@@ -3,10 +3,10 @@
 open System
 
 type private 'T LazySample =
-    | HasNoValue of cell : 'T Cell
+    | HasNoValue of cell : 'T CellImpl
     | HasValue of value : 'T
 
-and 'T Cell private(stream : 'T Stream, value : 'T option, setupListener : bool) =
+and internal 'T CellImpl private (stream : 'T StreamImpl, value : 'T option, setupListener : bool) =
     let mutable value = value
     let mutable valueUpdate = Option<'T>.None
 
@@ -27,11 +27,11 @@ and 'T Cell private(stream : 'T Stream, value : 'T option, setupListener : bool)
         else Listener.empty
 
     internal new(value : 'T) =
-        new Cell<'T>(new Stream<'T>(), Option.Some value, false)
-    internal new(stream : 'T Stream, initialValue : 'T) =
-        new Cell<'T>(stream, Option.Some initialValue, true)
-    internal new(stream : 'T Stream) =
-        new Cell<'T>(stream, Option.None, true)
+        new CellImpl<'T>(new StreamImpl<'T>(), Option.Some value, false)
+    internal new(stream : 'T StreamImpl, initialValue : 'T) =
+        new CellImpl<'T>(stream, Option.Some initialValue, true)
+    internal new(stream : 'T StreamImpl) =
+        new CellImpl<'T>(stream, Option.None, true)
 
     member internal __.Value with get () = value and set v = value <- v
 
@@ -64,8 +64,8 @@ and 'T Cell private(stream : 'T Stream, value : 'T option, setupListener : bool)
     interface IDisposable with
         member this.Dispose() = this.Dispose()
 
-type internal 'T LazyCell(stream : 'T Stream, lazyInitialValue : 'T Lazy option) =
-    inherit Cell<'T>(stream = stream)
+type internal 'T LazyCellImpl(stream : 'T StreamImpl, lazyInitialValue : 'T Lazy option) =
+    inherit CellImpl<'T>(stream = stream)
 
     member val internal LazyInitialValue = lazyInitialValue with get,set
 
@@ -81,14 +81,14 @@ type internal 'T LazyCell(stream : 'T Stream, lazyInitialValue : 'T Lazy option)
                         v
             | Some v -> v
 
-type 'T CellSink private(streamSink : 'T StreamSink, initialValue : 'T) =
-    inherit Cell<'T>(streamSink, initialValue)
+type internal 'T CellSinkImpl private(streamSink : 'T StreamSinkImpl, initialValue : 'T) =
+    inherit CellImpl<'T>(streamSink, initialValue)
 
     internal new(initialValue : 'T) =
-        new CellSink<'T>(new StreamSink<'T>(), initialValue)
+        new CellSinkImpl<'T>(new StreamSinkImpl<'T>(), initialValue)
 
     internal new(initialValue : 'T, coalesce : 'T -> 'T -> 'T) =
-        new CellSink<'T>(new StreamSink<'T>(coalesce), initialValue)
+        new CellSinkImpl<'T>(new StreamSinkImpl<'T>(coalesce), initialValue)
 
     member __.Send a = streamSink.Send a
 
@@ -96,12 +96,24 @@ type 'T CellSink private(streamSink : 'T StreamSink, initialValue : 'T) =
         base.Dispose()
         (streamSink :> IDisposable).Dispose ()
 
-type private 'T CellLoop private(streamLoop : 'T StreamLoop) =
-    inherit LazyCell<'T>(streamLoop, Option.None)
+type 'T Cell internal(impl : 'T CellImpl) =
+    member val internal Impl = impl
 
-    internal new() = new CellLoop<'T>(new StreamLoop<'T>())
+    interface IDisposable with
+        member __.Dispose() = (impl :> IDisposable).Dispose()
 
-    member internal this.Loop (cell : 'T Cell) =
+type 'T CellSink internal(impl : 'T CellSinkImpl) =
+    inherit Cell<'T>(impl)
+    member val internal Impl = impl
+
+    member __.Send a = impl.Send a
+
+type internal 'T CellLoopImpl private(streamLoop : 'T StreamLoopImpl) =
+    inherit LazyCellImpl<'T>(streamLoop, Option.None)
+
+    internal new() = new CellLoopImpl<'T>(new StreamLoopImpl<'T>())
+
+    member internal this.Loop (cell : 'T CellImpl) =
         Transaction.Apply (fun transaction ->
             this.LazyInitialValue <- Option.Some (cell.SampleLazy transaction)
             streamLoop.Loop (cell.Updates transaction) |> ignore)
@@ -113,3 +125,7 @@ type private 'T CellLoop private(streamLoop : 'T StreamLoop) =
     override __.Dispose () =
         base.Dispose()
         (streamLoop :> IDisposable).Dispose ()
+
+type 'T CellLoop internal(impl : 'T CellLoopImpl) =
+    inherit Cell<'T>(impl)
+    member val internal Impl = impl

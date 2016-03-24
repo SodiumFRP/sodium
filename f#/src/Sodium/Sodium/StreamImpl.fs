@@ -4,7 +4,7 @@ open System
 open System.Collections.Generic
 open System.Linq
 
-type private 'T StreamListener(stream : 'T Stream, action : Transaction -> 'T -> unit, target : 'T Target) = 
+type private 'T StreamListener(stream : 'T StreamImpl, action : Transaction -> 'T -> unit, target : 'T Target) = 
     let unlisten() =
         action.ToString () |> ignore
         stream.Node.Unlink target
@@ -15,14 +15,14 @@ type private 'T StreamListener(stream : 'T Stream, action : Transaction -> 'T ->
     interface IDisposable with
         member __.Dispose() = unlisten()
 
-and 'T Stream private (node : 'T Node, cleanup : IListener, firings : 'T seq) =
+and internal 'T StreamImpl private (node : 'T Node, cleanup : IListener, firings : 'T seq) =
     let mutable cleanup = cleanup
     let firings = List<'T>(firings)
     let keepListenersAlive = HashSet<IListener>()
 
-    internal new() = new Stream<'T>(Node<'T>(0L), Listener.empty, [])
+    internal new() = new StreamImpl<'T>(Node<'T>(0L), Listener.empty, [])
     
-    static member CreateCoalesceHandler (f : 'T -> 'T -> 'T) (stream : 'T Stream) = 
+    static member CreateCoalesceHandler (f : 'T -> 'T -> 'T) (stream : 'T StreamImpl) = 
         let mutable accum = Option.None
         (fun (transaction : Transaction) a ->
             match accum with
@@ -76,15 +76,15 @@ and 'T Stream private (node : 'T Node, cleanup : IListener, firings : 'T seq) =
     member internal __.AddCleanup listener =
         Transaction.Run(fun () ->
             let cleanupNew = Listener.append cleanup listener
-            new Stream<'T>(node, cleanupNew, firings))
+            new StreamImpl<'T>(node, cleanupNew, firings))
     
     member internal this.UnsafeAddCleanup listener =
         cleanup <- Listener.append cleanup listener
         this
     
     member internal this.Coalesce (transaction : Transaction) (f : 'T -> 'T -> 'T) =
-        let out = new Stream<'T>()
-        let h = Stream.CreateCoalesceHandler f out
+        let out = new StreamImpl<'T>()
+        let h = StreamImpl.CreateCoalesceHandler f out
         let listener = this.ListenInternal out.Node transaction h false
         out.UnsafeAddCleanup listener
     
@@ -108,11 +108,17 @@ and 'T Stream private (node : 'T Node, cleanup : IListener, firings : 'T seq) =
     interface IDisposable with
         member __.Dispose() = cleanup.Unlisten()
 
-type 'T StreamSink(coalesce : 'T -> 'T -> 'T) as this = 
-    inherit Stream<'T>()
-    let coalesce = Stream.CreateCoalesceHandler coalesce this
+type 'T Stream internal(impl : 'T StreamImpl) =
+    member val internal Impl = impl
+
+    interface IDisposable with
+        member __.Dispose() = (impl :> IDisposable).Dispose()
+
+type internal 'T StreamSinkImpl(coalesce : 'T -> 'T -> 'T) as this = 
+    inherit StreamImpl<'T>()
+    let coalesce = StreamImpl.CreateCoalesceHandler coalesce this
     internal new() = 
-        new StreamSink<'T>(fun x y -> 
+        new StreamSinkImpl<'T>(fun _ _ -> 
         invalidOp 
             "Send was called more than once in a transaction, which isn't allowed.  To combine the streams, pass a coalescing function to the StreamSink constructor.")
     member __.Send a = 
@@ -120,8 +126,14 @@ type 'T StreamSink(coalesce : 'T -> 'T -> 'T) as this =
             if Transaction.InCallback > 0 then invalidOp "Send() may not be called inside a Sodium callback."
             coalesce transaction a)
 
-type private 'T StreamLoop() = 
-    inherit Stream<'T>()
+type 'T StreamSink internal(impl : 'T StreamSinkImpl) =
+    inherit Stream<'T>(impl)
+    member val internal Impl = impl
+
+    member __.Send a = impl.Send a
+
+type internal 'T StreamLoopImpl() = 
+    inherit StreamImpl<'T>()
 
     let isAssignedLock = obj()
     let mutable isAssigned = false
@@ -131,8 +143,12 @@ type private 'T StreamLoop() =
 
     member internal __.IsAssigned = lock isAssignedLock (fun () -> isAssigned)
 
-    member internal this.Loop (stream : 'T Stream) =
+    member internal this.Loop (stream : 'T StreamImpl) =
         lock isAssignedLock (fun () ->
             if isAssigned then invalidOp "StreamLoop was looped more than once."
             isAssigned <- true)
         Transaction.Run (fun () -> this.UnsafeAddCleanup (stream.ListenWithTransaction this.Node (fun t a -> this.Send(t, a)))) |> ignore
+        
+type 'T StreamLoop internal(impl : 'T StreamLoopImpl) =
+    inherit Stream<'T>(impl)
+    member val internal Impl = impl

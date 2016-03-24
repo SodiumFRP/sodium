@@ -89,11 +89,11 @@ type Transaction() =
                 else action
             postQueue.[index] <- ``new``
 
-        member __.Post action =
+        member internal __.Post action =
             postQueueFirst.Add(action)
 
         static member Post action =
-            Transaction.Apply (fun _ -> Transaction.Post action)
+            Transaction.Apply (fun transaction -> transaction.Post action)
 
         member internal __.SetNeedsRegenerating () = toRegen <- true
 

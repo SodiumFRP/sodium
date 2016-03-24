@@ -1,4 +1,4 @@
-﻿namespace Sodium.Tests
+﻿module Sodium.Tests.Stream
 
 open NUnit.Framework
 open Sodium
@@ -6,9 +6,7 @@ open System
 open System.Collections.Generic
 
 [<TestFixture>]
-type StreamTests() =
-    
-    let flip f x y = f y x
+type Tests() =
 
     [<Test>]
     member __.``Test Stream Send``() =
@@ -163,8 +161,8 @@ type StreamTests() =
     member __.``Test Loop Stream``() =
         use sa = Stream.sink ()
         let (_, sc) = Stream.loop (fun sb ->
-            let scLocal = sa |> Stream.map (flip (%) 10) |> Stream.merge (*) sb
-            let sbOut = sa |> Stream.map (flip (/) 10) |> Stream.filter ((<>) 0)
+            let scLocal = sa |> Stream.map (Helper.flip (%) 10) |> Stream.merge (*) sb
+            let sbOut = sa |> Stream.map (Helper.flip (/) 10) |> Stream.filter ((<>) 0)
             (sbOut, scLocal))
         let out = List<_>()
         (
@@ -263,7 +261,7 @@ type StreamTests() =
     member __.``Test Collect``() =
         use sa = Stream.sink ()
         let out = List<_>()
-        use sum = sa |> flip Stream.collect (100, true) (fun a (s, c) ->
+        use sum = sa |> Helper.flip Stream.collect (100, true) (fun a (s, c) ->
             let outputValue = s + if c then a * 3 else a
             (outputValue, (outputValue, outputValue % 2 = 0)))
         (
