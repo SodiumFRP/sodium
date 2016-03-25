@@ -11,8 +11,8 @@ public class airline1 {
 
         SDateField dep = new SDateField();
         SDateField ret = new SDateField();
-        Cell<Boolean> valid = Cell.lift(
-            (d, r) -> d.compareTo(r) <= 0, dep.date, ret.date);
+        Cell<Boolean> valid = dep.date.lift(ret.date,
+            (d, r) -> d.compareTo(r) <= 0);
         SButton ok = new SButton("OK", valid);
 
         GridBagLayout gridbag = new GridBagLayout();

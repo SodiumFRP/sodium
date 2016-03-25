@@ -41,12 +41,11 @@ public class formvalidation {
                 Cell<Boolean> enabled = number.value.map(n -> ii < n);
                 STextField email = new STextField("", 30, enabled);
                 fields[row] = email;
-                valids[row] = Cell.lift((e, n) ->
+                valids[row] = email.text.lift(number.value, (e, n) ->
                     ii >= n             ? "" :
                     e.trim().equals("") ? "<-- enter something" :
                     e.indexOf('@') < 0  ? "<-- must contain @" :
-                                          "",
-                    email.text, number.value);
+                                          "");
             }
 
             GridBagLayout gridbag = new GridBagLayout();
@@ -69,7 +68,7 @@ public class formvalidation {
                 SLabel validLabel = new SLabel(valids[i]);
                 view.add(validLabel, c);
                 Cell<Boolean> thisValid = valids[i].map(t -> t.equals(""));
-                allValid = Cell.lift((a, b) -> a && b, allValid, thisValid);
+                allValid = allValid.lift(thisValid, (a, b) -> a && b);
             }
             c.weightx = 1.0;
             c.gridx = 0;

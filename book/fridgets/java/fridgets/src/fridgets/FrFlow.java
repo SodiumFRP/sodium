@@ -23,18 +23,17 @@ public class FrFlow extends Fridget {
                         idSupply.child1());
                 idSupply = idSupply.child2();
                 childSz.loop(
-                    Cell.lift((osz, foDsz) ->
+                    size.lift(fo.desiredSize, (osz, foDsz) ->
                         osz.isPresent()
                             ? Optional.of(dir == Direction.HORIZONTAL
                                 ? new Dimension(foDsz.width,
                                                 osz.get().height)
                                 : new Dimension(osz.get().width,
                                                 foDsz.height))
-                            : Optional.empty(),
-                        size, fo.desiredSize
+                            : Optional.empty()
                     )
                 );
-                desiredSize = Cell.lift(
+                desiredSize = desiredSize.lift(fo.desiredSize,
                     dir == Direction.HORIZONTAL
                         ? (dsz, foDsz) -> new Dimension(
                             dsz.width + foDsz.width,
@@ -43,11 +42,9 @@ public class FrFlow extends Fridget {
                         : (dsz, foDsz) -> new Dimension(
                             dsz.width > foDsz.width ? dsz.width
                                                     : foDsz.width,
-                            dsz.height + foDsz.height),
-                    desiredSize, fo.desiredSize);
-                drawable = Cell.lift(
-                    (drA, drB) -> drA.append(drB),
-                    drawable, fo.drawable);
+                            dsz.height + foDsz.height));
+                drawable = drawable.lift(fo.drawable,
+                    (drA, drB) -> drA.append(drB));
                 sChangeFocus = sChangeFocus.orElse(fo.sChangeFocus);
             }
             return new Fridget.Output(drawable, desiredSize, sChangeFocus);

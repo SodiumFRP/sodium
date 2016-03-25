@@ -18,9 +18,8 @@ public class Fill {
         price = capturePrice(sStart, price1, price2, price3);
         litersDelivered = AccumulatePulsesPump.accumulate(
                 sClearAccumulator, sFuelPulses, calibration);
-        dollarsDelivered = Cell.lift(
-                (liters, price_) -> liters * price_,
-                litersDelivered, price);
+        dollarsDelivered = litersDelivered.lift(price,
+                (liters, price_) -> liters * price_);
     }
 
     public static Cell<Double> capturePrice(

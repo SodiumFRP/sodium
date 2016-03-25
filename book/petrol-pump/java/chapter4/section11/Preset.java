@@ -15,7 +15,8 @@ public class Preset {
                   Fill fi,
                   Cell<Optional<Fuel>> fuelFlowing,
                   Cell<Boolean> fillActive) {
-        Cell<Speed> speed = Cell.lift(
+        Cell<Speed> speed = presetDollars.lift(
+        	    fi.price, fi.dollarsDelivered, fi.litersDelivered,
             (presetDollars_, price, dollarsDelivered, litersDelivered) -> {
                 if (presetDollars_ == 0)
                     return Speed.FAST;
@@ -29,10 +30,8 @@ public class Preset {
                     else
                         return Speed.FAST;
                 }
-            },
-            presetDollars, fi.price, fi.dollarsDelivered,
-                                     fi.litersDelivered);
-        delivery = Cell.lift(
+            });
+        delivery = fuelFlowing.lift(speed,
             (of, speed_) ->
                 speed_ == Speed.FAST ? (
                     of.equals(Optional.of(Fuel.ONE))   ? Delivery.FAST1 :
@@ -46,11 +45,9 @@ public class Preset {
                     of.equals(Optional.of(Fuel.THREE)) ? Delivery.SLOW3 : 
                                                          Delivery.OFF
                 ) :
-                Delivery.OFF,
-            fuelFlowing, speed);
-        keypadActive = Cell.lift(
+                Delivery.OFF);
+        keypadActive = fuelFlowing.lift(speed,
             (of, speed_) ->
-                !of.isPresent() || speed_ == Speed.FAST,
-            fuelFlowing, speed);
+                !of.isPresent() || speed_ == Speed.FAST);
     }
 }

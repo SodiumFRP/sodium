@@ -10,7 +10,7 @@ class Rule {
     }
     public final Lambda2<Calendar, Calendar, Boolean> f;
     public Cell<Boolean> reify(Cell<Calendar> dep, Cell<Calendar> ret) {
-        return Cell.lift(f, dep, ret);
+        return dep.lift(ret, f);
     }
     public Rule and(Rule other) {
         return new Rule(

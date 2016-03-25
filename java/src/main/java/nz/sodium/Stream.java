@@ -181,6 +181,19 @@ public class Stream<A> {
         return out.unsafeAddCleanup(l);
 	}
 
+    /**
+     * Transform the stream's event values into the specified constant value.
+     * @param b Constant value.
+     */
+	public final <B> Stream<B> mapTo(final B b)
+	{
+		return this.<B>map(new Lambda1<A, B>() {
+			public B apply(A a) {
+			    return b;
+			}
+		});
+	}
+
 	/**
 	 * Create a {@link Cell} with the specified initial value, that is updated
      * by this stream's event values.
@@ -247,6 +260,58 @@ public class Stream<A> {
 	        }
         });
         return out.unsafeAddCleanup(l);
+	}
+
+	/**
+	 * Variant of {@link snapshot(Cell, Lambda2)} that captures the values of
+	 * two cells.
+     */
+	public final <B,C,D> Stream<D> snapshot(final Cell<B> cb, final Cell<C> cc, final Lambda3<A,B,C,D> fn)
+	{
+		return this.snapshot(cb, new Lambda2<A,B,D>() {
+	    	public D apply(A a, B b) {
+	    		return fn.apply(a, b, cc.sample());
+	    	}
+		});
+	}
+
+	/**
+	 * Variant of {@link snapshot(Cell, Lambda2)} that captures the values of
+	 * three cells.
+     */
+	public final <B,C,D,E> Stream<E> snapshot(final Cell<B> cb, final Cell<C> cc, final Cell<D> cd, final Lambda4<A,B,C,D,E> fn)
+	{
+		return this.snapshot(cb, new Lambda2<A,B,E>() {
+	    	public E apply(A a, B b) {
+	    		return fn.apply(a, b, cc.sample(), cd.sample());
+	    	}
+		});
+	}
+
+	/**
+	 * Variant of {@link snapshot(Cell, Lambda2)} that captures the values of
+	 * four cells.
+     */
+	public final <B,C,D,E,F> Stream<F> snapshot(final Cell<B> cb, final Cell<C> cc, final Cell<D> cd, final Cell<E> ce, final Lambda5<A,B,C,D,E,F> fn)
+	{
+		return this.snapshot(cb, new Lambda2<A,B,F>() {
+	    	public F apply(A a, B b) {
+	    		return fn.apply(a, b, cc.sample(), cd.sample(), ce.sample());
+	    	}
+		});
+	}
+
+	/**
+	 * Variant of {@link snapshot(Cell, Lambda2)} that captures the values of
+	 * five cells.
+     */
+	public final <B,C,D,E,F,G> Stream<G> snapshot(final Cell<B> cb, final Cell<C> cc, final Cell<D> cd, final Cell<E> ce, final Cell<F> cf, final Lambda6<A,B,C,D,E,F,G> fn)
+	{
+		return this.snapshot(cb, new Lambda2<A,B,G>() {
+	    	public G apply(A a, B b) {
+	    		return fn.apply(a, b, cc.sample(), cd.sample(), ce.sample(), cf.sample());
+	    	}
+		});
 	}
 
     /**

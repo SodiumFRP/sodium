@@ -14,12 +14,12 @@ public class dynamic {
     static <A> Cell<List<A>> sequence(Collection<Cell<A>> in) {
         Cell<List<A>> out = new Cell<>(new ArrayList<A>());
         for (Cell<A> c : in)
-            out = Cell.lift(
+            out = out.lift(c,
                 (list0, a) -> {
                     List<A> list = new ArrayList<A>(list0);
                     list.add(a);
                     return list;
-                }, out, c);
+                });
         return out;
     }
     public static Stream<Unit> periodicTimer(

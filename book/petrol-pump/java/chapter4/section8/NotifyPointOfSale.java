@@ -33,13 +33,13 @@ public class NotifyPointOfSale {
              sClearSale.map(f -> Optional.empty())).hold(Optional.empty());
         sBeep = sClearSale;
         sSaleComplete = Stream.filterOptional(sEnd.snapshot(
-            Cell.lift(
+            fuelFlowing.lift(fi.price, fi.dollarsDelivered,
+            	                       fi.litersDelivered,
                 (oFuel, price_, dollars, liters) ->
                     oFuel.isPresent() ? Optional.of(
                            new Sale(oFuel.get(), price_, dollars, liters))
-                                      : Optional.empty(),
-                fuelFlowing, fi.price, fi.dollarsDelivered,
-                fi.litersDelivered)));
+                                      : Optional.empty())
+		));
     }
 }
 

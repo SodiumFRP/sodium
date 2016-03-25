@@ -191,10 +191,8 @@ public class TestCell extends TestCase {
         CellSink<Integer> a = new CellSink<Integer>(1);
         CellSink<Long> b = new CellSink<Long>(5L);
         List<String> out = new ArrayList<String>();
-        Listener l = Cell.lift(
-                (x, y) -> x + " " + y,
-                a,
-                b
+        Listener l = a.lift(b,
+                (x, y) -> x + " " + y
         ).listen((String x) -> {
             out.add(x);
         });
@@ -208,7 +206,7 @@ public class TestCell extends TestCase {
         CellSink<Integer> a = new CellSink<Integer>(1);
         Cell<Integer> a3 = a.map((Integer x) -> x * 3);
         Cell<Integer> a5 = a.map((Integer x) -> x * 5);
-        Cell<String> b = Cell.lift((x, y) -> x + " " + y, a3, a5);
+        Cell<String> b = a3.lift(a5, (x, y) -> x + " " + y);
         List<String> out = new ArrayList<String>();
         Listener l = b.listen((String x) -> {
             out.add(x);
@@ -228,7 +226,7 @@ public class TestCell extends TestCase {
         CellSink<Integer> b1 = t.a;
         CellSink<Integer> b2 = t.b;
         List<Integer> out = new ArrayList<>();
-        Listener l = Cell.lift((x, y) -> x + y, b1, b2)
+        Listener l = b1.lift(b2, (x, y) -> x + y)
                 .listen(x -> {
                     out.add(x);
                 });
@@ -437,9 +435,8 @@ public class TestCell extends TestCase {
         CellSink<String> b = new CellSink("kettle");
         Cell<String> c = Transaction.<Cell<String>>run(() -> {
             CellLoop<String> a = new CellLoop();
-            Cell<String> c_ = Cell.lift(
-                    (aa, bb) -> aa + " " + bb,
-                    a, b);
+            Cell<String> c_ = a.lift(b,
+                    (aa, bb) -> aa + " " + bb);
             a.loop(new Cell<String>("tea"));
             return c_;
         });

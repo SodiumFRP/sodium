@@ -6,7 +6,7 @@ public class CellJunction<A> extends Junction<Cell<A>, A> {
                                    A nullValue, Lambda2<A,A,A> combine) {
         Cell<A> cOut = new Cell<>(nullValue);
         for (Cell<A> c : in)
-            cOut = Cell.lift(combine, cOut, c);
+            cOut = cOut.lift(c, combine);
         return cOut;
     }
     public CellJunction(A nullValue, Lambda2<A,A,A> combine) {

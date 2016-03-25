@@ -36,9 +36,8 @@ public class AccumulatePulsesPump implements Pump {
                        pulses_ + total_)
                )
                .hold(0));
-        return Cell.lift(
-            (total_, calibration_) -> total_ * calibration_,
-            total, calibration);
+        return total.lift(calibration,
+            (total_, calibration_) -> total_ * calibration_);
     }
 }
 

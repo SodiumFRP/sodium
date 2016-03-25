@@ -79,10 +79,9 @@ public class HomoZombicus {
         state.loop(sChange.hold(
             new State(time.sample(), posInit, self, emptyScene)
         ));
-        character = Cell.lift((st, t) ->
+        character = state.lift(time, (st, t) ->
             new Character(self, CharacterType.ZOMBICUS,
-                st.positionAt(time.sample()), st.velocity),
-            state, time);
+                st.positionAt(time.sample()), st.velocity));
         sBite = Stream.filterOptional(
             sTick.snapshot(state,
                 (u, st) -> {

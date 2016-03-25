@@ -75,7 +75,7 @@ public class FrTextField extends Fridget {
                     fm.stringWidth(txt) + 14,
                     fm.getHeight() + 10));
             return new Output(
-                Cell.lift(
+                text.lift(x, haveFocus, size,
                     (txt, x_, haveFocus_, osz) -> new Drawable() {
                         public void draw(Graphics g) {
                             if (osz.isPresent()) {
@@ -98,8 +98,7 @@ public class FrTextField extends Fridget {
                                                4 + cursorX, sz.height - 5);
                                 }
                             }
-                        } },
-                    text, x, haveFocus, size
+                        } }
                 ),
                 desiredSize,
                 sPressed.map(xCoord -> myId)

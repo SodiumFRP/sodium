@@ -16,14 +16,13 @@ public class FrTranslate extends Fridget {
                         e.getClickCount(), e.isPopupTrigger()));
             Fridget.Output fo = fr.reify(size, sMouseNew,
                 sKey, focus, idSupply);
-            Cell<Drawable> drawableNew = Cell.lift(
+            Cell<Drawable> drawableNew = fo.drawable.lift(offset,
                 (dr, o) -> new Drawable() {
                     public void draw(Graphics g) {
                         g.translate(o.width, o.height);
                         dr.draw(g);
                         g.translate(-o.width, -o.height);
-                    } },
-                fo.drawable, offset);
+                    } });
             return new Fridget.Output(drawableNew,
                 fo.desiredSize, fo.sChangeFocus);
         });

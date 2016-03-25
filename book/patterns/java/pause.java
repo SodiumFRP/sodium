@@ -15,11 +15,11 @@ public class pause {
                 double now    = clock.sample();
                 return total + (now - tPause);
             });
-        return Cell.lift((otPause, tClk, tLost) ->
-            (otPause.isPresent() ? otPause.get()
-                                 : tClk)
-            - tLost,
-            pauseTime, clock, lostTime);
+        return pauseTime.lift(clock, lostTime,
+        	(otPause, tClk, tLost) ->
+				(otPause.isPresent() ? otPause.get()
+									 : tClk)
+				- tLost);
     }
 
     public static void main(String[] args) {
@@ -27,8 +27,8 @@ public class pause {
         StreamSink<Unit> sPause = new StreamSink<>();
         StreamSink<Unit> sResume = new StreamSink<>();
         Cell<Double> gameClock = pausableClock(sPause, sResume, mainClock);
-        Listener l = Cell.lift((m, g) -> "main="+m+" game="+g,
-                               mainClock, gameClock)
+        Listener l = mainClock.lift(gameClock,
+        	                        (m, g) -> "main="+m+" game="+g)
                          .listen(txt -> System.out.println(txt));
         mainClock.send(1.0);
         mainClock.send(2.0);

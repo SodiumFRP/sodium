@@ -181,9 +181,8 @@ class FRP1 implements Paradigm {
                                       .map(me -> me.pt)
                                       .hold(me1.pt);
                             Stream<Document> sMoves = Operational.updates(
-                                    Cell.lift((mv, lck) ->
-                                        elt.translate(me1.pt, mv, lck),
-                                        move, axisLock)
+                                    move.lift(axisLock, (mv, lck) ->
+                                        elt.translate(me1.pt, mv, lck))
                                 )
                                 .snapshot(doc, (newElt, doc2) ->
                                     doc2.insert(id, newElt));

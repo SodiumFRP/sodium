@@ -19,31 +19,29 @@ public class Shapes {
 
     public static Cell<Drawable> scale(Cell<Drawable> drawable,
                                        Cell<Double> scale) {
-        return Cell.lift((dr, newSc) -> new Drawable() {
+        return drawable.lift(scale, (dr, newSc) -> new Drawable() {
             public void draw(Graphics g, int ht, Point offset, double sc) {
                 dr.draw(g, ht, offset, sc * newSc);
             }
-        },
-        drawable, scale);
+        });
     }
 
     public static Cell<Drawable> translate(Cell<Drawable> drawable,
                                            Cell<Point> offset) {
-        return Cell.lift((dr, o) -> new Drawable() {
+        return drawable.lift(offset, (dr, o) -> new Drawable() {
             public void draw(Graphics g, int ht, Point offset, double sc) {
                 dr.draw(g, ht, offset.add(o.multiply(sc)), sc);
             }
-        },
-        drawable, offset);
+        });
     }
 
     public static Cell<Drawable> over(Cell<Drawable> a, Cell<Drawable> b) {
-        return Cell.lift((dra, drb) -> new Drawable() {
+        return a.lift(b, (dra, drb) -> new Drawable() {
             public void draw(Graphics g, int ht, Point offset, double sc) {
                 drb.draw(g, ht, offset, sc);
                 dra.draw(g, ht, offset, sc);
             }
-        }, a, b);
+        });
     }
 }
 

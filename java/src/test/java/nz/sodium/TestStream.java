@@ -37,6 +37,18 @@ public class TestStream extends TestCase {
         assertEquals(Arrays.asList("5"), out);
     }
 
+	public void testMapTo()
+    {
+        StreamSink<Integer> e = new StreamSink();
+        Stream<String> m = e.mapTo("fusebox");
+        List<String> out = new ArrayList();
+        Listener l = m.listen((String x) -> { out.add(x); });
+        e.send(5);
+        e.send(6);
+        l.unlisten();
+        assertEquals(Arrays.asList("fusebox", "fusebox"), out);
+    }
+
     public void testMergeNonSimultaneous()
     {
         StreamSink<Integer> e1 = new StreamSink();

@@ -43,12 +43,12 @@ public class SDateField extends JComponent {
                 }
                 return Optional.empty();
             });
-        date = Cell.lift((oy, om, od) -> {
-                return oy.isPresent() && om.isPresent() && od.isPresent()
-                    ? new GregorianCalendar(oy.get(), om.get(), od.get())
-                    : new GregorianCalendar();
-            },
-            year.selectedItem, monthIndex, day.selectedItem);
+        date = year.selectedItem.lift(monthIndex, day.selectedItem,
+        	(oy, om, od) -> {
+					return oy.isPresent() && om.isPresent() && od.isPresent()
+						? new GregorianCalendar(oy.get(), om.get(), od.get())
+						: new GregorianCalendar();
+				});
     }
     public final Cell<Calendar> date;
 }

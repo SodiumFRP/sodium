@@ -25,12 +25,12 @@ public class Promise<A> {
     public static <A,B,C> Promise<C> lift(final Lambda2<A, B, C> f,
                                           Promise<A> pa, Promise<B> pb) {
         return Transaction.run(() -> new Promise<C>(
-            Cell.lift(
+            pa.oValue.lift(pb.oValue,
                 (oa, ob) ->
                     oa.isPresent() && ob.isPresent()
                         ? Optional.of(f.apply(oa.get(), ob.get()))
-                        : Optional.empty(),
-                pa.oValue, pb.oValue)));
+                        : Optional.empty()
+			)));
     }
 }
 

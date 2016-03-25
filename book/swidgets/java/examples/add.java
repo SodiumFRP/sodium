@@ -12,7 +12,7 @@ public class add {
         STextField txtB = new STextField("10");
         Cell<Integer> a = txtA.text.map(t -> parseInt(t));
         Cell<Integer> b = txtB.text.map(t -> parseInt(t));
-        Cell<Integer> sum = Cell.lift((a_, b_) -> a_ + b_, a, b);
+        Cell<Integer> sum = a.lift(b, (a_, b_) -> a_ + b_);
         SLabel lblSum = new SLabel(sum.map(i -> Integer.toString(i)));
         frame.add(txtA);
         frame.add(txtB);

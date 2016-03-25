@@ -43,10 +43,9 @@ public class SimpleHomoSapiens {
                     traj_.positionAt(time.sample()))
             ).hold(new Trajectory(rng, time.sample(), posInit))
         );
-        character = Cell.lift((traj_, t) ->
+        character = traj.lift(time, (traj_, t) ->
             new Character(self, CharacterType.SAPIENS,
-                traj_.positionAt(t), traj_.velocity),
-            traj, time
+                traj_.positionAt(t), traj_.velocity)
         );
     }
 

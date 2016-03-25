@@ -45,15 +45,13 @@ public class ShowDollarsPump implements Pump {
             case THREE: idlePrice = inputs.price3; break;
             default:    idlePrice = null;
         }
-        return Cell.lift((oFuelSelected, fillPrice_, idlePrice_) ->
-            oFuelSelected.isPresent()
-                ? oFuelSelected.get() == fuel
-                                      ? Formatters.formatPrice(fillPrice_)
-                                      : ""
-                : Formatters.formatPrice(idlePrice_),
-            fillActive,
-            fillPrice,
-            idlePrice);
+        return fillActive.lift(fillPrice, idlePrice,
+        	(oFuelSelected, fillPrice_, idlePrice_) ->
+				oFuelSelected.isPresent()
+					? oFuelSelected.get() == fuel
+										  ? Formatters.formatPrice(fillPrice_)
+										  : ""
+					: Formatters.formatPrice(idlePrice_));
     }
 }
 

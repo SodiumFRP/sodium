@@ -103,8 +103,8 @@ public class Lookup {
             Stream<String> sDefinition = ib.sOut
                 .map(o -> o.isPresent() ? o.get() : "ERROR!");
             Cell<String> definition = sDefinition.hold("");
-            Cell<String> output = Cell.lift((def, bsy) ->
-                bsy ? "Looking up..." : def, definition, ib.busy);
+            Cell<String> output = definition.lift(ib.busy, (def, bsy) ->
+                bsy ? "Looking up..." : def);
             enabled.loop(ib.busy.map(b -> !b));
             STextArea outputArea = new STextArea(output, enabled);
             view.add(word, c);

@@ -38,7 +38,7 @@ public class FrButton extends Fridget {
                     fm.stringWidth(label_) + 14,
                     fm.getHeight() + 10));
             return new Output(
-                Cell.lift(
+                label.lift(size, pressed,
                     (label_, osz, pressed_) -> new Drawable() {
                         public void draw(Graphics g) {
                             if (osz.isPresent()) {
@@ -56,8 +56,7 @@ public class FrButton extends Fridget {
                                     (sz.height - fm.getHeight())/2
                                             + fm.getAscent());
                             }
-                        } },
-                    label, size, pressed
+                        } }
                 ),
                 desiredSize,
                 new Stream<Long>()

@@ -56,8 +56,8 @@ public class PromiseWithoutUpdates<A> {
                              .orElse(sSimultaneous)
                              .map(result)
                 ).once();
-            Cell<Optional<C>> oValue = Cell.lift(
-                combine, vA, vB).map(result);
+            Cell<Optional<C>> oValue = vA.lift(vB,
+                combine).map(result);
             return new PromiseWithoutUpdates<C>(sDeliver, oValue);
         });
     }

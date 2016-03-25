@@ -372,9 +372,8 @@ public class PetrolPump extends JFrame
                 add(face, BorderLayout.CENTER);
                 for (int i = 0; i < 3; i++) {
                     final Cell<Tuple2<Rectangle, UpDown>> rect_state =
-                        Cell.lift(
-                            (rect, state) -> new Tuple2<Rectangle, UpDown>(rect, state),
-                            face.nozzleRects[i], nozzles[i]);
+                        face.nozzleRects[i].lift(nozzles[i],
+                            (rect, state) -> new Tuple2<Rectangle, UpDown>(rect, state));
                     ((CellLoop<UpDown>)nozzles[i]).loop(
                         Stream.<UpDown>filterOptional(
                             sClick.snapshot(rect_state,

@@ -94,12 +94,12 @@
     <dependency>
       <groupId>nz.sodium</groupId>
       <artifactId>sodium</artifactId>
-      <version>1.0.0</version>
+      <version>1.1.0</version>
     </dependency>
     <dependency>
       <groupId>nz.sodium.swidgets</groupId>
       <artifactId>sodium-swidgets</artifactId>
-      <version>1.0.0</version>
+      <version>1.1.0</version>
     </dependency>
   </dependencies>
 </project>

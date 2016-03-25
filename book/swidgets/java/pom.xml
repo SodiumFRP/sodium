@@ -3,7 +3,7 @@
   <modelVersion>4.0.0</modelVersion>
   <groupId>nz.sodium.swidgets</groupId>
   <artifactId>sodium-swidgets</artifactId>
-  <version>1.0.0</version>
+  <version>1.1.0</version>
   <name>sodium-swidgets</name>
   <url>http://maven.apache.org</url>
   <build>
@@ -324,7 +324,7 @@
     <dependency>
       <groupId>nz.sodium</groupId>
       <artifactId>sodium</artifactId>
-      <version>1.0.0</version>
+      <version>1.1.0</version>
     </dependency>
   </dependencies>
 </project>

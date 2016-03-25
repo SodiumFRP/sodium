@@ -1,0 +1,26 @@
+<project default="compile">
+
+    <target name="clean">
+        <delete dir="build"/>
+    </target>
+
+    <target name="compile">
+        <subant buildpath="../../java"/>
+        <mkdir dir="build"/>
+        <javac debug="true" srcdir="." destdir="build" source="1.8" target="1.8">
+            <classpath>
+                <pathelement path="../../java/sodium.jar"/>
+            </classpath>
+        </javac>
+    </target>
+
+    <target name="glitch" depends="compile">
+        <java classname="glitch" fork="true">
+            <classpath>
+                <pathelement path="build/"/>
+                <pathelement path="../../java/sodium.jar"/>
+            </classpath>
+        </java>
+    </target>
+
+</project>
