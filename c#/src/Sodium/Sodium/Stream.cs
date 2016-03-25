@@ -221,6 +221,7 @@ namespace Sodium
             {
                 trans.SetNeedsRegenerating();
             }
+            // ReSharper disable once LocalVariableHidesMember
             List<T> firings = this.firings.ToList();
             if (!suppressEarlierFirings && firings.Any())
             {
@@ -263,6 +264,19 @@ namespace Sodium
             Stream<TResult> @out = new Stream<TResult>();
             IListener l = this.Listen(@out.Node, (trans2, a) => @out.Send(trans2, f(a)));
             return @out.UnsafeAddCleanup(l);
+        }
+
+        /// <summary>
+        ///     Transform the stream values to the specified constant value.
+        /// </summary>
+        /// <typeparam name="TResult">The type of the constant value fired by the returned stream.</typeparam>
+        /// <param name="value">
+        ///     The constant value to return from this mapping.
+        /// </param>
+        /// <returns>A stream which fires the constant value for each value fired by this stream.</returns>
+        public Stream<TResult> MapTo<TResult>(TResult value)
+        {
+            return this.Map(_ => value);
         }
 
         /// <summary>
