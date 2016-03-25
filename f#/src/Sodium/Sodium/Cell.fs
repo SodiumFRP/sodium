@@ -37,8 +37,6 @@ let listen handler (cell : 'T Cell) = Transaction.Apply (fun transaction -> cell
 
 let map f (cell : 'T Cell) = Transaction.Apply(fun transaction -> new Stream<'T>(cell.Impl.Updates transaction) |> Stream.map f |> Stream.holdLazyInternal transaction (cell.Impl.SampleLazy transaction |> Lazy.map f))
 
-let mapConst value stream = map (fun _ -> value) stream
-
 let apply f (cell : 'T Cell) =
     Transaction.Apply (fun transaction ->
         let out = Stream.sink ()

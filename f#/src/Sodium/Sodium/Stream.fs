@@ -53,7 +53,7 @@ let map (f : 'T -> 'a) (stream : 'T Stream) =
         out.Send(transaction, f a))
     new Stream<_>(out.UnsafeAddCleanup listener)
 
-let mapConst value stream = map (fun _ -> value) stream
+let mapTo value stream = map (fun _ -> value) stream
 
 let hold initialValue (stream : 'T Stream) =
     Transaction.Apply (fun _ -> new Cell<'T>(new CellImpl<'T>(stream.Impl, initialValue)))
