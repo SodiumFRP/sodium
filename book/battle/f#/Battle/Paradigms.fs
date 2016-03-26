@@ -124,8 +124,8 @@ type Frp(addMessage : string -> unit) =
 
     let listener = Transaction.Run (fun () ->
         let dragInfo = sMouseDown |> Stream.map (fun me ->
-            Option.Some { me = me; originalLeft = Double.zeroIfNaN (Canvas.GetLeft(me.element.Polygon)); originalTop = Double.zeroIfNaN (Canvas.GetTop(me.element.Polygon)) }) |>
-                        Stream.orElse (sMouseUp |> Stream.mapConst Option.None) |> Stream.hold Option.None
+            Option.Some { me = me; originalLeft = Double.zeroIfNaN (Canvas.GetLeft(me.element.polygon)); originalTop = Double.zeroIfNaN (Canvas.GetTop(me.element.polygon)) }) |>
+                        Stream.orElse (sMouseUp |> Stream.mapTo Option.None) |> Stream.hold Option.None
         let getMouseMoveIfDragging = function
             | None -> Stream.never ()
             | Some _ -> sMouseMove :> Stream<_>

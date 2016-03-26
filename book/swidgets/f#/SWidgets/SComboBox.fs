@@ -16,7 +16,7 @@ type SComboBox<'T>(setSelectedItem : 'T option Stream, initSelectedItem : 'T opt
 
     let init () =
         let sDecrement = Stream.sink ()
-        let allow = setSelectedItem |> Stream.mapConst 1 |> Stream.orElse sDecrement |> Stream.accum (+) 0 |> Cell.map ((=) 0)
+        let allow = setSelectedItem |> Stream.mapTo 1 |> Stream.orElse sDecrement |> Stream.accum (+) 0 |> Cell.map ((=) 0)
         let getSelectedItem () =
             let sel = this.BaseSelectedItem
             if sel = null then Option.None else match (box sel) with | :? 'T as s -> Option.Some s | _ -> Option.None

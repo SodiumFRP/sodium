@@ -20,8 +20,8 @@ type MainViewController() =
             view.Container.Children.Add(plus) |> ignore
             view.Container.Children.Add(minus) |> ignore
 
-            let sPlusDelta = plus.SClicked |> Stream.mapConst 1
-            let sMinusDelta = minus.SClicked |> Stream.mapConst -1
+            let sPlusDelta = plus.SClicked |> Stream.mapTo 1
+            let sMinusDelta = minus.SClicked |> Stream.mapTo -1
             let sDelta = sPlusDelta |> Stream.orElse sMinusDelta
             let sUpdate = sDelta |> Stream.snapshot (+) value
 

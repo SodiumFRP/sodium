@@ -55,7 +55,9 @@
   <Import Project="$(FSharpTargetsPath)" />
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
-    <None Include="DocumentUserControl.xaml" />
+    <Compile Include="Records.fs" />
+    <Compile Include="Paradigms.fs" />
+    <Resource Include="DocumentUserControl.xaml" />
     <Compile Include="DocumentUserControl.xaml.fs" />
     <Resource Include="MainWindow.xaml" />
     <Compile Include="MainWindow.xaml.fs" />

@@ -8,12 +8,11 @@ open Sodium
 
 type DocumentView = XAML<"DocumentUserControl.xaml", true>
 
-type DocumentViewController(container : UIElement, elements : Element seq) = 
-    inherit UserControlViewController<DocumentView>()
-
-    override __.OnLoaded view =
-        let createMouseEvt e = ()
+[<CompilationRepresentation (CompilationRepresentationFlags.ModuleSuffix)>]
+module DocumentView =
+    let init (d : DocumentView) (container : UIElement) (elements : Element seq) (paradigm : IParadigm) =
         for element in elements do
-            view.Canvas.Children.Add(element.polygon) |> ignore
-            element.polygon.MouseDown.Subscribe (fun )
-        ()
+            d.Canvas.Children.Add(element.polygon) |> ignore
+            element.polygon.MouseDown.Subscribe (fun args -> paradigm.HandleMouseDown { element = element; pt = (args.GetPosition(d)) }) |> ignore
+            container.MouseMove.Subscribe (fun args -> paradigm.HandleMouseMove { pt = (args.GetPosition(d)) }) |> ignore
+            container.MouseUp.Subscribe (fun args -> paradigm.HandleMouseUp { pt = (args.GetPosition(d)) }) |> ignore

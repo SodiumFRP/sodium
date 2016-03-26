@@ -13,8 +13,8 @@ type MainViewController() =
     override __.OnLoaded view =
         let red = new SButton(Content = "red", Width = 75.0)
         let green = new SButton(Content = "green", Width = 75.0)
-        let sRed = red.SClicked |> Stream.mapConst "red"
-        let sGreen = green.SClicked |> Stream.mapConst "green"
+        let sRed = red.SClicked |> Stream.mapTo "red"
+        let sGreen = green.SClicked |> Stream.mapTo "green"
         let sColor = sRed |> Stream.orElse sGreen
         let color = sColor |> Stream.hold ""
         let lbl = new SLabel(color, Width = 75.0, Margin = Thickness(5.0, 0.0, 0.0, 0.0))
