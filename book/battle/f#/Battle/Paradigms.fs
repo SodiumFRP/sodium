@@ -75,6 +75,7 @@ type Actor(addMessage : string -> unit, dispatcher : Dispatcher) =
                     dispatcher.Invoke(fun () ->
                         Canvas.SetLeft(r.Polygon, r.Left)
                         Canvas.SetTop(r.Polygon, r.Top))
+                    do! loop ()
                 }
 
             try
