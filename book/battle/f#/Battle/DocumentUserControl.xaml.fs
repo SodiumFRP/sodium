@@ -1,10 +1,7 @@
 ﻿namespace Battle
 
-open System
 open System.Windows
-open FSharpx.Functional.Prelude
 open FsXaml
-open Sodium
 
 type DocumentView = XAML<"DocumentUserControl.xaml", true>
 

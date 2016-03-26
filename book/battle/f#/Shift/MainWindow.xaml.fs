@@ -1,4 +1,4 @@
-﻿namespace Battle
+﻿namespace Shift
 
 open System
 open System.Windows
@@ -38,11 +38,11 @@ type MainViewController() =
             view.StackPanel.Children.Add(TextBlock(Text = message)) |> ignore
             view.ScrollViewer.ScrollToBottom()
         
-        let createDocumentView c e p =
+        let createDocumentView w c e p =
             let d = DocumentView()
-            DocumentView.init d c e p
+            DocumentView.init d w c e p
             d
 
-        view.ClassicPlaceholder.Child <- createDocumentView view.ClassicPlaceholder (createElements ()) (new Classic(addMessage))
-        view.FrpPlaceholder.Child <- createDocumentView view.FrpPlaceholder (createElements ()) (new Frp(addMessage))
-        view.ActorPlaceholder.Child <- createDocumentView view.ActorPlaceholder (createElements ()) (new Actor(addMessage, view.Root.Dispatcher))
+        view.ClassicPlaceholder.Child <- createDocumentView view.Root view.ClassicPlaceholder (createElements ()) (new Classic(addMessage))
+        view.FrpPlaceholder.Child <- createDocumentView view.Root view.FrpPlaceholder (createElements ()) (new Frp(addMessage))
+        view.ActorPlaceholder.Child <- createDocumentView view.Root view.ActorPlaceholder (createElements ()) (new Actor(addMessage, view.Root.Dispatcher))
