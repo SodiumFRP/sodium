@@ -88,7 +88,6 @@
   </ItemGroup>
   <ItemGroup>
     <Compile Include="MouseEvt.cs" />
-    <Compile Include="MouseEvtType.cs" />
     <Compile Include="MouseEvtWithElement.cs" />
     <Compile Include="Properties\AssemblyInfo.cs">
       <SubType>Code</SubType>
