@@ -31,17 +31,21 @@ namespace Sodium
         internal readonly Node<T> Node;
         private readonly List<IListener> disposables;
         private readonly List<T> firings;
-        private readonly HashSet<IListener> keepListenersAlive = new HashSet<IListener>();
+        internal readonly IKeepListenersAlive KeepListenersAlive;
 
         internal Stream()
+            : this(new KeepListenersAliveImplementation())
         {
-            this.Node = new Node<T>(0L);
-            this.disposables = new List<IListener>();
-            this.firings = new List<T>();
         }
 
-        private Stream(Node<T> node, List<IListener> disposables, List<T> firings)
+        internal Stream(IKeepListenersAlive keepListenersAlive)
+            : this(keepListenersAlive, new Node<T>(0L), new List<IListener>(), new List<T>())
         {
+        }
+
+        private Stream(IKeepListenersAlive keepListenersAlive, Node<T> node, List<IListener> disposables, List<T> firings)
+        {
+            this.KeepListenersAlive = keepListenersAlive;
             this.Node = node;
             this.disposables = disposables;
             this.firings = firings;
@@ -88,20 +92,20 @@ namespace Sodium
                 {
                 }
 
-                lock (this.keepListenersAlive)
+                lock (this.KeepListenersAlive)
                 {
                     // ReSharper disable AccessToModifiedClosure
                     if (listener != null)
                     {
-                        this.keepListenersAlive.Remove(listener);
+                        this.KeepListenersAlive.StopKeepingListenerAlive(listener);
                     }
                     // ReSharper restore AccessToModifiedClosure
                 }
             });
 
-            lock (this.keepListenersAlive)
+            lock (this.KeepListenersAlive)
             {
-                this.keepListenersAlive.Add(listener);
+                this.KeepListenersAlive.KeepListenerAlive(listener);
             }
 
             return listener;
@@ -143,7 +147,7 @@ namespace Sodium
             {
                 List<IListener> fsNew = this.disposables.ToList();
                 fsNew.Add(listener);
-                return new Stream<T>(this.Node, fsNew, this.firings);
+                return new Stream<T>(this.KeepListenersAlive, this.Node, fsNew, this.firings);
             });
         }
 
@@ -261,7 +265,7 @@ namespace Sodium
         /// <returns>A stream which fires values transformed by <paramref name="f" /> for each value fired by this stream.</returns>
         public Stream<TResult> Map<TResult>(Func<T, TResult> f)
         {
-            Stream<TResult> @out = new Stream<TResult>();
+            Stream<TResult> @out = new Stream<TResult>(this.KeepListenersAlive);
             IListener l = this.Listen(@out.Node, (trans2, a) => @out.Send(trans2, f(a)));
             return @out.UnsafeAddCleanup(l);
         }
@@ -329,7 +333,7 @@ namespace Sodium
         /// </returns>
         public Stream<TResult> Snapshot<T1, TResult>(Cell<T1> c, Func<T, T1, TResult> f)
         {
-            Stream<TResult> @out = new Stream<TResult>();
+            Stream<TResult> @out = new Stream<TResult>(this.KeepListenersAlive);
             IListener l = this.Listen(@out.Node, (trans2, a) => @out.Send(trans2, f(a, c.SampleNoTransaction())));
             return @out.UnsafeAddCleanup(l);
         }
@@ -350,7 +354,7 @@ namespace Sodium
         /// </returns>
         public Stream<TResult> Snapshot<T1, T2, TResult>(Cell<T1> c1, Cell<T2> c2, Func<T, T1, T2, TResult> f)
         {
-            Stream<TResult> @out = new Stream<TResult>();
+            Stream<TResult> @out = new Stream<TResult>(this.KeepListenersAlive);
             IListener l = this.Listen(@out.Node, (trans2, a) => @out.Send(trans2, f(a, c1.SampleNoTransaction(), c2.SampleNoTransaction())));
             return @out.UnsafeAddCleanup(l);
         }
@@ -373,7 +377,7 @@ namespace Sodium
         /// </returns>
         public Stream<TResult> Snapshot<T1, T2, T3, TResult>(Cell<T1> c1, Cell<T2> c2, Cell<T3> c3, Func<T, T1, T2, T3, TResult> f)
         {
-            Stream<TResult> @out = new Stream<TResult>();
+            Stream<TResult> @out = new Stream<TResult>(this.KeepListenersAlive);
             IListener l = this.Listen(@out.Node, (trans2, a) => @out.Send(trans2, f(a, c1.SampleNoTransaction(), c2.SampleNoTransaction(), c3.SampleNoTransaction())));
             return @out.UnsafeAddCleanup(l);
         }
@@ -398,7 +402,7 @@ namespace Sodium
         /// </returns>
         public Stream<TResult> Snapshot<T1, T2, T3, T4, TResult>(Cell<T1> c1, Cell<T2> c2, Cell<T3> c3, Cell<T4> c4, Func<T, T1, T2, T3, T4, TResult> f)
         {
-            Stream<TResult> @out = new Stream<TResult>();
+            Stream<TResult> @out = new Stream<TResult>(this.KeepListenersAlive);
             IListener l = this.Listen(@out.Node, (trans2, a) => @out.Send(trans2, f(a, c1.SampleNoTransaction(), c2.SampleNoTransaction(), c3.SampleNoTransaction(), c4.SampleNoTransaction())));
             return @out.UnsafeAddCleanup(l);
         }
@@ -431,7 +435,7 @@ namespace Sodium
 
         private Stream<T> Merge(Stream<T> s)
         {
-            Stream<T> @out = new Stream<T>();
+            Stream<T> @out = new Stream<T>(this.KeepListenersAlive);
             Node<T> left = new Node<T>(0);
             Node<T> right = @out.Node;
             Node<T>.Target nodeTarget = left.Link((t, v) => { }, right).Item2;
@@ -469,7 +473,7 @@ namespace Sodium
 
         private Stream<T> Coalesce(Transaction trans1, Func<T, T, T> f)
         {
-            Stream<T> @out = new Stream<T>();
+            Stream<T> @out = new Stream<T>(this.KeepListenersAlive);
             Action<Transaction, T> h = CoalesceHandler.Create(f, @out);
             IListener l = this.Listen(@out.Node, trans1, h, false);
             return @out.UnsafeAddCleanup(l);
@@ -492,7 +496,7 @@ namespace Sodium
         /// <returns>A stream that only outputs events for which the predicate returns <code>true</code>.</returns>
         public Stream<T> Filter(Func<T, bool> predicate)
         {
-            Stream<T> @out = new Stream<T>();
+            Stream<T> @out = new Stream<T>(this.KeepListenersAlive);
             IListener l = this.Listen(@out.Node, (trans2, a) =>
             {
                 if (predicate(a))
@@ -626,7 +630,7 @@ namespace Sodium
         {
             // This is a bit long-winded but it's efficient because it unregisters
             // the listener.
-            Stream<T> @out = new Stream<T>();
+            Stream<T> @out = new Stream<T>(this.KeepListenersAlive);
             IListener l = null;
             l = this.Listen(@out.Node, (trans, a) =>
             {
@@ -724,6 +728,27 @@ namespace Sodium
             public void Unlisten()
             {
                 this.stream?.Node.Unlink(this.target);
+            }
+        }
+
+        private class KeepListenersAliveImplementation : IKeepListenersAlive
+        {
+            private readonly HashSet<IListener> listeners = new HashSet<IListener>();
+            private readonly List<IKeepListenersAlive> childKeepListenersAliveList = new List<IKeepListenersAlive>();
+
+            public void KeepListenerAlive(IListener listener)
+            {
+                this.listeners.Add(listener);
+            }
+
+            public void StopKeepingListenerAlive(IListener listener)
+            {
+                this.listeners.Remove(listener);
+            }
+
+            public void Use(IKeepListenersAlive childKeepListenersAlive)
+            {
+                this.childKeepListenersAliveList.Add(childKeepListenersAlive);
             }
         }
     }

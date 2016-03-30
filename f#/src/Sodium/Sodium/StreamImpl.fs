@@ -4,6 +4,15 @@ open System
 open System.Collections.Generic
 open System.Linq
 
+type private 'T KeepListenersAliveImplementation() =
+    let listeners = HashSet<IListener>()
+    let childKeepListenersAliveList = List<IKeepListenersAlive>()
+
+    interface IKeepListenersAlive with
+        member __.KeepListenerAlive listener = listeners.Add(listener) |> ignore
+        member __.StopKeepingListenerAlive listener = listeners.Remove(listener) |> ignore
+        member __.Use childKeepListenersAlive = childKeepListenersAliveList.Add(childKeepListenersAlive)
+
 type private 'T StreamListener(stream : 'T StreamImpl, action : Transaction -> 'T -> unit, target : 'T Target) = 
     let unlisten() =
         action.ToString () |> ignore
@@ -15,13 +24,15 @@ type private 'T StreamListener(stream : 'T StreamImpl, action : Transaction -> '
     interface IDisposable with
         member __.Dispose() = unlisten()
 
-and internal 'T StreamImpl private (node : 'T Node, cleanup : IListener, firings : 'T seq) =
+and internal 'T StreamImpl private (keepListenersAlive : IKeepListenersAlive, node : 'T Node, cleanup : IListener, firings : 'T seq) =
     let mutable cleanup = cleanup
     let firings = List<'T>(firings)
-    let keepListenersAlive = HashSet<IListener>()
 
-    internal new() = new StreamImpl<'T>(Node<'T>(0L), Listener.empty, [])
+    internal new(keepListenersAlive : IKeepListenersAlive) = new StreamImpl<'T>(keepListenersAlive, Node<'T>(0L), Listener.empty, [])
+    internal new() = new StreamImpl<'T>(KeepListenersAliveImplementation())
     
+    member val internal KeepListenersAlive = keepListenersAlive
+
     static member CreateCoalesceHandler (f : 'T -> 'T -> 'T) (stream : 'T StreamImpl) = 
         let mutable accum = Option.None
         (fun (transaction : Transaction) a ->
@@ -68,22 +79,22 @@ and internal 'T StreamImpl private (node : 'T Node, cleanup : IListener, firings
                  lock keepListenersAlive (fun () -> 
                      match listenerReference with
                      | None -> ()
-                     | Some l -> keepListenersAlive.Remove(l) |> ignore)))
+                     | Some l -> keepListenersAlive.StopKeepingListenerAlive(l) |> ignore)))
         listenerReference <- Option.Some listener
-        lock keepListenersAlive (fun () -> keepListenersAlive.Add(listener) |> ignore)
+        lock keepListenersAlive (fun () -> keepListenersAlive.KeepListenerAlive(listener) |> ignore)
         listener
     
     member internal __.AddCleanup listener =
         Transaction.Run(fun () ->
             let cleanupNew = Listener.append cleanup listener
-            new StreamImpl<'T>(node, cleanupNew, firings))
+            new StreamImpl<'T>(keepListenersAlive, node, cleanupNew, firings))
     
     member internal this.UnsafeAddCleanup listener =
         cleanup <- Listener.append cleanup listener
         this
     
     member internal this.Coalesce (transaction : Transaction) (f : 'T -> 'T -> 'T) =
-        let out = new StreamImpl<'T>()
+        let out = new StreamImpl<'T>(keepListenersAlive)
         let h = StreamImpl.CreateCoalesceHandler f out
         let listener = this.ListenInternal out.Node transaction h false
         out.UnsafeAddCleanup listener
@@ -147,7 +158,9 @@ type internal 'T StreamLoopImpl() =
         lock isAssignedLock (fun () ->
             if isAssigned then invalidOp "StreamLoop was looped more than once."
             isAssigned <- true)
-        Transaction.Run (fun () -> this.UnsafeAddCleanup (stream.ListenWithTransaction this.Node (fun t a -> this.Send(t, a)))) |> ignore
+        Transaction.Run (fun () ->
+            this.UnsafeAddCleanup (stream.ListenWithTransaction this.Node (fun t a -> this.Send(t, a)))
+            stream.KeepListenersAlive.Use(this.KeepListenersAlive)) |> ignore
         
 type 'T StreamLoop internal(impl : 'T StreamLoopImpl) =
     inherit Stream<'T>(impl)

@@ -44,3 +44,8 @@ module Listener =
     let append (l1 : IListener) (l2 : IListener) : IListener = upcast new ActionListener(fun() ->
         l1.Unlisten()
         l2.Unlisten())
+
+type internal IKeepListenersAlive =
+    abstract member KeepListenerAlive : IListener -> unit
+    abstract member StopKeepingListenerAlive : IListener -> unit
+    abstract member Use : IKeepListenersAlive -> unit
