@@ -42,18 +42,15 @@ type TimerSystem<'T when 'T : comparison> (implementation : 'T ITimerSystemImple
                         if tempEvent <> null && tempEvent.Event.time <= t then
                             let evLocal = eventQueue.Dequeue()
                             if evLocal <> null then Option.Some evLocal.Event else Option.None
-                        else
-                            Option.None
-                     else
-                        Option.None)
-                let continueProcessing =
-                    match ev with
-                        | None -> false
-                        | Some ev ->
-                            timeSink.Send ev.time
-                            ev.alarm.Send ev.time
-                            true
-                if continueProcessing then processEvents ()
+                        else Option.None
+                     else Option.None)
+                match ev with
+                    | None -> ()
+                    | Some ev ->
+                        timeSink.Send ev.time
+                        ev.alarm.Send ev.time
+                        processEvents ()
+            processEvents ()
             timeSink.Send t)
         timeSink :> 'T Cell)
 
@@ -83,21 +80,19 @@ type TimerSystemImplementationImplementationBase<'T when 'T : comparison>() as t
     let mutable nextSeq = 0
 
     let rec timeUntilNext now =
-        let mutable fired = Option.None
-        let waitTime = lock lockObject (fun () ->
-            if timers.Count < 1 then TimeSpan.FromSeconds(1000.0)
+        let waitOrFire = lock lockObject (fun () ->
+            if timers.Count < 1 then Wait (TimeSpan.FromSeconds(1000.0))
             else
                 let timer = timers.First()
                 let waitTime = this.SubtractTimes timer.Time now
                 if waitTime <= TimeSpan.Zero then
-                    fired <- Option.Some timer
                     timers.Remove(timer) |> ignore
-                    TimeSpan.Zero
-                else waitTime)
-        match fired with
-            | None -> waitTime
-            | Some f ->
-                f.Callback()
+                    Fire timer.Callback
+                else Wait waitTime)
+        match waitOrFire with
+            | Wait waitTime -> waitTime
+            | Fire callback ->
+                callback()
                 timeUntilNext now
 
     member internal __.LockObject = lockObject
@@ -126,11 +121,11 @@ type TimerSystemImplementationImplementationBase<'T when 'T : comparison>() as t
                                 lock cancellationTokenSourceLock (fun () -> cancellationTokenSource <- Option.None)
                     with
                         | e -> handleException e
-                    return! loop ()
+                    do! loop ()
                 }
 
             async {
-                return! loop ()
+                do! loop ()
             } |> Async.Start
 
         member this.SetTimer time callback =
@@ -146,6 +141,10 @@ type TimerSystemImplementationImplementationBase<'T when 'T : comparison>() as t
         member __.RunTimersTo now = timeUntilNext now |> ignore
 
         member this.Now = this.Now
+
+and private WaitOrFire =
+    | Wait of TimeSpan
+    | Fire of (unit -> unit)
 
 and SimpleTimer<'T when 'T : comparison>(implementation : 'T TimerSystemImplementationImplementationBase, time : 'T, callback : unit -> unit) =
     let seq = lock implementation.LockObject (fun () ->
