@@ -28,7 +28,7 @@ module FrTranslate =
             let offsetDrawable drawable (offset : Point) =
                 DrawableDelegate (fun d ->
                     d.PushTransform(TranslateTransform(offset.X, offset.Y))
-                    DrawableDelegate.invoke drawable d
+                    drawable |> DrawableDelegate.invoke d
                     d.Pop())
 
             {
