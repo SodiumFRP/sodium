@@ -14,7 +14,7 @@ namespace Timers
 
             this.Loaded += async (sender, args) =>
             {
-                TimerSystem<DateTime> sys = new SystemClockTimerSystem(e => this.Dispatcher.Invoke(() => { throw e; }));
+                ITimerSystem<DateTime> sys = new SystemClockTimerSystem(e => this.Dispatcher.Invoke(() => { throw e; }));
                 Cell<DateTime> time = sys.Time;
                 StreamSink<Unit> sMain = new StreamSink<Unit>();
                 IListener l = Transaction.Run(() =>
@@ -33,7 +33,7 @@ namespace Timers
             };
         }
 
-        private static Stream<DateTime> Periodic(TimerSystem<DateTime> sys, TimeSpan period)
+        private static Stream<DateTime> Periodic(ITimerSystem<DateTime> sys, TimeSpan period)
         {
             Cell<DateTime> time = sys.Time;
             CellLoop<IMaybe<DateTime>> oAlarm = new CellLoop<IMaybe<DateTime>>();
