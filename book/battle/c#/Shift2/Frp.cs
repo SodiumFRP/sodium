@@ -6,7 +6,6 @@ namespace Shift2
 {
     public class Frp : IParadigm
     {
-        private readonly Action<string> addMessage;
         private readonly IListener listener;
 
         private readonly StreamSink<MouseEvtWithElement> sMouseDown = new StreamSink<MouseEvtWithElement>();
@@ -16,7 +15,6 @@ namespace Shift2
 
         public Frp(Action<string> addMessage)
         {
-            this.addMessage = addMessage;
             this.listener = Transaction.Run(() =>
             {
                 Cell<IMaybe<DragInfo>> dragInfo =
@@ -26,7 +24,7 @@ namespace Shift2
                 Cell<IMaybe<Tuple<MouseEvt, bool>>> mouseMoveAndAxisLock = dragInfo.Map(md => md.Match(
                     d => this.sMouseMove.Hold(d.Me).Lift(axisLock, Tuple.Create).Map(Maybe.Just),
                     () => Cell.Constant(Maybe.Nothing<Tuple<MouseEvt, bool>>()))).SwitchC();
-                IListener listener1 = Operational.Value(dragInfo).FilterMaybe().Listen(d => this.addMessage("FRP dragging " + d.Me.Element.Name));
+                IListener listener1 = Operational.Value(dragInfo).FilterMaybe().Listen(d => addMessage("FRP dragging " + d.Me.Element.Name));
                 IListener listener2 = Operational.Value(mouseMoveAndAxisLock).FilterMaybe().Snapshot(dragInfo, (ma, md) => md.Match(
                     d => Maybe.Just(new Reposition(d, ma.Item1, ma.Item2)),
                     Maybe.Nothing<Reposition>)).FilterMaybe().Listen(p =>

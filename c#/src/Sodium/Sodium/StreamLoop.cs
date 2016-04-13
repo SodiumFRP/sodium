@@ -53,7 +53,11 @@ namespace Sodium
                 this.isAssigned = true;
             }
 
-            Transaction.RunVoid(() => this.UnsafeAddCleanup(stream.Listen(this.Node, this.Send)));
+            Transaction.RunVoid(() =>
+            {
+                this.UnsafeAddCleanup(stream.Listen(this.Node, this.Send));
+                stream.KeepListenersAlive.Use(this.KeepListenersAlive);
+            });
         }
     }
 }

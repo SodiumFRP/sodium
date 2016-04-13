@@ -27,7 +27,7 @@ namespace Fridgets
                                 ? Maybe.Just(p.X - 2)
                                 : Maybe.Nothing<double>();
                         },
-                        Maybe.Nothing<double>)).FilterMaybe<double>();
+                        Maybe.Nothing<double>)).FilterMaybe();
                 CellLoop<int> x = new CellLoop<int>();
                 long myId = idSupply.Get();
                 Cell<bool> haveFocus = focus.Map(fId => fId == myId);
@@ -89,9 +89,9 @@ namespace Fridgets
                                     FormattedText t = FontUtilities.GetStandardFormattedText(txt, typeface, 13, Brushes.Black);
                                     FormattedText tCursor = FontUtilities.GetStandardFormattedText(txt.Substring(0, xValue), typeface, 13, Brushes.Black);
                                     d.DrawText(t, new Point(4, (sz.Height - t.Height) / 2));
-                                    double cursorX = tCursor.Width;
                                     if (haveFocusValue)
                                     {
+                                        double cursorX = tCursor.Width;
                                         d.DrawLine(new Pen(Brushes.Red, 1), new Point(4 + cursorX, 4), new Point(4 + cursorX, sz.Height - 5));
                                     }
                                 },

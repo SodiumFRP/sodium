@@ -1,5 +1,13 @@
 ﻿module Sodium.Cell
 
+type private FanOutKeepListenersAlive(keepListenersAliveEnumerable : IKeepListenersAlive seq) =
+    let keepListenersAliveList = List.ofSeq keepListenersAliveEnumerable
+    
+    interface IKeepListenersAlive with
+        member __.KeepListenerAlive listener = for keepListenersAlive in keepListenersAliveList do keepListenersAlive.KeepListenerAlive listener
+        member __.StopKeepingListenerAlive listener = for keepListenersAlive in keepListenersAliveList do keepListenersAlive.StopKeepingListenerAlive listener
+        member __.Use childKeepListenersAlive = for keepListenersAlive in keepListenersAliveList do keepListenersAlive.Use childKeepListenersAlive
+
 let sink<'T> initialValue = new CellSink<'T>(new CellSinkImpl<'T>(initialValue))
 
 let sinkWithCoalesce<'T> initialValue coalesce = new CellSink<'T>(new CellSinkImpl<'T>(initialValue, coalesce))
@@ -26,7 +34,7 @@ let sample (cell : 'T Cell) = Transaction.Apply (fun _ -> cell.Impl.SampleNoTran
 let sampleLazy (cell : 'T Cell) = Transaction.Apply cell.Impl.SampleLazy
 
 let internal valueInternal (transaction : Transaction) (cell : 'T Cell) =
-    let spark = new Stream<unit>(new StreamImpl<unit>())
+    let spark = new Stream<unit>(new StreamImpl<unit>(cell.Impl.KeepListenersAlive))
     transaction.Prioritized spark.Impl.Node (fun transaction -> spark.Impl.Send(transaction, ()))
     let initial = spark |> Stream.snapshotAndTakeCell cell
     initial |> Stream.merge (fun _ r -> r) (new Stream<'T>(cell.Impl.Updates transaction))
@@ -37,11 +45,9 @@ let listen handler (cell : 'T Cell) = Transaction.Apply (fun transaction -> cell
 
 let map f (cell : 'T Cell) = Transaction.Apply(fun transaction -> new Stream<'T>(cell.Impl.Updates transaction) |> Stream.map f |> Stream.holdLazyInternal transaction (cell.Impl.SampleLazy transaction |> Lazy.map f))
 
-let mapConst value stream = map (fun _ -> value) stream
-
 let apply f (cell : 'T Cell) =
     Transaction.Apply (fun transaction ->
-        let out = Stream.sink ()
+        let out = new Stream<_>(new StreamImpl<_>(cell.Impl.KeepListenersAlive))
         let outTarget = out.Impl.Node
         let inTarget = Node<unit>(0L)
         let (_, nodeTarget) = inTarget.Link (fun _ _ -> ()) outTarget
@@ -87,7 +93,8 @@ let liftAll f (cells : seq<#Cell<'T>>) =
     Transaction.Apply (fun transaction ->
         let c = List.ofSeq cells
         let values = c |> Seq.map (fun c -> c.Impl.SampleNoTransaction ()) |> Array.ofSeq
-        let out = new StreamImpl<'a>()
+        let getKeepListenersAlive (c : #Cell<'T>) = c.Impl.KeepListenersAlive
+        let out = new StreamImpl<'a>(FanOutKeepListenersAlive(List.map getKeepListenersAlive c))
         let initialValue = lazy (f (List.ofSeq values))
         let listeners = cells |> Seq.mapi (fun i cell ->
             (cell.Impl.Updates transaction).ListenInternal out.Node transaction (fun transaction v ->
@@ -104,7 +111,7 @@ let calm (cell : 'T Cell when 'T : equality) =
 let switchC (cell : Cell<#Cell<'T>>) =
     Transaction.Apply (fun transaction ->
         let za = cell |> sampleLazy |> Lazy.map sample
-        let out = new StreamImpl<'T>()
+        let out = new StreamImpl<'T>(cell.Impl.KeepListenersAlive)
         let mutable currentListener = Option<IListener>.None
         let h = (fun (transaction : Transaction) (c : 'T Cell) ->
             match currentListener with
@@ -116,7 +123,7 @@ let switchC (cell : Cell<#Cell<'T>>) =
 
 let switchS (cell : Cell<#Stream<'T>>) =
     Transaction.Apply (fun transaction ->
-        let out = new StreamImpl<'T>()
+        let out = new StreamImpl<'T>(cell.Impl.KeepListenersAlive)
         let mutable currentListener = (cell.Impl.SampleNoTransaction ()).Impl.ListenInternal out.Node transaction (fun t a -> out.Send(t, a)) false
         let h = (fun (transaction : Transaction) (s : 'T Stream) ->
             transaction.Last (fun () ->

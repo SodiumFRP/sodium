@@ -36,8 +36,8 @@ type SSpinner private(initialValue : int) as this =
         Grid.SetColumn(minus, 1)
         this.Children.Add(minus) |> ignore
 
-        let sPlusDelta = plus.SClicked |> Stream.mapConst 1
-        let sMinusDelta = minus.SClicked |> Stream.mapConst -1
+        let sPlusDelta = plus.SClicked |> Stream.mapTo 1
+        let sMinusDelta = minus.SClicked |> Stream.mapTo -1
         let sDelta = sPlusDelta |> Stream.orElse sMinusDelta
         let sSetValue = sDelta |> Stream.snapshot (+) value
 

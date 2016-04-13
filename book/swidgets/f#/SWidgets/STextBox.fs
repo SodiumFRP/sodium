@@ -12,7 +12,7 @@ type STextBox(setText : string Stream, initText : string, enabled : bool Cell) a
 
     let init () =
         let sDecrement = Stream.sink ()
-        let allow = setText |> Stream.mapConst 1 |> Stream.orElse sDecrement |> Stream.accum (+) 0 |> Cell.map ((=) 0)
+        let allow = setText |> Stream.mapTo 1 |> Stream.orElse sDecrement |> Stream.accum (+) 0 |> Cell.map ((=) 0)
         Transaction.Post (fun () -> this.Dispatcher.InvokeIfNecessary (fun () -> this.IsEnabled <- enabled |> Cell.sample))
         let sUserChanges = Stream.sink ()
         let text = sUserChanges |> Stream.gate allow |> Stream.orElse setText |> Stream.hold initText

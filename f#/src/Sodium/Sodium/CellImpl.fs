@@ -33,6 +33,8 @@ and internal 'T CellImpl private (stream : 'T StreamImpl, value : 'T option, set
     internal new(stream : 'T StreamImpl) =
         new CellImpl<'T>(stream, Option.None, true)
 
+    member val internal KeepListenersAlive = stream.KeepListenersAlive
+
     member internal __.Value with get () = value and set v = value <- v
 
     member internal this.SampleLazy (transaction : Transaction) =

@@ -17,7 +17,7 @@ namespace Sodium
             return Transaction.Apply(trans1 =>
             {
                 Lazy<T> za = cca.SampleLazy().Map(ca => ca.Sample());
-                Stream<T> @out = new Stream<T>();
+                Stream<T> @out = new Stream<T>(cca.KeepListenersAlive);
                 IListener currentListener = null;
                 Action<Transaction, Cell<T>> h = (trans2, ca) =>
                 {
@@ -42,7 +42,7 @@ namespace Sodium
         {
             return Transaction.Apply(trans1 =>
             {
-                Stream<T> @out = new Stream<T>();
+                Stream<T> @out = new Stream<T>(csa.KeepListenersAlive);
                 IListener currentListener = csa.SampleNoTransaction().Listen(@out.Node, trans1, @out.Send, false);
                 Action<Transaction, Stream<T>> h = (trans2, sa) =>
                 {
@@ -75,7 +75,7 @@ namespace Sodium
             {
                 IReadOnlyList<Cell<T>> cells = c.ToArray();
                 T[] values = cells.Select(cell => cell.SampleNoTransaction()).ToArray();
-                Stream<TResult> @out = new Stream<TResult>();
+                Stream<TResult> @out = new Stream<TResult>(new FanOutKeepListenersAlive(cells.Select(cell => cell.KeepListenersAlive)));
                 Lazy<TResult> initialValue = new Lazy<TResult>(() => f(values.ToArray()));
                 IEnumerable<IListener> listeners = cells.Select((cell, i) => cell.Updates(trans1).Listen(@out.Node, trans1, (trans2, v) =>
                   {
@@ -84,6 +84,40 @@ namespace Sodium
                   }, false));
                 return @out.UnsafeAddCleanup(new ImmutableCompositeListener(listeners)).HoldLazy(initialValue);
             });
+        }
+
+        private class FanOutKeepListenersAlive : IKeepListenersAlive
+        {
+            private readonly IReadOnlyList<IKeepListenersAlive> keepListenersAliveList;
+
+            public FanOutKeepListenersAlive(IEnumerable<IKeepListenersAlive> keepListenersAliveEnumerable)
+            {
+                this.keepListenersAliveList = keepListenersAliveEnumerable.ToArray();
+            }
+
+            public void KeepListenerAlive(IListener listener)
+            {
+                foreach (IKeepListenersAlive keepListenersAlive in this.keepListenersAliveList)
+                {
+                    keepListenersAlive.KeepListenerAlive(listener);
+                }
+            }
+
+            public void StopKeepingListenerAlive(IListener listener)
+            {
+                foreach (IKeepListenersAlive keepListenersAlive in this.keepListenersAliveList)
+                {
+                    keepListenersAlive.StopKeepingListenerAlive(listener);
+                }
+            }
+
+            public void Use(IKeepListenersAlive childKeepListenersAlive)
+            {
+                foreach (IKeepListenersAlive keepListenersAlive in this.keepListenersAliveList)
+                {
+                    keepListenersAlive.Use(childKeepListenersAlive);
+                }
+            }
         }
     }
 }

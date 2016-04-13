@@ -11,7 +11,7 @@ type MainViewController() =
 
     override __.OnLoaded view =
         let clear = new SButton(Content = "Clear", Width = 75.0)
-        let sClearIt = clear.SClicked |> Stream.mapConst ""
+        let sClearIt = clear.SClicked |> Stream.mapTo ""
         let text = new STextBox(sClearIt, "Hello", Width = 100.0)
 
         view.Container.Children.Add(text) |> ignore
