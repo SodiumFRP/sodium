@@ -18,6 +18,9 @@ module FrTextField =
     type private TextUpdate = { text : string; newX : int }
 
     let create initialText =
+        let substring (s : string) startIndex length = s.Substring(startIndex,length)
+        let substringToEnd (s : string) startIndex = s.Substring(startIndex)
+
         let textSink = Cell.sink (Cell.constant "")
         let text = textSink |> Cell.switchC
         let reify size sMouse sKey focus idSupply =
@@ -44,22 +47,22 @@ module FrTextField =
                     match key with
                         | BackspaceKeyEvent _ ->
                             if xValue > 0
-                            then Option.Some { text = text.[..xValue - 2] + text.[xValue..]; newX = xValue - 1 }
+                            then Option.Some { text = (substring text 0 (xValue - 1)) + (substringToEnd text xValue); newX = xValue - 1 }
                             else Option.None
                         | StringKeyEvent stringKey ->
                             if stringKey = "\b"
                             then Option.None
-                            else Option.Some { text = text.[..xValue - 1] + stringKey + text.[xValue..]; newX = xValue + 1 }
+                            else Option.Some { text = (substring text 0 xValue) + stringKey + (substringToEnd text xValue); newX = xValue + 1 }
                 let sTextUpdate = sKey |> Stream.gate haveFocus |> Stream.snapshot getTextUpdate text |> Stream.filterOption
                 let getX x (text : string) =
                     let rec checkLength n =
-                        if n >= text.Length
+                        if n > text.Length
                         then text.Length
                         else
-                            if x < (FontUtilities.measureString text.[..n] typeface 13.0).Width
-                            then n
+                            if x < (FontUtilities.measureString (substring text 0 n) typeface 13.0).Width
+                            then n - 1
                             else checkLength (n + 1)
-                    checkLength 0
+                    checkLength 1
                 (
                     sPressed |> Stream.snapshot getX text |> Stream.orElse (sTextUpdate |> Stream.map (fun u -> u.newX)) |> Stream.hold 0,
                     sTextUpdate
@@ -78,7 +81,7 @@ module FrTextField =
                         | Some (size : Size) ->
                             d.DrawRectangle(Brushes.White, Pen(Brushes.Black, 1.0), Rect(Point(2.0, 2.0), Size(size.Width - 5.0, size.Height - 5.0)))
                             let t = FontUtilities.getStandardFormattedText text typeface 13.0 Brushes.Black
-                            let tCursor = FontUtilities.getStandardFormattedText text.[..x- 1] typeface 13.0 Brushes.Black
+                            let tCursor = FontUtilities.getStandardFormattedText (substring text 0 x) typeface 13.0 Brushes.Black
                             d.DrawText(t, Point(4.0, (size.Height - t.Height) / 2.0))
                             if haveFocus then
                                 let cursorX = tCursor.Width
@@ -96,4 +99,4 @@ module FrTextField =
             text = text
         }
 
-    let sClicked b = b.sClicked
+    let text (t : FrTextField) = t.text

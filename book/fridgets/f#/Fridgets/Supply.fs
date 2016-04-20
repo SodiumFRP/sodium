@@ -41,6 +41,8 @@ let create () =
         child2Lock = obj()
     }
 
+let private createWithImpl impl = { create () with impl = impl }
+
 let get s = getImpl s.idLock s.id' (fun v -> s.id' <- v) s.impl.Alloc
-let child1 s = getImpl s.child1Lock s.child1 (fun v -> s.child1 <- v) (fun () -> { s with impl = s.impl })
-let child2 s = getImpl s.child2Lock s.child2 (fun v -> s.child2 <- v) (fun () -> { s with impl = s.impl })
+let child1 s = getImpl s.child1Lock s.child1 (fun v -> s.child1 <- v) (fun () -> createWithImpl s.impl)
+let child2 s = getImpl s.child2Lock s.child2 (fun v -> s.child2 <- v) (fun () -> createWithImpl s.impl)

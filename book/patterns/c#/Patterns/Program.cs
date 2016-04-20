@@ -65,8 +65,8 @@ namespace Patterns
             {
                 return sA.CollectLazy(init, (a, lastA) =>
                 {
-                    IMaybe<T> oa = Maybe.Just(a);
-                    return oa.Equals(lastA) ? Tuple.Create(Maybe.Nothing<T>(), lastA) : Tuple.Create(oa, oa);
+                    IMaybe<T> ma = Maybe.Just(a);
+                    return ma.Equals(lastA) ? Tuple.Create(Maybe.Nothing<T>(), lastA) : Tuple.Create(ma, ma);
                 }).FilterMaybe();
             }
 
