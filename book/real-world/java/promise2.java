@@ -10,8 +10,7 @@ public class promise2 {
             Promise<String> pa = new Promise<>(sa);
             StreamSink<String> sb = new StreamSink<>();
             Promise<String> pb = new Promise<>(sb);
-            Promise<String> p = Promise.lift(
-                (a, b) -> a + " " + b, pa, pb);
+            Promise<String> p = pa.lift(pb, (a, b) -> a + " " + b);
             sa.send("Hello");
             p.thenDo(t -> System.out.println(t));
             sb.send("World");
@@ -23,8 +22,7 @@ public class promise2 {
             Promise<String> pa = new Promise<>(sa);
             StreamSink<String> sb = new StreamSink<>();
             Promise<String> pb = new Promise<>(sb);
-            Promise<String> p = Promise.lift(
-                (a, b) -> a + " " + b, pa, pb);
+            Promise<String> p = pa.lift(pb, (a, b) -> a + " " + b);
             p.thenDo(t -> System.out.println(t));
             Transaction.runVoid(() -> {
                 sa.send("Hello");

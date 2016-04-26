@@ -22,10 +22,10 @@ public class Promise<A> {
             then().listenOnce(h)
         );
     }
-    public static <A,B,C> Promise<C> lift(final Lambda2<A, B, C> f,
-                                          Promise<A> pa, Promise<B> pb) {
+    public <B,C> Promise<C> lift(Promise<B> pb,
+                                 final Lambda2<A, B, C> f) {
         return Transaction.run(() -> new Promise<C>(
-            pa.oValue.lift(pb.oValue,
+            this.oValue.lift(pb.oValue,
                 (oa, ob) ->
                     oa.isPresent() && ob.isPresent()
                         ? Optional.of(f.apply(oa.get(), ob.get()))

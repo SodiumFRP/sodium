@@ -29,7 +29,7 @@ public class pause {
         Cell<Double> gameClock = pausableClock(sPause, sResume, mainClock);
         Listener l = mainClock.lift(gameClock,
         	                        (m, g) -> "main="+m+" game="+g)
-                         .listen(txt -> System.out.println(txt));
+                              .listen(txt -> System.out.println(txt));
         mainClock.send(1.0);
         mainClock.send(2.0);
         mainClock.send(3.0);
