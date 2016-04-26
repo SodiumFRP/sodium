@@ -40,6 +40,47 @@ public class Lazy<A> {
 	 * Lift a binary function into lazy values, so the returned Lazy reflects
      * the value of the function applied to the input Lazys' values.
 	 */
+	public final <B,C> Lazy<C> lift(final Lazy<B> b, final Lambda2<A,B,C> f)
+	{
+		return new Lazy<C>(new Lambda0<C>() {
+            public C apply() {
+                return f.apply(Lazy.this.get(), b.get());
+            }
+		});
+	}
+
+	/**
+	 * Lift a ternary function into lazy values, so the returned Lazy reflects
+     * the value of the function applied to the input Lazys' values.
+	 */
+	public final <B,C,D> Lazy<D> lift(final Lazy<B> b, final Lazy<C> c, final Lambda3<A,B,C,D> f)
+	{
+		return new Lazy<D>(new Lambda0<D>() {
+            public D apply() {
+                return f.apply(Lazy.this.get(), b.get(), c.get());
+            }
+		});
+	}
+
+	/**
+	 * Lift a quaternary function into lazy values, so the returned Lazy reflects
+     * the value of the function applied to the input Lazys' values.
+	 */
+	public final <B,C,D,E> Lazy<E> lift(final Lazy<B> b, final Lazy<C> c, final Lazy<D> d, final Lambda4<A,B,C,D,E> f)
+	{
+		return new Lazy<E>(new Lambda0<E>() {
+            public E apply() {
+                return f.apply(Lazy.this.get(), b.get(), c.get(), d.get());
+            }
+		});
+	}
+
+	/**
+	 * Lift a binary function into lazy values, so the returned Lazy reflects
+     * the value of the function applied to the input Lazys' values.
+ 	 * @deprecated As of release 1.1.2, replaced by {@link lift(Lazy,Lambda2)}
+	 */
+    @Deprecated
 	public static final <A,B,C> Lazy<C> lift(final Lambda2<A,B,C> f, final Lazy<A> a, final Lazy<B> b)
 	{
 		return new Lazy<C>(new Lambda0<C>() {
@@ -52,7 +93,9 @@ public class Lazy<A> {
 	/**
 	 * Lift a ternary function into lazy values, so the returned Lazy reflects
      * the value of the function applied to the input Lazys' values.
+ 	 * @deprecated As of release 1.1.2, replaced by {@link lift(Lazy,Lazy,Lambda3)}
 	 */
+    @Deprecated
 	public static final <A,B,C,D> Lazy<D> lift(final Lambda3<A,B,C,D> f, final Lazy<A> a, final Lazy<B> b, final Lazy<C> c)
 	{
 		return new Lazy<D>(new Lambda0<D>() {
@@ -65,6 +108,7 @@ public class Lazy<A> {
 	/**
 	 * Lift a quaternary function into lazy values, so the returned Lazy reflects
      * the value of the function applied to the input Lazys' values.
+ 	 * @deprecated As of release 1.1.2, replaced by {@link lift(Lazy,Lazy,Lazy,Lambda4)}
 	 */
 	public static final <A,B,C,D,E> Lazy<E> lift(final Lambda4<A,B,C,D,E> f, final Lazy<A> a, final Lazy<B> b, final Lazy<C> c, final Lazy<D> d)
 	{
