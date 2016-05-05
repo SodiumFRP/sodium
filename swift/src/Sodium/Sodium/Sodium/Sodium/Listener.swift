@@ -1,9 +1,9 @@
 /// <summary>
 ///     A listener which runs the specified action when it is disposed.
 /// </summary>
-public class Listener : IListener
+public class Listener : ListenerType
 {
-    private let unlisten: Block
+    private let _unlisten: Block
 
     /// <summary>
     ///     Creates a listener which runs the specified action when it is disposed.
@@ -11,13 +11,13 @@ public class Listener : IListener
     /// <param name="unlisten">The action to run when this listener should stop listening.</param>
     init(unlisten: Block)
     {
-        self.unlisten = unlisten
+        self._unlisten = unlisten
     }
 
     public var hashValue: Int { return 0 }
 
-    public func Unlisten() {
-        self.unlisten()
+    public func unlisten() {
+        self._unlisten()
     }
 }
 

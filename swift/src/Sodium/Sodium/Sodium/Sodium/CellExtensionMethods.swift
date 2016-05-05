@@ -6,7 +6,7 @@
     /// <typeparam name="T">The type of the cell.</typeparam>
     /// <param name="cca">The cell containing another cell.</param>
     /// <returns>The unwrapped cell.</returns>
-    static func SwitchC() -> Cell<T>
+    static func switchC() -> Cell<T>
     {
         return Transaction.Apply(
             {
@@ -32,7 +32,7 @@ extension Cell<Stream<T>> {
     /// <typeparam name="T">The type of the stream.</typeparam>
     /// <param name="csa">The cell containing the stream.</param>
     /// <returns>The unwrapped stream.</returns>
-    public static func SwitchS<T>() -> Stream<T> {
+    public static func switchS<T>() -> Stream<T> {
         
         return Transaction.Apply(
         {
@@ -87,20 +87,20 @@ extension Cell<Stream<T>> {
             self.keepListenersAliveList = keepListenersAliveEnumerable.ToArray()
         }
 
-        public func KeepListenerAlive(listener: IListener)
+        public func keepListenerAlive(listener: IListener)
         {
             for keepListenersAlive in self.keepListenersAliveList {
                 keepListenersAlive.KeepListenerAlive(listener)
             }
         }
 
-        public func StopKeepingListenerAlive(listener: IListener) {
+        public func stopKeepingListenerAlive(listener: IListener) {
             for keepListenersAlive in self.keepListenersAliveList {
                 keepListenersAlive.StopKeepingListenerAlive(listener)
             }
         }
 
-        public func Use(childKeepListenersAlive: IKeepListenersAlive) {
+        public func use(childKeepListenersAlive: IKeepListenersAlive) {
             for keepListenersAlive in self.keepListenersAliveList {
                 keepListenersAlive.Use(childKeepListenersAlive)
             }

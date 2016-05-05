@@ -1,6 +1,6 @@
 internal class CoalesceHandler
 {
-    internal static func Create<T>(f: (T,T) -> T, out: Stream<T>) -> (Transaction, T) -> Void {
+    internal static func create<T>(f: (T,T) -> T, out: Stream<T>) -> (Transaction, T) -> Void {
         var accum: T?
         
         return { (trans1, a) in
@@ -11,8 +11,8 @@ internal class CoalesceHandler
             else {
                 accum = a
 
-                trans1.Prioritized(out.node) { trans2 in
-                    out.Send(trans2, a: accum!)
+                trans1.prioritized(out.node) { trans2 in
+                    out.send(trans2, a: accum!)
                     accum = nil
                 }
             }

@@ -10,12 +10,12 @@ public class ImmutableCompositeListener : Listener
 
     deinit
     {
-        self.Unlisten()
+        self.unlisten()
     }
 
-    public override func Unlisten() {
+    public override func unlisten() {
         for l in self.listeners {
-            l.Unlisten()
+            l.unlisten()
         }
     }
 }

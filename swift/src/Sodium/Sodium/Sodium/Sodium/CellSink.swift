@@ -12,10 +12,10 @@ public class CellSink<T> : Cell<T>
     ///     Construct a writable cell that uses the last value if <see cref="Send" /> is called more than once per transaction.
     /// </summary>
     /// <param name="initialValue">The initial value of the cell.</param>
-//    convenience init(initialValue: T)
-//    {
-//        self.init(streamSink: StreamSink<T>(), initialValue: initialValue)
-//    }
+    convenience init(_ initialValue: T)
+    {
+        self.init(streamSink: StreamSink<T>(), initialValue: initialValue)
+    }
 
     /// <summary>
     ///     Construct a writable cell that uses
@@ -41,5 +41,5 @@ public class CellSink<T> : Cell<T>
     ///     define new primitives.
     /// </summary>
     /// <param name="a">The value to send.</param>
-    public func Send(a: T) { self.streamSink.Send(a) }
+    public func send(a: T) { self.streamSink.send(a) }
 }

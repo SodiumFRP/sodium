@@ -15,7 +15,7 @@ internal class INode : Comparable, Hashable
     
     internal var rank: Int64 { return self._rank }
 
-    internal static func EnsureBiggerThan(node: INode, limit: Int64, inout visited: Set<INode>) -> Bool {
+    internal static func ensureBiggerThan(node: INode, limit: Int64, inout visited: Set<INode>) -> Bool {
         if (node.rank > limit || visited.contains(node))
         {
             return false
@@ -23,15 +23,15 @@ internal class INode : Comparable, Hashable
 
         visited.insert(node)
         node._rank = limit + 1
-        for n in node.GetListenerNodesUnsafe()
+        for n in node.getListenerNodesUnsafe()
         {
-            EnsureBiggerThan(n, limit: node.rank, visited: &visited)
+            ensureBiggerThan(n, limit: node.rank, visited: &visited)
         }
 
         return true
     }
 
-    func GetListenerNodesUnsafe() -> [INode] { return [] }
+    func getListenerNodesUnsafe() -> [INode] { return [] }
 
     class Target
     {
@@ -78,24 +78,24 @@ internal class Node<T> : INode
     ///     A tuple containing whether or not changes were made to the node rank
     ///     and the <see cref="Target" /> object created for this link.
     /// </returns>
-    internal func Link(action: (Transaction, T) -> Void, target: INode) -> (Bool, NodeTarget<T>) {
+    internal func link(action: (Transaction, T) -> Void, target: INode) -> (Bool, NodeTarget<T>) {
         objc_sync_enter(INode.ListenersLock)
         defer { objc_sync_exit(INode.ListenersLock) }
 
         var v = Set<INode>()
-        let changed = INode.EnsureBiggerThan(target, limit: self.rank, visited: &v)
+        let changed = INode.ensureBiggerThan(target, limit: self.rank, visited: &v)
         let t = NodeTarget(action: action, node: target)
         self.listeners.append(t)
         return (changed, t)
     }
 
-    internal func Unlink(target: NodeTarget<T>)
+    internal func unlink(target: NodeTarget<T>)
     {
-        self.RemoveListener(target)
+        self.removeListener(target)
     }
 
 
-    internal func GetListeners() -> [NodeTarget<T>]
+    internal func getListeners() -> [NodeTarget<T>]
     {
         objc_sync_enter(INode.ListenersLock)
         defer { objc_sync_exit(INode.ListenersLock) }
@@ -103,14 +103,14 @@ internal class Node<T> : INode
         return self.listeners
     }
 
-    internal func RemoveListener(target: NodeTarget<T>) {
+    internal func removeListener(target: NodeTarget<T>) {
         objc_sync_enter(INode.ListenersLock)
         defer { objc_sync_exit(INode.ListenersLock) }
 
         self.listeners.remove(target)
     }
 
-    override func GetListenerNodesUnsafe() -> [INode] {
+    override func getListenerNodesUnsafe() -> [INode] {
         objc_sync_enter(INode.ListenersLock)
         defer { objc_sync_exit(INode.ListenersLock) }
         
@@ -122,11 +122,11 @@ internal class Node<T> : INode
 
 class NodeTarget<T> : INode.Target, Hashable
 {
-    internal var Action: (Transaction, T) -> Void
+    internal var action: (Transaction, T) -> Void
     
     internal init(action: (Transaction, T)->Void, node: INode)
     {
-        self.Action = action
+        self.action = action
         super.init(node: node)
     }
     

@@ -13,22 +13,17 @@ public class CompositeListener : Listener
         super.init(unlisten: {})
     }
 
-    public func Add(l: Listener) {
+    public func add(l: Listener) {
         self.listeners.append(l)
     }
 
-    public func AddRange<S : SequenceType where S.Generator.Element == Listener>(ls: S) {
+    public func addRange<S : SequenceType where S.Generator.Element == Listener>(ls: S) {
         self.listeners.appendContentsOf(ls)
     }
 
-    deinit
-    {
-        self.Unlisten()
-    }
-
-    public override func Unlisten() {
+    public override func unlisten() {
         for l in self.listeners {
-            l.Unlisten()
+            l.unlisten()
         }
     }
 }

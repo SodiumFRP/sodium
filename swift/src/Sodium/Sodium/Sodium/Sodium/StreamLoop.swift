@@ -5,28 +5,28 @@
 public class StreamLoop<T> : Stream<T>
 {
     private let isAssignedLock = NSObject()
-    private var isAssigned = false
+    private var _isAssigned = false
 
     /// <summary>
     ///     Create an <see cref="StreamLoop{T}" />.  This must be called from within a transaction.
     /// </summary>
     public override init()
     {
-        if (!Transaction.HasCurrentTransaction())
+        if (!Transaction.hasCurrentTransaction())
         {
             fatalError("StreamLoop and CellLoop must be used within an explicit transaction")
         }
         super.init()
     }
 
-    internal var IsAssigned: Bool
+    internal var isAssigned: Bool
     {
         get
         {
             objc_sync_enter(self.isAssignedLock)
             defer { objc_sync_exit(self.isAssignedLock) }
 
-            return self.isAssigned
+            return self._isAssigned
         }
     }
 
@@ -38,7 +38,7 @@ public class StreamLoop<T> : Stream<T>
     ///     <see cref="Transaction.RunVoid(Action)" />.
     /// </summary>
     /// <param name="stream">The stream that was forward referenced.</param>
-    public func Loop(stream: Stream<T>) {
+    public func loop(stream: Stream<T>) {
         objc_sync_enter(self.isAssignedLock)
         defer { objc_sync_exit(self.isAssignedLock) }
 
@@ -46,11 +46,11 @@ public class StreamLoop<T> : Stream<T>
             fatalError("StreamLoop was looped more than once.")
         }
 
-        self.isAssigned = true
+        self._isAssigned = true
 
-        Transaction.RunVoid {
-            self.UnsafeAddCleanup(stream.Listen(self.node, action: self.Send))
-            stream.KeepListenersAlive.Use(self.KeepListenersAlive)
+        Transaction.runVoid {
+            self.unsafeAddCleanup(stream.listen(self.node, action: self.send))
+            stream.keepListenersAlive.use(self.keepListenersAlive)
         }
     }
 }

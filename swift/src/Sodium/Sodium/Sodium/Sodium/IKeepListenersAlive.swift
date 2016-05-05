@@ -1,6 +1,6 @@
 internal protocol IKeepListenersAlive
 {
-    func KeepListenerAlive(listener: Listener)
-    func StopKeepingListenerAlive(listener : Listener)
-    func Use(childKeepListenersAlive: IKeepListenersAlive)
+    func keepListenerAlive(listener: Listener)
+    func stopKeepingListenerAlive(listener : Listener)
+    func use(childKeepListenersAlive: IKeepListenersAlive)
 }

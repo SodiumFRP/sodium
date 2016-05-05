@@ -21,17 +21,17 @@ struct OrElseSequenceSequence<T, S:CollectionType where S.Generator.Element == S
         }
     }
     
-    func OrElse(s: S) -> Stream<T>
+    func orElse(s: S) -> Stream<T>
     {
         return s.Merge({ (left, right) in return left })
     }
 
-    func Merge(f: (T,T) -> T) -> Stream<T> {
+    func merge(f: (T,T) -> T) -> Stream<T> {
         let v = self.toArray()
         return Merge(v, 0, v.Count, f)
     }
 
-    func Merge(e: S, start: Int, end: Int, f: (T,T)->T) -> Stream<T> {
+    func merge(e: S, start: Int, end: Int, f: (T,T)->T) -> Stream<T> {
         let n = end - start
     
         if (n == 0)
@@ -50,7 +50,7 @@ struct OrElseSequenceSequence<T, S:CollectionType where S.Generator.Element == S
         }
     
         let mid = (start + end) / 2
-        return Merge(e, start, mid, f).Merge(Merge(e, mid, end, f), f)
+        return merge(e, start, mid, f).Merge(Merge(e, mid, end, f), f)
     }
 
 }
@@ -72,7 +72,7 @@ extension SequenceType {
     ///     A stream that is the result of merging the collection of streams and dropping the stream's value specified
     ///     earlier in the collection in the simultaneous case.
     /// </returns>
-    public static func OrElse<T>(this IEnumerable<Stream<T>> s) -> Stream<T>
+    public static func orElse<T>(this IEnumerable<Stream<T>> s) -> Stream<T>
     {
         return s.Merge((left, right) => left)
     }
@@ -97,13 +97,13 @@ extension SequenceType {
     ///     The event from the stream earlier in the collection will appear at the left input of the combining function, and
     ///     the event from the stream later in the collection will appear at the right.
     /// </remarks>
-    public static Stream<T> Merge<T>(this IEnumerable<Stream<T>> s, Func<T, T, T> f)
+    public static Stream<T> merge<T>(this IEnumerable<Stream<T>> s, Func<T, T, T> f)
     {
         IReadOnlyList<Stream<T>> v = s.ToArray()
         return Merge(v, 0, v.Count, f)
     }
 
-    private static Stream<T> Merge<T>(IReadOnlyList<Stream<T>> e, int start, int end, Func<T, T, T> f)
+    private static Stream<T> merge<T>(IReadOnlyList<Stream<T>> e, int start, int end, Func<T, T, T> f)
     {
         int n = end - start
 
@@ -135,7 +135,7 @@ extension SequenceType {
     ///     A stream that only outputs events that have values, removing the <see cref="IMaybe{T}" /> wrapper, and
     ///     discarding <see cref="Maybe.Nothing{T}()" /> values.
     /// </returns>
-    public static Stream<T> FilterMaybe<T>(this Stream<IMaybe<T>> s)
+    public static Stream<T> filterMaybe<T>(this Stream<IMaybe<T>> s)
     {
         Stream<T> @out = new Stream<T>(s.KeepListenersAlive)
         IListener l = s.Listen(@out.Node, (trans2, a) => a.Match(v => @out.Send(trans2, v), () => { }))

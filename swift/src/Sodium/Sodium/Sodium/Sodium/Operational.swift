@@ -12,7 +12,7 @@ class Operational
     ///     The rule with this primitive is that you should only use it in functions
     ///     that do not allow the caller to detect the cell updates.
     /// </remarks>
-    static func Updates<T>(c: Cell<T>) -> Stream<T> { return Transaction.Apply(c.updates) }
+    static func updates<T>(c: Cell<T>) -> Stream<T> { return Transaction.apply(c.updates) }
 
     /// <summary>
     ///     A stream that is guaranteed to fire once upon listening, giving the current
@@ -27,7 +27,7 @@ class Operational
     ///     The rule with this primitive is that you should only use it in functions
     ///     that do not allow the caller to detect the cell updates.
     /// </remarks>
-    static func Value<T>(c: Cell<T>) -> Stream<T> { return Transaction.Apply(c.value) }
+    static func value<T>(c: Cell<T>) -> Stream<T> { return Transaction.apply(c.value) }
 
     /// <summary>
     ///     Push each stream event onto a new transaction guaranteed to come before the next externally
@@ -39,7 +39,7 @@ class Operational
     /// <returns>A stream firing the deferred event firings.</returns>
     static func Defer<T>(s: Stream<AnySequence<T>>) -> Stream<T>
     {
-        return Split(s)
+        return split(s)
     }
 
     /// <summary>
@@ -54,16 +54,16 @@ class Operational
     /// <typeparam name="TCollection">The collection type of the stream to split.</typeparam>
     /// <param name="s">The stream to split.</param>
     /// <returns>A stream firing the split event firings.</returns>
-    static func Split<T>(s: Stream<AnySequence<T>>) -> Stream<T>
+    static func split<T>(s: Stream<AnySequence<T>>) -> Stream<T>
     {
-        let out = Stream<T>(keepListenersAlive: s.KeepListenersAlive)
-        let l1 = s.Listen(out.node, action: { (trans, aa) in
+        let out = Stream<T>(keepListenersAlive: s.keepListenersAlive)
+        let l1 = s.listen(out.node, action: { (trans, aa) in
             var childIx = 0
             for a in aa {
-                trans.Post(childIx, action: { trans1 in out.Send(trans1!, a: a) })
+                trans.post(childIx, action: { trans1 in out.send(trans1!, a: a) })
                 childIx += 1
             }
         })
-        return out.UnsafeAddCleanup(l1)
+        return out.unsafeAddCleanup(l1)
     }
 }

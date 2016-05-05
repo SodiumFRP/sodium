@@ -10,7 +10,7 @@
      Otherwise, objects implementing this interface do not need to be disposed.
  </remarks>
 */
-public protocol IListener: Hashable
+public protocol ListenerType: Hashable
 {
-    func Unlisten()
+    func unlisten()
 }

@@ -15,8 +15,7 @@
 		055B91FB1CD140150048BC24 /* CoalesceHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B91EA1CD140150048BC24 /* CoalesceHandler.swift */; };
 		055B91FC1CD140150048BC24 /* CompositeListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B91EB1CD140150048BC24 /* CompositeListener.swift */; };
 		055B91FD1CD140150048BC24 /* IKeepListenersAlive.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B91EC1CD140150048BC24 /* IKeepListenersAlive.swift */; };
-		055B91FE1CD140150048BC24 /* IListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B91ED1CD140150048BC24 /* IListener.swift */; };
-		055B91FF1CD140150048BC24 /* IMaybe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B91EE1CD140150048BC24 /* IMaybe.swift */; };
+		055B91FE1CD140150048BC24 /* ListenerType.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B91ED1CD140150048BC24 /* ListenerType.swift */; };
 		055B92001CD140150048BC24 /* ImmutableCompositeListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B91EF1CD140150048BC24 /* ImmutableCompositeListener.swift */; };
 		055B92011CD140150048BC24 /* LazyCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B91F01CD140150048BC24 /* LazyCell.swift */; };
 		055B92031CD140150048BC24 /* Listener.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B91F21CD140150048BC24 /* Listener.swift */; };
@@ -63,15 +62,11 @@
 		055B91EA1CD140150048BC24 /* CoalesceHandler.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CoalesceHandler.swift; sourceTree = "<group>"; };
 		055B91EB1CD140150048BC24 /* CompositeListener.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CompositeListener.swift; sourceTree = "<group>"; };
 		055B91EC1CD140150048BC24 /* IKeepListenersAlive.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IKeepListenersAlive.swift; sourceTree = "<group>"; };
-		055B91ED1CD140150048BC24 /* IListener.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IListener.swift; sourceTree = "<group>"; };
-		055B91EE1CD140150048BC24 /* IMaybe.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IMaybe.swift; sourceTree = "<group>"; };
+		055B91ED1CD140150048BC24 /* ListenerType.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ListenerType.swift; sourceTree = "<group>"; };
 		055B91EF1CD140150048BC24 /* ImmutableCompositeListener.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImmutableCompositeListener.swift; sourceTree = "<group>"; };
 		055B91F01CD140150048BC24 /* LazyCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LazyCell.swift; sourceTree = "<group>"; };
 		055B91F11CD140150048BC24 /* LazyExtensionMethods.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LazyExtensionMethods.swift; sourceTree = "<group>"; };
 		055B91F21CD140150048BC24 /* Listener.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Listener.swift; sourceTree = "<group>"; };
-		055B91F31CD140150048BC24 /* Maybe.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Maybe.swift; sourceTree = "<group>"; };
-		055B91F41CD140150048BC24 /* MaybeMonad.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MaybeMonad.swift; sourceTree = "<group>"; };
-		055B91F51CD140150048BC24 /* MutableMaybeValue.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MutableMaybeValue.swift; sourceTree = "<group>"; };
 		055B91F61CD140150048BC24 /* Node.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Node.swift; sourceTree = "<group>"; };
 		055B91F71CD140150048BC24 /* Operational.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Operational.swift; sourceTree = "<group>"; };
 		055B92091CD140280048BC24 /* Stream.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Stream.swift; sourceTree = "<group>"; };
@@ -134,15 +129,11 @@
 				055B91EA1CD140150048BC24 /* CoalesceHandler.swift */,
 				055B91EB1CD140150048BC24 /* CompositeListener.swift */,
 				055B91EC1CD140150048BC24 /* IKeepListenersAlive.swift */,
-				055B91ED1CD140150048BC24 /* IListener.swift */,
-				055B91EE1CD140150048BC24 /* IMaybe.swift */,
+				055B91ED1CD140150048BC24 /* ListenerType.swift */,
 				055B91EF1CD140150048BC24 /* ImmutableCompositeListener.swift */,
 				055B91F01CD140150048BC24 /* LazyCell.swift */,
 				055B91F11CD140150048BC24 /* LazyExtensionMethods.swift */,
 				055B91F21CD140150048BC24 /* Listener.swift */,
-				055B91F31CD140150048BC24 /* Maybe.swift */,
-				055B91F41CD140150048BC24 /* MaybeMonad.swift */,
-				055B91F51CD140150048BC24 /* MutableMaybeValue.swift */,
 				055B91F61CD140150048BC24 /* Node.swift */,
 				055B91F71CD140150048BC24 /* Operational.swift */,
 				055B92091CD140280048BC24 /* Stream.swift */,
@@ -300,7 +291,7 @@
 			files = (
 				055B92081CD140150048BC24 /* Operational.swift in Sources */,
 				055B91FD1CD140150048BC24 /* IKeepListenersAlive.swift in Sources */,
-				055B91FE1CD140150048BC24 /* IListener.swift in Sources */,
+				055B91FE1CD140150048BC24 /* ListenerType.swift in Sources */,
 				055B92031CD140150048BC24 /* Listener.swift in Sources */,
 				055B92001CD140150048BC24 /* ImmutableCompositeListener.swift in Sources */,
 				055B920D1CD140280048BC24 /* Stream.swift in Sources */,
@@ -316,7 +307,6 @@
 				057C5C741CDA76DC0013C3E3 /* Lazy.swift in Sources */,
 				055B92141CD140360048BC24 /* Unit.swift in Sources */,
 				057C5C721CD951590013C3E3 /* PriorityQueue.swift in Sources */,
-				055B91FF1CD140150048BC24 /* IMaybe.swift in Sources */,
 				055B91FB1CD140150048BC24 /* CoalesceHandler.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

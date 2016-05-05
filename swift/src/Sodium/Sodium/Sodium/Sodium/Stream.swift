@@ -9,7 +9,7 @@ public class Stream<T>
     internal let node: Node<T>
     private var disposables: Array<Listener>
     private var firings: Array<T>
-    internal let KeepListenersAlive: IKeepListenersAlive
+    internal let keepListenersAlive: IKeepListenersAlive
     internal let lock = NSObject()
     
     /// <summary>
@@ -17,13 +17,11 @@ public class Stream<T>
     /// </summary>
     /// <typeparam name="T">The type of the values that would be fired by the stream if it did fire values.</typeparam>
     /// <returns>A stream that never fires.</returns>
-    public static func Never<T>() -> Stream<T> {
-        return Stream<T>()
-    }
+    public static func never() -> Stream<T> { return Stream<T>() }
 
     init()
     {
-        self.KeepListenersAlive = KeepListenersAliveImplementation()
+        self.keepListenersAlive = KeepListenersAliveImplementation()
         self.node = Node<T>(rank: 0)
         self.disposables = []
         self.firings = []
@@ -36,7 +34,7 @@ public class Stream<T>
 
     private init(keepListenersAlive: IKeepListenersAlive, node: Node<T>, disposables: [Listener], firings: [T])
     {
-        self.KeepListenersAlive = keepListenersAlive
+        self.keepListenersAlive = keepListenersAlive
         self.node = node
         self.disposables = disposables
         self.firings = firings
@@ -65,9 +63,11 @@ public class Stream<T>
     ///         disposed, pass the returned listener to this stream's <see cref="AddCleanup" /> method.
     ///     </para>
     /// </remarks>
-    public func Listen(handler: (T)->Void) -> Listener?
+    public func listen(handler: (T)->Void) -> Listener?
     {
-        var innerListener = self.ListenWeak(handler)
+        var innerListener = self.listenWeak(handler)
+//        defer { innerListener.Unlisten() }
+
         var listener: Listener?
 
         listener = Listener(
@@ -75,10 +75,11 @@ public class Stream<T>
             objc_sync_enter(self.lock)
             defer { objc_sync_exit(self.lock) }
 
+            innerListener.unlisten()
             // ReSharper disable AccessToModifiedClosure
             if (listener != nil)
             {
-                self.KeepListenersAlive.StopKeepingListenerAlive(listener!)
+                self.keepListenersAlive.stopKeepingListenerAlive(listener!)
             }
             // ReSharper restore AccessToModifiedClosure
         })
@@ -86,7 +87,7 @@ public class Stream<T>
         objc_sync_enter(self.lock)
         defer { objc_sync_exit(self.lock) }
 
-        self.KeepListenersAlive.KeepListenerAlive(listener!)
+        self.keepListenersAlive.keepListenerAlive(listener!)
 
         return listener
     }
@@ -114,8 +115,10 @@ public class Stream<T>
     ///         disposed, pass the returned listener to this stream's <see cref="AddCleanup" /> method.
     ///     </para>
     /// </remarks>
-    func ListenWeak(handler: TV) -> Listener {
-        return self.Listen(INode.Null, action: {(trans2, a) in handler(a) })
+    func listenWeak(handler: TV) -> Listener {
+        return self.listen(INode.Null, action: {(trans2, a) in
+            handler(a)
+        })
     }
 
     /// <summary>
@@ -123,11 +126,11 @@ public class Stream<T>
     /// </summary>
     /// <param name="listener">The listener to dispose along with this stream.</param>
     /// <returns>A new stream equivalent to this stream which will dispose <paramref name="listener" /> when it is disposed.</returns>
-    public func AddCleanup(listener: Listener) -> Stream<T> {
-        return Transaction.NoThrowRun({
+    public func addCleanup(listener: Listener) -> Stream<T> {
+        return Transaction.noThrowRun({
             var fsNew = self.disposables
             fsNew.append(listener)
-            return Stream<T>(keepListenersAlive: self.KeepListenersAlive, node: self.node, disposables: fsNew, firings: self.firings)
+            return Stream<T>(keepListenersAlive: self.keepListenersAlive, node: self.node, disposables: fsNew, firings: self.firings)
         })
     }
 
@@ -137,11 +140,14 @@ public class Stream<T>
     /// <typeparam name="T">The type of values fired by the stream.</typeparam>
     /// <param name="handler">The handler to execute for values fired by this stream.</param>
     /// <returns></returns>
-    public func ListenOnce(handler: (T)->Void) -> Listener? {
-        let listener = self.Listen({ a in
+    public func listenOnce(handler: (T)->Void) -> Listener? {
+        var ls = [Listener]()
+        
+        ls.append(self.listen({ a in
             handler(a)
-        })
-        return listener
+            ls.first!.unlisten()
+        })!)
+        return ls.first!
     }
     
 /*
@@ -150,7 +156,7 @@ public class Stream<T>
     /// </summary>
     /// <typeparam name="T">The type of values fired by the stream.</typeparam>
     /// <returns>A task which completes when a value is fired by this stream.</returns>
-    public func ListenOnce() -> Task<T> {
+    public func listenOnce() -> Task<T> {
         return self.ListenOnce(CancellationToken.None)
     }
 
@@ -160,7 +166,7 @@ public class Stream<T>
     /// <typeparam name="T">The type of values fired by the stream.</typeparam>
     /// <param name="token">The cancellation token.</param>
     /// <returns>A task which completes when a value is fired by this stream.</returns>
-    public func ListenOnce(token: CancellationToken) -> Task<T> {
+    public func listenOnce(token: CancellationToken) -> Task<T> {
         let tcs = TaskCompletionSource<T>()
 
         let listener = self.Listen({ a in
@@ -172,28 +178,28 @@ public class Stream<T>
         return tcs.Task
     }
 */
-    internal func Listen(target: INode, action: (Transaction, T)->Void) -> Listener {
-        return Transaction.Apply { trans1 in self.Listen(target, trans: trans1, action: action, suppressEarlierFirings: false) }
+    internal func listen(target: INode, action: (Transaction, T)->Void) -> Listener {
+        return Transaction.apply { trans1 in self.listen(target, trans: trans1, action: action, suppressEarlierFirings: false) }
     }
 
-    internal func Listen(target: INode, trans: Transaction, action: (Transaction, T) -> Void, suppressEarlierFirings: Bool) -> Listener {
+    internal func listen(target: INode, trans: Transaction, action: (Transaction, T) -> Void, suppressEarlierFirings: Bool) -> Listener {
         
-        let t = self.node.Link(action, target: target)
+        let t = self.node.link(action, target: target)
         let nodeTarget = t.1
         if (t.0)
         {
-            trans.SetNeedsRegenerating()
+            trans.setNeedsRegenerating()
         }
         // ReSharper disable once LocalVariableHidesMember
         let firings = self.firings
         if (!suppressEarlierFirings && !firings.isEmpty)
         {
-            trans.Prioritized(target, action: { trans2 in
+            trans.prioritized(target, action: { trans2 in
                 // Anything sent already in this transaction must be sent now so that
                 // there's no order dependency between send and listen.
                 for a in firings {
-                    Transaction.InCallback += 1
-                    defer { Transaction.InCallback -= 1 }
+                    Transaction.inCallback += 1
+                    defer { Transaction.inCallback -= 1 }
                     // Don't allow transactions to interfere with Sodium internals.
                     action(trans2, a)
                 }
@@ -213,11 +219,11 @@ public class Stream<T>
     ///     Other than this, the function must be a pure function.
     /// </param>
     /// <returns>A stream which fires values transformed by <paramref name="f" /> for each value fired by this stream.</returns>
-    public func Map<TResult>(f: (T) -> TResult) -> Stream<TResult>
+    public func map<TResult>(f: (T) -> TResult) -> Stream<TResult>
     {
-        let out = Stream<TResult>(keepListenersAlive: self.KeepListenersAlive)
-        let l = self.Listen(out.node, action: { (trans2, a) in out.Send(trans2, a: f(a))} )
-        return out.UnsafeAddCleanup(l)
+        let out = Stream<TResult>(keepListenersAlive: self.keepListenersAlive)
+        let l = self.listen(out.node, action: { (trans2, a) in out.send(trans2, a: f(a))} )
+        return out.unsafeAddCleanup(l)
     }
 
     /// <summary>
@@ -228,8 +234,8 @@ public class Stream<T>
     ///     The constant value to return from this mapping.
     /// </param>
     /// <returns>A stream which fires the constant value for each value fired by this stream.</returns>
-    public func MapTo<TResult>(value: TResult) -> Stream<TResult> {
-        return self.Map({ _ in value })
+    public func mapTo<TResult>(value: TResult) -> Stream<TResult> {
+        return self.map({ _ in value })
     }
 
     /// <summary>
@@ -246,12 +252,12 @@ public class Stream<T>
     ///     it was before
     ///     any state changes from the current transaction.
     /// </remarks>
-    public func Hold(initialValue: T)  -> Cell<T> {
-        return Transaction.Apply{trans in Cell<T>(stream: self, initialValue: initialValue) }
+    public func hold(initialValue: T)  -> Cell<T> {
+        return Transaction.apply{trans in Cell<T>(stream: self, initialValue: initialValue) }
     }
 
-    public func HoldLazy(initialValue: () -> T) -> AnyCell<T> {
-        return Transaction.Apply {trans in self.HoldLazy(trans, initialValue: initialValue)}
+    public func holdLazy(initialValue: () -> T) -> AnyCell<T> {
+        return Transaction.apply {trans in self.holdLazy(trans, initialValue: initialValue)}
     }
 
     /// <summary>
@@ -259,15 +265,15 @@ public class Stream<T>
     /// </summary>
     /// <param name="initialValue">The lazily initialized initial value of the cell.</param>
     /// <returns>A cell with the specified lazily initialized initial value, that is updated by this stream's values.</returns>
-//    public func HoldLazy(@autoclosure(escaping) autoInitialValue: () -> T) -> Cell<T> {
+//    public func holdLazy(@autoclosure(escaping) autoInitialValue: () -> T) -> Cell<T> {
 //        return Transaction.Apply {trans in self.HoldLazy(trans, initialValue: autoInitialValue)}
 //    }
 
-    internal func HoldLazy(trans: Transaction, lazy: Lazy<T>) -> AnyCell<T> {
+    internal func holdLazy(trans: Transaction, lazy: Lazy<T>) -> AnyCell<T> {
         return AnyCell<T>(LazyCell<T>(stream: self, lazyInitialValue: lazy))
     }
 
-    internal func HoldLazy(trans: Transaction, initialValue: () -> T) -> AnyCell<T> {
+    internal func holdLazy(trans: Transaction, initialValue: () -> T) -> AnyCell<T> {
         return AnyCell<T>(LazyCell<T>(stream: self, lazyInitialValue: initialValue))
     }
 
@@ -277,9 +283,9 @@ public class Stream<T>
     /// <typeparam name="TResult">The return type.</typeparam>
     /// <param name="c">The cell to combine with.</param>
     /// <returns>A stream whose events are the values of the cell at the time of the stream event firing.</returns>
-    public func Snapshot<TResult, C:CellType where C.Element==TResult>(c: C) -> Stream<TResult>
+    public func snapshot<TResult, C:CellType where C.Element==TResult>(c: C) -> Stream<TResult>
     {
-        return self.Snapshot(c, f: { (a, b) in b })
+        return self.snapshot(c, f: { (a, b) in b })
     }
 
     /// <summary>
@@ -294,10 +300,10 @@ public class Stream<T>
     ///     A stream whose events are the result of the combination using the specified function of the input stream's
     ///     value and the value of the cell at the time of the stream event firing.
     /// </returns>
-    public func Snapshot<T1, TResult, C1 : CellType where C1.Element==T1>(c: C1, f: (T, T1) -> TResult) -> Stream<TResult> {
-        let out = Stream<TResult>(keepListenersAlive: self.KeepListenersAlive)
-        let l = self.Listen(out.node, action: { (trans2, a) in out.Send(trans2, a: f(a, c.sampleNoTransaction()))} )
-        return out.UnsafeAddCleanup(l)
+    public func snapshot<T1, TResult, C1 : CellType where C1.Element==T1>(c: C1, f: (T, T1) -> TResult) -> Stream<TResult> {
+        let out = Stream<TResult>(keepListenersAlive: self.keepListenersAlive)
+        let l = self.listen(out.node, action: { (trans2, a) in out.send(trans2, a: f(a, c.sampleNoTransaction()))} )
+        return out.unsafeAddCleanup(l)
     }
 
     /// <summary>
@@ -314,10 +320,10 @@ public class Stream<T>
     ///     A stream whose events are the result of the combination using the specified function of the input stream's
     ///     value and the value of the cells at the time of the stream event firing.
     /// </returns>
-    public func Snapshot<T1, T2, TResult>(c1: Cell<T1>, c2: Cell<T2>, f: (T, T1, T2) -> TResult) -> Stream<TResult> {
-        let out = Stream<TResult>(keepListenersAlive: self.KeepListenersAlive)
-        let l = self.Listen(out.node, action: { (trans2, a) in out.Send(trans2, a: f(a, c1.sampleNoTransaction(), c2.sampleNoTransaction()))} )
-        return out.UnsafeAddCleanup(l)
+    public func snapshot<T1, T2, TResult>(c1: Cell<T1>, c2: Cell<T2>, f: (T, T1, T2) -> TResult) -> Stream<TResult> {
+        let out = Stream<TResult>(keepListenersAlive: self.keepListenersAlive)
+        let l = self.listen(out.node, action: { (trans2, a) in out.send(trans2, a: f(a, c1.sampleNoTransaction(), c2.sampleNoTransaction()))} )
+        return out.unsafeAddCleanup(l)
     }
 
     /// <summary>
@@ -336,10 +342,10 @@ public class Stream<T>
     ///     A stream whose events are the result of the combination using the specified function of the input stream's
     ///     value and the value of the cells at the time of the stream event firing.
     /// </returns>
-    public func Snapshot<T1, T2, T3, TResult>(c1: Cell<T1>, c2: Cell<T2>, c3: Cell<T3>, f: (T, T1, T2, T3) -> TResult) -> Stream<TResult> {
-        let out = Stream<TResult>(keepListenersAlive: self.KeepListenersAlive)
-        let l = self.Listen(out.node, action: { (trans2, a) in out.Send(trans2, a: f(a, c1.sampleNoTransaction(), c2.sampleNoTransaction(), c3.sampleNoTransaction()))} )
-        return out.UnsafeAddCleanup(l)
+    public func snapshot<T1, T2, T3, TResult>(c1: Cell<T1>, c2: Cell<T2>, c3: Cell<T3>, f: (T, T1, T2, T3) -> TResult) -> Stream<TResult> {
+        let out = Stream<TResult>(keepListenersAlive: self.keepListenersAlive)
+        let l = self.listen(out.node, action: { (trans2, a) in out.send(trans2, a: f(a, c1.sampleNoTransaction(), c2.sampleNoTransaction(), c3.sampleNoTransaction()))} )
+        return out.unsafeAddCleanup(l)
     }
 
     /// <summary>
@@ -360,10 +366,10 @@ public class Stream<T>
     ///     A stream whose events are the result of the combination using the specified function of the input stream's
     ///     value and the value of the cells at the time of the stream event firing.
     /// </returns>
-    public func Snapshot<T1, T2, T3, T4, TResult>(c1: Cell<T1>, c2: Cell<T2>, c3: Cell<T3>, c4: Cell<T4>, f: (T, T1, T2, T3, T4) -> TResult) -> Stream<TResult> {
-        let out = Stream<TResult>(keepListenersAlive: self.KeepListenersAlive)
-        let l = self.Listen(out.node, action: { (trans2, a) in out.Send(trans2, a: f(a, c1.sampleNoTransaction(), c2.sampleNoTransaction(), c3.sampleNoTransaction(), c4.sampleNoTransaction()))} )
-        return out.UnsafeAddCleanup(l)
+    public func snapshot<T1, T2, T3, T4, TResult>(c1: Cell<T1>, c2: Cell<T2>, c3: Cell<T3>, c4: Cell<T4>, f: (T, T1, T2, T3, T4) -> TResult) -> Stream<TResult> {
+        let out = Stream<TResult>(keepListenersAlive: self.keepListenersAlive)
+        let l = self.listen(out.node, action: { (trans2, a) in out.send(trans2, a: f(a, c1.sampleNoTransaction(), c2.sampleNoTransaction(), c3.sampleNoTransaction(), c4.sampleNoTransaction()))} )
+        return out.unsafeAddCleanup(l)
     }
 
     /// <summary>
@@ -387,19 +393,20 @@ public class Stream<T>
     ///         be dropped.
     ///     </para>
     /// </remarks>
-    public func OrElse(s: Stream<T>) -> Stream<T> {
-        return self.Merge(s, f: { (left, right) in left })
+    public func orElse(s: Stream<T>) -> Stream<T> {
+        return self.merge(s, f: { (left, right) in left })
     }
 
-    private func Merge(s: Stream<T>) -> Stream<T> {
-        let out = Stream<T>(keepListenersAlive: self.KeepListenersAlive)
+    private func merge(s: Stream<T>) -> Stream<T> {
+        let out = Stream<T>(keepListenersAlive: self.keepListenersAlive)
         let left = Node<T>(rank: 0)
         let right = out.node
-        let nodeTarget = left.Link( { (t, v) in }, target: right).1
-        let h = out.Send
-        let l1 = self.Listen(left, action: h)
-        let l2 = s.Listen(right, action: h)
-        return out.UnsafeAddCleanup([l1, l2, Listener(unlisten: { left.Unlink(nodeTarget) })])
+        let nodeTargets = [left.link( { (t, v) in }, target: right).1]
+        let nodeTarget = nodeTargets.first!
+        let h = out.send
+        let l1 = self.listen(left, action: h)
+        let l2 = s.listen(right, action: h)
+        return out.unsafeAddCleanup([l1, l2, Listener(unlisten: { left.unlink(nodeTarget) })])
     }
 
     /// <summary>
@@ -423,15 +430,15 @@ public class Stream<T>
     ///     The event from this stream will appear at the left input of the combining function, and
     ///     the event from <paramref name="s" /> will appear at the right.
     /// </remarks>
-    func Merge(s: Stream<T>, f: (T, T) -> T) -> Stream<T> {
-        return Transaction.Apply { trans in self.Merge(s).Coalesce(trans, f: f) }
+    func merge(s: Stream<T>, f: (T, T) -> T) -> Stream<T> {
+        return Transaction.apply { trans in self.merge(s).fold(trans, f: f) }
     }
 
-    func Coalesce(trans1: Transaction, f: (T, T) -> T) -> Stream<T> {
-        let out = Stream<T>(keepListenersAlive: self.KeepListenersAlive)
-        let h = CoalesceHandler.Create(f, out: out)
-        let l = self.Listen(out.node, trans: trans1, action: h, suppressEarlierFirings: false)
-        return out.UnsafeAddCleanup(l)
+    func fold(trans1: Transaction, f: (T, T) -> T) -> Stream<T> {
+        let out = Stream<T>(keepListenersAlive: self.keepListenersAlive)
+        let h = CoalesceHandler.create(f, out: out)
+        let l = self.listen(out.node, trans: trans1, action: h, suppressEarlierFirings: false)
+        return out.unsafeAddCleanup(l)
     }
 
     /// <summary>
@@ -439,9 +446,9 @@ public class Stream<T>
     /// </summary>
     /// <param name="trans">The transaction to get the last firing from.</param>
     /// <returns>A stream containing only the last event firing from the specified transaction.</returns>
-    internal func LastFiringOnly(trans: Transaction) -> Stream<T>
+    internal func lastFiringOnly(trans: Transaction) -> Stream<T>
     {
-        return self.Coalesce(trans, f: { (first, second) in second } )
+        return self.fold(trans, f: { (first, second) in second } )
     }
 
     /// <summary>
@@ -449,15 +456,15 @@ public class Stream<T>
     /// </summary>
     /// <param name="predicate">The predicate used to filter the cell.</param>
     /// <returns>A stream that only outputs events for which the predicate returns <code>true</code>.</returns>
-    public func Filter(predicate: (T)->Bool) -> Stream<T> {
-        let out = Stream<T>(keepListenersAlive: self.KeepListenersAlive)
-        let l = self.Listen(out.node, action: { (trans2, a) in
+    public func filter(predicate: (T)->Bool) -> Stream<T> {
+        let out = Stream<T>(keepListenersAlive: self.keepListenersAlive)
+        let l = self.listen(out.node, action: { (trans2, a) in
             if (predicate(a))
             {
-                out.Send(trans2, a: a)
+                out.send(trans2, a: a)
             }
         })
-        return out.UnsafeAddCleanup(l)
+        return out.unsafeAddCleanup(l)
     }
 
     /// <summary>
@@ -466,9 +473,9 @@ public class Stream<T>
     /// </summary>
     /// <param name="c">The cell that acts as a gate.</param>
     /// <returns>A stream that only outputs events from the input stream when the specified cell's value is <code>true</code>.</returns>
-    public func Gate(c: Cell<Bool>) -> Stream<T> {
+    public func gate(c: Cell<Bool>) -> Stream<T> {
         // TODO: Wha?  returning nil confuses the compiler, and makes no sense even
-        return self.Snapshot(c, f: {(a: T, pred: Bool) in return pred ? a : a })
+        return self.snapshot(c, f: {(a: T, pred: Bool) in return pred ? a : a })
     }
 
     /// <summary>
@@ -477,7 +484,7 @@ public class Stream<T>
     /// <returns>A stream that only outputs events which have a different value than the previous event.</returns>
     /*
 extension on T:Comparable???
-public func Calm() -> Stream<T> {
+public func calm() -> Stream<T> {
         return self.Calm(EqualityComparer<T>.Default)
     }
 
@@ -487,11 +494,11 @@ public func Calm() -> Stream<T> {
     /// </summary>
     /// <param name="comparer">The equality comparer to use to determine if two items are equal.</param>
     /// <returns>A stream that only outputs events which have a different value than the previous event.</returns>
-    public func Calm(IEqualityComparer<T> comparer) -> Stream<T> {
+    public func calm(IEqualityComparer<T> comparer) -> Stream<T> {
         return self.Calm(Lazy<IMaybe<T>>(Maybe.Nothing<T>), comparer)
     }
 
-    internal func Calm(Lazy<IMaybe<T>> init, IEqualityComparer<T> comparer) -> Stream<T> {
+    internal func calm(Lazy<IMaybe<T>> init, IEqualityComparer<T> comparer) -> Stream<T> {
         return self.CollectLazy(init, (a, lastA) =>
         {
             if (lastA.Match(v => comparer.Equals(v, a), () => false))
@@ -517,7 +524,9 @@ public func Calm() -> Stream<T> {
     ///     <see cref="Snapshot{TReturn}(Cell{TReturn})" />.  Apart from this, the function must be pure.
     /// </param>
     /// <returns>A stream resulting from the transformation of this stream by the Mealy machine.</returns>
-    public func Collect<TState, TReturn>(initialState: TState , f: (T,TState)->(TReturn,TState)) -> Stream<TReturn> { return self.CollectLazy(initialState, f: f) }
+    public func collect<TState, TReturn>(initialState: TState , f: (T,TState)->(TReturn,TState)) -> Stream<TReturn> {
+        return self.collectLazy(initialState, f: f)
+    }
 
     /// <summary>
     ///     Transform a stream with a generalized state loop (a Mealy machine) using a lazily evaluated initial state.
@@ -532,14 +541,14 @@ public func Calm() -> Stream<T> {
     ///     <see cref="Snapshot{TReturn}(Cell{TReturn})" />.  Apart from this, the function must be pure.
     /// </param>
     /// <returns>A stream resulting from the transformation of this stream by the Mealy machine.</returns>
-    public func CollectLazy<TState, TReturn>(@autoclosure(escaping) initialState: () -> TState, f: (T,TState) -> (TReturn, TState)) -> Stream<TReturn> {
-        return Transaction.NoThrowRun({
+    public func collectLazy<TState, TReturn>(@autoclosure(escaping) initialState: () -> TState, f: (T,TState) -> (TReturn, TState)) -> Stream<TReturn> {
+        return Transaction.noThrowRun({
             let es = StreamLoop<TState>()
-            let s = es.HoldLazy(initialState)
-            let ebs = self.Snapshot(s, f: f)
-            let eb = ebs.Map{ $0.0}
-            let esOut = ebs.Map{ $0.1}
-            es.Loop(esOut)
+            let s = es.holdLazy(initialState)
+            let ebs = self.snapshot(s, f: f)
+            let eb = ebs.map{ $0.0}
+            let esOut = ebs.map{ $0.1}
+            es.loop(esOut)
             return eb
         })
     }
@@ -555,16 +564,16 @@ public func Calm() -> Stream<T> {
     ///     <see cref="Snapshot{TReturn}(Cell{TReturn})" />.  Apart from this, the function must be pure.
     /// </param>
     /// <returns>A cell holding the accumulated state of this stream.</returns>
-    public func Accum<TReturn>(initialState: TReturn, f: (T,TReturn) -> TReturn) -> AnyCell<TReturn> { return self.AccumLazy(initialState, f: f) }
+    public func accum<TReturn>(initialState: TReturn, f: (T,TReturn) -> TReturn) -> AnyCell<TReturn> { return self.accumLazy(initialState, f: f) }
 
-    public func AccumLazy<TReturn>(@autoclosure(escaping) initialState: () -> TReturn, f: (T,TReturn)->TReturn) -> AnyCell<TReturn> {
-        return Transaction.NoThrowRun(
+    public func accumLazy<TReturn>(@autoclosure(escaping) initialState: () -> TReturn, f: (T,TReturn)->TReturn) -> AnyCell<TReturn> {
+        return Transaction.noThrowRun(
         {
             let es = StreamLoop<TReturn>()
-            let s = es.HoldLazy(initialState)
-            let esOut = self.Snapshot(s, f: f)
-            es.Loop(esOut)
-            return esOut.HoldLazy(initialState)
+            let s = es.holdLazy(initialState)
+            let esOut = self.snapshot(s, f: f)
+            es.loop(esOut)
+            return esOut.holdLazy(initialState)
         })
     }
 
@@ -576,17 +585,19 @@ public func Calm() -> Stream<T> {
     ///     A stream that outputs only one value: the next event of the input stream starting from the transaction in
     ///     which this method was invoked.
     /// </returns>
-    public func Once() -> Stream<T>
+    public func once() -> Stream<T>
     {
         // This is a bit long-winded but it's efficient because it unregisters
         // the listener.
-        let out = Stream<T>(keepListenersAlive: self.KeepListenersAlive)
-        var l: Listener
+        let out = Stream<T>(keepListenersAlive: self.keepListenersAlive)
+        var ls = [Listener]()
 
-        l = self.Listen(out.node, action: { (trans, a) in
-            out.Send(trans, a: a)
-        })
-        return out.UnsafeAddCleanup(l)
+        ls.append(self.listen(out.node, action: { (trans, a) in
+            out.send(trans, a: a)
+            ls.first!.unlisten()
+        }))
+        
+        return out.unsafeAddCleanup(ls.first!)
     }
 
     // This is not thread-safe, so one of these two conditions must apply:
@@ -595,36 +606,36 @@ public func Calm() -> Stream<T> {
     // 2. The object on which this is being called was created has not yet
     //    been returned from the method where it was created, so it can't
     //    be shared between threads.
-    internal func UnsafeAddCleanup(cleanup: Listener) -> Stream<T>
+    internal func unsafeAddCleanup(cleanup: Listener) -> Stream<T>
     {
         self.disposables.append(cleanup)
         return self
     }
 
-    internal func UnsafeAddCleanup(ls: [Listener]) -> Stream<T>
+    internal func unsafeAddCleanup(ls: [Listener]) -> Stream<T>
     {
         self.disposables.appendContentsOf(ls)
         return self
     }
 
-    func Send(trans: Transaction, a: T)
+    func send(trans: Transaction, a: T)
     {
         if (self.firings.isEmpty)
         {
-            trans.Last({ self.firings.removeAll() })
+            trans.last({ self.firings.removeAll() })
         }
         self.firings.append(a)
 
-        let targets = Set<NodeTarget<T>>(self.node.GetListeners())
+        let targets = Set<NodeTarget<T>>(self.node.getListeners())
         for target in targets {
-            trans.Prioritized(target.node, action: { trans2 in
-                Transaction.InCallback += 1
-                defer { Transaction.InCallback -= 1 }
+            trans.prioritized(target.node, action: { trans2 in
+                Transaction.inCallback += 1
+                defer { Transaction.inCallback -= 1 }
                 // Don't allow transactions to interfere with Sodium internals.
                 // Dereference the weak reference
                 
-                    // If it hasn't been garbage collected, call it.
-                    target.Action(trans2, a)
+                // If it hasn't been garbage collected, call it.
+                target.action(trans2, a)
                 //}
                 //else
                 //{
@@ -655,9 +666,9 @@ class ListenerImplementation<T> : Listener
         super.init(unlisten: { })
     }
     
-    internal override func Unlisten()
+    internal override func unlisten()
     {
-        self.stream.node.Unlink(self.target)
+        self.stream.node.unlink(self.target)
     }
 }
 
@@ -666,15 +677,15 @@ private class KeepListenersAliveImplementation : IKeepListenersAlive
     private var listeners = Set<Listener>()
     private var childKeepListenersAliveList = Array<IKeepListenersAlive>()
     
-    func KeepListenerAlive(listener: Listener) {
+    func keepListenerAlive(listener: Listener) {
         self.listeners.insert(listener)
     }
     
-    func StopKeepingListenerAlive(listener: Listener) {
+    func stopKeepingListenerAlive(listener: Listener) {
         self.listeners.remove(listener)
     }
     
-    func Use(childKeepListenersAlive: IKeepListenersAlive) {
+    func use(childKeepListenersAlive: IKeepListenersAlive) {
         self.childKeepListenersAliveList.append(childKeepListenersAlive)
     }
 }

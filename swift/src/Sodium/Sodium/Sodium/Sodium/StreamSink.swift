@@ -38,15 +38,15 @@ public class StreamSink<T> : Stream<T>
     ///     define new primitives.
     /// </summary>
     /// <param name="a">The value to send.</param>
-    public func Send(a: T) {
-        Transaction.Run(
+    public func send(a: T) {
+        Transaction.run(
         {
             trans in
-            if (Transaction.InCallback > 0)
+            if (Transaction.inCallback > 0)
             {
                 fatalError("Send() may not be called inside a Sodium callback.")
             }
-            CoalesceHandler.Create(self.fold, out: self)(trans, a)
+            CoalesceHandler.create(self.fold, out: self)(trans, a)
         })
     }
 }

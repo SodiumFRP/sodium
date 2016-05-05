@@ -23,7 +23,7 @@ public final class Transaction
     private var postQueue = Dictionary<Int, OTV>()
 
     private let prioritizedQueue = PriorityQueue<Entry>(comparator: <)
-    static var InCallback = 0
+    static var inCallback = 0
     
     // True if we need to re-generate the priority queue.
     private var toRegen = false
@@ -35,7 +35,7 @@ public final class Transaction
     ///     Return the current transaction as an option type.
     /// </summary>
     /// <returns>The current transaction as an option type.</returns>
-    internal static func GetCurrentTransaction() -> Transaction?
+    internal static func getCurrentTransaction() -> Transaction?
     {
         objc_sync_enter(transactionLock)
         defer { objc_sync_exit(transactionLock) }
@@ -47,7 +47,7 @@ public final class Transaction
     ///     Return whether or not there is a current transaction.
     /// </summary>
     /// <returns><code>true</code> if there is a current transaction, <code>false</code> otherwise.</returns>
-    internal static func HasCurrentTransaction() -> Bool
+    internal static func hasCurrentTransaction() -> Bool
     {
         objc_sync_enter(transactionLock)
         defer { objc_sync_exit(transactionLock) }
@@ -63,38 +63,11 @@ public final class Transaction
     ///     In most cases this is not needed, because all primitives will create their own transaction automatically.
     ///     It is useful for running multiple reactive operations atomically.
     /// </remarks>
-    internal static func RunVoid(action: Action) {
-        /*
-        objc_sync_enter(transactionLock)
-        defer { objc_sync_exit(transactionLock) }
-
-        // If we are already inside a transaction (which must be on the same
-        // thread otherwise we wouldn't have acquired transactionLock), then
-        // keep using that same transaction.
-        let transWas = currentTransaction
-        do
-        {
-            StartIfNecessary()
-            try action()
-        }
-        catch
-        {
-            do {
-                if (transWas == nil)
-                {
-                    try currentTransaction?.Close()
-                }
-            }
-            catch
-            {
-                currentTransaction = transWas
-            }
-        }
- */
+    internal static func runVoid(action: Action) {
         go { try action() }
     }
 
-    public static func NoThrowRun<T>(f: () -> T) -> T {
+    public static func noThrowRun<T>(f: () -> T) -> T {
         return go { f() }!
     }
     
@@ -108,68 +81,13 @@ public final class Transaction
     ///     In most cases this is not needed, because all primitives will create their own transaction automatically.
     ///     It is useful for running multiple reactive operations atomically.
     /// </remarks>
-    public static func Run<T>(f: () throws -> T) -> T?
+    public static func run<T>(f: () throws -> T) -> T?
     {
-        /*
-        objc_sync_enter(transactionLock)
-        defer { objc_sync_exit(transactionLock) }
-        
-        // If we are already inside a transaction (which must be on the same
-        // thread otherwise we wouldn't have acquired transactionLock), then
-        // keep using that same transaction.
-        let transWas = currentTransaction
-        do
-        {
-            StartIfNecessary()
-            return try f()
-        }
-        catch
-        {
-            do
-            {
-                if (transWas == nil)
-                {
-                    try currentTransaction?.Close()
-                }
-            }
-            catch
-            {
-                currentTransaction = transWas
-            }
-        }
- */
         return go { try f() }
     }
 
-    internal static func Run(code: TV) {
-        /*
-        objc_sync_enter(transactionLock)
-        defer { objc_sync_exit(transactionLock) }
-        
-        // If we are already inside a transaction (which must be on the same
-        // thread otherwise we wouldn't have acquired transactionLock), then
-        // keep using that same transaction.
-        let transWas = currentTransaction
-        do
-        {
-            StartIfNecessary()
-            try code(currentTransaction)
-        }
-        catch
-        {
-            do
-            {
-                if (transWas == nil) {
-                    try currentTransaction?.Close()
-                }
-            }
-            catch
-            {
-                currentTransaction = transWas
-            }
-        }
- */
-        go( { try code(StartIfNecessary())})
+    internal static func run(code: TV) {
+        go( { try code(startIfNecessary())})
     }
 
     static func go<R>(code: () throws -> R) -> R? {
@@ -185,7 +103,7 @@ public final class Transaction
             do
             {
                 if (transWas == nil) {
-                    try currentTransaction?.Close()
+                    try currentTransaction?.close()
                 }
             }
             catch
@@ -196,7 +114,6 @@ public final class Transaction
 
         do
         {
-            StartIfNecessary()
             return try code()
         }
         catch
@@ -205,39 +122,12 @@ public final class Transaction
         return nil
     }
 
-    internal static func Apply<T>(code: (Transaction) -> T) -> T {
-        return go { code(StartIfNecessary()) }!
+    internal static func apply<T>(code: (Transaction) -> T) -> T {
+        return go { code(startIfNecessary()) }!
     }
 
-    internal static func Apply<T>(code: (Transaction) throws -> T) -> T? {
-        /*
-        objc_sync_enter(transactionLock)
-        defer { objc_sync_exit(transactionLock) }
-        // If we are already inside a transaction (which must be on the same
-        // thread otherwise we wouldn't have acquired transactionLock), then
-        // keep using that same transaction.
-        let transWas = currentTransaction
-        try
-        {
-            StartIfNecessary()
-            return code(currentTransaction)
-        }
-        finally
-        {
-            try
-            {
-                if (transWas == nil)
-                {
-                    currentTransaction?.Close()
-                }
-            }
-            finally
-            {
-                currentTransaction = transWas
-            }
-        }
- */
-        return go { try code(StartIfNecessary()) }
+    internal static func apply<T>(code: (Transaction) throws -> T) -> T? {
+        return go { try code(startIfNecessary()) }
     }
 
     /// <summary>
@@ -248,14 +138,14 @@ public final class Transaction
     ///     The action may start transactions itself, which will not cause the hooks to execute recursively.
     ///     The main use case of this is for the implementation of a time/alarm system.
     /// </remarks>
-    internal static func OnStart(action: Action) {
+    internal static func onStart(action: Action) {
         objc_sync_enter(transactionLock)
         defer { objc_sync_exit(transactionLock) }
 
         OnStartHooks.append(action)
     }
 
-    private static func StartIfNecessary() -> Transaction {
+    private static func startIfNecessary() -> Transaction {
         if (currentTransaction == nil)
         {
             if (!runningOnStartHooks)
@@ -279,7 +169,7 @@ public final class Transaction
         return currentTransaction!
     }
 
-    internal func Prioritized(rank: INode, action: TV) {
+    internal func prioritized(rank: INode, action: TV) {
         let e = Entry(rank: rank, action: action)
         self.prioritizedQueue.push(e)
         self.entries.insert(e)
@@ -289,7 +179,7 @@ public final class Transaction
     ///     Add an action to run after all prioritized actions.
     /// </summary>
     /// <param name="action">The action to run after all prioritized actions.</param>
-    internal func Last(action: Action) {
+    internal func last(action: Action) {
         self.lastQueue.append(action)
     }
 
@@ -298,7 +188,7 @@ public final class Transaction
     /// </summary>
     /// <param name="index">The order index in which to run the action.</param>
     /// <param name="action">The action to run after all last actions.</param>
-    internal func Post(index: Int, action: OTV) {
+    internal func post(index: Int, action: OTV) {
         // If an entry exists already, combine the old one with the new one.
         var new: OTV
         if let existing = self.postQueue[index] {
@@ -322,19 +212,19 @@ public final class Transaction
     ///     The action to run after the current transaction is closed
     ///     or immediately if there is no current transaction.
     /// </param>
-    internal static func Post(action: OTV) {
+    internal static func post(action: OTV) {
         // -1 will mean it runs before anything split/deferred, and will run
         // outside a transaction context.
-        Run { trans in trans.Post(-1, action: action) }
+        self.run { trans in trans.post(-1, action: action) }
     }
 
-    internal func SetNeedsRegenerating() {
+    internal func setNeedsRegenerating() {
         self.toRegen = true
     }
 
     // If the priority queue has entries in it when we modify any of the nodes'
     // ranks, then we need to re-generate it to make sure it's up-to-date.
-    private func CheckRegen() {
+    private func checkRegen() {
         if (self.toRegen)
         {
             self.toRegen = false
@@ -345,10 +235,10 @@ public final class Transaction
         }
     }
 
-    internal func Close() throws {
+    internal func close() throws {
         while (true)
         {
-            self.CheckRegen()
+            self.checkRegen()
 
             if self.prioritizedQueue.isEmpty {
                 break
@@ -383,7 +273,7 @@ public final class Transaction
                     }
                     catch
                     {
-                        try transaction.Close()
+                        try transaction.close()
                     }
                 }
             }

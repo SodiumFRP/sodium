@@ -63,7 +63,7 @@ public class CellBase<T> : CellType {
     /// <typeparam name="T">The type of the value of the cell.</typeparam>
     /// <param name="value">The value of the cell.</param>
     /// <returns>A cell with a constant value.</returns>
-    public static func Constant<T>(value: T) -> Cell<T> {
+    public static func constant<T>(value: T) -> Cell<T> {
         return Cell<T>(value: value)
     }
     
@@ -73,9 +73,9 @@ public class CellBase<T> : CellType {
     /// <typeparam name="T">The type of the value of the cell.</typeparam>
     /// <param name="value">The lazily computed value of the cell.</param>
     /// <returns>A cell with a lazily computed constant value.</returns>
-    public static func ConstantLazy<TResult>(@autoclosure(escaping) value: () -> TResult) -> AnyCell<TResult>
+    public static func constantLazy<TResult>(@autoclosure(escaping) value: () -> TResult) -> AnyCell<TResult>
     {
-        return Stream<TResult>.Never().HoldLazy(value)
+        return Stream<TResult>.never().holdLazy(value)
     }
 
     /// <summary>
@@ -94,7 +94,7 @@ public class CellBase<T> : CellType {
         self._stream = stream
     }
 
-    internal var KeepListenersAlive: IKeepListenersAlive { return self._stream.KeepListenersAlive }
+    internal var keepListenersAlive: IKeepListenersAlive { return self._stream.keepListenersAlive }
 
     var ValueProperty: T
     {
@@ -143,9 +143,8 @@ public class CellBase<T> : CellType {
     ///         current value and any updates without risk of missing any in between.
     ///     </para>
     /// </remarks>
-    //public func Sample() -> V { return  Transaction.Apply{ trans in self.SampleNoTransaction()} }
     public func sample() -> T {
-        return  Transaction.Apply{ trans in self.sampleNoTransaction() }
+        return  Transaction.apply{ trans in self.sampleNoTransaction() }
     }
     public func stream() -> Stream<T> {
         return self._stream
@@ -153,7 +152,7 @@ public class CellBase<T> : CellType {
 
     public func sampleLazy(trans: Transaction) -> Lazy<T> {
         let s = LazySample(cell: self)
-        trans.Last(
+        trans.last(
             {
                 if case .Updated(let t) = self.value {
                     s.Value = t
@@ -175,8 +174,6 @@ public class CellBase<T> : CellType {
     ///     when the cell loop has not yet been looped.  It should be used in any code that is general
     ///     enough that it may be passed a <see cref="CellLoop{T}" />.  See <see cref="Stream{T}.HoldLazy(Lazy{T})" />.
     /// </remarks>
-    //public func SampleLazy() -> () -> T { return { Transaction.Apply(self.SampleLazy) } }
-    
     public func sampleNoTransaction() -> T
     {
         return self.ValueProperty
@@ -185,10 +182,10 @@ public class CellBase<T> : CellType {
     internal func updates(trans: Transaction?) -> Stream<T> { return self.stream() }
 
     public func value(trans1: Transaction?) -> Stream<T> {
-        let spark = Stream<Unit>(keepListenersAlive: self._stream.KeepListenersAlive)
-        trans1!.Prioritized(spark.node, action: { trans2 in spark.Send(trans2, a: Unit.value)})
-        let initial = spark.Snapshot(self)
-        return initial.Merge(self.updates(trans1), f: { (left, right) in right })
+        let spark = Stream<Unit>(keepListenersAlive: self._stream.keepListenersAlive)
+        trans1!.prioritized(spark.node, action: { trans2 in spark.send(trans2, a: Unit.value)})
+        let initial = spark.snapshot(self)
+        return initial.merge(self.updates(trans1), f: { (left, right) in right })
     }
 
     /// <summary>
@@ -210,28 +207,10 @@ public class CellBase<T> : CellType {
     ///         disposed or garbage collected or the listener itself is garbage collected.
     ///     </para>
     /// </remarks>
-    public func ListenWeak(handler: (T) -> Void) -> Listener { return Transaction.Apply{ trans in self.value(trans).ListenWeak(handler)} }
+    public func listenWeak(handler: (T) -> Void) -> Listener {
+        return Transaction.apply { trans in self.value(trans).listenWeak(handler)}
+    }
 
-    /// <summary>
-    ///     Listen for updates to the value of this cell.  The returned <see cref="IListener" /> may be
-    ///     disposed to stop listening.  This is an OPERATIONAL mechanism for interfacing between
-    ///     the world of I/O and FRP.
-    /// </summary>
-    /// <param name="handler">The handler to execute for each value.</param>
-    /// <returns>An <see cref="IListener" /> which may be disposed to stop listening.</returns>
-    /// <remarks>
-    ///     <para>
-    ///         No assumptions should be made about what thread the handler is called on and it should not block.
-    ///         Neither <see cref="StreamSink{T}.Send" /> nor <see cref="CellSink{T}.Send" /> may be called from the
-    ///         handler.
-    ///         They will throw an exception because this method is not meant to be used to create new primitives.
-    ///     </para>
-    ///     <para>
-    ///         If the <see cref="IListener" /> is not disposed, it will continue to listen until this cell is either
-    ///         disposed or garbage collected.
-    ///     </para>
-    /// </remarks>
-    public func Listen(handler: (T) -> Void) -> Listener { return Transaction.Apply{trans in self.value(trans).Listen(handler)}! }
 
 
 
@@ -240,7 +219,7 @@ public class CellBase<T> : CellType {
     ///     Return a cell whose stream only receives events which have a different value than the previous event.
     /// </summary>
     /// <returns>A cell whose stream only receives events which have a different value than the previous event.</returns>
-    public func Calm() -> Cell<T>
+    public func calm() -> Cell<T>
     {
         return self.Calm(EqualityComparer<T>.Default)
     }
@@ -250,7 +229,7 @@ public class CellBase<T> : CellType {
     /// </summary>
     /// <param name="comparer">The equality comparer to use to determine if two items are equal.</param>
     /// <returns>A cell whose stream only receives events which have a different value than the previous event.</returns>
-    public func Calm(comparer: IEqualityComparer<T>) -> Cell<T>
+    public func calm(comparer: IEqualityComparer<T>) -> Cell<T>
     {
         let initA = self.SampleLazy()
         let mInitA = initA.Map(Maybe.Just)
@@ -276,8 +255,8 @@ public class Cell<T>: CellBase<T> {
     internal override init(value: T) {
         super.init (value: value)
         
-        self.cleanup = Transaction.Apply{ trans1 in
-            self._stream.Listen(Node<T>.Null, trans: trans1, action: { (trans2, a) in
+        self.cleanup = Transaction.apply{ trans1 in
+            self._stream.listen(Node<T>.Null, trans: trans1, action: { (trans2, a) in
                 self.value = .Updated(a)
                 }, suppressEarlierFirings: false)
         }
@@ -286,15 +265,15 @@ public class Cell<T>: CellBase<T> {
     internal override init(stream: Stream<T>, initialValue: T) {
 
         super.init(stream: stream, initialValue: initialValue)
-        self.cleanup = Transaction.Apply{ trans1 in
-            self._stream.Listen(Node<T>.Null, trans: trans1, action: { (trans2, a) in
+        self.cleanup = Transaction.apply{ trans1 in
+            self._stream.listen(Node<T>.Null, trans: trans1, action: { (trans2, a) in
                 self.value = .Updated(a)
                 }, suppressEarlierFirings: false)
         }
     }
     
     deinit {
-        self.cleanup.Unlisten()
+        self.cleanup.unlisten()
     }
 }
 
@@ -314,7 +293,7 @@ extension CellType {
     /// <param name="f">The binary function to lift into the cells.</param>
     /// <param name="b2">The second cell.</param>
     /// <returns>A cell containing values resulting from the binary function applied to the input cells' values.</returns>
-    public func lift<T2, TResult>(b2: Cell<T2>, f: (Element,T2) -> TResult) -> AnyCell<TResult> {
+    public func lift<C:CellType, TResult>(b2: C, f: (Element,C.Element) -> TResult) -> AnyCell<TResult> {
         let ffa = { a in { b in f(a,b) }}
         return b2.apply(self.map(ffa))
     }
@@ -369,7 +348,7 @@ extension CellType {
     /// <param name="b4">The fourth cell.</param>
     /// <param name="b5">The fifth cell.</param>
     /// <returns>A cell containing values resulting from the 5-argument function applied to the input cells' values.</returns>
-    public func Lift<T2, T3, T4, T5, TResult>(b2: Cell<T2>, b3: Cell<T3>, b4: Cell<T4>, b5: Cell<T5>, f: (Element,T2,T3,T4,T5)->TResult) -> AnyCell<TResult>
+    public func lift<T2, T3, T4, T5, TResult>(b2: Cell<T2>, b3: Cell<T3>, b4: Cell<T4>, b5: Cell<T5>, f: (Element,T2,T3,T4,T5)->TResult) -> AnyCell<TResult>
     {
         let ffa = { a in { b in { c in { d in { e in f(a,b,c,d,e) }}}}}
         return b5.apply(b4.apply(b3.apply(b2.apply(self.map(ffa)))))
@@ -392,7 +371,7 @@ extension CellType {
     /// <param name="b5">The fifth cell.</param>
     /// <param name="b6">The sixth cell.</param>
     /// <returns>A cell containing values resulting from the 6-argument function applied to the input cells' values.</returns>
-    public func Lift<T2, T3, T4, T5, T6, TResult>(b2: Cell<T2>, b3: Cell<T3>, b4: Cell<T4>, b5: Cell<T5>, b6: Cell<T6>, f: (Element,T2,T3,T4,T5,T6)->TResult) -> AnyCell<TResult>
+    public func lift<T2, T3, T4, T5, T6, TResult>(b2: Cell<T2>, b3: Cell<T3>, b4: Cell<T4>, b5: Cell<T5>, b6: Cell<T6>, f: (Element,T2,T3,T4,T5,T6)->TResult) -> AnyCell<TResult>
     {
         let ffa = { a in { b in { c in { d in { e in { _f in f(a,b,c,d,e,_f) }}}}}}
         return b6.apply(b5.apply(b4.apply(b3.apply(b2.apply(self.map(ffa))))))
@@ -407,34 +386,60 @@ extension CellType {
     ///     A cell whose value is the result of applying the current function in cell <paramref name="bf" /> to this
     ///     cell's current value.
     /// </returns>
-    public func apply<TResult>(bf: AnyCell<Element->TResult>) -> AnyCell<TResult> {
-        return Transaction.Apply{ trans0 in
-            let out = Stream<TResult>(keepListenersAlive: self.stream().KeepListenersAlive)
+    //public func apply<TResult, C:CellType where C.Element == Element->TResult>(bf: C) -> AnyCell<TResult> {
+   // }
+    
+    public func apply<TResult, C:CellType where C.Element == Element->TResult>(bf: C) -> AnyCell<TResult> {
+        return Transaction.apply{ trans0 in
+            let out = Stream<TResult>(keepListenersAlive: self.stream().keepListenersAlive)
             
             let outTarget = out.node
             let inTarget = Node<TResult>(rank: 0)
-            let nodeTarget = inTarget.Link({ (t, v) in }, target: outTarget).1
+            let nodeTarget = inTarget.link({ (t, v) in }, target: outTarget).1
             
             var f: ((Element)->TResult)?
             var a: Element?
             
-            let h = { (trans1: Transaction) -> Void in trans1.Prioritized(out.node as INode, action: { trans2 throws -> Void in out.Send(trans2, a: f!(a!))} )}
+            let h = { (trans1: Transaction) -> Void in trans1.prioritized(out.node as INode, action: { trans2 throws -> Void in out.send(trans2, a: f!(a!))} )}
             
-            let l1 = bf.value(trans0).Listen(inTarget, action: {(trans1, ff) in
+            let l1 = bf.value(trans0).listen(inTarget, action: {(trans1, ff) in
                 f = ff
                 if a != nil {
                     h(trans1)
                 }
             })
-            let l2 = self.value(trans0).Listen(inTarget, action: { (trans1, aa) in
+            let l2 = self.value(trans0).listen(inTarget, action: { (trans1, aa) in
                 a = aa
                 if f != nil {
                     h(trans1)
                 }
             })
-            return out.LastFiringOnly(trans0).UnsafeAddCleanup([l1,l2,
-                Listener(unlisten: { inTarget.Unlink(nodeTarget) })]).HoldLazy({ bf.sampleNoTransaction()(self.sampleNoTransaction()) })
+            return out.lastFiringOnly(trans0).unsafeAddCleanup([l1,l2,
+                Listener(unlisten: { inTarget.unlink(nodeTarget) })]).holdLazy({ bf.sampleNoTransaction()(self.sampleNoTransaction()) })
         }
+    }
+
+    /// <summary>
+    ///     Listen for updates to the value of this cell.  The returned <see cref="IListener" /> may be
+    ///     disposed to stop listening.  This is an OPERATIONAL mechanism for interfacing between
+    ///     the world of I/O and FRP.
+    /// </summary>
+    /// <param name="handler">The handler to execute for each value.</param>
+    /// <returns>An <see cref="IListener" /> which may be disposed to stop listening.</returns>
+    /// <remarks>
+    ///     <para>
+    ///         No assumptions should be made about what thread the handler is called on and it should not block.
+    ///         Neither <see cref="StreamSink{T}.Send" /> nor <see cref="CellSink{T}.Send" /> may be called from the
+    ///         handler.
+    ///         They will throw an exception because this method is not meant to be used to create new primitives.
+    ///     </para>
+    ///     <para>
+    ///         If the <see cref="IListener" /> is not disposed, it will continue to listen until this cell is either
+    ///         disposed or garbage collected.
+    ///     </para>
+    /// </remarks>
+    public func listen(handler: (Element) -> Void) -> Listener {
+        return Transaction.apply{trans in self.value(trans).listen(handler)}!
     }
 
     /// <summary>
@@ -448,8 +453,8 @@ extension CellType {
     /// <returns>An cell which fires values transformed by <paramref name="f" /> for each value fired by this cell.</returns>
     public func map<TResult>(f: (Element) -> TResult) -> AnyCell<TResult>
     {
-        let foo = Transaction.Apply{ (trans: Transaction) in
-            self.stream().Map(f).HoldLazy(trans, lazy: self.sampleLazy(trans).map(f)) }
+        let foo = Transaction.apply{ (trans: Transaction) in
+            self.stream().map(f).holdLazy(trans, lazy: self.sampleLazy(trans).map(f)) }
         
         return foo
     }

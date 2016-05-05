@@ -28,7 +28,7 @@ public class CellLoop<T> : LazyCell<T>
     ///     <see cref="Transaction.RunVoid(Action)" />.
     /// </summary>
     /// <param name="c">The cell that was forward referenced.</param>
-    public func Loop(c: Cell<T>) {
+    public func loop(c: Cell<T>) {
         Transaction.Apply(
         { trans -> Unit in
             self.streamLoop.Loop(c.stream())
