@@ -1,0 +1,138 @@
+internal class INode : Comparable, Hashable
+{
+    static let Null = INode(rank: Int64.max)
+    
+    // Fine-grained lock that protects listeners and nodes.
+    internal static let ListenersLock = NSObject()
+
+    private var _rank: Int64
+
+    internal init(rank: Int64) {
+        self._rank = rank
+    }
+
+    var hashValue: Int { return 1 }
+    
+    internal var rank: Int64 { return self._rank }
+
+    internal static func EnsureBiggerThan(node: INode, limit: Int64, inout visited: Set<INode>) -> Bool {
+        if (node.rank > limit || visited.contains(node))
+        {
+            return false
+        }
+
+        visited.insert(node)
+        node._rank = limit + 1
+        for n in node.GetListenerNodesUnsafe()
+        {
+            EnsureBiggerThan(n, limit: node.rank, visited: &visited)
+        }
+
+        return true
+    }
+
+    func GetListenerNodesUnsafe() -> [INode] { return [] }
+
+    class Target
+    {
+        let node: INode
+
+        init(node: INode)
+        {
+            self.node = node
+        }
+    }
+}
+
+func ==(lhs: INode, rhs: INode) -> Bool {
+    return lhs.rank == rhs.rank
+}
+func <(lhs: INode, rhs: INode) -> Bool {
+    return lhs.rank < rhs.rank
+}
+func <=(lhs: INode, rhs: INode) -> Bool {
+    return lhs.rank <= rhs.rank
+}
+func >=(lhs: INode, rhs: INode) -> Bool {
+    return lhs.rank >= rhs.rank
+}
+func >(lhs: INode, rhs: INode) -> Bool {
+    return lhs.rank > rhs.rank
+}
+
+internal class Node<T> : INode
+{
+    private var listeners = Array<NodeTarget<T>>()
+
+    internal override init(rank: Int64)
+    {
+        super.init(rank: rank)
+    }
+
+    /// <summary>
+    ///     Link an action and a target node to this node.
+    /// </summary>
+    /// <param name="action">The action to link to this node.</param>
+    /// <param name="target">The target node to link to this node.</param>
+    /// <returns>
+    ///     A tuple containing whether or not changes were made to the node rank
+    ///     and the <see cref="Target" /> object created for this link.
+    /// </returns>
+    internal func Link(action: (Transaction, T) -> Void, target: INode) -> (Bool, NodeTarget<T>) {
+        objc_sync_enter(INode.ListenersLock)
+        defer { objc_sync_exit(INode.ListenersLock) }
+
+        var v = Set<INode>()
+        let changed = INode.EnsureBiggerThan(target, limit: self.rank, visited: &v)
+        let t = NodeTarget(action: action, node: target)
+        self.listeners.append(t)
+        return (changed, t)
+    }
+
+    internal func Unlink(target: NodeTarget<T>)
+    {
+        self.RemoveListener(target)
+    }
+
+
+    internal func GetListeners() -> [NodeTarget<T>]
+    {
+        objc_sync_enter(INode.ListenersLock)
+        defer { objc_sync_exit(INode.ListenersLock) }
+        
+        return self.listeners
+    }
+
+    internal func RemoveListener(target: NodeTarget<T>) {
+        objc_sync_enter(INode.ListenersLock)
+        defer { objc_sync_exit(INode.ListenersLock) }
+
+        self.listeners.remove(target)
+    }
+
+    override func GetListenerNodesUnsafe() -> [INode] {
+        objc_sync_enter(INode.ListenersLock)
+        defer { objc_sync_exit(INode.ListenersLock) }
+        
+        return self.listeners.map{ $0.node }
+    }
+    
+    override var hashValue: Int { return 3 }
+}
+
+class NodeTarget<T> : INode.Target, Hashable
+{
+    internal var Action: (Transaction, T) -> Void
+    
+    internal init(action: (Transaction, T)->Void, node: INode)
+    {
+        self.Action = action
+        super.init(node: node)
+    }
+    
+    var hashValue: Int { return 9 }
+}
+
+func ==<T>(lhs: NodeTarget<T>, rhs: NodeTarget<T>) -> Bool {
+    return true
+}

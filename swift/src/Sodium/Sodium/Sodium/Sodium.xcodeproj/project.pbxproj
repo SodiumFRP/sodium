@@ -1,0 +1,520 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 46;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		055B91CF1CD13D940048BC24 /* Sodium.h in Headers */ = {isa = PBXBuildFile; fileRef = 055B91CE1CD13D940048BC24 /* Sodium.h */; settings = {ATTRIBUTES = (Public, ); }; };
+		055B91D61CD13D950048BC24 /* Sodium.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 055B91CB1CD13D940048BC24 /* Sodium.framework */; };
+		055B91DB1CD13D950048BC24 /* SodiumTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B91DA1CD13D950048BC24 /* SodiumTests.swift */; };
+		055B91E61CD13DD10048BC24 /* Cell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B91E51CD13DD10048BC24 /* Cell.swift */; };
+		055B91FA1CD140150048BC24 /* CellSink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B91E91CD140150048BC24 /* CellSink.swift */; };
+		055B91FB1CD140150048BC24 /* CoalesceHandler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B91EA1CD140150048BC24 /* CoalesceHandler.swift */; };
+		055B91FC1CD140150048BC24 /* CompositeListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B91EB1CD140150048BC24 /* CompositeListener.swift */; };
+		055B91FD1CD140150048BC24 /* IKeepListenersAlive.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B91EC1CD140150048BC24 /* IKeepListenersAlive.swift */; };
+		055B91FE1CD140150048BC24 /* IListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B91ED1CD140150048BC24 /* IListener.swift */; };
+		055B91FF1CD140150048BC24 /* IMaybe.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B91EE1CD140150048BC24 /* IMaybe.swift */; };
+		055B92001CD140150048BC24 /* ImmutableCompositeListener.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B91EF1CD140150048BC24 /* ImmutableCompositeListener.swift */; };
+		055B92011CD140150048BC24 /* LazyCell.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B91F01CD140150048BC24 /* LazyCell.swift */; };
+		055B92031CD140150048BC24 /* Listener.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B91F21CD140150048BC24 /* Listener.swift */; };
+		055B92071CD140150048BC24 /* Node.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B91F61CD140150048BC24 /* Node.swift */; };
+		055B92081CD140150048BC24 /* Operational.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B91F71CD140150048BC24 /* Operational.swift */; };
+		055B920D1CD140280048BC24 /* Stream.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B92091CD140280048BC24 /* Stream.swift */; };
+		055B920F1CD140280048BC24 /* StreamLoop.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B920B1CD140280048BC24 /* StreamLoop.swift */; };
+		055B92101CD140280048BC24 /* StreamSink.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B920C1CD140280048BC24 /* StreamSink.swift */; };
+		055B92131CD140360048BC24 /* Transaction.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B92111CD140360048BC24 /* Transaction.swift */; };
+		055B92141CD140360048BC24 /* Unit.swift in Sources */ = {isa = PBXBuildFile; fileRef = 055B92121CD140360048BC24 /* Unit.swift */; };
+		057C5C721CD951590013C3E3 /* PriorityQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 057C5C711CD951590013C3E3 /* PriorityQueue.swift */; };
+		057C5C741CDA76DC0013C3E3 /* Lazy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 057C5C731CDA76DC0013C3E3 /* Lazy.swift */; };
+		05B469B51CD84FB400166473 /* Array-Extension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05B469B41CD84FB400166473 /* Array-Extension.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		055B91D71CD13D950048BC24 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 055B91C21CD13D940048BC24 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 055B91CA1CD13D940048BC24;
+			remoteInfo = Sodium;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		05226ABF1CD1AFAD00C90522 /* TimerSystemImpl.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TimerSystemImpl.swift; sourceTree = "<group>"; };
+		05226AC01CD1AFAD00C90522 /* TimerSystem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = TimerSystem.swift; sourceTree = "<group>"; };
+		05226AC11CD1AFAD00C90522 /* Timer.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Timer.swift; sourceTree = "<group>"; };
+		05226AC21CD1AFAD00C90522 /* SecondsTimerSystemImpl.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecondsTimerSystemImpl.swift; sourceTree = "<group>"; };
+		05226AC31CD1AFAD00C90522 /* SecondsTimerSystem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = SecondsTimerSystem.swift; sourceTree = "<group>"; };
+		05226AC41CD1AFAD00C90522 /* MillisecondsTimerSystemImpl.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MillisecondsTimerSystemImpl.swift; sourceTree = "<group>"; };
+		05226AC51CD1AFAD00C90522 /* MillisecondsTimerSystem.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MillisecondsTimerSystem.swift; sourceTree = "<group>"; };
+		055B91CB1CD13D940048BC24 /* Sodium.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = Sodium.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		055B91CE1CD13D940048BC24 /* Sodium.h */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.h; path = Sodium.h; sourceTree = "<group>"; };
+		055B91D01CD13D950048BC24 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		055B91D51CD13D950048BC24 /* SodiumTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SodiumTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		055B91DA1CD13D950048BC24 /* SodiumTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SodiumTests.swift; sourceTree = "<group>"; };
+		055B91DC1CD13D950048BC24 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		055B91E51CD13DD10048BC24 /* Cell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Cell.swift; sourceTree = "<group>"; };
+		055B91E71CD140150048BC24 /* CellExtensionMethods.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CellExtensionMethods.swift; sourceTree = "<group>"; };
+		055B91E81CD140150048BC24 /* CellLoop.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CellLoop.swift; sourceTree = "<group>"; };
+		055B91E91CD140150048BC24 /* CellSink.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CellSink.swift; sourceTree = "<group>"; };
+		055B91EA1CD140150048BC24 /* CoalesceHandler.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CoalesceHandler.swift; sourceTree = "<group>"; };
+		055B91EB1CD140150048BC24 /* CompositeListener.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = CompositeListener.swift; sourceTree = "<group>"; };
+		055B91EC1CD140150048BC24 /* IKeepListenersAlive.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IKeepListenersAlive.swift; sourceTree = "<group>"; };
+		055B91ED1CD140150048BC24 /* IListener.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IListener.swift; sourceTree = "<group>"; };
+		055B91EE1CD140150048BC24 /* IMaybe.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = IMaybe.swift; sourceTree = "<group>"; };
+		055B91EF1CD140150048BC24 /* ImmutableCompositeListener.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = ImmutableCompositeListener.swift; sourceTree = "<group>"; };
+		055B91F01CD140150048BC24 /* LazyCell.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LazyCell.swift; sourceTree = "<group>"; };
+		055B91F11CD140150048BC24 /* LazyExtensionMethods.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = LazyExtensionMethods.swift; sourceTree = "<group>"; };
+		055B91F21CD140150048BC24 /* Listener.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Listener.swift; sourceTree = "<group>"; };
+		055B91F31CD140150048BC24 /* Maybe.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Maybe.swift; sourceTree = "<group>"; };
+		055B91F41CD140150048BC24 /* MaybeMonad.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MaybeMonad.swift; sourceTree = "<group>"; };
+		055B91F51CD140150048BC24 /* MutableMaybeValue.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = MutableMaybeValue.swift; sourceTree = "<group>"; };
+		055B91F61CD140150048BC24 /* Node.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Node.swift; sourceTree = "<group>"; };
+		055B91F71CD140150048BC24 /* Operational.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Operational.swift; sourceTree = "<group>"; };
+		055B92091CD140280048BC24 /* Stream.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Stream.swift; sourceTree = "<group>"; };
+		055B920A1CD140280048BC24 /* StreamExtensionMethods.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StreamExtensionMethods.swift; sourceTree = "<group>"; };
+		055B920B1CD140280048BC24 /* StreamLoop.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StreamLoop.swift; sourceTree = "<group>"; };
+		055B920C1CD140280048BC24 /* StreamSink.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StreamSink.swift; sourceTree = "<group>"; };
+		055B92111CD140360048BC24 /* Transaction.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Transaction.swift; sourceTree = "<group>"; };
+		055B92121CD140360048BC24 /* Unit.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Unit.swift; sourceTree = "<group>"; };
+		057C5C711CD951590013C3E3 /* PriorityQueue.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PriorityQueue.swift; sourceTree = "<group>"; };
+		057C5C731CDA76DC0013C3E3 /* Lazy.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Lazy.swift; sourceTree = "<group>"; };
+		05B469B41CD84FB400166473 /* Array-Extension.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "Array-Extension.swift"; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		055B91C71CD13D940048BC24 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		055B91D21CD13D950048BC24 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				055B91D61CD13D950048BC24 /* Sodium.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		055B91C11CD13D940048BC24 = {
+			isa = PBXGroup;
+			children = (
+				055B91CD1CD13D940048BC24 /* Sodium */,
+				055B91D91CD13D950048BC24 /* SodiumTests */,
+				055B91CC1CD13D940048BC24 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		055B91CC1CD13D940048BC24 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				055B91CB1CD13D940048BC24 /* Sodium.framework */,
+				055B91D51CD13D950048BC24 /* SodiumTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		055B91CD1CD13D940048BC24 /* Sodium */ = {
+			isa = PBXGroup;
+			children = (
+				057C5C701CD9514A0013C3E3 /* Common */,
+				055B91CE1CD13D940048BC24 /* Sodium.h */,
+				055B91E51CD13DD10048BC24 /* Cell.swift */,
+				055B91E71CD140150048BC24 /* CellExtensionMethods.swift */,
+				055B91E81CD140150048BC24 /* CellLoop.swift */,
+				055B91E91CD140150048BC24 /* CellSink.swift */,
+				055B91EA1CD140150048BC24 /* CoalesceHandler.swift */,
+				055B91EB1CD140150048BC24 /* CompositeListener.swift */,
+				055B91EC1CD140150048BC24 /* IKeepListenersAlive.swift */,
+				055B91ED1CD140150048BC24 /* IListener.swift */,
+				055B91EE1CD140150048BC24 /* IMaybe.swift */,
+				055B91EF1CD140150048BC24 /* ImmutableCompositeListener.swift */,
+				055B91F01CD140150048BC24 /* LazyCell.swift */,
+				055B91F11CD140150048BC24 /* LazyExtensionMethods.swift */,
+				055B91F21CD140150048BC24 /* Listener.swift */,
+				055B91F31CD140150048BC24 /* Maybe.swift */,
+				055B91F41CD140150048BC24 /* MaybeMonad.swift */,
+				055B91F51CD140150048BC24 /* MutableMaybeValue.swift */,
+				055B91F61CD140150048BC24 /* Node.swift */,
+				055B91F71CD140150048BC24 /* Operational.swift */,
+				055B92091CD140280048BC24 /* Stream.swift */,
+				055B920A1CD140280048BC24 /* StreamExtensionMethods.swift */,
+				055B920B1CD140280048BC24 /* StreamLoop.swift */,
+				055B920C1CD140280048BC24 /* StreamSink.swift */,
+				055B92111CD140360048BC24 /* Transaction.swift */,
+				055B92151CD1403F0048BC24 /* Time */,
+				055B92121CD140360048BC24 /* Unit.swift */,
+				055B91D01CD13D950048BC24 /* Info.plist */,
+				057C5C731CDA76DC0013C3E3 /* Lazy.swift */,
+			);
+			path = Sodium;
+			sourceTree = "<group>";
+		};
+		055B91D91CD13D950048BC24 /* SodiumTests */ = {
+			isa = PBXGroup;
+			children = (
+				055B91DA1CD13D950048BC24 /* SodiumTests.swift */,
+				055B91DC1CD13D950048BC24 /* Info.plist */,
+			);
+			path = SodiumTests;
+			sourceTree = "<group>";
+		};
+		055B92151CD1403F0048BC24 /* Time */ = {
+			isa = PBXGroup;
+			children = (
+				05226ABF1CD1AFAD00C90522 /* TimerSystemImpl.swift */,
+				05226AC01CD1AFAD00C90522 /* TimerSystem.swift */,
+				05226AC11CD1AFAD00C90522 /* Timer.swift */,
+				05226AC21CD1AFAD00C90522 /* SecondsTimerSystemImpl.swift */,
+				05226AC31CD1AFAD00C90522 /* SecondsTimerSystem.swift */,
+				05226AC41CD1AFAD00C90522 /* MillisecondsTimerSystemImpl.swift */,
+				05226AC51CD1AFAD00C90522 /* MillisecondsTimerSystem.swift */,
+			);
+			path = Time;
+			sourceTree = "<group>";
+		};
+		057C5C701CD9514A0013C3E3 /* Common */ = {
+			isa = PBXGroup;
+			children = (
+				05B469B41CD84FB400166473 /* Array-Extension.swift */,
+				057C5C711CD951590013C3E3 /* PriorityQueue.swift */,
+			);
+			name = Common;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		055B91C81CD13D940048BC24 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				055B91CF1CD13D940048BC24 /* Sodium.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		055B91CA1CD13D940048BC24 /* Sodium */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 055B91DF1CD13D950048BC24 /* Build configuration list for PBXNativeTarget "Sodium" */;
+			buildPhases = (
+				055B91C61CD13D940048BC24 /* Sources */,
+				055B91C71CD13D940048BC24 /* Frameworks */,
+				055B91C81CD13D940048BC24 /* Headers */,
+				055B91C91CD13D940048BC24 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = Sodium;
+			productName = Sodium;
+			productReference = 055B91CB1CD13D940048BC24 /* Sodium.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+		055B91D41CD13D950048BC24 /* SodiumTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 055B91E21CD13D950048BC24 /* Build configuration list for PBXNativeTarget "SodiumTests" */;
+			buildPhases = (
+				055B91D11CD13D950048BC24 /* Sources */,
+				055B91D21CD13D950048BC24 /* Frameworks */,
+				055B91D31CD13D950048BC24 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				055B91D81CD13D950048BC24 /* PBXTargetDependency */,
+			);
+			name = SodiumTests;
+			productName = SodiumTests;
+			productReference = 055B91D51CD13D950048BC24 /* SodiumTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		055B91C21CD13D940048BC24 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				LastSwiftUpdateCheck = 0720;
+				LastUpgradeCheck = 0720;
+				ORGANIZATIONNAME = "Whirlygig Ventures";
+				TargetAttributes = {
+					055B91CA1CD13D940048BC24 = {
+						CreatedOnToolsVersion = 7.2.1;
+					};
+					055B91D41CD13D950048BC24 = {
+						CreatedOnToolsVersion = 7.2.1;
+					};
+				};
+			};
+			buildConfigurationList = 055B91C51CD13D940048BC24 /* Build configuration list for PBXProject "Sodium" */;
+			compatibilityVersion = "Xcode 3.2";
+			developmentRegion = English;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+			);
+			mainGroup = 055B91C11CD13D940048BC24;
+			productRefGroup = 055B91CC1CD13D940048BC24 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				055B91CA1CD13D940048BC24 /* Sodium */,
+				055B91D41CD13D950048BC24 /* SodiumTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		055B91C91CD13D940048BC24 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		055B91D31CD13D950048BC24 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		055B91C61CD13D940048BC24 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				055B92081CD140150048BC24 /* Operational.swift in Sources */,
+				055B91FD1CD140150048BC24 /* IKeepListenersAlive.swift in Sources */,
+				055B91FE1CD140150048BC24 /* IListener.swift in Sources */,
+				055B92031CD140150048BC24 /* Listener.swift in Sources */,
+				055B92001CD140150048BC24 /* ImmutableCompositeListener.swift in Sources */,
+				055B920D1CD140280048BC24 /* Stream.swift in Sources */,
+				055B91FC1CD140150048BC24 /* CompositeListener.swift in Sources */,
+				055B92011CD140150048BC24 /* LazyCell.swift in Sources */,
+				055B92071CD140150048BC24 /* Node.swift in Sources */,
+				05B469B51CD84FB400166473 /* Array-Extension.swift in Sources */,
+				055B92131CD140360048BC24 /* Transaction.swift in Sources */,
+				055B920F1CD140280048BC24 /* StreamLoop.swift in Sources */,
+				055B91FA1CD140150048BC24 /* CellSink.swift in Sources */,
+				055B92101CD140280048BC24 /* StreamSink.swift in Sources */,
+				055B91E61CD13DD10048BC24 /* Cell.swift in Sources */,
+				057C5C741CDA76DC0013C3E3 /* Lazy.swift in Sources */,
+				055B92141CD140360048BC24 /* Unit.swift in Sources */,
+				057C5C721CD951590013C3E3 /* PriorityQueue.swift in Sources */,
+				055B91FF1CD140150048BC24 /* IMaybe.swift in Sources */,
+				055B91FB1CD140150048BC24 /* CoalesceHandler.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		055B91D11CD13D950048BC24 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				055B91DB1CD13D950048BC24 /* SodiumTests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		055B91D81CD13D950048BC24 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 055B91CA1CD13D940048BC24 /* Sodium */;
+			targetProxy = 055B91D71CD13D950048BC24 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		055B91DD1CD13D950048BC24 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.2;
+				MTL_ENABLE_DEBUG_INFO = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Debug;
+		};
+		055B91DE1CD13D950048BC24 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++0x";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
+				COPY_PHASE_STRIP = NO;
+				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu99;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 9.2;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				SDKROOT = iphoneos;
+				TARGETED_DEVICE_FAMILY = "1,2";
+				VALIDATE_PRODUCT = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+				VERSION_INFO_PREFIX = "";
+			};
+			name = Release;
+		};
+		055B91E01CD13D950048BC24 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Sodium/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = ventures.whirlygig.Sodium;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		055B91E11CD13D950048BC24 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CLANG_ENABLE_MODULES = YES;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				INFOPLIST_FILE = Sodium/Info.plist;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = ventures.whirlygig.Sodium;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SKIP_INSTALL = YES;
+			};
+			name = Release;
+		};
+		055B91E31CD13D950048BC24 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INFOPLIST_FILE = SodiumTests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = ventures.whirlygig.SodiumTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Debug;
+		};
+		055B91E41CD13D950048BC24 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				INFOPLIST_FILE = SodiumTests/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
+				PRODUCT_BUNDLE_IDENTIFIER = ventures.whirlygig.SodiumTests;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		055B91C51CD13D940048BC24 /* Build configuration list for PBXProject "Sodium" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				055B91DD1CD13D950048BC24 /* Debug */,
+				055B91DE1CD13D950048BC24 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		055B91DF1CD13D950048BC24 /* Build configuration list for PBXNativeTarget "Sodium" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				055B91E01CD13D950048BC24 /* Debug */,
+				055B91E11CD13D950048BC24 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		055B91E21CD13D950048BC24 /* Build configuration list for PBXNativeTarget "SodiumTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				055B91E31CD13D950048BC24 /* Debug */,
+				055B91E41CD13D950048BC24 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 055B91C21CD13D940048BC24 /* Project object */;
+}
