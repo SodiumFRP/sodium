@@ -55,7 +55,7 @@ enum Value<T> {
 /// <typeparam name="T">The type of the value.</typeparam>
 public class CellBase<T> : CellType {
     internal let _stream: Stream<T>
-    private var value: Value<T>
+    private var _value: Value<T>
 
     /// <summary>
     ///     Creates a cell with a constant value.
@@ -85,13 +85,12 @@ public class CellBase<T> : CellType {
     internal init(value: T)
     {
         self._stream = Stream<T>()
-        self.value = .Initial(value)
+        self._value = .Initial(value)
     }
     
     internal init(stream: Stream<T>, initialValue: T) {
-        
-        self.value = .Initial(initialValue)
         self._stream = stream
+        self._value = .Initial(initialValue)
     }
 
     internal var keepListenersAlive: IKeepListenersAlive { return self._stream.keepListenersAlive }
@@ -99,7 +98,7 @@ public class CellBase<T> : CellType {
     var ValueProperty: T
     {
         get {
-            switch self.value {
+            switch self._value {
             case .Initial(let t):
                 return t
             case .Updated(let t):
@@ -108,15 +107,8 @@ public class CellBase<T> : CellType {
         }
         set(value)
         {
-            self.value = .Updated(value)
+            self._value = .Updated(value)
         }
-    }
-
-    deinit
-    {
-        //using (self.cleanup)
-       // {
-        //}
     }
 
     /// <summary>
@@ -154,7 +146,7 @@ public class CellBase<T> : CellType {
         let s = LazySample(cell: self)
         trans.last(
             {
-                if case .Updated(let t) = self.value {
+                if case .Updated(let t) = self._value {
                     s.Value = t
                 }
                 else {
@@ -257,7 +249,7 @@ public class Cell<T>: CellBase<T> {
         
         self.cleanup = Transaction.apply{ trans1 in
             self._stream.listen(Node<T>.Null, trans: trans1, action: { (trans2, a) in
-                self.value = .Updated(a)
+                self._value = .Updated(a)
                 }, suppressEarlierFirings: false)
         }
 
@@ -267,7 +259,7 @@ public class Cell<T>: CellBase<T> {
         super.init(stream: stream, initialValue: initialValue)
         self.cleanup = Transaction.apply{ trans1 in
             self._stream.listen(Node<T>.Null, trans: trans1, action: { (trans2, a) in
-                self.value = .Updated(a)
+                self._value = .Updated(a)
                 }, suppressEarlierFirings: false)
         }
     }

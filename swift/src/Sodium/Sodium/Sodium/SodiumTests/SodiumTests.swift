@@ -21,12 +21,7 @@ class SodiumTests: XCTestCase {
         super.tearDown()
     }
     
-    func testExample() {
-        // This is an example of a functional test case.
-        // Use XCTAssert and related functions to verify your tests produce the correct results.
-    }
-    
-    func testPerformanceExample() {
+    func xtestPerformanceExample() {
         // This is an example of a performance test case.
         self.measureBlock {
             // Put the code you want to measure the time of here.
@@ -34,14 +29,16 @@ class SodiumTests: XCTestCase {
     }
     
     func testValue() {
-        let c = CellSink<Int>(9)
         var out = Array<Int>()
         do {
-            let l = Transaction.Run { Operational.Value(c).Listen{ out.append($0) } }!!
-            defer { l.Unlisten() }
+            let c = CellSink<Int>(9)
+            let l = Transaction.run { //x in
+                return Operational.value(c).listen({ out.append($0) })
+            }!!
+            defer { l.unlisten() }
             
-            c.Send(2)
-            c.Send(7)
+            c.send(2)
+            c.send(7)
         }
         XCTAssert([9,2,7] == out, "testValue failed \(out)")
     }
@@ -51,8 +48,8 @@ class SodiumTests: XCTestCase {
         var out = Array<String>()
         do {
             let l = c.map{ $0.description }.listen{ out.append($0) }
-            defer { l.Unlisten() }
-            c.Send(8)
+            defer { l.unlisten() }
+            c.send(8)
         }
         XCTAssert(["6","8"] == out, "testMap() failed \(out)")
     }
@@ -62,11 +59,11 @@ class SodiumTests: XCTestCase {
         var out = Array<Int>()
         
         do {
-            let l = Transaction.Run{ Operational.Value(c).Map{ $0 + 100}.Listen{ out.append($0) }}!!
-            defer { l.Unlisten() }
+            let l = Transaction.run{ Operational.value(c).map{ $0 + 100}.listen{ out.append($0) }}!!
+            defer { l.unlisten() }
             
-            c.Send(2)
-            c.Send(7)
+            c.send(2)
+            c.send(7)
         }
         XCTAssert([109,102,107] == out, "testValueThenMap() failed \(out)")
     }
@@ -77,12 +74,12 @@ class SodiumTests: XCTestCase {
         let c2 = CellSink<Int>(2)
         var out = Array<Int>()
         do {
-            let l = Transaction.Run{
-                Operational.Value(c1).Merge(Operational.Value(c2), f: {(x, y) in x + y}).Listen{ out.append($0) }}!!
-            defer { l.Unlisten() }
+            let l = Transaction.run{
+                Operational.value(c1).merge(Operational.value(c2), f: {(x, y) in x + y}).listen{ out.append($0) }}!!
+            defer { l.unlisten() }
 
-            c1.Send(1)
-            c2.Send(4)
+            c1.send(1)
+            c2.send(4)
         }
         XCTAssert([11,1,4] == out, "testValueThenMerge() failed \(out)")
     }
@@ -93,10 +90,10 @@ class SodiumTests: XCTestCase {
         var out = Array<Int>()
         
         do {
-            let l = Transaction.Run { Operational.Value(c).once().Listen{ out.append($0) }}!!
-            defer { l.Unlisten() }
-            c.Send(2)
-            c.Send(7)
+            let l = Transaction.run { Operational.value(c).once().listen{ out.append($0) }}!!
+            defer { l.unlisten() }
+            c.send(2)
+            c.send(7)
         }
         XCTAssert([9] == out, "testValueThenOnce() failed \(out)")
     }
@@ -107,11 +104,11 @@ class SodiumTests: XCTestCase {
         var out = Array<Int>()
 
         do {
-            let l = Transaction.Run{ Operational.Value(c).Filter{ $0 % 2 != 0}.Listen{ out.append($0) }}!!
-            defer { l.Unlisten() }
+            let l = Transaction.run{ Operational.value(c).filter{ $0 % 2 != 0}.listen{ out.append($0) }}!!
+            defer { l.unlisten() }
             
-            c.Send(2)
-            c.Send(7)
+            c.send(2)
+            c.send(7)
         }
         XCTAssert([9,7] == out, "testValueThenFilter() failed \(out)")
     }
@@ -120,13 +117,13 @@ class SodiumTests: XCTestCase {
     {
         let c = CellSink<Int>(9)
         var out = Array<Int>()
-        let value = Operational.Value(c)
-        c.Send(8)
+        let value = Operational.value(c)
+        c.send(8)
         do {
-            let l = value.Listen{ out.append($0) }!
-            defer { l.Unlisten() }
-            c.Send(2)
-            c.Send(7)
+            let l = value.listen{ out.append($0) }!
+            defer { l.unlisten() }
+            c.send(2)
+            c.send(7)
         }
         XCTAssert([2,7] == out, "testValueThenLateListen() failed \(out)")
     }
@@ -136,11 +133,11 @@ class SodiumTests: XCTestCase {
         let c = CellSink<Int>(6)
         var out = Array<String>()
         let cm = c.map{ $0.description }
-        c.Send(2)
+        c.send(2)
         do {
             let l = cm.listen{ out.append($0) }
-            defer { l.Unlisten() }
-            c.Send(8)
+            defer { l.unlisten() }
+            c.send(8)
         }
         XCTAssert([2,8] == out, "testMapLateListen() failed \(out)")
     }
@@ -152,9 +149,9 @@ class SodiumTests: XCTestCase {
         var out = Array<String>()
         do {
             let l = c1.lift(c2, f: {(x: Int, y: Int64) in x.description + " " + y.description}).listen{ out.append($0) }
-            defer { l.Unlisten() }
-            c1.Send(12)
-            c2.Send(6)
+            defer { l.unlisten() }
+            c1.send(12)
+            c2.send(6)
         }
         XCTAssert(["1 5", "12 5", "12 6"] == out, "testList() failed \(out)")
     }
@@ -169,8 +166,8 @@ class SodiumTests: XCTestCase {
         do
         {
             let l = c.listen{ out.append($0) }
-            defer { l.Unlisten() }
-            c1.Send(2)
+            defer { l.unlisten() }
+            c1.send(2)
         }
         XCTAssert(["3 5", "6 10"] == out, "test() failed \(out)")
     }
@@ -180,10 +177,10 @@ class SodiumTests: XCTestCase {
         var out = [Int]()
         do {
             let l = c.listen { out.append($0) }
-            defer { l.Unlisten() }
+            defer { l.unlisten() }
             
-            c.Send(2)
-            c.Send(7)
+            c.send(2)
+            c.send(7)
         }
         XCTAssert([9,2,7] == out, "testListen failed")
     }
@@ -193,11 +190,11 @@ class SodiumTests: XCTestCase {
         var out = [Int]()
         
         do {
-            let l = Transaction.Run{ Operational.Value(c).ListenOnce{ out.append($0) } }!!
-            defer { l.Unlisten() }
+            let l = Transaction.run{ Operational.value(c).listenOnce{ out.append($0) } }!!
+            defer { l.unlisten() }
 
-            c.Send(2)
-            c.Send(7)
+            c.send(2)
+            c.send(7)
         }
         XCTAssert([9] == out, "testListenOnce() failed")
     }
@@ -208,10 +205,10 @@ class SodiumTests: XCTestCase {
         var out = Array<Int>()
         
         do {
-            let l = Operational.Updates(c).Listen{ out.append($0) }
-            defer { l?.Unlisten() }
-            c.Send(2)
-            c.Send(7)
+            let l = Operational.updates(c).listen{ out.append($0) }
+            defer { l?.unlisten() }
+            c.send(2)
+            c.send(7)
         }
         XCTAssert([2,7] == out, "testUpdates() failed \(out)")
     }
@@ -224,9 +221,9 @@ class SodiumTests: XCTestCase {
         
         do {
             let l = ca.apply(cf).listen{ out.append($0) }
-            defer { l.Unlisten() }
-            cf.Send({x in "12 " + x.description})
-            ca.Send(6)
+            defer { l.unlisten() }
+            cf.send({x in "12 " + x.description})
+            ca.send(6)
         }
         XCTAssert(["1 5", "12 5", "12 6"] == out, "testApply() failed \(out)")
     }
@@ -234,42 +231,42 @@ class SodiumTests: XCTestCase {
 
     func testHold() {
         let s = StreamSink<Int>()
-        let c = s.Hold(0)
+        let c = s.hold(0)
         var out = [Int]()
         do {
             let l = c.listen {
                 out.append($0)
             }
             
-            defer { l.Unlisten() }
+            defer { l.unlisten() }
             
-            s.Send(2)
-            s.Send(9)
+            s.send(2)
+            s.send(9)
         }
         XCTAssert([0,2,9] == out, "Test Hold failed")
     }
     
     func xtestHoldUpdates() {
         let s = StreamSink<Int>()
-        let c = s.Hold(0)
+        let c = s.hold(0)
         var out = [Int]()
         do {
-            let s2 = Operational.Updates(c)
-            let l = s2.Listen { n in out.append(n) }
-            defer { l?.Unlisten() }
-            s.Send(2)
-            s.Send(9)
+            let s2 = Operational.updates(c)
+            let l = s2.listen { n in out.append(n) }
+            defer { l?.unlisten() }
+            s.send(2)
+            s.send(9)
         }
         XCTAssert([0,2,9] == out, "Test Hold failed")
     }
 
     func testLiftFromSimultaneous()
     {
-        let t = Transaction.Run{() -> (CellSink<Int>,CellSink<Int>) in
+        let t = Transaction.run{() -> (CellSink<Int>,CellSink<Int>) in
             let localC1 = CellSink<Int>(3)
             let localC2 = CellSink<Int>(5)
         
-            localC2.Send(7)
+            localC2.send(7)
             return (localC1, localC2)
         }!
         
@@ -279,7 +276,7 @@ class SodiumTests: XCTestCase {
         do
         {
             let l = c1.lift(c2, f: {(x, y) in x + y}).listen{ out.append($0) }
-            defer { l.Unlisten() }
+            defer { l.unlisten() }
         }
         XCTAssert([10] == out, "testLiftFromSimultaneous() failed \(out)")
     }
@@ -287,15 +284,15 @@ class SodiumTests: XCTestCase {
     func testHoldIsDelayed()
     {
         let s = StreamSink<Int>()
-        let h = s.Hold(0)
-        let pair = s.Snapshot(h, f: {(a, b) in a.description + " " + b.description})
+        let h = s.hold(0)
+        let pair = s.snapshot(h, f: {(a, b) in a.description + " " + b.description})
         var out = Array<String>()
         do
         {
-            let l = pair.Listen{ out.append($0) }!
-            defer { l.Unlisten() }
-            s.Send(2)
-            s.Send(3)
+            let l = pair.listen{ out.append($0) }!
+            defer { l.unlisten() }
+            s.send(2)
+            s.send(3)
         }
         XCTAssert(["2 0", "3 2"] == out, "testHoldIsDelayed() failed \(out)")
     }

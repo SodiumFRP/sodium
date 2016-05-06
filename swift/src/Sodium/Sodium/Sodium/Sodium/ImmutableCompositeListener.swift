@@ -8,10 +8,10 @@ public class ImmutableCompositeListener : Listener
         super.init(unlisten: {})
     }
 
-    deinit
-    {
-        self.unlisten()
-    }
+//    deinit
+//    {
+//        self.unlisten()
+//    }
 
     public override func unlisten() {
         for l in self.listeners {

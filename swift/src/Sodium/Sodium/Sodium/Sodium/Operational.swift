@@ -12,7 +12,9 @@ class Operational
     ///     The rule with this primitive is that you should only use it in functions
     ///     that do not allow the caller to detect the cell updates.
     /// </remarks>
-    static func updates<T>(c: Cell<T>) -> Stream<T> { return Transaction.apply(c.updates) }
+    static func updates<T>(c: Cell<T>) -> Stream<T> {
+        return Transaction.apply(c.updates)
+    }
 
     /// <summary>
     ///     A stream that is guaranteed to fire once upon listening, giving the current
@@ -27,7 +29,9 @@ class Operational
     ///     The rule with this primitive is that you should only use it in functions
     ///     that do not allow the caller to detect the cell updates.
     /// </remarks>
-    static func value<T>(c: Cell<T>) -> Stream<T> { return Transaction.apply(c.value) }
+    static func value<T>(c: Cell<T>) -> Stream<T> {
+        return Transaction.apply(c.value)
+    }
 
     /// <summary>
     ///     Push each stream event onto a new transaction guaranteed to come before the next externally
