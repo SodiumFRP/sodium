@@ -5,7 +5,7 @@
 /// <typeparam name="T">The type of values fired by the stream.</typeparam>
 public class StreamSink<T> : Stream<T>
 {
-    //private let coalescer: (Transaction, T) -> Void
+    private var coalescer: ((Transaction, T) -> Void)?
     private let fold: (T,T)->T
     /// <summary>
     ///     Construct a StreamSink that uses the last value if <see cref="Send" /> is called more than once per transaction.
@@ -28,7 +28,8 @@ public class StreamSink<T> : Stream<T>
     {
         self.fold = fold
         super.init()
-        //self.coalescer = CoalesceHandler.Create(coalesce, out: self)
+        let h = CoalesceHandler<T>()
+        self.coalescer = h.create(fold, out: self)
     }
 
     /// <summary>
@@ -42,11 +43,10 @@ public class StreamSink<T> : Stream<T>
         Transaction.run(
         {
             trans in
-            if (Transaction.inCallback > 0)
-            {
+            if (Transaction.inCallback > 0) {
                 fatalError("Send() may not be called inside a Sodium callback.")
             }
-            CoalesceHandler.create(self.fold, out: self)(trans, a)
+            self.coalescer!(trans, a)
         })
     }
 }

@@ -29,6 +29,7 @@
 		057C5C721CD951590013C3E3 /* PriorityQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 057C5C711CD951590013C3E3 /* PriorityQueue.swift */; };
 		057C5C741CDA76DC0013C3E3 /* Lazy.swift in Sources */ = {isa = PBXBuildFile; fileRef = 057C5C731CDA76DC0013C3E3 /* Lazy.swift */; };
 		05B469B51CD84FB400166473 /* Array-Extension.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05B469B41CD84FB400166473 /* Array-Extension.swift */; };
+		05FE4C071CDD0C3B00108F68 /* StreamTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05FE4C061CDD0C3B00108F68 /* StreamTests.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -78,6 +79,7 @@
 		057C5C711CD951590013C3E3 /* PriorityQueue.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = PriorityQueue.swift; sourceTree = "<group>"; };
 		057C5C731CDA76DC0013C3E3 /* Lazy.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = Lazy.swift; sourceTree = "<group>"; };
 		05B469B41CD84FB400166473 /* Array-Extension.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = "Array-Extension.swift"; sourceTree = "<group>"; };
+		05FE4C061CDD0C3B00108F68 /* StreamTests.swift */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.swift; path = StreamTests.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -153,6 +155,7 @@
 			isa = PBXGroup;
 			children = (
 				055B91DA1CD13D950048BC24 /* SodiumTests.swift */,
+				05FE4C061CDD0C3B00108F68 /* StreamTests.swift */,
 				055B91DC1CD13D950048BC24 /* Info.plist */,
 			);
 			path = SodiumTests;
@@ -316,6 +319,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				055B91DB1CD13D950048BC24 /* SodiumTests.swift in Sources */,
+				05FE4C071CDD0C3B00108F68 /* StreamTests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -461,6 +465,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = ventures.whirlygig.SodiumTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_INTERFACE_HEADER_NAME = "";
 			};
 			name = Debug;
 		};
@@ -471,6 +476,7 @@
 				LD_RUNPATH_SEARCH_PATHS = "$(inherited) @executable_path/Frameworks @loader_path/Frameworks";
 				PRODUCT_BUNDLE_IDENTIFIER = ventures.whirlygig.SodiumTests;
 				PRODUCT_NAME = "$(TARGET_NAME)";
+				SWIFT_OBJC_INTERFACE_HEADER_NAME = "";
 			};
 			name = Release;
 		};

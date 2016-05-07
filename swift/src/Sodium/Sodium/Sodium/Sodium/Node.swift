@@ -1,6 +1,6 @@
-internal class INode : Comparable, Hashable
+internal class INode : NSObject, Comparable
 {
-    static let Null = INode(rank: Int64.max)
+    static let Null = INode(rank: 0x123456789)
     
     // Fine-grained lock that protects listeners and nodes.
     internal static let ListenersLock = NSObject()
@@ -11,7 +11,7 @@ internal class INode : Comparable, Hashable
         self._rank = rank
     }
 
-    var hashValue: Int { return 1 }
+    //override var hashValue: Int { return super.hashValue }
     
     internal var rank: Int64 { return self._rank }
 
@@ -117,7 +117,7 @@ internal class Node<T> : INode
         return self.listeners.map{ $0.node }
     }
     
-    override var hashValue: Int { return 3 }
+    //override var hashValue: Int { return 3 }
 }
 
 class NodeTarget<T> : INode.Target, Hashable

@@ -63,33 +63,33 @@ public class Stream<T>
     ///         disposed, pass the returned listener to this stream's <see cref="AddCleanup" /> method.
     ///     </para>
     /// </remarks>
-    public func listen(handler: (T)->Void) -> Listener?
+    public func listen(handler: (T)->Void) -> Listener
     {
         var innerListener = self.listenWeak(handler)
 //        defer { innerListener.Unlisten() }
 
-        var listener: Listener?
+        var ls = [Listener]()
 
-        listener = Listener(
+        ls.append(Listener(
         unlisten: {
             objc_sync_enter(self.lock)
             defer { objc_sync_exit(self.lock) }
 
             innerListener.unlisten()
             // ReSharper disable AccessToModifiedClosure
-            if (listener != nil)
+            if (ls.first != nil)
             {
-                self.keepListenersAlive.stopKeepingListenerAlive(listener!)
+                self.keepListenersAlive.stopKeepingListenerAlive(ls.first!)
             }
             // ReSharper restore AccessToModifiedClosure
-        })
+        }))
 
         objc_sync_enter(self.lock)
         defer { objc_sync_exit(self.lock) }
 
-        self.keepListenersAlive.keepListenerAlive(listener!)
+        self.keepListenersAlive.keepListenerAlive(ls.first!)
 
-        return listener
+        return ls.first!
     }
 
     /// <summary>
@@ -146,7 +146,7 @@ public class Stream<T>
         ls.append(self.listen({ a in
             handler(a)
             ls.first!.unlisten()
-        })!)
+        }))
         return ls.first!
     }
     
@@ -203,7 +203,7 @@ public class Stream<T>
                     // Don't allow transactions to interfere with Sodium internals.
                     action(trans2, a)
                 }
-            })
+            }, dbg: "Stream<>.listen")
         }
         return ListenerImplementation(stream: self, action: action, target: nodeTarget)
     }
@@ -302,7 +302,9 @@ public class Stream<T>
     /// </returns>
     public func snapshot<T1, TResult, C1 : CellType where C1.Element==T1>(c: C1, f: (T, T1) -> TResult) -> Stream<TResult> {
         let out = Stream<TResult>(keepListenersAlive: self.keepListenersAlive)
-        let l = self.listen(out.node, action: { (trans2, a) in out.send(trans2, a: f(a, c.sampleNoTransaction()))} )
+        let l = self.listen(out.node, action: { (trans2, a) in
+            out.send(trans2, a: f(a, c.sampleNoTransaction()))
+        })
         return out.unsafeAddCleanup(l)
     }
 
@@ -436,7 +438,8 @@ public class Stream<T>
 
     func fold(trans1: Transaction, f: (T, T) -> T) -> Stream<T> {
         let out = Stream<T>(keepListenersAlive: self.keepListenersAlive)
-        let h = CoalesceHandler.create(f, out: out)
+        let ch = CoalesceHandler<T>()
+        let h = ch.create(f, out: out)
         let l = self.listen(out.node, trans: trans1, action: h, suppressEarlierFirings: false)
         return out.unsafeAddCleanup(l)
     }
@@ -611,6 +614,12 @@ public func calm() -> Stream<T> {
         self.disposables.append(cleanup)
         return self
     }
+    
+    internal func unlisten() {
+        for d in self.disposables {
+            d.unlisten()
+        }
+    }
 
     internal func unsafeAddCleanup(ls: [Listener]) -> Stream<T>
     {
@@ -642,7 +651,7 @@ public func calm() -> Stream<T> {
                     // If it has been garbage collected, remove it.
                 //    self.node.RemoveListener(target)
                 //}
-            })
+            }, dbg: "Stream<>.send()")
         }
     }
 }

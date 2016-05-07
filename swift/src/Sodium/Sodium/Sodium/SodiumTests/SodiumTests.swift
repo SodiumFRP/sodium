@@ -21,7 +21,7 @@ class SodiumTests: XCTestCase {
         super.tearDown()
     }
     
-    func xtestPerformanceExample() {
+    func testPerformanceExample() {
         // This is an example of a performance test case.
         self.measureBlock {
             // Put the code you want to measure the time of here.
@@ -48,7 +48,7 @@ class SodiumTests: XCTestCase {
         }
         XCTAssert([9,2,7] == out, "testValue failed \(out)")
     }
-/*
+
     func testMap() {
         let c = CellSink<Int>(6)
         var out = Array<String>()
@@ -252,7 +252,7 @@ class SodiumTests: XCTestCase {
         XCTAssert([0,2,9] == out, "Test Hold failed")
     }
     
-    func xtestHoldUpdates() {
+    func testHoldUpdates() {
         let s = StreamSink<Int>()
         let c = s.hold(0)
         var out = [Int]()
@@ -302,7 +302,6 @@ class SodiumTests: XCTestCase {
         }
         XCTAssert(["2 0", "3 2"] == out, "testHoldIsDelayed() failed \(out)")
     }
-*/
     
     /*
 

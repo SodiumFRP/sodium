@@ -44,10 +44,10 @@ public struct AnyCell<T>: CellType {
     }
 }
 
-enum Value<T> {
-    case Initial(T)
-    case Updated(T)
-}
+//enum Value<T> {
+//    case Initial(T)
+//    case Updated(T)
+//}
 
 /// <summary>
 ///     Represents a value that changes over time.
@@ -55,8 +55,9 @@ enum Value<T> {
 /// <typeparam name="T">The type of the value.</typeparam>
 public class CellBase<T> : CellType {
     internal let _stream: Stream<T>
-    private var _value: Value<T>
-
+    private var _value: T
+    private var _valueUpdate: T?
+    
     /// <summary>
     ///     Creates a cell with a constant value.
     /// </summary>
@@ -85,12 +86,12 @@ public class CellBase<T> : CellType {
     internal init(value: T)
     {
         self._stream = Stream<T>()
-        self._value = .Initial(value)
+        self._value = value
     }
     
     internal init(stream: Stream<T>, initialValue: T) {
         self._stream = stream
-        self._value = .Initial(initialValue)
+        self._value = initialValue
     }
 
     internal var keepListenersAlive: IKeepListenersAlive { return self._stream.keepListenersAlive }
@@ -98,16 +99,11 @@ public class CellBase<T> : CellType {
     var ValueProperty: T
     {
         get {
-            switch self._value {
-            case .Initial(let t):
-                return t
-            case .Updated(let t):
-                return t
-            }
+            return _value
         }
         set(value)
         {
-            self._value = .Updated(value)
+            self._value = value
         }
     }
 
@@ -146,15 +142,10 @@ public class CellBase<T> : CellType {
         let s = LazySample(cell: self)
         trans.last(
             {
-                if case .Updated(let t) = self._value {
-                    s.Value = t
-                }
-                else {
-                    s.Value = self.sampleNoTransaction()
-                }
+                s.value = self._valueUpdate ?? self.sampleNoTransaction()
                 //s.cell = nil
         })
-        return Lazy(f: { s.Value ?? s.cell.sample() })
+        return Lazy(f: { s.value ?? s.cell.sample() })
     }
 
     /// <summary>
@@ -168,16 +159,19 @@ public class CellBase<T> : CellType {
     /// </remarks>
     public func sampleNoTransaction() -> T
     {
-        return self.ValueProperty
+        let t = self.ValueProperty
+        return t
     }
 
     internal func updates(trans: Transaction?) -> Stream<T> { return self.stream() }
 
     public func value(trans1: Transaction?) -> Stream<T> {
         let spark = Stream<Unit>(keepListenersAlive: self._stream.keepListenersAlive)
-        trans1!.prioritized(spark.node, action: { trans2 in spark.send(trans2, a: Unit.value)})
+        trans1!.prioritized(spark.node, action: { trans2 in spark.send(trans2, a: Unit.value)}, dbg: "Cell.value()")
         let initial = spark.snapshot(self)
-        return initial.merge(self.updates(trans1), f: { (left, right) in right })
+        return initial.merge(self.updates(trans1), f: {
+            (left, right) in right
+        })
     }
 
     /// <summary>
@@ -233,7 +227,7 @@ public class CellBase<T> : CellType {
 private class LazySample<C:CellType>
 {
     let cell: C
-    var Value: C.Element?
+    var value: C.Element?
     
     init(cell: C)
     {
@@ -249,17 +243,28 @@ public class Cell<T>: CellBase<T> {
         
         self.cleanup = Transaction.apply{ trans1 in
             self._stream.listen(Node<T>.Null, trans: trans1, action: { (trans2, a) in
-                self._value = .Updated(a)
+                if self._valueUpdate == nil {
+                    trans2.last({
+                        self._value = self._valueUpdate!
+                        self._valueUpdate = nil
+                    })
+                }
+                self._valueUpdate = a
                 }, suppressEarlierFirings: false)
         }
-
     }
     internal override init(stream: Stream<T>, initialValue: T) {
 
         super.init(stream: stream, initialValue: initialValue)
         self.cleanup = Transaction.apply{ trans1 in
             self._stream.listen(Node<T>.Null, trans: trans1, action: { (trans2, a) in
-                self._value = .Updated(a)
+                if self._valueUpdate == nil {
+                    trans2.last({
+                        self._value = self._valueUpdate!
+                        self._valueUpdate = nil
+                    })
+                }
+                self._valueUpdate = a
                 }, suppressEarlierFirings: false)
         }
     }
@@ -392,7 +397,8 @@ extension CellType {
             var f: ((Element)->TResult)?
             var a: Element?
             
-            let h = { (trans1: Transaction) -> Void in trans1.prioritized(out.node as INode, action: { trans2 throws -> Void in out.send(trans2, a: f!(a!))} )}
+            let h = { (trans1: Transaction) -> Void in
+                trans1.prioritized(out.node as INode, action: { trans2 throws -> Void in out.send(trans2, a: f!(a!))}, dbg: "Cell<>.apply()" )}
             
             let l1 = bf.value(trans0).listen(inTarget, action: {(trans1, ff) in
                 f = ff

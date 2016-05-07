@@ -22,13 +22,14 @@ public final class Transaction
     private var lastQueue = Array<Action>()
     private var postQueue = Dictionary<Int, OTV>()
 
-    private let prioritizedQueue = PriorityQueue<Entry>(comparator: <)
+    private let prioritizedQueue = PriorityQueue<Entry>(comparator: >)
     static var inCallback = 0
     
     // True if we need to re-generate the priority queue.
     private var toRegen = false
 
     init() {
+        print("Transaction()\n")
     }
     
     /// <summary>
@@ -94,10 +95,13 @@ public final class Transaction
         objc_sync_enter(transactionLock)
         defer { objc_sync_exit(transactionLock) }
         
+        
         // If we are already inside a transaction (which must be on the same
         // thread otherwise we wouldn't have acquired transactionLock), then
         // keep using that same transaction.
         let transWas = currentTransaction
+        startIfNecessary()
+        
         defer
         {
             do
@@ -160,8 +164,8 @@ public final class Transaction
                 }
                 catch
                 {
-                    runningOnStartHooks = false
                 }
+                runningOnStartHooks = false
             }
 
             currentTransaction = Transaction()
@@ -169,8 +173,8 @@ public final class Transaction
         return currentTransaction!
     }
 
-    internal func prioritized(rank: INode, action: TV) {
-        let e = Entry(rank: rank, action: action)
+    internal func prioritized(rank: INode, action: TV, dbg: String) {
+        let e = Entry(rank: rank, action: action, dbg: dbg)
         self.prioritizedQueue.push(e)
         self.entries.insert(e)
     }
@@ -245,8 +249,9 @@ public final class Transaction
             }
 
             let e = self.prioritizedQueue.pop()
+            print("Running \(e!.dbg)")
             self.entries.remove(e!)
-            try e!.Action(self)
+            try e!.action(self)
         }
 
         for action in self.lastQueue {
@@ -285,47 +290,51 @@ public final class Transaction
         self.postQueue.removeAll()
     }
 
-    class Entry : Sequenced, Comparable, Hashable
+    class Entry : Sequenced, Comparable, Hashable, CustomStringConvertible
     {
         //private static var nextSeq: Int64 = 0
 
-        let Rank: INode
-        let Action: TV
+        let dbg: String
+        let rank: INode
+        let action: TV
         let seq: Int64
         
         var hashValue: Int { return Int(seq) }
 
-        init(rank: INode, action: TV) {
+        init(rank: INode, action: TV, dbg: String) {
             //super.init()
             
-            self.Rank = rank
-            self.Action = action
-            self.seq = Int64(0)//next()
+            self.rank = rank
+            self.action = action
+            self.dbg = dbg
+            self.seq = nextSeq++
         }
+        
+        var description: String { return rank.rank.description }
     }
 }
 
 func ==(lhs: Transaction.Entry, rhs: Transaction.Entry) -> Bool {
-    return lhs.Rank == rhs.Rank && lhs.seq == rhs.seq
+    return lhs.rank == rhs.rank && lhs.seq == rhs.seq
 }
 func <(lhs: Transaction.Entry, rhs: Transaction.Entry) -> Bool {
-    if lhs.Rank < rhs.Rank { return true }
-    if lhs.Rank == rhs.Rank && lhs.seq < rhs.seq { return true }
+    if lhs.rank < rhs.rank { return true }
+    if lhs.rank == rhs.rank && lhs.seq < rhs.seq { return true }
     return false
 }
 func <=(lhs: Transaction.Entry, rhs: Transaction.Entry) -> Bool {
-    if lhs.Rank < rhs.Rank { return true }
-    if lhs.Rank == rhs.Rank && lhs.seq <= rhs.seq { return true }
+    if lhs.rank < rhs.rank { return true }
+    if lhs.rank == rhs.rank && lhs.seq <= rhs.seq { return true }
     return false
 }
 func >=(lhs: Transaction.Entry, rhs: Transaction.Entry) -> Bool {
-    if lhs.Rank > rhs.Rank { return true }
-    if lhs.Rank == rhs.Rank && lhs.seq >= rhs.seq { return true }
+    if lhs.rank > rhs.rank { return true }
+    if lhs.rank == rhs.rank && lhs.seq >= rhs.seq { return true }
     return false
 }
 func >(lhs: Transaction.Entry, rhs: Transaction.Entry) -> Bool {
-    if lhs.Rank > rhs.Rank { return true }
-    if lhs.Rank == rhs.Rank && lhs.seq > rhs.seq { return true }
+    if lhs.rank > rhs.rank { return true }
+    if lhs.rank == rhs.rank && lhs.seq > rhs.seq { return true }
     return false
 }
 

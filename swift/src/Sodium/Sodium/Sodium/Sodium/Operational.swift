@@ -29,7 +29,7 @@ class Operational
     ///     The rule with this primitive is that you should only use it in functions
     ///     that do not allow the caller to detect the cell updates.
     /// </remarks>
-    static func value<T>(c: Cell<T>) -> Stream<T> {
+    static func value<C:CellType>(c: C) -> Stream<C.Element> {
         return Transaction.apply(c.value)
     }
 

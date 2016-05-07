@@ -27,7 +27,7 @@ public class Cell<A> {
     	this.value = initValue;
     	Transaction.run(new Handler<Transaction>() {
     		public void run(Transaction trans1) {
-	    		Cell.this.cleanup = str.listen(Node.NULL, trans1, new TransactionHandler<A>() {
+	    		Cell.this.cleanup =  str.listen(Node.NULL, trans1, new TransactionHandler<A>() {
 	    			public void run(Transaction trans2, A a) {
 			    		if (Cell.this.valueUpdate == null) {
 			    			trans2.last(new Runnable() {

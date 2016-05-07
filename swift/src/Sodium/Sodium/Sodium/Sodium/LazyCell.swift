@@ -3,7 +3,7 @@ public class LazyCell<T> : CellType
 {
     internal let _stream: Stream<T>
     internal var LazyInitialValue: Lazy<T>
-    internal lazy var value: T = self.LazyInitialValue**
+    internal lazy var _value: T = self.LazyInitialValue**
     
     init(stream: Stream<T>, @autoclosure(escaping) autoInitialValue: () -> T)
     {
@@ -27,7 +27,7 @@ public class LazyCell<T> : CellType
         return Stream<T>()
     }
     public func sample() -> T {
-        return self.value
+        return self._value
     }
     public func sampleLazy(trans: Transaction) -> Lazy<T> {
         return self.LazyInitialValue
@@ -35,13 +35,13 @@ public class LazyCell<T> : CellType
    
     public func value(trans: Transaction?) -> Stream<T> {
         let spark = Stream<Unit>(keepListenersAlive: self._stream.keepListenersAlive)
-        trans!.prioritized(spark.node, action: { trans2 in spark.send(trans2, a: Unit.value)})
+        trans!.prioritized(spark.node, action: { trans2 in spark.send(trans2, a: Unit.value)}, dbg: "LazyCell<>.value()")
         let initial = spark.snapshot(self)
         return initial.merge(self._stream, f: { (left, right) in right })
     }
 
     public func sampleNoTransaction() -> T {
-        return self.value
+        return self._value
     }
 }
 
