@@ -117,50 +117,26 @@ extension SodiumTests {
         XCTAssert([30] == c_3, "testOrElse1() failed \(c_3)")
     }
 
-    /*
+    func test_Operational_deferSimultaneous() {
+        let a = Transaction.run{ StreamSink<String>() }!
+        let b = Transaction.run{ StreamSink<String>() }!
+        let c = Transaction.run{ Operational.Defer(a).orElse(Operational.Defer(b)) }!
+        
+        var c_0 = [String]()
+        let c_0_l = Transaction.run{ c.listen{ c_0.append($0) } }!
+        Transaction.runVoid{
+            b.send("A")
+        }
+        c_0_l.unlisten()
+        XCTAssert(["A"] == c_0, "testDeferSimultaneous() failed \(c_0)")
 
-    
-    
-    public void test_Operational_deferSimultaneous() {
-    StreamSink<String> a = Transaction.run{
-    StreamSink<String> a_ = new StreamSink()
-    return a_
-    })
-    StreamSink<String> b = Transaction.run{
-    StreamSink<String> b_ = new StreamSink()
-    return b_
-    })
-    Stream<String> c = Transaction.run{
-    Stream<String> c_ = Operational.defer(a).orElse(Operational.defer(b))
-    return c_
-    })
-    List<String> c_0 = new ArrayList<>()
-    Listener c_0_l = Transaction.run{
-    Listener c_0_l_ = c.listen{
-    c_0.add(val)
-    })
-    return c_0_l_
-    })
-    Transaction.runVoid{
-    b.send("A")
-    })
-    c_0_l.unlisten()
-     XCTAssert(["A"] == c_0, "testDeferSimultaneous() failed \(c_0)")
-     //assertEquals(Arrays.<String>asList("A"),c_0)
-    List<String> c_1 = new ArrayList<>()
-    Listener c_1_l = Transaction.run{
-    Listener c_1_l_ = c.listen{
-    c_1.add(val)
-    })
-    return c_1_l_
-    })
-    Transaction.runVoid{
-    a.send("b")
-    b.send("B")
-    })
-    c_1_l.unlisten()
-     XCTAssert(["b"] == c_1, "testDeferSimultaneous() failed \(c_1)")
-    //assertEquals(Arrays.<String>asList("b"),c_1)
+        var c_1 = [String]()
+        let c_1_l = Transaction.run{ c.listen{ c_1.append($0) } }!
+        Transaction.runVoid{
+            a.send("b")
+            b.send("B")
+        }
+        c_1_l.unlisten()
+        XCTAssert(["b"] == c_1, "testDeferSimultaneous() failed \(c_1)")
     }
-*/
 }

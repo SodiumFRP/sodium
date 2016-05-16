@@ -307,7 +307,7 @@ public final class Transaction
             self.rank = rank
             self.action = action
             self.dbg = dbg
-            self.seq = nextSeq++
+            self.seq = OSAtomicAdd64(1, &nextSeq)
         }
         
         var description: String { return rank.rank.description }

@@ -41,9 +41,9 @@ class Operational
     /// <typeparam name="T">The type of the stream to defer.</typeparam>
     /// <param name="s">The stream to defer.</param>
     /// <returns>A stream firing the deferred event firings.</returns>
-    static func Defer<T>(s: Stream<AnySequence<T>>) -> Stream<T>
+    static func Defer<T>(s: Stream<T>) -> Stream<T>
     {
-        return split(s)
+        return split(s.map{ [$0] })
     }
 
     /// <summary>
@@ -58,7 +58,7 @@ class Operational
     /// <typeparam name="TCollection">The collection type of the stream to split.</typeparam>
     /// <param name="s">The stream to split.</param>
     /// <returns>A stream firing the split event firings.</returns>
-    static func split<T>(s: Stream<AnySequence<T>>) -> Stream<T>
+    static func split<T, S: SequenceType where S.Generator.Element == T>(s: Stream<S>) -> Stream<T>
     {
         let out = Stream<T>(keepListenersAlive: s.keepListenersAlive)
         let l1 = s.listen(out.node, action: { (trans, aa) in

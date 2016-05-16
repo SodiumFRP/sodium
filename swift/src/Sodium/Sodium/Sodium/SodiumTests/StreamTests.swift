@@ -92,53 +92,111 @@ extension SodiumTests {
         l.unlisten()
         XCTAssert([60,9,90,90,90] == out, "testMergeSimultaneous() failed \(out)")
     }
-    
-}
-/*
-public class TestStream extends TestCase {
- 
 
     func testCoalesce()
     {
-        StreamSink<Integer> s = StreamSink<>((Integer a, Integer b) -> a+b)
-    var out = [Int]()
-        let l = s
-            .listen((Integer x) -> { out.add(x) })
-        Transaction.runVoid(() -> {
+        let s = StreamSink<Int>(fold: { $0 + $1 })
+        var out = [Int]()
+        let l = s.listen{ out.append($0) }
+        Transaction.runVoid{
             s.send(2)
-            })
-        Transaction.runVoid(() -> {
+        }
+        Transaction.runVoid{
             s.send(8)
             s.send(40)
-            })
+        }
         l.unlisten()
-        assertEquals(Arrays.asList(2, 48), out)
+        XCTAssert([2,48] == out, "testCoalesces() failed \(out)")
     }
-    
+
     func testFilter()
     {
-        StreamSink<Character> e = StreamSink()
-        List<Character> out = ArrayList()
-        let l = e.filter((Character c) -> Character.isUpperCase(c)).listen((Character c) -> { out.add(c) })
-        e.send('H')
-        e.send('o')
-        e.send('I')
-        l.unlisten()
-        assertEquals(Arrays.asList('H','I'), out)
-    }
-    
-    func testFilterOptional()
-    {
-        StreamSink<Optional<String>> e = StreamSink()
+        let e = StreamSink<String>()
         var out = [String]()
-        let l = Stream.filterOptional(e).listen(s -> { out.add(s) })
-        e.send(Optional.of("tomato"))
-        e.send(Optional.empty())
-        e.send(Optional.of("peach"))
+        let l = e.filter{ $0.isUpperCase}.listen{ out.append($0) }
+        e.send("H")
+        e.send("o")
+        e.send("I")
         l.unlisten()
-        assertEquals(Arrays.asList("tomato","peach"), out)
+        XCTAssert(["H","I"] == out, "testFilter() failed \(out)")
     }
     
+    func testAccum()
+    {
+        let ea = StreamSink<Int>()
+        var out = [Int]()
+        let sum = ea.accum(100, f: {(a,s) in a+s })
+        let l = sum.listen{ out.append($0) }
+        ea.send(5)
+        ea.send(7)
+        ea.send(1)
+        ea.send(2)
+        ea.send(3)
+        l.unlisten()
+        XCTAssert([100,105,112,113,115,118] == out, "testAccum() failed \(out)")
+    }
+
+    func testGate()
+    {
+        let ec = StreamSink<String>()
+        let epred = CellSink(true)
+        var out = [String]()
+        let l = ec.gate(epred).listen{ out.append($0) }
+        ec.send("H")
+        epred.send(false)
+        ec.send("O")
+        epred.send(true)
+        ec.send("I")
+        l.unlisten()
+        XCTAssert(["H","I"] == out, "testGate() failed \(out)")
+    }
+    
+    func testCollect()
+    {
+        let ea = StreamSink<Int>()
+        var out = [Int]()
+        let sum = ea.collect(0,
+            f: {(a,s) in (a+s+100, a+s) })
+        
+        let l = sum.listen{ out.append($0) }
+        ea.send(5)
+        ea.send(7)
+        ea.send(1)
+        ea.send(2)
+        ea.send(3)
+        l.unlisten()
+        XCTAssert([105,112,113,115,118] == out, "testCollect() failed \(out)")
+    }
+    
+    func testOnce()
+    {
+        let e = StreamSink<String>()
+        var out = [String]()
+        let l = e.once().listen{ out.append($0) }
+        e.send("A")
+        e.send("B")
+        e.send("C")
+        l.unlisten()
+        XCTAssert(["A"] == out, "testOnce() failed \(out)")
+    }
+    
+
+}
+/*
+public class TestStream extends TestCase {
+    func testDefer()
+    {
+    let e = StreamSink<Character>()
+    let b = e.hold(" ")
+    var out = [Character]()
+    let l = Operational.Defer(e).snapshot(b).listen{ out.append($0) }
+    e.send("C")
+    e.send("B")
+    e.send("A")
+    l.unlisten()
+    XCTAssert(["C","B","A"] == out, "testDefer() failed \(out)")
+    }
+
     func testLoopStream()
     {
         final StreamSink<Integer> ea = StreamSink()
@@ -154,80 +212,25 @@ public class TestStream extends TestCase {
         ea.send(2)
         ea.send(52)
         l.unlisten()
+
+        XCTAssert(["H","I"] == out, "testFilter() failed \(out)")
         assertEquals(Arrays.asList(2,7), out)
     }
     
-    func testGate()
-    {
-        StreamSink<Character> ec = StreamSink()
-        CellSink<Boolean> epred = CellSink(true)
-        List<Character> out = ArrayList()
-        let l = ec.gate(epred).listen(x -> { out.add(x) })
-        ec.send('H')
-        epred.send(false)
-        ec.send('O')
-        epred.send(true)
-        ec.send('I')
-        l.unlisten()
-        assertEquals(Arrays.asList('H','I'), out)
-    }
-    
-    func testCollect()
-    {
-        StreamSink<Integer> ea = StreamSink()
-    var out = [Int]()
-        Stream<Integer> sum = ea.collect(0,
-                                         (a,s) -> Tuple2(a+s+100, a+s)
-        )
-        let l = sum.listen((x) -> { out.add(x) })
-        ea.send(5)
-        ea.send(7)
-        ea.send(1)
-        ea.send(2)
-        ea.send(3)
-        l.unlisten()
-        assertEquals(Arrays.asList(105,112,113,115,118), out)
-    }
-    
-    func testAccum()
-    {
-        StreamSink<Integer> ea = StreamSink()
-    var out = [Int]()
-        Cell<Integer> sum = ea.accum(100, (a,s)->a+s)
-        let l = sum.listen((x) -> { out.add(x) })
-        ea.send(5)
-        ea.send(7)
-        ea.send(1)
-        ea.send(2)
-        ea.send(3)
-        l.unlisten()
-        assertEquals(Arrays.asList(100,105,112,113,115,118), out)
-    }
-    
-    func testOnce()
-    {
-        StreamSink<Character> e = StreamSink()
-        List<Character> out = ArrayList()
-        let l = e.once().listen((x) -> { out.add(x) })
-        e.send('A')
-        e.send('B')
-        e.send('C')
-        l.unlisten()
-        assertEquals(Arrays.asList('A'), out)
-    }
-    
-    func testDefer()
-    {
-        StreamSink<Character> e = StreamSink()
-        Cell<Character> b = e.hold(' ')
-        List<Character> out = ArrayList()
-        let l = Operational.defer(e).snapshot(b).listen((x) -> { out.add(x) })
-        e.send('C')
-        e.send('B')
-        e.send('A')
-        l.unlisten()
-        assertEquals(Arrays.asList('C','B','A'), out)
-    }
+
+
+func testFilterOptional()
+{
+let e = StreamSink<String?>()
+var out = [String]()
+let l = Stream.filterOptional(e).listen{ out.append($0) }
+e.send("tomato")
+e.send(nil)
+e.send("peach")
+l.unlisten()
+XCTAssert(["tomato","peach"] == out, "testFilterOptional() failed \(out)")
+}
+
 }
 
 */
