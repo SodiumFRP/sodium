@@ -3,7 +3,7 @@
 /// </summary>
 
 public protocol CellType {
-    typealias Element
+    associatedtype Element
     func stream() -> Stream<Element>
     func sample() -> Element
     func sampleLazy(trans: Transaction) -> Lazy<Element>
@@ -242,7 +242,7 @@ public class Cell<T>: CellBase<T> {
         super.init (value: value)
         
         self.cleanup = Transaction.apply{ trans1 in
-            self._stream.listen(Node<T>.Null, trans: trans1, action: { (trans2, a) in
+            self._stream.listen(Node<T>.Null, trans: trans1, action: { (trans2, a, dbg) in
                 if self._valueUpdate == nil {
                     trans2.last({
                         self._value = self._valueUpdate!
@@ -257,7 +257,7 @@ public class Cell<T>: CellBase<T> {
 
         super.init(stream: stream, initialValue: initialValue)
         self.cleanup = Transaction.apply{ trans1 in
-            self._stream.listen(Node<T>.Null, trans: trans1, action: { (trans2, a) in
+            self._stream.listen(Node<T>.Null, trans: trans1, action: { (trans2, a, dbg) in
                 if self._valueUpdate == nil {
                     trans2.last({
                         self._value = self._valueUpdate!
@@ -392,7 +392,7 @@ extension CellType {
             
             let outTarget = out.node
             let inTarget = Node<TResult>(rank: 0)
-            let nodeTarget = inTarget.link({ (t, v) in }, target: outTarget).1
+            let nodeTarget = inTarget.link({ (t, v, dbg) in }, target: outTarget).1
             
             var f: ((Element)->TResult)?
             var a: Element?
@@ -400,13 +400,13 @@ extension CellType {
             let h = { (trans1: Transaction) -> Void in
                 trans1.prioritized(out.node as INode, action: { trans2 throws -> Void in out.send(trans2, a: f!(a!))}, dbg: "Cell<>.apply()" )}
             
-            let l1 = bf.value(trans0).listen(inTarget, action: {(trans1, ff) in
+            let l1 = bf.value(trans0).listen(inTarget, action: {(trans1, ff, dbg) in
                 f = ff
                 if a != nil {
                     h(trans1)
                 }
             })
-            let l2 = self.value(trans0).listen(inTarget, action: { (trans1, aa) in
+            let l2 = self.value(trans0).listen(inTarget, action: { (trans1, aa, dbg) in
                 a = aa
                 if f != nil {
                     h(trans1)
@@ -440,20 +440,23 @@ extension CellType {
         return Transaction.apply{trans in self.value(trans).listen(handler)}!
     }
 
-    /// <summary>
-    ///     Transform the cell values according to the supplied function, so the returned
-    ///     cell's values reflect the value of the function applied to the input cell's values.
-    /// </summary>
-    /// <typeparam name="TResult">The type of values fired by the returned cell.</typeparam>
-    /// <param name="f">
-    ///     Function to apply to convert the values.  It must be a pure function.
-    /// </param>
-    /// <returns>An cell which fires values transformed by <paramref name="f" /> for each value fired by this cell.</returns>
-    public func map<TResult>(f: (Element) -> TResult) -> AnyCell<TResult>
+    /*
+     * Transform the cell values according to the supplied function, so the returned cell's values reflect the
+     * value of the function applied to the input cell's values.
+     *
+     * TResult - The type of values fired by the returned cell.
+     * f - Function to apply to convert the values.  It must be a pure function.
+     *
+     * returns - An cell which fires values transformed by f() for each value fired by this cell.
+     */
+    public func map<TResult>(f: (Element) -> TResult) -> Cell<TResult>
     {
+    //    let foo = Transaction.apply{ (trans: Transaction) in
+    //        self.stream().map(f).holdLazy(trans, lazy: self.sampleLazy(trans).map(f)) }
+
         let foo = Transaction.apply{ (trans: Transaction) in
-            self.stream().map(f).holdLazy(trans, lazy: self.sampleLazy(trans).map(f)) }
-        
+            self.stream().map(f).hold(f(self.sample())) }
+
         return foo
     }
     

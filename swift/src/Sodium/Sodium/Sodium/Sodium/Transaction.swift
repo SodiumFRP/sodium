@@ -173,7 +173,7 @@ public final class Transaction
         return currentTransaction!
     }
 
-    internal func prioritized(rank: INode, action: TV, dbg: String) {
+    internal func prioritized(rank: INode, action: TV, dbg: String = #function) {
         let e = Entry(rank: rank, action: action, dbg: dbg)
         self.prioritizedQueue.push(e)
         self.entries.insert(e)
@@ -240,6 +240,8 @@ public final class Transaction
     }
 
     internal func close() throws {
+
+        print("close, \(self.prioritizedQueue.count) entries")
         while (true)
         {
             self.checkRegen()

@@ -62,6 +62,8 @@ func >(lhs: INode, rhs: INode) -> Bool {
 
 internal class Node<T> : INode
 {
+    typealias ACTION = (Transaction, T, String) -> Void
+    
     private var listeners = Array<NodeTarget<T>>()
 
     internal override init(rank: Int64)
@@ -78,7 +80,7 @@ internal class Node<T> : INode
     ///     A tuple containing whether or not changes were made to the node rank
     ///     and the <see cref="Target" /> object created for this link.
     /// </returns>
-    internal func link(action: (Transaction, T) -> Void, target: INode) -> (Bool, NodeTarget<T>) {
+    internal func link(action: ACTION, target: INode) -> (Bool, NodeTarget<T>) {
         objc_sync_enter(INode.ListenersLock)
         defer { objc_sync_exit(INode.ListenersLock) }
 
@@ -122,9 +124,11 @@ internal class Node<T> : INode
 
 class NodeTarget<T> : INode.Target, Hashable
 {
-    internal var action: (Transaction, T) -> Void
+    typealias Action = (Transaction, T, String) -> Void
     
-    internal init(action: (Transaction, T)->Void, node: INode)
+    internal var action: Action
+    
+    internal init(action: Action, node: INode)
     {
         self.action = action
         super.init(node: node)

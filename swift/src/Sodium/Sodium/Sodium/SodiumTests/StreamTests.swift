@@ -22,17 +22,6 @@ extension SodiumTests {
         XCTAssert([5] == out, "testSendStream() failed \(out)")
     }
 
-    func xtestMap() {
-        let e = StreamSink<Int>()
-        let m = e.map{ $0.description }
-        var out = [String]()
-        let l = m.listen{ out.append($0) }
-        e.send(5)
-        l.unlisten()
-
-        XCTAssert(["5"] == out, "testMap() failed \(out)")
-    }
-
     func xtestMapTo()
     {
         let e = StreamSink<Int>()
@@ -45,7 +34,7 @@ extension SodiumTests {
         XCTAssert(["fusebox", "fusebox"] == out, "testMapTo() failed \(out)")
     }
 
-    func xtestMergeNonSimultaneous()
+    func workstestMergeNonSimultaneous()
     {
         let e1 = StreamSink<Int>()
         let e2 = StreamSink<Int>()
@@ -58,7 +47,7 @@ extension SodiumTests {
         XCTAssert([7,9,8] == out, "testMergeNonSimultaneous() failed \(out)")
     }
 
-    func testMergeSimultaneous()
+    func workstestMergeSimultaneous()
     {
         let s1 = StreamSink<Int>(fold: { (l,r) in r })
         let s2 = StreamSink<Int>(fold: { (l,r) in r })
@@ -93,7 +82,7 @@ extension SodiumTests {
         XCTAssert([60,9,90,90,90] == out, "testMergeSimultaneous() failed \(out)")
     }
 
-    func testCoalesce()
+    func xtestCoalesce()
     {
         let s = StreamSink<Int>(fold: { $0 + $1 })
         var out = [Int]()
@@ -109,7 +98,7 @@ extension SodiumTests {
         XCTAssert([2,48] == out, "testCoalesces() failed \(out)")
     }
 
-    func testFilter()
+    func xtestFilter()
     {
         let e = StreamSink<String>()
         var out = [String]()
@@ -121,7 +110,7 @@ extension SodiumTests {
         XCTAssert(["H","I"] == out, "testFilter() failed \(out)")
     }
     
-    func testAccum()
+    func xtestAccum()
     {
         let ea = StreamSink<Int>()
         var out = [Int]()
@@ -136,7 +125,7 @@ extension SodiumTests {
         XCTAssert([100,105,112,113,115,118] == out, "testAccum() failed \(out)")
     }
 
-    func testGate()
+    func xtestGate()
     {
         let ec = StreamSink<String>()
         let epred = CellSink(true)
@@ -151,7 +140,7 @@ extension SodiumTests {
         XCTAssert(["H","I"] == out, "testGate() failed \(out)")
     }
     
-    func testCollect()
+    func xtestCollect()
     {
         let ea = StreamSink<Int>()
         var out = [Int]()
@@ -168,7 +157,7 @@ extension SodiumTests {
         XCTAssert([105,112,113,115,118] == out, "testCollect() failed \(out)")
     }
     
-    func testOnce()
+    func xtestOnce()
     {
         let e = StreamSink<String>()
         var out = [String]()
@@ -180,11 +169,33 @@ extension SodiumTests {
         XCTAssert(["A"] == out, "testOnce() failed \(out)")
     }
     
+    func xtestConstantBehavior() {
+        let b = Cell<Int>(value: 12)
+        var out = [Int]()
+        let l = b.listen{
+            out.append($0)
+        }
+        l.unlisten()
+        XCTAssert([12] == out, "testConstantBehavior() failed \(out)")
+    }
 
+/*
+    func xtestSwitchAndDefer() {
+        var out = [String]()
+        let si = StreamSink<Int>()
+        let l = Cell.switchS(si.map { Operational.Defer(Operational.value(Cell("A" + $0))) }
+            .hold(Stream<String>())).listen{ out.append($0) }
+        si.send(2)
+        si.send(4)
+        l.unlisten()
+        XCTAssert(["A2","A4"] == out, "testSwitchAndDefer() failed \(out)")
+    }
+*/
+    
 }
 /*
 public class TestStream extends TestCase {
-    func testDefer()
+    func xtestDefer()
     {
     let e = StreamSink<Character>()
     let b = e.hold(" ")
@@ -197,7 +208,7 @@ public class TestStream extends TestCase {
     XCTAssert(["C","B","A"] == out, "testDefer() failed \(out)")
     }
 
-    func testLoopStream()
+    func xtestLoopStream()
     {
         final StreamSink<Integer> ea = StreamSink()
         Stream<Integer> ec = Transaction.<Stream<Integer>>run(() -> {
@@ -219,7 +230,7 @@ public class TestStream extends TestCase {
     
 
 
-func testFilterOptional()
+func xtestFilterOptional()
 {
 let e = StreamSink<String?>()
 var out = [String]()

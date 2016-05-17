@@ -21,14 +21,14 @@ class SodiumTests: XCTestCase {
         super.tearDown()
     }
     
-    func testPerformanceExample() {
+    func xtestPerformanceExample() {
         // This is an example of a performance test case.
         self.measureBlock {
             // Put the code you want to measure the time of here.
         }
     }
     
-    func testValue() {
+    func xtestValue() {
         var out = Array<Int>()
         do {
             let c = CellSink<Int>(9)
@@ -49,7 +49,7 @@ class SodiumTests: XCTestCase {
         XCTAssert([9,2,7] == out, "testValue failed \(out)")
     }
 
-    func testMap() {
+    func xtestMap() {
         let c = CellSink<Int>(6)
         var out = Array<String>()
         do {
@@ -60,7 +60,7 @@ class SodiumTests: XCTestCase {
         XCTAssert(["6","8"] == out, "testMap() failed \(out)")
     }
 
-    func testValueThenMap() {
+    func xtestValueThenMap() {
         let c = CellSink<Int>(9)
         var out = Array<Int>()
         
@@ -74,7 +74,7 @@ class SodiumTests: XCTestCase {
         XCTAssert([109,102,107] == out, "testValueThenMap() failed \(out)")
     }
     
-    func testValueThenMerge()
+    func xtestValueThenMerge()
     {
         let c1 = CellSink<Int>(9)
         let c2 = CellSink<Int>(2)
@@ -91,7 +91,7 @@ class SodiumTests: XCTestCase {
     }
 
 
-    func testValueThenOnce() {
+    func xtestValueThenOnce() {
         let c = CellSink<Int>(9)
         var out = Array<Int>()
         
@@ -104,7 +104,7 @@ class SodiumTests: XCTestCase {
         XCTAssert([9] == out, "testValueThenOnce() failed \(out)")
     }
 
-    func testValueThenFilter()
+    func xtestValueThenFilter()
     {
         let c = CellSink<Int>(9)
         var out = Array<Int>()
@@ -119,7 +119,7 @@ class SodiumTests: XCTestCase {
         XCTAssert([9,7] == out, "testValueThenFilter() failed \(out)")
     }
     
-    func testValueThenLateListen()
+    func xtestValueThenLateListen()
     {
         let c = CellSink<Int>(9)
         var out = Array<Int>()
@@ -134,21 +134,35 @@ class SodiumTests: XCTestCase {
         XCTAssert([2,7] == out, "testValueThenLateListen() failed \(out)")
     }
     
+    func testCellSink() {
+        let x = CellSink<Int>(0)
+        var out = [Int]()
+        
+        let l = x.listen{ out.append($0) }
+        x.send(10)
+        x.send(20)
+        x.send(30)
+        l.unlisten()
+        XCTAssert([0,10,20,30] == out, "testCellSink() failed \(out)")
+    }
+
     func testMapLateListen()
     {
         let c = CellSink<Int>(6)
-        var out = Array<String>()
+        var out = [String]()
         let cm = c.map{ $0.description }
         c.send(2)
         do {
-            let l = cm.listen{ out.append($0) }
+            let l = cm.listen{
+                out.append($0)
+            }
             defer { l.unlisten() }
             c.send(8)
         }
-        XCTAssert([2,8] == out, "testMapLateListen() failed \(out)")
+        XCTAssert(["2","8"] == out, "testMapLateListen() failed \(out)")
     }
     
-    func testLift()
+    func xtestLift()
     {
         let c1 = CellSink<Int>(1)
         let c2 = CellSink<Int64>(5)
@@ -162,7 +176,7 @@ class SodiumTests: XCTestCase {
         XCTAssert(["1 5", "12 5", "12 6"] == out, "testList() failed \(out)")
     }
 
-    func testLiftGlitch()
+    func xtestLiftGlitch()
     {
         let c1 = CellSink<Int>(1)
         let c3 = c1.map{ $0 * 3 }
@@ -178,7 +192,7 @@ class SodiumTests: XCTestCase {
         XCTAssert(["3 5", "6 10"] == out, "test() failed \(out)")
     }
 
-    func testListen() {
+    func xtestListen() {
         let c = CellSink<Int>(9)
         var out = [Int]()
         do {
@@ -191,7 +205,7 @@ class SodiumTests: XCTestCase {
         XCTAssert([9,2,7] == out, "testListen failed")
     }
 
-    func testListenOnce() {
+    func xtestListenOnce() {
         let c = CellSink<Int>(9)
         var out = [Int]()
         
@@ -205,7 +219,7 @@ class SodiumTests: XCTestCase {
         XCTAssert([9] == out, "testListenOnce() failed")
     }
 
-    func testUpdates()
+    func xtestUpdates()
     {
         let c = CellSink<Int>(9)
         var out = Array<Int>()
@@ -219,7 +233,7 @@ class SodiumTests: XCTestCase {
         XCTAssert([2,7] == out, "testUpdates() failed \(out)")
     }
     
-    func testApply()
+    func xtestApply()
     {
         let cf = CellSink<Int64->String>({ (x:Int64) in "1 " + x.description})
         let ca = CellSink<Int64>(5)
@@ -235,7 +249,7 @@ class SodiumTests: XCTestCase {
     }
     
 
-    func testHold() {
+    func xtestHold() {
         let s = StreamSink<Int>()
         let c = s.hold(0)
         var out = [Int]()
@@ -252,7 +266,7 @@ class SodiumTests: XCTestCase {
         XCTAssert([0,2,9] == out, "Test Hold failed")
     }
     
-    func testHoldUpdates() {
+    func xtestHoldUpdates() {
         let s = StreamSink<Int>()
         let c = s.hold(0)
         var out = [Int]()
@@ -266,7 +280,7 @@ class SodiumTests: XCTestCase {
         XCTAssert([0,2,9] == out, "Test Hold failed")
     }
 
-    func testLiftFromSimultaneous()
+    func xtestLiftFromSimultaneous()
     {
         let t = Transaction.run{() -> (CellSink<Int>,CellSink<Int>) in
             let localC1 = CellSink<Int>(3)
@@ -287,7 +301,7 @@ class SodiumTests: XCTestCase {
         XCTAssert([10] == out, "testLiftFromSimultaneous() failed \(out)")
     }
     
-    func testHoldIsDelayed()
+    func xtestHoldIsDelayed()
     {
         let s = StreamSink<Int>()
         let h = s.hold(0)
@@ -303,10 +317,22 @@ class SodiumTests: XCTestCase {
         XCTAssert(["2 0", "3 2"] == out, "testHoldIsDelayed() failed \(out)")
     }
     
+    func xtestTransaction() {
+        var calledBack = [Bool](arrayLiteral: false)
+        
+        Transaction.run{ trans in
+            trans.prioritized(INode.Null, action: { trans2 in
+                calledBack[0] = true
+            }, dbg: "test")
+        }
+
+        XCTAssert(true == calledBack[0], "testTransaction() failed")
+    }
+
     /*
 
     [Test]
-    func testSnapshot()
+    func xtestSnapshot()
     {
     let c = CellSink<Int>(0)
     StreamSink<long> trigger = StreamSink<long>()
@@ -348,7 +374,7 @@ public async Task TestListenOnceTask()
 [Test]
 [Test]
 [Test]
-func testCalm()
+func xtestCalm()
 {
     let c = CellSink<Int>(2)
     Array<Int> @out = Array<Int>()
@@ -369,7 +395,7 @@ func testCalm()
 }
 
 [Test]
-func testCalm2()
+func xtestCalm2()
 {
     let c = CellSink<Int>(2)
     Array<Int> @out = Array<Int>()
@@ -408,7 +434,7 @@ private class Sc
 }
 
 [Test]
-func testSwitchC()
+func xtestSwitchC()
 {
     StreamSink<Sc> ssc = StreamSink<Sc>()
     // Split each field out of SB so we can update multiple behaviors in a
@@ -446,7 +472,7 @@ private class Sc2
 }
 
 [Test]
-func testSwitchCSimultaneous()
+func xtestSwitchCSimultaneous()
 {
     Sc2 sc1 = Sc2(0)
     CellSink<Sc2> csc = CellSink<Sc2>(sc1)
@@ -494,7 +520,7 @@ private class Ss
 }
 
 [Test]
-func testSwitchS()
+func xtestSwitchS()
 {
     StreamSink<Ss> sss = StreamSink<Ss>()
     // Split each field out of SB so we can update multiple behaviors in a
@@ -527,7 +553,7 @@ private class Ss2
 }
 
 [Test]
-func testSwitchSSimultaneous()
+func xtestSwitchSSimultaneous()
 {
     Ss2 ss1 = Ss2()
     CellSink<Ss2> css = CellSink<Ss2>(ss1)
@@ -564,7 +590,7 @@ func testSwitchSSimultaneous()
 }
 
 [Test]
-func testLiftList()
+func xtestLiftList()
 {
     IReadOnlyList<CellSink<Int>> cellSinks = Enumerable.Range(0, 50).Select(_ => CellSink<Int>(1)).ToArray()
     Cell<Int> sum = cellSinks.Lift(v => v.Sum())
@@ -587,7 +613,7 @@ func testLiftList()
 }
 
 [Test]
-func testLiftListLarge()
+func xtestLiftListLarge()
 {
     IReadOnlyList<CellSink<Int>> cellSinks = Enumerable.Range(0, 500).Select(_ => CellSink<Int>(1)).ToArray()
     Cell<Int> sum = cellSinks.Lift(v => v.Sum())
@@ -610,7 +636,7 @@ func testLiftListLarge()
 }
 
 [Test]
-func testLiftListLargeManyUpdates()
+func xtestLiftListLargeManyUpdates()
 {
     IReadOnlyList<CellSink<Int>> cellSinks = Enumerable.Range(0, 500).Select(_ => CellSink<Int>(1)).ToArray()
     Cell<Int> sum = cellSinks.Lift(v => v.Sum())
@@ -637,7 +663,7 @@ func testLiftListLargeManyUpdates()
 }
 
 [Test]
-func testLiftListChangesWhileListening()
+func xtestLiftListChangesWhileListening()
 {
     IReadOnlyList<CellSink<Int>> cellSinks = Enumerable.Range(0, 50).Select(_ => CellSink<Int>(1)).ToArray()
     Cell<Int> sum = cellSinks.Lift(v => v.Sum())
