@@ -116,7 +116,18 @@ public class Stream<T>
     /// </remarks>
     func listenWeak(handler: TV) -> Listener {
         return self.listen(INode.Null, action: {(trans2, a, dbg) in
-            handler(a)
+            
+            // T could really be U? so make sure we have a value using reflection
+            let ref = Mirror(reflecting: a)
+            
+            // if a is not Optional, just call handler
+            if ref.displayStyle != .Optional {
+                handler(a)
+            }
+            else if ref.children.count > 0 {
+                let (_, some) = ref.children.first!
+                handler(some as! T)
+            }
         })
     }
 

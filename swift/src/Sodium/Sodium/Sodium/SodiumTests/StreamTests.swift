@@ -132,7 +132,7 @@ extension SodiumTests {
         let ec = StreamSink<String>()
         let epred = CellSink(true)
         var out = [String]()
-        let l = ec.gate(epred).listen{ if $0 != nil { out.append($0!) } }
+        let l = ec.gate(epred).listen{ out.append($0!) }
         ec.send("H")
         epred.send(false)
         ec.send("O")
