@@ -8,7 +8,7 @@ public protocol CellType {
     func sample() -> Element
     func sampleLazy(trans: Transaction) -> Lazy<Element>
     func sampleNoTransaction() -> Element
-    func value(trans: Transaction?) -> Stream<Element>
+    func value(trans: Transaction) -> Stream<Element>
 }
 
 
@@ -17,7 +17,7 @@ public struct AnyCell<T>: CellType {
     private let _sample: () -> T
     private let _sampleLazy: (Transaction)->Lazy<T>
     private let _sampleNoTransaction: () -> T
-    private let _value: (Transaction?) -> Stream<T>
+    private let _value: (Transaction) -> Stream<T>
     
     init<Base: CellType where T == Base.Element>(_ base: Base) {
         _stream = base.stream
@@ -39,7 +39,7 @@ public struct AnyCell<T>: CellType {
     public func sampleNoTransaction() -> T {
         return _sampleNoTransaction()
     }
-    public func value(trans: Transaction?) -> Stream<T> {
+    public func value(trans: Transaction) -> Stream<T> {
         return _value(trans)
     }
 }
@@ -164,15 +164,6 @@ public class CellBase<T> : CellType {
     }
 
     internal func updates(trans: Transaction?) -> Stream<T> { return self.stream() }
-
-    public func value(trans1: Transaction?) -> Stream<T> {
-        let spark = Stream<Unit>(keepListenersAlive: self._stream.keepListenersAlive)
-        trans1!.prioritized(spark.node, action: { trans2 in spark.send(trans2, a: Unit.value)}, dbg: "Cell.value()")
-        let initial = spark.snapshot(self)
-        return initial.merge(self.updates(trans1), f: {
-            (left, right) in right
-        })
-    }
 
     /// <summary>
     ///     Listen for updates to the value of this cell.  The returned <see cref="IListener" /> may be
@@ -417,25 +408,20 @@ extension CellType {
         }
     }
 
-    /// <summary>
-    ///     Listen for updates to the value of this cell.  The returned <see cref="IListener" /> may be
-    ///     disposed to stop listening.  This is an OPERATIONAL mechanism for interfacing between
-    ///     the world of I/O and FRP.
-    /// </summary>
-    /// <param name="handler">The handler to execute for each value.</param>
-    /// <returns>An <see cref="IListener" /> which may be disposed to stop listening.</returns>
-    /// <remarks>
-    ///     <para>
-    ///         No assumptions should be made about what thread the handler is called on and it should not block.
-    ///         Neither <see cref="StreamSink{T}.Send" /> nor <see cref="CellSink{T}.Send" /> may be called from the
-    ///         handler.
-    ///         They will throw an exception because this method is not meant to be used to create new primitives.
-    ///     </para>
-    ///     <para>
-    ///         If the <see cref="IListener" /> is not disposed, it will continue to listen until this cell is either
-    ///         disposed or garbage collected.
-    ///     </para>
-    /// </remarks>
+    /*
+     * Listen for updates to the value of this cell.  The returned Listener may be disposed to stop listening.  
+     * This is an OPERATIONAL mechanism for interfacing between the world of I/O and FRP.
+     * 
+     * handler - The handler to execute for each value.
+     * returns - Listener which may be disposed to stop listening.
+     *
+     * No assumptions should be made about what thread the handler is called on and it should not block.  Neither
+     * StreamSink<T>.send nor CellSink<T>.send may be called from the handler.  They will throw an exception
+     * because this method is not meant to be used to create new primitives.
+     *
+     * If the Listener is not disposed, it will continue to listen until this cell is disposed.
+     */
+  
     public func listen(handler: (Element) -> Void) -> Listener {
         return Transaction.apply{trans in self.value(trans).listen(handler)}!
     }
@@ -460,6 +446,11 @@ extension CellType {
         return foo
     }
     
-
-
+    public func value(trans1: Transaction) -> Stream<Element> {
+        let spark = Stream<Unit>(keepListenersAlive: self.stream().keepListenersAlive)
+        trans1.prioritized(spark.node, action: { trans2 in spark.send(trans2, a: Unit.value)}, dbg: "Cell.value()")
+        let initial = spark.snapshot(self)
+        //return initial.merge(self.updates(trans1), f: { $1 })
+        return initial.merge(self.stream(), f: { $1 })
+    }
 }

@@ -33,7 +33,7 @@ internal class INode : NSObject, Comparable
 
     func getListenerNodesUnsafe() -> [INode] { return [] }
 
-    class Target
+    class Target : NSObject
     {
         let node: INode
 
@@ -122,7 +122,7 @@ internal class Node<T> : INode
     //override var hashValue: Int { return 3 }
 }
 
-class NodeTarget<T> : INode.Target, Hashable
+class NodeTarget<T> : INode.Target
 {
     typealias Action = (Transaction, T, String) -> Void
     
@@ -134,9 +134,9 @@ class NodeTarget<T> : INode.Target, Hashable
         super.init(node: node)
     }
     
-    var hashValue: Int { return 9 }
+    //var hashValue: Int { return 9 }
 }
 
 func ==<T>(lhs: NodeTarget<T>, rhs: NodeTarget<T>) -> Bool {
-    return true
+    return lhs.hashValue == rhs.hashValue
 }

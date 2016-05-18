@@ -33,11 +33,11 @@ public class LazyCell<T> : CellType
         return self.LazyInitialValue
     }
    
-    public func value(trans: Transaction?) -> Stream<T> {
+    public func value(trans: Transaction) -> Stream<T> {
         let spark = Stream<Unit>(keepListenersAlive: self._stream.keepListenersAlive)
-        trans!.prioritized(spark.node, action: { trans2 in spark.send(trans2, a: Unit.value)})
+        trans.prioritized(spark.node, action: { trans2 in spark.send(trans2, a: Unit.value)})
         let initial = spark.snapshot(self)
-        return initial.merge(self._stream, f: { (left, right) in right })
+        return initial.merge(self._stream, f: { $1 })
     }
 
     public func sampleNoTransaction() -> T {

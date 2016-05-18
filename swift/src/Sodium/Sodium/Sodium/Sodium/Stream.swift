@@ -68,23 +68,20 @@ public class Stream<T>
     public func listen(handler: (T)->Void) -> Listener
     {
         var innerListener = self.listenWeak(handler)
-//        defer { innerListener.Unlisten() }
-
         var ls = [Listener]()
-
+        
         ls.append(Listener(
-        unlisten: {
-            objc_sync_enter(self.lock)
-            defer { objc_sync_exit(self.lock) }
+            unlisten: {
+                objc_sync_enter(self.lock)
+                defer { objc_sync_exit(self.lock) }
 
-            innerListener.unlisten()
-            // ReSharper disable AccessToModifiedClosure
-            if (ls.first != nil)
-            {
-                self.keepListenersAlive.stopKeepingListenerAlive(ls.first!)
-            }
-            // ReSharper restore AccessToModifiedClosure
-        }))
+                innerListener.unlisten()
+
+                if (ls.first != nil) {
+                    self.keepListenersAlive.stopKeepingListenerAlive(ls.first!)
+                }
+            })
+        )
 
         objc_sync_enter(self.lock)
         defer { objc_sync_exit(self.lock) }
@@ -224,7 +221,7 @@ public class Stream<T>
     public func map<TResult>(f: (T) -> TResult) -> Stream<TResult>
     {
         let out = Stream<TResult>(keepListenersAlive: self.keepListenersAlive)
-        let l = self.listen(out.node, action: { (trans2, a, dbg) in out.send(trans2, a: f(a), dbg: "Stream:map " + dbg)} )
+        let l = self.listen(out.node, action: { (trans2, a, dbg) in out.send(trans2, a: f(a), dbg: "Stream:map " + dbg) } )
         return out.unsafeAddCleanup(l)
     }
 
@@ -251,12 +248,9 @@ public class Stream<T>
     ///     <see cref="Stream{T}.Snapshot{T2, TResult}(Cell{T2}, Func{T, T2, TResult})" />
     ///     until the following transaction. To put this another way,
     ///     <see cref="Stream{T}.Snapshot{T2, TResult}(Cell{T2}, Func{T, T2, TResult})" /> always sees the value of a cell as
-    ///     it was before
-    ///     any state changes from the current transaction.
+    ///     it was before any state changes from the current transaction.
     /// </remarks>
-    public func hold(initialValue: T)  -> Cell<T> {
-        return Transaction.apply{trans in Cell<T>(stream: self, initialValue: initialValue) }
-    }
+    public func hold(initialValue: T)  -> Cell<T> { return Transaction.apply{trans in Cell<T>(stream: self, initialValue: initialValue) } }
 
     public func holdLazy(initialValue: () -> T) -> AnyCell<T> {
         return Transaction.apply {trans in self.holdLazy(trans, initialValue: initialValue)}
@@ -478,9 +472,9 @@ public class Stream<T>
     /// </summary>
     /// <param name="c">The cell that acts as a gate.</param>
     /// <returns>A stream that only outputs events from the input stream when the specified cell's value is <code>true</code>.</returns>
-    public func gate(c: Cell<Bool>) -> Stream<T> {
+    public func gate(c: Cell<Bool>) -> Stream<T?> {
         // TODO: Wha?  returning nil confuses the compiler, and makes no sense even
-        return self.snapshot(c, f: {(a: T, pred: Bool) in return pred ? a : a })
+        return self.snapshot(c, f: {(a: T, pred: Bool) -> T? in return pred ? a : nil })
     }
 
     /// <summary>
@@ -569,7 +563,20 @@ public func calm() -> Stream<T> {
     ///     <see cref="Snapshot{TReturn}(Cell{TReturn})" />.  Apart from this, the function must be pure.
     /// </param>
     /// <returns>A cell holding the accumulated state of this stream.</returns>
-    public func accum<TReturn>(initialState: TReturn, f: (T,TReturn) -> TReturn) -> AnyCell<TReturn> { return self.accumLazy(initialState, f: f) }
+    public func accum(initialState: T, f: (T,T) -> T) -> AnyCell<T>
+    { return self.accumLazy(initialState, f: f) }
+//    {
+//        let ch = CoalesceHandler<T>()
+//        let a = ch.create(f, out: self)
+//        let l = self.listen(self.node, action: a)
+//        self.unsafeAddCleanup(l)
+//
+//        let cell = self.hold(initialState)
+////        let sout = self.snapshot(cell, f: f)
+//        
+////        return sout.hold(initialState)
+//        return cell
+//    }
 
     public func accumLazy<TReturn>(@autoclosure(escaping) initialState: () -> TReturn, f: (T,TReturn)->TReturn) -> AnyCell<TReturn> {
         return Transaction.noThrowRun(
