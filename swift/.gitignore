@@ -1,0 +1,7 @@
+*.cs
+*.config
+*.csproj
+*.xml
+*.xcuserstate
+*.xcbkptlist
+
