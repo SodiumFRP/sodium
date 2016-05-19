@@ -261,7 +261,9 @@ public class Stream<T>
     ///     <see cref="Stream{T}.Snapshot{T2, TResult}(Cell{T2}, Func{T, T2, TResult})" /> always sees the value of a cell as
     ///     it was before any state changes from the current transaction.
     /// </remarks>
-    public func hold(initialValue: T)  -> Cell<T> { return Transaction.apply{trans in Cell<T>(stream: self, initialValue: initialValue) } }
+    public func hold(initialValue: T)  -> Cell<T> {
+        return Transaction.apply{trans in Cell<T>(stream: self, initialValue: initialValue) }
+    }
 
     public func holdLazy(initialValue: () -> T) -> AnyCell<T> {
         return Transaction.apply {trans in self.holdLazy(trans, initialValue: initialValue)}

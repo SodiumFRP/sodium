@@ -292,7 +292,7 @@ class SodiumTests: XCTestCase {
         XCTAssert([0,10,20,30] == out, "testCellSink() failed \(out)")
     }
     
-    func testHold() {
+    func testHoldCellListen() {
         let s = StreamSink<Int>()
         let c = s.hold(0)
         var out = [Int]()
@@ -306,7 +306,22 @@ class SodiumTests: XCTestCase {
             //s.send(2)
             //s.send(9)
         }
-        XCTAssert([0] == out, "testHold() failed \(out)")
+        XCTAssert([0] == out, "testHoldCellListen() failed \(out)")
+    }
+
+    func testHoldStreamListen() {
+        let s = StreamSink<Int>()
+        let c = s.hold(0)
+        XCTAssert(0 == c.sample(), "testHoldStreamListen() sample after hold failed \(c.sample())")
+        var out = [Int]()
+        do {
+            let l = s.listen { out.append($0) }
+            defer { l.unlisten() }
+            
+            // s.send(2)
+            // s.send(9)
+        }
+        XCTAssert([0] == out, "testHoldStreamListen() failed \(out)")
     }
 
     func testListenTwice() {
@@ -326,16 +341,17 @@ class SodiumTests: XCTestCase {
         
         XCTAssert(["one", "one", "two", "two"] == out, "testListenTwice() failed \(out)")
     }
+    
     func testHoldUpdates() {
         let s = StreamSink<Int>()
         let c = s.hold(0)
         XCTAssert(0 == c.sample(), "testHoldUpdates() failed \(c.sample())")
         var out = [Int]()
         do {
-            //let s2 = Operational.updates(c)
+            let s2 = Operational.updates(c)
             //let s3 = Transaction.apply(c.updates)
             //let l = s3.listen { out.append($0) }
-            let l = s.listen { out.append($0) }
+            let l = s2.listen { out.append($0) }
             defer { l.unlisten() }
             
             //Transaction.run{ trans in
