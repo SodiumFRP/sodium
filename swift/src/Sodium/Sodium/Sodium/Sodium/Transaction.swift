@@ -187,25 +187,23 @@ public final class Transaction
         self.lastQueue.append(action)
     }
 
-    /// <summary>
-    ///     Add an action to run after all last actions.
-    /// </summary>
-    /// <param name="index">The order index in which to run the action.</param>
-    /// <param name="action">The action to run after all last actions.</param>
+    /*
+     * Add an action to run after all last actions.
+     *
+     * `index` - the order index in which to run the action.
+     * `action` - the action to run after all last actions.
+     */
     internal func post(index: Int, action: OTV) {
         // If an entry exists already, combine the old one with the new one.
-        var new: OTV
+        var a = action
         if let existing = self.postQueue[index] {
-            new = { trans in
+            a = { trans in
                 try existing(trans)
                 try action(trans)
             }
         }
-        else {
-            new = action
-        }
 
-        self.postQueue[index] = new
+        self.postQueue[index] = a
     }
 
     /// <summary>
@@ -263,6 +261,18 @@ public final class Transaction
 
         for pair in self.postQueue {
             let parent = Transaction.currentTransaction
+            
+            defer {
+                do {
+                    if (parent == nil) {
+                        try Transaction.currentTransaction?.close()
+                    }
+                }
+                catch {
+                }
+                Transaction.currentTransaction = parent
+            }
+
             do
             {
                 if (pair.0 < 0)
@@ -273,20 +283,13 @@ public final class Transaction
                 else
                 {
                     let transaction = Transaction()
+                    defer { do { try transaction.close() } catch {} }
+                    
                     Transaction.currentTransaction = transaction
-                    do
-                    {
-                        try pair.1(transaction)
-                    }
-                    catch
-                    {
-                        try transaction.close()
-                    }
+                    do { try pair.1(transaction) } catch {}
                 }
             }
-            catch
-            {
-                Transaction.currentTransaction = parent
+            catch {
             }
         }
         self.postQueue.removeAll()

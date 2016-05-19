@@ -27,7 +27,29 @@ class SodiumTests: XCTestCase {
             // Put the code you want to measure the time of here.
         }
     }
-    
+
+    func testCellValue() {
+        let s = StreamSink<Int>()
+        let c = Cell<Int>(stream: s, initialValue: 1234)
+        
+        XCTAssert(c.ValueProperty == 1234, "testCellValue failed \(c.ValueProperty)")
+        XCTAssert(c.sample() == 1234, "testCellValue failed \(c.sample())")
+        s.send(5)
+        XCTAssert(c.ValueProperty == 5, "testCellValue failed \(c.ValueProperty)")
+        XCTAssert(c.sample() == 5, "testCellValue failed \(c.sample())")
+        
+    }
+
+    func testLazyCellValue() {
+        let s = StreamSink<Int>()
+        let c = LazyCell<Int>(stream: s, autoInitialValue: 1234)
+        
+        XCTAssert(c.sample() == 1234, "testCellValue failed \(c.sample())")
+        s.send(5)
+        XCTAssert(c.sample() == 5, "testCellValue failed \(c.sample())")
+        
+    }
+
     func testCellSinkSend() {
         let c = CellSink<Int>(1234)
         
@@ -307,6 +329,7 @@ class SodiumTests: XCTestCase {
     func testHoldUpdates() {
         let s = StreamSink<Int>()
         let c = s.hold(0)
+        XCTAssert(0 == c.sample(), "testHoldUpdates() failed \(c.sample())")
         var out = [Int]()
         do {
             //let s2 = Operational.updates(c)

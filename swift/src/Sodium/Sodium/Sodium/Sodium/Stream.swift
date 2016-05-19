@@ -596,7 +596,7 @@ public func calm() -> Stream<T> {
             let s = es.holdLazy(initialState)
             let esOut = self.snapshot(s, f: f)
             es.loop(esOut)
-            return esOut.holdLazy(initialState)
+            return s // esOut.holdLazy(initialState)
         })
     }
 

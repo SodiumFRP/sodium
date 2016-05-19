@@ -23,5 +23,5 @@ public class Listener : NSObject, ListenerType
 }
 
 public func ==(lhs: Listener, rhs: Listener) -> Bool {
-    return lhs === rhs
+    return lhs.hashValue == rhs.hashValue
 }

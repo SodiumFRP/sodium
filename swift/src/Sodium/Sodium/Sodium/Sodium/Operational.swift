@@ -46,18 +46,19 @@ class Operational
         return split(s.map{ [$0] })
     }
 
-    /// <summary>
-    ///     Push each stream event in the list of streams onto a newly created transaction guaranteed
-    ///     to come before the next externally initiated transaction.  Note that the semantics
-    ///     are such that two different invocations of this method can put stream events into the same
-    ///     new transaction, so the resulting stream's events could be simultaneous with
-    ///     events output by <see cref="Split{T, TCollection}(Stream{TCollection})" /> or <see cref="Defer{T}(Stream{T})" />
-    ///     invoked elsewhere in the code.
-    /// </summary>
-    /// <typeparam name="T">The collection item type of the stream to split.</typeparam>
-    /// <typeparam name="TCollection">The collection type of the stream to split.</typeparam>
-    /// <param name="s">The stream to split.</param>
-    /// <returns>A stream firing the split event firings.</returns>
+    /*
+     * Push each stream event in the list of streams onto a newly created transaction guaranteed to come before the
+     * next externally initiated transaction.  Note that the semantics are such that two different invocations of
+     * this method can put stream events into the same new transaction, so the resulting stream's events could be 
+     * simultaneous with events output by split<T, TCollection>(Stream<TCollection>) or Defer<T>(Stream<T>)invoked
+     * elsewhere in the code.
+     *
+     * `T` The collection item type of the stream to split.
+     * `S` The collection type of the stream to split.
+     *
+     * `s` The stream to split.
+     * returns - A stream firing the split event firings.
+     */
     static func split<T, S: SequenceType where S.Generator.Element == T>(s: Stream<S>) -> Stream<T>
     {
         let out = Stream<T>(keepListenersAlive: s.keepListenersAlive)
