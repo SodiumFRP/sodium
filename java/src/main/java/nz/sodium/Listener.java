@@ -2,9 +2,6 @@ package nz.sodium;
 
 /**
  * A handle for a listener that was registered with {@link Cell#listen(Handler)} or {@link Stream#listen(Handler)}.
- * To keep the FRP logic alive, you must prevent this object being garbage
- * collected. You're recommended either to ensure you call {@link unlisten()} when you've
- * finished with it, or to store it in a field of an object that you know will stay in memory.
  */
 public class Listener {
     public Listener() {}
