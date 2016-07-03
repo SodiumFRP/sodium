@@ -25,7 +25,7 @@ public class Operational {
     }
 
     /**
-     * A stream that is guaranteed to fire once when you listen to it, giving
+     * A stream that is guaranteed to fire once in the transaction where value() is invoked, giving
      * the current value of the cell, and thereafter behaves like {@link updates(Cell)},
      * firing for each update/step of the cell's value.
      * <P>

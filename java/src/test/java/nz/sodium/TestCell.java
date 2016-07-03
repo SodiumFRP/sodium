@@ -67,78 +67,7 @@ public class TestCell extends TestCase {
         assertEquals(Arrays.asList(12), out);
     }
 
-    public void testValueThenMap() {
-        CellSink<Integer> b = new CellSink<Integer>(9);
-        List<Integer> out = new ArrayList<Integer>();
-        Listener l = Transaction.run(
-                () -> Operational.value(b).map(x -> x + 100).listen(x -> {
-                    out.add(x);
-                })
-        );
-        b.send(2);
-        b.send(7);
-        l.unlisten();
-        assertEquals(Arrays.asList(109, 102, 107), out);
-    }
-
-    public void testValuesThenMerge() {
-        CellSink<Integer> bi = new CellSink<Integer>(9);
-        CellSink<Integer> bj = new CellSink<Integer>(2);
-        List<Integer> out = new ArrayList<Integer>();
-        Listener l = Transaction.run(
-                () -> Operational.value(bi).merge(Operational.value(bj), (x, y) -> x + y)
-                        .listen(x -> {
-                            out.add(x);
-                        })
-        );
-        bi.send(1);
-        bj.send(4);
-        l.unlisten();
-        assertEquals(Arrays.asList(11, 1, 4), out);
-    }
-
-    public void testValuesThenFilter() {
-        CellSink<Integer> b = new CellSink<Integer>(9);
-        List<Integer> out = new ArrayList<Integer>();
-        Listener l = Transaction.run(
-                () -> Operational.value(b).filter(a -> true).listen(x -> {
-                    out.add(x);
-                })
-        );
-        b.send(2);
-        b.send(7);
-        l.unlisten();
-        assertEquals(Arrays.asList(9, 2, 7), out);
-    }
-
-    public void testValuesThenOnce() {
-        CellSink<Integer> b = new CellSink<Integer>(9);
-        List<Integer> out = new ArrayList<Integer>();
-        Listener l = Transaction.run(
-                () -> Operational.value(b).once().listen(x -> {
-                    out.add(x);
-                })
-        );
-        b.send(2);
-        b.send(7);
-        l.unlisten();
-        assertEquals(Arrays.asList(9), out);
-    }
-
-    public void testValuesLateListen() {
-        CellSink<Integer> b = new CellSink<Integer>(9);
-        List<Integer> out = new ArrayList<Integer>();
-        Stream<Integer> value = Operational.value(b);
-        b.send(8);
-        Listener l = value.listen(x -> {
-            out.add(x);
-        });
-        b.send(2);
-        l.unlisten();
-        assertEquals(Arrays.asList(2), out);
-    }
-
-    public void testMapB() {
+    public void testMapC() {
         CellSink<Integer> b = new CellSink<Integer>(6);
         List<String> out = new ArrayList<String>();
         Listener l = b.map(x -> x.toString())
@@ -150,7 +79,7 @@ public class TestCell extends TestCase {
         assertEquals(Arrays.asList("6", "8"), out);
     }
 
-    public void testMapBLateListen() {
+    public void testMapCLateListen() {
         CellSink<Integer> b = new CellSink<Integer>(6);
         List<String> out = new ArrayList<String>();
         Cell<String> bm = b.map(x -> x.toString());
@@ -161,16 +90,6 @@ public class TestCell extends TestCase {
         b.send(8);
         l.unlisten();
         assertEquals(Arrays.asList("2", "8"), out);
-    }
-
-    public void testTransaction() {
-        final boolean[] calledBack = new boolean[1];
-        Transaction.run((Transaction trans) -> {
-            trans.prioritized(Node.NULL, trans2 -> {
-                calledBack[0] = true;
-            });
-        });
-        assertEquals(true, calledBack[0]);
     }
 
     public void testApply() {

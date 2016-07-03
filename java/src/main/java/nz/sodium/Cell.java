@@ -307,7 +307,9 @@ public class Cell<A> {
                     ApplyHandler(Transaction trans0) {
                     }
                     Lambda1<A,B> f = null;
+                    boolean f_present = false;
                     A a = null;
+                    boolean a_present = false;
                     @Override
                     public void run(Transaction trans1) {
                         trans1.prioritized(out.node, new Handler<Transaction>() {
@@ -327,14 +329,16 @@ public class Cell<A> {
                 Listener l1 = bf.value(trans0).listen_(in_target, new TransactionHandler<Lambda1<A,B>>() {
                     public void run(Transaction trans1, Lambda1<A,B> f) {
                         h.f = f;
-                        if (h.a != null)
+                        h.f_present = true;
+                        if (h.a_present)
                             h.run(trans1);
                     }
                 });
                 Listener l2 = ba.value(trans0).listen_(in_target, new TransactionHandler<A>() {
                     public void run(Transaction trans1, A a) {
                         h.a = a;
-                        if (h.f != null)
+                        h.a_present = true;
+                        if (h.f_present)
                             h.run(trans1);
                     }
                 });
