@@ -4,11 +4,12 @@ This is based on Flapjax, Yampa, scala.React and a number of other Functional
 Reactive Programming efforts, as well as a lot of personal experience. Enjoy.
 
 Status:
-  C++ - complete - in separate sodium-cxx repository
+  C++ - complete, but the memory management is not quite right yet - in separate sodium-cxx repository
   C# - complete
   Java - complete
   Kotlin - complete - in separate sodium-kotlin repository
   Scala - complete but in need of some updating
+  Typescript/Javascript - complete - in separate sodium-typescript repository
 
   Haskell - deprecated in favour of Heinrich Apfelmus's Reactive Banana
   Embedded-C - just an experiment

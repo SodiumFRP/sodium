@@ -281,11 +281,11 @@ public class TestCell extends TestCase {
         assertEquals(Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7, 8, 9), out);
     }
 
-    public void testLoopBehavior() {
-        final StreamSink<Integer> ea = new StreamSink();
+    public void testLoopCell() {
+        final StreamSink<Integer> sa = new StreamSink();
         Cell<Integer> sum_out = Transaction.<Cell<Integer>>run(() -> {
             CellLoop<Integer> sum = new CellLoop<Integer>();
-            Cell<Integer> sum_out_ = ea.snapshot(sum, (x, y) -> x + y).hold(0);
+            Cell<Integer> sum_out_ = sa.snapshot(sum, (x, y) -> x + y).hold(0);
             sum.loop(sum_out_);
             return sum_out_;
         });
@@ -293,26 +293,26 @@ public class TestCell extends TestCase {
         Listener l = sum_out.listen(x -> {
             out.add(x);
         });
-        ea.send(2);
-        ea.send(3);
-        ea.send(1);
+        sa.send(2);
+        sa.send(3);
+        sa.send(1);
         l.unlisten();
         assertEquals(Arrays.asList(0, 2, 5, 6), out);
         assertEquals((int) 6, (int) sum_out.sample());
     }
 
     public void testAccum() {
-        StreamSink<Integer> ea = new StreamSink();
+        StreamSink<Integer> sa = new StreamSink();
         List<Integer> out = new ArrayList();
-        Cell<Integer> sum = ea.accum(100, (a, s) -> a + s);
+        Cell<Integer> sum = sa.accum(100, (a, s) -> a + s);
         Listener l = sum.listen((x) -> {
             out.add(x);
         });
-        ea.send(5);
-        ea.send(7);
-        ea.send(1);
-        ea.send(2);
-        ea.send(3);
+        sa.send(5);
+        sa.send(7);
+        sa.send(1);
+        sa.send(2);
+        sa.send(3);
         l.unlisten();
         assertEquals(Arrays.asList(100, 105, 112, 113, 115, 118), out);
     }
