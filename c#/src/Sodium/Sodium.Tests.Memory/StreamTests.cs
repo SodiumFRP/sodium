@@ -9,6 +9,7 @@ namespace Sodium.Tests.Memory
     public class StreamTests
     {
         [Test]
+        [Ignore]
         public void TestStreamGarbageCollection()
         {
             int? beforeListenerCount = null;
@@ -54,6 +55,7 @@ namespace Sodium.Tests.Memory
         }
 
         [Test]
+        [Ignore]
         public void TestMapMemory()
         {
             int? beforeListenerCount = null;
@@ -88,6 +90,7 @@ namespace Sodium.Tests.Memory
         }
 
         [Test]
+        [Ignore]
         public void TestNestedMapGarbageCollection()
         {
             int? beforeStreamCount = null;
