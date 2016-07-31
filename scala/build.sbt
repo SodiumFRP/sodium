@@ -4,5 +4,5 @@ lazy val root = (project in file(".")).
   settings(
     name := "sodium",
     version := "1.0",
-    scalaVersion := "2.11.4"
+    scalaVersion := "2.11.8"
   )
