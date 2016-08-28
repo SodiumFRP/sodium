@@ -1,12 +1,5 @@
-sodium.jar can be built with Java 5 or higher, but it's recommended you use either
-Eclipse Xtend or Java 8 for your project so you can use lambda syntax, which makes
-reactive code a lot nicer to write.
-
-Xtend can be found at http://www.eclipse.org/xtend/
-
-At the time of writing, you need to use the Project Lambda version of Java 8, which
-can be found at http://openjdk.java.net/projects/lambda/
-(These changes will eventually become mainstream Java 8.)
+sodium.jar can be built with Java 5 or higher, but it's recommended you use Java 8
+if you can. The lambda syntax makes your FRP code a lot nicer to write.
 
 
 BUILD WITH ANT
@@ -18,7 +11,14 @@ Ant targets:
     ant tests   <-- build and run the test cases (requires java8 with lambda support)
 
 
-BUILD WITH ECLIPSE
+BUILD WITH MAVEN:
 
-The 'sodium' directory contains an Eclipse project. Add the project to Eclipse, and then
-double click on sodium.jardesc to build the jar file.
+    mvn install
+
+
+--- Support for Java 5:
+Only the ant build can build the Java 5 (JDK 1.5) version of the jar file.
+If you don't have Java 8 (JDK 1.8) installed, then to avoid the 1.8 build you'll
+need to type
+
+    ant jar-old
