@@ -137,12 +137,15 @@ let switchEarlyS (cell : Cell<#Stream<'T>>) =
         let out = new StreamImpl<'T>(cell.Impl.KeepListenersAlive)
         let node = Node<'T>(0L)
         let mutable _, nodeTarget = node.Link (fun t v -> ()) out.Node
-        let mutable currentListener = (cell.Impl.SampleNoTransaction ()).Impl.ListenInternal node transaction (fun t a -> out.Send(t, a)) false
+        let mutable listenerId = System.Guid.NewGuid()
+        let sendIfNodeTargetMatches t (a, l) i = if l = i then out.Send(t, a) else ()
+        let mutable currentListener = (Stream.map (fun v -> (v, listenerId)) (cell.Impl.SampleNoTransaction ())).Impl.ListenInternal node transaction (fun t a -> sendIfNodeTargetMatches t a listenerId) false
         let h = (fun (transaction : Transaction) (s : 'T Stream) ->
+            currentListener.Unlisten()
             node.Unlink nodeTarget
             let (_, nt) = node.Link (fun t v -> ()) out.Node
             nodeTarget <- nt
-            currentListener.Unlisten()
-            currentListener <- s.Impl.ListenInternal out.Node transaction (fun t a -> out.Send(t, a)) false)
+            listenerId <- System.Guid.NewGuid()
+            currentListener <- (Stream.map (fun v -> (v, listenerId)) s).Impl.ListenInternal out.Node transaction (fun t a -> sendIfNodeTargetMatches t a listenerId) false)
         let listener = (cell.Impl.Updates transaction).ListenInternal node transaction h false
         new Stream<_>(((out.LastFiringOnly transaction).UnsafeAddCleanup listener).UnsafeAddCleanup (Listener.fromAction(fun () -> node.Unlink nodeTarget))))

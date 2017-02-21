@@ -490,27 +490,34 @@ namespace Sodium.Tests
         [Test]
         public void TestSwitchEarlyS()
         {
-            StreamSink<Ss> sss = new StreamSink<Ss>();
-            // Split each field out of SB so we can update multiple behaviors in a
-            // single transaction.
-            Stream<char> sa = sss.Map(s => s.A);
-            Stream<char> sb = sss.Map(s => s.B);
-            Cell<Stream<char>> csw = sss.Map(s => s.Sw).FilterMaybe().Hold(sa);
-            Stream<char> so = csw.SwitchEarlyS();
-            List<char> @out = new List<char>();
+            Ss2 ss1 = new Ss2();
+            CellSink<Ss2> css = new CellSink<Ss2>(ss1);
+            Stream<int> so = css.Map<Stream<int>>(b => b.S).SwitchEarlyS();
+            List<int> @out = new List<int>();
             using (so.Listen(@out.Add))
             {
-                sss.Send(new Ss('A', 'a', Maybe.Nothing<Stream<char>>()));
-                sss.Send(new Ss('B', 'b', Maybe.Nothing<Stream<char>>()));
-                sss.Send(new Ss('C', 'c', Maybe.Just(sb)));
-                sss.Send(new Ss('D', 'd', Maybe.Nothing<Stream<char>>()));
-                sss.Send(new Ss('E', 'e', Maybe.Just(sa)));
-                sss.Send(new Ss('F', 'f', Maybe.Nothing<Stream<char>>()));
-                sss.Send(new Ss('G', 'g', Maybe.Just(sb)));
-                sss.Send(new Ss('H', 'h', Maybe.Just(sa)));
-                sss.Send(new Ss('I', 'i', Maybe.Just(sa)));
+                Ss2 ss2 = new Ss2();
+                Ss2 ss3 = new Ss2();
+                Ss2 ss4 = new Ss2();
+                ss1.S.Send(0);
+                ss1.S.Send(1);
+                ss1.S.Send(2);
+                css.Send(ss2);
+                ss1.S.Send(7);
+                ss2.S.Send(3);
+                ss2.S.Send(4);
+                ss3.S.Send(2);
+                css.Send(ss3);
+                ss3.S.Send(5);
+                ss3.S.Send(6);
+                ss3.S.Send(7);
+                ss4.S.Send(8);
+                css.Send(ss4);
+                ss4.S.Send(8);
+                ss3.S.Send(2);
+                ss4.S.Send(9);
             }
-            CollectionAssert.AreEqual(new[] { 'A', 'B', 'c', 'd', 'E', 'F', 'g', 'H', 'I' }, @out);
+            CollectionAssert.AreEqual(new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 }, @out);
         }
 
         [Test]

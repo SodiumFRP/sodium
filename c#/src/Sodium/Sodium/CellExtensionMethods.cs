@@ -75,7 +75,15 @@ namespace Sodium
                 Stream<T> @out = new Stream<T>(csa.KeepListenersAlive);
                 Node<T> node = new Node<T>(0);
                 Node<T>.Target nodeTarget = node.Link((t, v) => { }, @out.Node).Item2;
-                IListener currentListener = csa.SampleNoTransaction().Listen(node, trans1, @out.Send, false);
+                Guid listenerId = Guid.NewGuid();
+                Action<Transaction, Tuple<T, Guid>, Guid> sendIfNodeTargetMatches = (t, v, i) =>
+                {
+                    if (v.Item2 == i)
+                    {
+                        @out.Send(t, v.Item1);
+                    }
+                };
+                IListener currentListener = csa.SampleNoTransaction().Map(v => Tuple.Create(v, listenerId)).Listen(node, trans1, (t, v) => sendIfNodeTargetMatches(t, v, listenerId), false);
                 Action<Transaction, Stream<T>> h = (trans2, sa) =>
                 {
                     using (currentListener)
@@ -84,10 +92,11 @@ namespace Sodium
 
                     node.Unlink(nodeTarget);
                     nodeTarget = node.Link((t, v) => { }, @out.Node).Item2;
-                    currentListener = sa.Listen(@out.Node, trans2, @out.Send, false);
+                    listenerId = Guid.NewGuid();
+                    currentListener = sa.Map(v => Tuple.Create(v, listenerId)).Listen(@out.Node, trans2, (t, v) => sendIfNodeTargetMatches(t, v, listenerId), false);
                 };
                 IListener l1 = csa.Updates(trans1).Listen(node, trans1, h, false);
-                return @out.LastFiringOnly(trans1).UnsafeAddCleanup(l1).UnsafeAddCleanup(new Listener(() => node.Unlink(nodeTarget)));
+                return @out.UnsafeAddCleanup(l1).UnsafeAddCleanup(new Listener(() => node.Unlink(nodeTarget)));
             });
         }
 
