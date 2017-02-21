@@ -148,4 +148,4 @@ let switchEarlyS (cell : Cell<#Stream<'T>>) =
             listenerId <- System.Guid.NewGuid()
             currentListener <- (Stream.map (fun v -> (v, listenerId)) s).Impl.ListenInternal out.Node transaction (fun t a -> sendIfNodeTargetMatches t a listenerId) false)
         let listener = (cell.Impl.Updates transaction).ListenInternal node transaction h false
-        new Stream<_>(((out.LastFiringOnly transaction).UnsafeAddCleanup listener).UnsafeAddCleanup (Listener.fromAction(fun () -> node.Unlink nodeTarget))))
+        new Stream<_>((out.UnsafeAddCleanup listener).UnsafeAddCleanup (Listener.fromAction(fun () -> node.Unlink nodeTarget))))
