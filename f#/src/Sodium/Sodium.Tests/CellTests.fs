@@ -425,6 +425,59 @@ type Tests() =
         CollectionAssert.AreEqual([0;1;2;3;4;5;6;7;8;9], out)
 
     [<Test>]
+    member __.``Test Switch Early For Stream``() =
+        let sss = Stream.sink<Ss> ()
+        let sa = sss |> Stream.map (fun s -> s.a)
+        let sb = sss |> Stream.map (fun s -> s.b)
+        let csw = sss |> Stream.map (fun s -> s.sw) |> Stream.filterOption |> Stream.hold sa
+        let so = csw |> Cell.switchEarlyS
+        let out = List<_>()
+        (
+            use _l = so |> Stream.listen out.Add
+            sss.Send { a = 'A'; b = 'a'; sw = Option.None }
+            sss.Send { a = 'B'; b = 'b'; sw = Option.None }
+            sss.Send { a = 'C'; b = 'c'; sw = Option.Some sb }
+            sss.Send { a = 'D'; b = 'd'; sw = Option.None }
+            sss.Send { a = 'E'; b = 'e'; sw = Option.Some sa }
+            sss.Send { a = 'F'; b = 'f'; sw = Option.None }
+            sss.Send { a = 'G'; b = 'g'; sw = Option.Some sb }
+            sss.Send { a = 'H'; b = 'h'; sw = Option.Some sa }
+            sss.Send { a = 'I'; b = 'i'; sw = Option.Some sa }
+        )
+        CollectionAssert.AreEqual(['A';'B';'c';'d';'E';'F';'g';'H';'I'], out)
+
+    [<Test>]
+    member __.``Test Switch Early For Stream Simultaneous``() =
+        let ss1 : Ss2 = { s = Stream.sink () }
+        let css = Cell.sink ss1
+        let so = css |> Cell.map (fun b -> b.s) |> Cell.switchEarlyS
+        let out = List<_>()
+        (
+            use _l = so |> Stream.listen out.Add
+            let ss2 : Ss2 = { s = Stream.sink () }
+            let ss3 : Ss2 = { s = Stream.sink () }
+            let ss4 : Ss2 = { s = Stream.sink () }
+            ss1.s.Send 0
+            ss1.s.Send 1
+            ss1.s.Send 2
+            css.Send ss2
+            ss1.s.Send 7
+            ss2.s.Send 3
+            ss2.s.Send 4
+            ss3.s.Send 2
+            css.Send ss3
+            ss3.s.Send 5
+            ss3.s.Send 6
+            ss3.s.Send 7
+            Transaction.Run (fun () ->
+                ss4.s.Send 8
+                css.Send ss4
+                ss3.s.Send 2)
+            ss4.s.Send 9
+        )
+        CollectionAssert.AreEqual([0;1;2;3;4;5;6;7;8;9], out)
+
+    [<Test>]
     member __.``Test Lift List``() =
         let cellSinks = List.init 50 (fun _ -> Cell.sink 1)
         let sum = cellSinks |> Cell.liftAll List.sum

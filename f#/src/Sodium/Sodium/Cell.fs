@@ -131,3 +131,18 @@ let switchS (cell : Cell<#Stream<'T>>) =
                 currentListener <- s.Impl.ListenInternal out.Node transaction (fun t a -> out.Send(t, a)) true))
         let listener = (cell.Impl.Updates transaction).ListenInternal out.Node transaction h false
         new Stream<_>(out.UnsafeAddCleanup listener))
+
+let switchEarlyS (cell : Cell<#Stream<'T>>) =
+    Transaction.Apply (fun transaction ->
+        let out = new StreamImpl<'T>(cell.Impl.KeepListenersAlive)
+        let node = Node<'T>(0L)
+        let mutable _, nodeTarget = node.Link (fun t v -> ()) out.Node
+        let mutable currentListener = (cell.Impl.SampleNoTransaction ()).Impl.ListenInternal node transaction (fun t a -> out.Send(t, a)) false
+        let h = (fun (transaction : Transaction) (s : 'T Stream) ->
+            node.Unlink nodeTarget
+            let (_, nt) = node.Link (fun t v -> ()) out.Node
+            nodeTarget <- nt
+            currentListener.Unlisten()
+            currentListener <- s.Impl.ListenInternal out.Node transaction (fun t a -> out.Send(t, a)) false)
+        let listener = (cell.Impl.Updates transaction).ListenInternal node transaction h false
+        new Stream<_>(((out.LastFiringOnly transaction).UnsafeAddCleanup listener).UnsafeAddCleanup (Listener.fromAction(fun () -> node.Unlink nodeTarget))))
