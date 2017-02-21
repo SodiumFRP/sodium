@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 using NUnit.Framework;
 
 namespace Sodium.Tests
@@ -230,21 +231,60 @@ namespace Sodium.Tests
         public void TestLoopStream()
         {
             StreamSink<int> sa = new StreamSink<int>();
-            Stream<int> sc = Transaction.Run(() =>
-            {
-                StreamLoop<int> sb = new StreamLoop<int>();
-                Stream<int> scLocal = sa.Map(x => x % 10).Merge(sb, (x, y) => x * y);
-                Stream<int> sbOut = sa.Map(x => x / 10).Filter(x => x != 0);
-                sb.Loop(sbOut);
-                return scLocal;
-            });
+            Tuple<StreamLoop<int>, Stream<int>, Stream<int>> s = Transaction.Run(() =>
+             {
+                 StreamLoop<int> sbLocal = new StreamLoop<int>();
+                 Stream<int> scLocal = sa.Map(x => x % 10).Merge(sbLocal, (x, y) => x * y);
+                 Stream<int> sbOut = sa.Map(x => x / 10).Filter(x => x != 0);
+                 sbLocal.Loop(sbOut);
+                 return Tuple.Create(sbLocal, sbOut, scLocal);
+             });
+            StreamLoop<int> sb = s.Item1;
+            Stream<int> sb2 = s.Item2;
+            Stream<int> sc = s.Item3;
             List<int> @out = new List<int>();
-            using (sc.Listen(@out.Add))
+            List<int> out2 = new List<int>();
+            List<int> out3 = new List<int>();
+            using (sb.Listen(@out.Add))
+            using (sb2.Listen(out2.Add))
+            using (sc.Listen(out3.Add))
             {
                 sa.Send(2);
                 sa.Send(52);
             }
-            CollectionAssert.AreEqual(new[] { 2, 10 }, @out.ToArray());
+            CollectionAssert.AreEqual(new[] { 5 }, @out.ToArray());
+            CollectionAssert.AreEqual(new[] { 5 }, out2.ToArray());
+            CollectionAssert.AreEqual(new[] { 2, 10 }, out3.ToArray());
+        }
+
+        [Test]
+        public void TestLoopCell()
+        {
+            CellSink<int> ca = new CellSink<int>(22);
+            Tuple<CellLoop<int>, Cell<int>, Cell<int>> c = Transaction.Run(() =>
+            {
+                CellLoop<int> cbLocal = new CellLoop<int>();
+                Cell<int> ccLocal = ca.Map(x => x % 10).Lift(cbLocal, (x, y) => x * y);
+                Cell<int> cbOut = ca.Map(x => x / 10);
+                cbLocal.Loop(cbOut);
+                return Tuple.Create(cbLocal, cbOut, ccLocal);
+            });
+            CellLoop<int> cb = c.Item1;
+            Cell<int> cb2 = c.Item2;
+            Cell<int> cc = c.Item3;
+            List<int> @out = new List<int>();
+            List<int> out2 = new List<int>();
+            List<int> out3 = new List<int>();
+            using (cb.Listen(@out.Add))
+            using (cb2.Listen(out2.Add))
+            using (cc.Listen(out3.Add))
+            {
+                ca.Send(2);
+                ca.Send(52);
+            }
+            CollectionAssert.AreEqual(new[] { 2, 0, 5 }, @out.ToArray());
+            CollectionAssert.AreEqual(new[] { 2, 0, 5 }, out2.ToArray());
+            CollectionAssert.AreEqual(new[] { 4, 0, 10 }, out3.ToArray());
         }
 
         [Test]
@@ -433,6 +473,43 @@ namespace Sodium.Tests
                 s.Send('A');
             }
             CollectionAssert.AreEqual(new[] { 'C', 'B', 'A' }, @out);
+        }
+
+        [Test]
+        public async Task TestListenAsync()
+        {
+            CellSink<int> a = new CellSink<int>(1);
+            Cell<int> a1 = a.Map(x => x + 1);
+            Cell<int> a2 = a.Map(x => x * 2);
+            Tuple<List<int>, CellLoop<int>> resultsAndCalled = Transaction.Run(() =>
+            {
+                Cell<int> result = a1.Lift(a2, (x, y) => x + y);
+                Stream<Unit> incrementStream = Operational.Value(result).MapTo(Unit.Value);
+                StreamSink<Unit> decrementStream = new StreamSink<Unit>();
+                CellLoop<int> calledLoop = new CellLoop<int>();
+                calledLoop.Loop(incrementStream.MapTo(1).Merge(decrementStream.MapTo(-1), (x, y) => x + y).Snapshot(calledLoop, (u, c) => c + u).Hold(0));
+                List<int> r = new List<int>();
+                result.Listen(v =>
+                {
+                    Task.Run(async () =>
+                    {
+                        await Task.Delay(900);
+                        r.Add(v);
+                        decrementStream.Send(Unit.Value);
+                    });
+                });
+                return Tuple.Create(r, calledLoop);
+            });
+            List<int> results = resultsAndCalled.Item1;
+            Cell<int> called = resultsAndCalled.Item2;
+            List<int> calledResults = new List<int>();
+            called.Listen(calledResults.Add);
+
+            await Task.Delay(500);
+            a.Send(2);
+            await Task.Delay(500);
+            a.Send(3);
+            await Task.Delay(2500);
         }
     }
 }
