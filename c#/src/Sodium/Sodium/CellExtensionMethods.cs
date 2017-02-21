@@ -74,13 +74,6 @@ namespace Sodium
             {
                 Stream<T> @out = new Stream<T>(csa.KeepListenersAlive);
                 Node<T> node = new Node<T>(0);
-                Action<Node<T>.Target> cleanupIfNotNull = t =>
-                {
-                    if (t != null)
-                    {
-                        node.Unlink(t);
-                    }
-                };
                 Node<T>.Target nodeTarget = node.Link((t, v) => { }, @out.Node).Item2;
                 IListener currentListener = csa.SampleNoTransaction().Listen(node, trans1, @out.Send, false);
                 Action<Transaction, Stream<T>> h = (trans2, sa) =>
@@ -89,12 +82,12 @@ namespace Sodium
                     {
                     }
 
-                    cleanupIfNotNull(nodeTarget);
+                    node.Unlink(nodeTarget);
                     nodeTarget = node.Link((t, v) => { }, @out.Node).Item2;
                     currentListener = sa.Listen(@out.Node, trans2, @out.Send, false);
                 };
                 IListener l1 = csa.Updates(trans1).Listen(node, trans1, h, false);
-                return @out.LastFiringOnly(trans1).UnsafeAddCleanup(l1).UnsafeAddCleanup(new Listener(() => cleanupIfNotNull(nodeTarget)));
+                return @out.LastFiringOnly(trans1).UnsafeAddCleanup(l1).UnsafeAddCleanup(new Listener(() => node.Unlink(nodeTarget)));
             });
         }
 
