@@ -311,7 +311,7 @@ namespace Sodium
             {
                 this.CheckRegen();
 
-                if (!this.prioritizedQueue.Any())
+                if (this.prioritizedQueue.Count < 1)
                 {
                     break;
                 }

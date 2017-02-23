@@ -559,7 +559,7 @@ namespace Sodium.Tests
         public void TestLiftList()
         {
             IReadOnlyList<CellSink<int>> cellSinks = Enumerable.Range(0, 50).Select(_ => new CellSink<int>(1)).ToArray();
-            Cell<int> sum = cellSinks.Lift(v => v.Sum());
+            Cell<int> sum = cellSinks.Lift().Map(v => v.Sum());
             List<int> @out = new List<int>();
             using (sum.Listen(@out.Add))
             {
@@ -580,7 +580,7 @@ namespace Sodium.Tests
         public void TestLiftListLarge()
         {
             IReadOnlyList<CellSink<int>> cellSinks = Enumerable.Range(0, 500).Select(_ => new CellSink<int>(1)).ToArray();
-            Cell<int> sum = cellSinks.Lift(v => v.Sum());
+            Cell<int> sum = cellSinks.Lift().Map(v => v.Sum());
             List<int> @out = new List<int>();
             using (sum.Listen(@out.Add))
             {
@@ -601,7 +601,7 @@ namespace Sodium.Tests
         public void TestLiftListLargeManyUpdates()
         {
             IReadOnlyList<CellSink<int>> cellSinks = Enumerable.Range(0, 500).Select(_ => new CellSink<int>(1)).ToArray();
-            Cell<int> sum = cellSinks.Lift(v => v.Sum());
+            Cell<int> sum = cellSinks.Lift().Map(v => v.Sum());
             List<int> @out = new List<int>();
             using (sum.Listen(@out.Add))
             {
@@ -626,7 +626,7 @@ namespace Sodium.Tests
         public void TestLiftListChangesWhileListening()
         {
             IReadOnlyList<CellSink<int>> cellSinks = Enumerable.Range(0, 50).Select(_ => new CellSink<int>(1)).ToArray();
-            Cell<int> sum = cellSinks.Lift(v => v.Sum());
+            Cell<int> sum = cellSinks.Lift().Map(v => v.Sum());
             List<int> @out = new List<int>();
             IListener l = Transaction.Run(() =>
             {

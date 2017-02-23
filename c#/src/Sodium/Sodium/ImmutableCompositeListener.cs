@@ -1,5 +1,4 @@
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Sodium
 {
@@ -7,9 +6,9 @@ namespace Sodium
     {
         private readonly IReadOnlyList<IListener> listeners;
 
-        public ImmutableCompositeListener(IEnumerable<IListener> listeners)
+        public ImmutableCompositeListener(IReadOnlyList<IListener> listeners)
         {
-            this.listeners = (listeners ?? new IListener[0]).ToArray();
+            this.listeners = listeners;
         }
 
         public void Dispose()

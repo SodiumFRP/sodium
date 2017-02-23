@@ -227,7 +227,7 @@ namespace Sodium
             }
             // ReSharper disable once LocalVariableHidesMember
             List<T> firings = this.firings.ToList();
-            if (!suppressEarlierFirings && firings.Any())
+            if (!suppressEarlierFirings && firings.Count > 0)
             {
                 trans.Prioritized(target, trans2 =>
                 {
@@ -664,7 +664,7 @@ namespace Sodium
 
         internal void Send(Transaction trans, T a)
         {
-            if (!this.firings.Any())
+            if (this.firings.Count < 1)
             {
                 trans.Last(this.firings.Clear);
             }

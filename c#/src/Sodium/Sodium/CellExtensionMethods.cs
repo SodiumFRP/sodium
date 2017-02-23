@@ -101,27 +101,44 @@ namespace Sodium
         }
 
         /// <summary>
-        ///     Lift a function into cells, so the returned cell always reflects the specified function applied to the
-        ///     input cells' values.
+        ///     Lift into an enumerable of cells, so the returned cell always reflects a list of the input cells' values.
         /// </summary>
         /// <typeparam name="T">The type of the cells.</typeparam>
-        /// <typeparam name="TResult">The type of the result.</typeparam>
         /// <param name="c">The enumerable of cells.</param>
-        /// <param name="f">The binary function to lift into the cells.</param>
-        /// <returns>A cell containing values resulting from the function applied to the input cells' values.</returns>
-        public static Cell<TResult> Lift<T, TResult>(this IEnumerable<Cell<T>> c, Func<IReadOnlyList<T>, TResult> f)
+        /// <returns>A cell containing a list of the input cells' values.</returns>
+        public static Cell<IReadOnlyList<T>> Lift<T>(this IEnumerable<Cell<T>> c)
+        {
+            return c.ToArray().Lift();
+        }
+
+        /// <summary>
+        ///     Lift into a collection of cells, so the returned cell always reflects a list of the input cells' values.
+        /// </summary>
+        /// <typeparam name="T">The type of the cells.</typeparam>
+        /// <param name="c">The collection of cells.</param>
+        /// <returns>A cell containing a list of the input cells' values.</returns>
+        public static Cell<IReadOnlyList<T>> Lift<T>(this IReadOnlyCollection<Cell<T>> c)
+        {
+            return c.LiftToArray().Map<IReadOnlyList<T>>(v => v);
+        }
+
+        internal static Cell<T[]> LiftToArray<T>(this IEnumerable<Cell<T>> c)
+        {
+            return c.ToArray().LiftToArray();
+        }
+
+        internal static Cell<T[]> LiftToArray<T>(this IReadOnlyCollection<Cell<T>> c)
         {
             return Transaction.Apply(trans1 =>
             {
-                IReadOnlyList<Cell<T>> cells = c.ToArray();
-                T[] values = cells.Select(cell => cell.SampleNoTransaction()).ToArray();
-                Stream<TResult> @out = new Stream<TResult>(new FanOutKeepListenersAlive(cells.Select(cell => cell.KeepListenersAlive)));
-                Lazy<TResult> initialValue = new Lazy<TResult>(() => f(values.ToArray()));
-                IEnumerable<IListener> listeners = cells.Select((cell, i) => cell.Updates(trans1).Listen(@out.Node, trans1, (trans2, v) =>
-                  {
-                      values[i] = v;
-                      @out.Send(trans2, f(values.ToArray()));
-                  }, false));
+                T[] values = c.Select(cell => cell.SampleNoTransaction()).ToArray();
+                Stream<T[]> @out = new Stream<T[]>(new FanOutKeepListenersAlive(c.Select(cell => cell.KeepListenersAlive)));
+                Lazy<T[]> initialValue = new Lazy<T[]>(() => values.ToArray());
+                IReadOnlyList<IListener> listeners = c.Select((cell, i) => cell.Updates(trans1).Listen(@out.Node, trans1, (trans2, v) =>
+                {
+                    values[i] = v;
+                    @out.Send(trans2, values.ToArray());
+                }, false)).ToArray();
                 return @out.UnsafeAddCleanup(new ImmutableCompositeListener(listeners)).HoldLazy(initialValue);
             });
         }

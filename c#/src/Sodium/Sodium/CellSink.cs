@@ -7,7 +7,7 @@ namespace Sodium
     ///     FRP.  Code that exports instances of <see cref="CellSink{T}" /> for read-only use should downcast to
     ///     <see cref="Cell{T}" />.
     /// </summary>
-    /// <typeparam name="T">The type of values in the cell.</typeparam>
+    /// <typeparam name="T">The type of values in the cell sink.</typeparam>
     public class CellSink<T> : Cell<T>
     {
         private readonly StreamSink<T> streamSink;

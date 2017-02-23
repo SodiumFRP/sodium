@@ -5,7 +5,7 @@ namespace Sodium
     /// <summary>
     ///     A forward reference for a <see cref="Cell{T}" /> equivalent to the <see cref="Cell{T}" /> that is referenced.
     /// </summary>
-    /// <typeparam name="T">The type of values in the cell.</typeparam>
+    /// <typeparam name="T">The type of values in the cell loop.</typeparam>
     public class CellLoop<T> : LazyCell<T>
     {
         private readonly StreamLoop<T> streamLoop;
