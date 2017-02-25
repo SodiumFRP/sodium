@@ -17,7 +17,7 @@ namespace Sodium
         /// </summary>
         /// <param name="initialValue">The initial value of the cell.</param>
         public CellSink(T initialValue)
-            : this(new StreamSink<T>(), initialValue)
+            : this(new StreamSink<T>((left, right) => right), initialValue)
         {
         }
 
@@ -47,6 +47,12 @@ namespace Sodium
         /// </summary>
         /// <param name="a">The value to send.</param>
         public void Send(T a) => this.streamSink.Send(a);
+
+        /// <summary>
+        ///     Return a reference to this <see cref="CellSink{T}" /> as a <see cref="Cell{T}" />.
+        /// </summary>
+        /// <returns>A reference to this <see cref="CellSink{T}" /> as a <see cref="Cell{T}" />.</returns>
+        public Cell<T> AsCell() => this;
 
         public override void Dispose()
         {

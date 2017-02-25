@@ -12,7 +12,7 @@ namespace Sodium
         private readonly Action<Transaction, T> coalescer;
 
         /// <summary>
-        ///     Construct a StreamSink that uses the last value if <see cref="Send" /> is called more than once per transaction.
+        ///     Construct a StreamSink that throws an exception if <see cref="Send" /> is called more than once per transaction.
         /// </summary>
         public StreamSink()
             : this((left, right) => { throw new InvalidOperationException("Send was called more than once in a transaction, which isn't allowed.  To combine the streams, pass a coalescing function to the StreamSink constructor."); })
@@ -48,5 +48,11 @@ namespace Sodium
                 this.coalescer(trans, a);
             });
         }
+
+        /// <summary>
+        ///     Return a reference to this <see cref="StreamSink{T}" /> as a <see cref="Stream{T}" />.
+        /// </summary>
+        /// <returns>A reference to this <see cref="StreamSink{T}" /> as a <see cref="Stream{T}" />.</returns>
+        public Stream<T> AsStream() => this;
     }
 }

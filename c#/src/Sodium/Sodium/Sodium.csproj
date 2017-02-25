@@ -47,6 +47,7 @@
   <ItemGroup>
     <Compile Include="Cell.cs" />
     <Compile Include="CellExtensionMethods.cs" />
+    <Compile Include="DiscreteCellStreamSink.cs" />
     <Compile Include="CellSink.cs" />
     <Compile Include="CoalesceHandler.cs" />
     <Compile Include="CompositeListener.cs" />

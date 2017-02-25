@@ -59,5 +59,11 @@ namespace Sodium
                 stream.KeepListenersAlive.Use(this.KeepListenersAlive);
             });
         }
+
+        /// <summary>
+        ///     Return a reference to this <see cref="StreamLoop{T}" /> as a <see cref="Stream{T}" />.
+        /// </summary>
+        /// <returns>A reference to this <see cref="StreamLoop{T}" /> as a <see cref="Stream{T}" />.</returns>
+        public Stream<T> AsStream() => this;
     }
 }

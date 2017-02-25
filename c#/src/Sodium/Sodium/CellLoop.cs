@@ -42,6 +42,12 @@ namespace Sodium
             });
         }
 
+        /// <summary>
+        ///     Return a reference to this <see cref="CellLoop{T}" /> as a <see cref="Cell{T}" />.
+        /// </summary>
+        /// <returns>A reference to this <see cref="CellLoop{T}" /> as a <see cref="Cell{T}" />.</returns>
+        public Cell<T> AsCell() => this;
+
         internal override T SampleNoTransaction()
         {
             if (!this.streamLoop.IsAssigned)

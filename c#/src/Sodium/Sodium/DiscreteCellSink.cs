@@ -11,16 +11,16 @@ namespace Sodium
     public class DiscreteCellSink<T> : DiscreteCell<T>
     {
         internal DiscreteCellSink(T initialValue)
-            : this(new StreamSink<T>(), initialValue)
+            : this(new DiscreteCellStreamSink<T>(), initialValue)
         {
         }
 
-        private DiscreteCellSink(StreamSink<T> streamSink, T initialValue)
+        private DiscreteCellSink(DiscreteCellStreamSink<T> streamSink, T initialValue)
             : this(streamSink, streamSink.Hold(initialValue))
         {
         }
 
-        private DiscreteCellSink(StreamSink<T> streamSink, Cell<T> cell)
+        private DiscreteCellSink(DiscreteCellStreamSink<T> streamSink, Cell<T> cell)
             : base(streamSink, cell)
         {
             this.StreamSink = streamSink;
@@ -29,7 +29,7 @@ namespace Sodium
         /// <summary>
         ///     The underlying stream sink providing discrete updates to this cell and through which new values are sent.
         /// </summary>
-        public StreamSink<T> StreamSink { get; }
+        public DiscreteCellStreamSink<T> StreamSink { get; }
 
         /// <summary>
         ///     Send a value, modifying the value of the cell.  This method may not be called from inside handlers registered with
