@@ -45,6 +45,7 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DiscreteCellTests.cs" />
     <Compile Include="CellTests.cs" />
     <Compile Include="CommonTests.cs" />
     <Compile Include="DenotationalSemanticsTests.cs" />

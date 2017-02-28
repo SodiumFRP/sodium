@@ -13,7 +13,7 @@ namespace Sodium
         /// <param name="stream">The stream which will provide updates to the discrete cell.</param>
         /// <param name="initialValue">The initial value of the discrete cell.</param>
         /// <returns>A discrete cell with initial value <see cref="initialValue"/> receiving updates from <see cref="stream"/>.</returns>
-        public static DiscreteCell<T> ToDiscreteCell<T>(this Stream<T> stream, T initialValue) => DiscreteCell.Create(stream, initialValue);
+        public static DiscreteCell<T> ToDiscreteCell<T>(this Stream<T> stream, T initialValue) => DiscreteCell.Create(stream, new Lazy<T>(() => initialValue));
 
         /// <summary>
         ///     Unwrap a discrete cell inside another discrete cell to give a time-varying cell implementation.
@@ -27,7 +27,7 @@ namespace Sodium
                     cca.Updates.Map(v => v.Cell.Sample())
                         .Merge(cca.Cell.Map(v => v.Updates).SwitchEarlyS(), (o, n) => n)
                         .Snapshot(cca.Cell.Map(v => v.Cell).SwitchC(), (n, o) => n),
-                    cca.Cell.Sample().Cell.Sample()));
+                    cca.Cell.SampleLazy().Map(c => c.Cell.Sample())));
 
         /// <summary>
         ///     Lift into an enumerable of cells, so the returned cell always reflects a list of the input cells' values.
@@ -46,7 +46,7 @@ namespace Sodium
         public static DiscreteCell<IReadOnlyList<T>> Lift<T>(this IReadOnlyCollection<DiscreteCell<T>> c) =>
             Transaction.Run(() =>
             {
-                IReadOnlyList<T> initialValue = c.Select(o => o.Cell.Sample()).ToArray();
+                Lazy<IReadOnlyList<T>> initialValue = new Lazy<IReadOnlyList<T>>(() => c.Select(o => o.Cell.Sample()).ToArray());
                 Stream<IReadOnlyList<T>> stream =
                     c.Select((o, i) => o.Updates.Map(v => new[] { (Func<T[], T[]>)(vv =>
                     {

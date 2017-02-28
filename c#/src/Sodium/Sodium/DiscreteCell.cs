@@ -15,7 +15,7 @@ namespace Sodium
         /// <param name="stream">The stream which will provide updates to the discrete cell.</param>
         /// <param name="initialValue">The initial value of the discrete cell.</param>
         /// <returns>A discrete cell with initial value <see cref="initialValue"/> receiving updates from <see cref="stream"/>.</returns>
-        public static DiscreteCell<T> Create<T>(Stream<T> stream, T initialValue) => new DiscreteCell<T>(stream, stream.Hold(initialValue));
+        public static DiscreteCell<T> Create<T>(Stream<T> stream, Lazy<T> initialValue) => new DiscreteCell<T>(stream, stream.HoldLazy(initialValue));
 
         /// <summary>
         ///     Creates a discrete cell with a constant value.
@@ -23,7 +23,7 @@ namespace Sodium
         /// <typeparam name="T">The type of the value of the cell.</typeparam>
         /// <param name="value">The value of the cell.</param>
         /// <returns>A discrete cell with a constant value.</returns>
-        public static DiscreteCell<T> Constant<T>(T value) => Create(Stream.Never<T>(), value);
+        public static DiscreteCell<T> Constant<T>(T value) => Create(Stream.Never<T>(), new Lazy<T>(() => value));
 
         /// <summary>
         ///     Creates a discrete cell loop.
@@ -71,7 +71,7 @@ namespace Sodium
         /// </param>
         /// <returns>A discrete cell which fires values transformed by <paramref name="f" /> for each value fired by this cell.</returns>
         public DiscreteCell<TResult> Map<TResult>(Func<T, TResult> f) =>
-            Transaction.Run(() => DiscreteCell.Create(this.Updates.Map(f), f(this.Cell.Sample())));
+            Transaction.Run(() => DiscreteCell.Create(this.Updates.Map(f), this.Cell.SampleLazy().Map(f)));
 
         /// <summary>
         ///     Lift a binary function into cells, so the returned cell always reflects the specified function applied to the input
@@ -89,7 +89,7 @@ namespace Sodium
                         .Merge(b2.Updates.Map(ModifyTuple<T, T2>), Compose)
                         .Snapshot(this.Cell.Lift(b2.Cell, Tuple.Create), (ff, x) => ff(x))
                         .Map(o => f(o.Item1, o.Item2)),
-                    f(this.Cell.Sample(), b2.Cell.Sample())));
+                    new Lazy<TResult>(() => f(this.Cell.Sample(), b2.Cell.Sample()))));
 
         /// <summary>
         ///     Lift a ternary function into cells, so the returned cell always reflects the specified function applied to the
@@ -110,7 +110,7 @@ namespace Sodium
                         .Merge(b3.Updates.Map(ModifyTuple<T, T2, T3>), Compose)
                         .Snapshot(this.Cell.Lift(b2.Cell, b3.Cell, Tuple.Create), (ff, x) => ff(x))
                         .Map(o => f(o.Item1, o.Item2, o.Item3)),
-                    f(this.Cell.Sample(), b2.Cell.Sample(), b3.Cell.Sample())));
+                    new Lazy<TResult>(() => f(this.Cell.Sample(), b2.Cell.Sample(), b3.Cell.Sample()))));
 
         /// <summary>
         ///     Lift a quaternary function into cells, so the returned cell always reflects the specified function applied to the
@@ -134,7 +134,7 @@ namespace Sodium
                         .Merge(b4.Updates.Map(ModifyTuple<T, T2, T3, T4>), Compose)
                         .Snapshot(this.Cell.Lift(b2.Cell, b3.Cell, b4.Cell, Tuple.Create), (ff, x) => ff(x))
                         .Map(o => f(o.Item1, o.Item2, o.Item3, o.Item4)),
-                    f(this.Cell.Sample(), b2.Cell.Sample(), b3.Cell.Sample(), b4.Cell.Sample())));
+                    new Lazy<TResult>(() => f(this.Cell.Sample(), b2.Cell.Sample(), b3.Cell.Sample(), b4.Cell.Sample()))));
 
         /// <summary>
         ///     Lift a 5-argument function into cells, so the returned cell always reflects the specified function applied to the
@@ -161,7 +161,7 @@ namespace Sodium
                         .Merge(b5.Updates.Map(ModifyTuple<T, T2, T3, T4, T5>), Compose)
                         .Snapshot(this.Cell.Lift(b2.Cell, b3.Cell, b4.Cell, b5.Cell, Tuple.Create), (ff, x) => ff(x))
                         .Map(o => f(o.Item1, o.Item2, o.Item3, o.Item4, o.Item5)),
-                    f(this.Cell.Sample(), b2.Cell.Sample(), b3.Cell.Sample(), b4.Cell.Sample(), b5.Cell.Sample())));
+                    new Lazy<TResult>(() => f(this.Cell.Sample(), b2.Cell.Sample(), b3.Cell.Sample(), b4.Cell.Sample(), b5.Cell.Sample()))));
 
         /// <summary>
         ///     Lift a 6-argument function into cells, so the returned cell always reflects the specified function applied to the
@@ -191,7 +191,7 @@ namespace Sodium
                         .Merge(b6.Updates.Map(ModifyTuple<T, T2, T3, T4, T5, T6>), Compose)
                         .Snapshot(this.Cell.Lift(b2.Cell, b3.Cell, b4.Cell, b5.Cell, b6.Cell, Tuple.Create), (ff, x) => ff(x))
                         .Map(o => f(o.Item1, o.Item2, o.Item3, o.Item4, o.Item5, o.Item6)),
-                    f(this.Cell.Sample(), b2.Cell.Sample(), b3.Cell.Sample(), b4.Cell.Sample(), b5.Cell.Sample(), b6.Cell.Sample())));
+                    new Lazy<TResult>(() => f(this.Cell.Sample(), b2.Cell.Sample(), b3.Cell.Sample(), b4.Cell.Sample(), b5.Cell.Sample(), b6.Cell.Sample()))));
 
         /// <summary>
         ///     Apply a value inside a cell to a function inside a cell.  This is the primitive for all function lifting.
@@ -209,7 +209,7 @@ namespace Sodium
                         .Merge(bf.Updates.Map(ModifyTuple<T, Func<T, TResult>>), Compose)
                         .Snapshot(this.Cell.Lift(bf.Cell, Tuple.Create), (ff, x) => ff(x))
                         .Map(o => o.Item2(o.Item1)),
-                    bf.Cell.Sample()(this.Cell.Sample())));
+                    bf.Cell.SampleLazy().Map(f => f(this.Cell.Sample()))));
 
         /// <summary>
         ///     Return a discrete cell whose stream only receives events which have a different value than the previous event.
@@ -225,9 +225,9 @@ namespace Sodium
         public DiscreteCell<T> Calm(IEqualityComparer<T> comparer) =>
             Transaction.Run(() =>
             {
-                T initialValue = this.Cell.Sample();
+                Lazy<T> initialValue = this.Cell.SampleLazy();
                 return DiscreteCell.Create(
-                    this.Updates.Collect(Maybe.Just(initialValue), (a, lastA) =>
+                    this.Updates.CollectLazy(initialValue.Map(Maybe.Just), (a, lastA) =>
                     {
                         if (lastA.Match(v => comparer.Equals(v, a), () => false))
                         {
