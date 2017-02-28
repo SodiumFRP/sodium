@@ -44,7 +44,7 @@ namespace Sodium
             return Transaction.Apply(trans1 =>
             {
                 Stream<T> @out = new Stream<T>(csa.KeepListenersAlive);
-                IListener currentListener = csa.SampleNoTransaction().Listen(@out.Node, trans1, @out.Send, false);
+                IListener currentListener = null;
                 Action<Transaction, Stream<T>> h = (trans2, sa) =>
                 {
                     trans2.Last(() =>
@@ -56,7 +56,7 @@ namespace Sodium
                         currentListener = sa.Listen(@out.Node, trans2, @out.Send, true);
                     });
                 };
-                IListener l1 = csa.Updates(trans1).Listen(@out.Node, trans1, h, false);
+                IListener l1 = csa.Value(trans1).Listen(@out.Node, trans1, h, false);
                 return @out.UnsafeAddCleanup(l1);
             });
         }
@@ -75,7 +75,7 @@ namespace Sodium
                 Stream<T> @out = new Stream<T>(csa.KeepListenersAlive);
                 Node<T> node = new Node<T>(0);
                 Node<T>.Target nodeTarget = node.Link((t, v) => { }, @out.Node).Item2;
-                Guid listenerId = Guid.NewGuid();
+                Guid listenerId;
                 Action<Transaction, Tuple<T, Guid>, Guid> sendIfNodeTargetMatches = (t, v, i) =>
                 {
                     if (v.Item2 == i)
@@ -83,7 +83,7 @@ namespace Sodium
                         @out.Send(t, v.Item1);
                     }
                 };
-                IListener currentListener = csa.SampleNoTransaction().Map(v => Tuple.Create(v, listenerId)).Listen(node, trans1, (t, v) => sendIfNodeTargetMatches(t, v, listenerId), false);
+                IListener currentListener = null;
                 Action<Transaction, Stream<T>> h = (trans2, sa) =>
                 {
                     using (currentListener)
@@ -95,7 +95,7 @@ namespace Sodium
                     listenerId = Guid.NewGuid();
                     currentListener = sa.Map(v => Tuple.Create(v, listenerId)).Listen(@out.Node, trans2, (t, v) => sendIfNodeTargetMatches(t, v, listenerId), false);
                 };
-                IListener l1 = csa.Updates(trans1).Listen(node, trans1, h, false);
+                IListener l1 = csa.Value(trans1).Listen(node, trans1, h, false);
                 return @out.UnsafeAddCleanup(l1).UnsafeAddCleanup(new Listener(() => node.Unlink(nodeTarget)));
             });
         }

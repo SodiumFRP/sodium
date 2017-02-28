@@ -645,5 +645,104 @@ namespace Sodium.Tests
             l.Unlisten();
             CollectionAssert.AreEqual(new[] { 58, 62, 74 }, @out);
         }
+
+        [Test]
+        public void SwitchCOnCellLoop()
+        {
+            var t = Transaction.Run(() =>
+              {
+                  CellLoop<Cell<int>> l = new CellLoop<Cell<int>>();
+                  CellSink<int> c1 = new CellSink<int>(1);
+                  CellSink<int> c2 = new CellSink<int>(11);
+                  Cell<int> c = l.SwitchC();
+                  CellSink<Cell<int>> s = new CellSink<Cell<int>>(c1);
+                  l.Loop(s);
+                  return Tuple.Create(c, c1, c2, s);
+              });
+
+            List<int> output = new List<int>();
+            t.Item1.Listen(output.Add);
+
+            t.Item2.Send(2);
+            t.Item3.Send(12);
+
+            Transaction.RunVoid(() =>
+            {
+                t.Item2.Send(3);
+                t.Item3.Send(13);
+                t.Item4.Send(t.Item3);
+            });
+
+            t.Item2.Send(4);
+            t.Item3.Send(14);
+
+            CollectionAssert.AreEqual(new[] { 1, 2, 13, 14 }, output);
+        }
+
+        [Test]
+        public void SwitchSOnCellLoop()
+        {
+            var t = Transaction.Run(() =>
+            {
+                CellLoop<Stream<int>> l = new CellLoop<Stream<int>>();
+                StreamSink<int> c1 = new StreamSink<int>();
+                StreamSink<int> c2 = new StreamSink<int>();
+                Stream<int> c = l.SwitchS();
+                CellSink<Stream<int>> s = new CellSink<Stream<int>>(c1);
+                l.Loop(s);
+                return Tuple.Create(c, c1, c2, s);
+            });
+
+            List<int> output = new List<int>();
+            t.Item1.Listen(output.Add);
+
+            t.Item2.Send(2);
+            t.Item3.Send(12);
+
+            Transaction.RunVoid(() =>
+            {
+                t.Item2.Send(3);
+                t.Item3.Send(13);
+                t.Item4.Send(t.Item3);
+            });
+
+            t.Item2.Send(4);
+            t.Item3.Send(14);
+
+            CollectionAssert.AreEqual(new[] { 2, 3, 14 }, output);
+        }
+
+        [Test]
+        public void SwitchEarlySOnCellLoop()
+        {
+            var t = Transaction.Run(() =>
+            {
+                CellLoop<Stream<int>> l = new CellLoop<Stream<int>>();
+                StreamSink<int> c1 = new StreamSink<int>();
+                StreamSink<int> c2 = new StreamSink<int>();
+                Stream<int> c = l.SwitchEarlyS();
+                CellSink<Stream<int>> s = new CellSink<Stream<int>>(c1);
+                l.Loop(s);
+                return Tuple.Create(c, c1, c2, s);
+            });
+
+            List<int> output = new List<int>();
+            t.Item1.Listen(output.Add);
+
+            t.Item2.Send(2);
+            t.Item3.Send(12);
+
+            Transaction.RunVoid(() =>
+            {
+                t.Item2.Send(3);
+                t.Item3.Send(13);
+                t.Item4.Send(t.Item3);
+            });
+
+            t.Item2.Send(4);
+            t.Item3.Send(14);
+
+            CollectionAssert.AreEqual(new[] { 2, 13, 14 }, output);
+        }
     }
 }
