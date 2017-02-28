@@ -106,6 +106,21 @@ namespace Sodium
             });
         }
 
+        /// <summary>
+        ///     Map an <see cref="IMaybe{T}"/> value using a mapping function if a value exists, or propogate the nothing value if it does not.
+        /// </summary>
+        /// <param name="a">The <see cref="IMaybe{T}"/> value to transform.</param>
+        /// <param name="f">The function to transform the <see cref="IMaybe{T}"/> input value <paramref name="a"/>.</param>
+        /// <typeparam name="T1">The type of the maybe input value.</typeparam>
+        /// <typeparam name="TResult">The type of the maybe result value.</typeparam>
+        /// <returns>
+        ///     The <see cref="IMaybe{TResult}"/> which results from transforming <paramref name="a"/> using <paramref name="f"/>.
+        /// </returns>
+        public static IMaybe<TResult> Map<T1, TResult>(this IMaybe<T1> a, Func<T1, TResult> f)
+        {
+            return a.Bind(v => Maybe.Just(f(v)));
+        }
+
         #endregion
     }
 }
