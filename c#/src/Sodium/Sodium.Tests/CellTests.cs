@@ -650,15 +650,15 @@ namespace Sodium.Tests
         public void SwitchCOnCellLoop()
         {
             var t = Transaction.Run(() =>
-              {
-                  CellLoop<Cell<int>> l = new CellLoop<Cell<int>>();
-                  CellSink<int> c1 = new CellSink<int>(1);
-                  CellSink<int> c2 = new CellSink<int>(11);
-                  Cell<int> c = l.SwitchC();
-                  CellSink<Cell<int>> s = new CellSink<Cell<int>>(c1);
-                  l.Loop(s);
-                  return Tuple.Create(c, c1, c2, s);
-              });
+            {
+                CellLoop<Cell<int>> l = new CellLoop<Cell<int>>();
+                CellSink<int> c1 = new CellSink<int>(1);
+                CellSink<int> c2 = new CellSink<int>(11);
+                Cell<int> c = l.SwitchC();
+                CellSink<Cell<int>> s = new CellSink<Cell<int>>(c1);
+                l.Loop(s);
+                return Tuple.Create(c, c1, c2, s);
+            });
 
             List<int> output = new List<int>();
             t.Item1.Listen(output.Add);
@@ -743,6 +743,117 @@ namespace Sodium.Tests
             t.Item3.Send(14);
 
             CollectionAssert.AreEqual(new[] { 2, 13, 14 }, output);
+        }
+
+        [Test]
+        public void SwitchCCatchFirst()
+        {
+            List<int> output = new List<int>();
+
+            var t = Transaction.Run(() =>
+            {
+                CellSink<int> c1 = new CellSink<int>(1);
+                CellSink<int> c2 = new CellSink<int>(11);
+                CellSink<Cell<int>> s = new CellSink<Cell<int>>(c1);
+                Cell<int> c = s.SwitchC();
+
+                c1.Send(2);
+                c2.Send(12);
+                s.Send(c2);
+
+                c.Listen(output.Add);
+
+                return Tuple.Create(c, c1, c2, s);
+            });
+
+            t.Item2.Send(3);
+            t.Item3.Send(13);
+
+            Transaction.RunVoid(() =>
+            {
+                t.Item2.Send(4);
+                t.Item3.Send(14);
+                t.Item4.Send(t.Item2);
+            });
+
+            t.Item2.Send(5);
+            t.Item3.Send(15);
+
+            CollectionAssert.AreEqual(new[] { 12, 13, 4, 5 }, output);
+        }
+
+        [Test]
+        public void SwitchSCatchFirst()
+        {
+            List<int> output = new List<int>();
+
+            var t = Transaction.Run(() =>
+            {
+                StreamSink<int> c1 = new StreamSink<int>();
+                StreamSink<int> c2 = new StreamSink<int>();
+                CellSink<Stream<int>> s = new CellSink<Stream<int>>(c1);
+                Stream<int> c = s.SwitchS();
+
+                c1.Send(2);
+                c2.Send(12);
+                s.Send(c2);
+
+                c.Listen(output.Add);
+
+                return Tuple.Create(c, c1, c2, s);
+            });
+
+            t.Item2.Send(3);
+            t.Item3.Send(13);
+
+            Transaction.RunVoid(() =>
+            {
+                t.Item2.Send(4);
+                t.Item3.Send(14);
+                t.Item4.Send(t.Item2);
+            });
+
+            t.Item2.Send(5);
+            t.Item3.Send(15);
+
+            CollectionAssert.AreEqual(new[] { 2, 13, 14, 5 }, output);
+        }
+
+        [Test]
+        public void SwitchEarlySCatchFirst()
+        {
+            List<int> output = new List<int>();
+
+            var t = Transaction.Run(() =>
+            {
+                StreamSink<int> c1 = new StreamSink<int>();
+                StreamSink<int> c2 = new StreamSink<int>();
+                CellSink<Stream<int>> s = new CellSink<Stream<int>>(c1);
+                Stream<int> c = s.SwitchEarlyS();
+
+                c1.Send(2);
+                c2.Send(12);
+                s.Send(c2);
+
+                c.Listen(output.Add);
+
+                return Tuple.Create(c, c1, c2, s);
+            });
+
+            t.Item2.Send(3);
+            t.Item3.Send(13);
+
+            Transaction.RunVoid(() =>
+            {
+                t.Item2.Send(4);
+                t.Item3.Send(14);
+                t.Item4.Send(t.Item2);
+            });
+
+            t.Item2.Send(5);
+            t.Item3.Send(15);
+
+            CollectionAssert.AreEqual(new[] { 12, 13, 4, 5 }, output);
         }
     }
 }

@@ -45,6 +45,14 @@ namespace Sodium
             {
                 Stream<T> @out = new Stream<T>(csa.KeepListenersAlive);
                 IListener currentListener = null;
+                Action<Transaction, Stream<T>> hInitial = (trans2, sa) =>
+                {
+                    using (currentListener)
+                    {
+                    }
+
+                    currentListener = sa.Listen(@out.Node, trans2, @out.Send, false);
+                };
                 Action<Transaction, Stream<T>> h = (trans2, sa) =>
                 {
                     trans2.Last(() =>
@@ -56,7 +64,8 @@ namespace Sodium
                         currentListener = sa.Listen(@out.Node, trans2, @out.Send, true);
                     });
                 };
-                IListener l1 = csa.Value(trans1).Listen(@out.Node, trans1, h, false);
+                trans1.Prioritized(new Node<T>(0), trans2 => hInitial(trans2, csa.SampleNoTransaction()));
+                IListener l1 = csa.Updates(trans1).Listen(@out.Node, trans1, h, false);
                 return @out.UnsafeAddCleanup(l1);
             });
         }
@@ -90,8 +99,6 @@ namespace Sodium
                     {
                     }
 
-                    node.Unlink(nodeTarget);
-                    nodeTarget = node.Link((t, v) => { }, @out.Node).Item2;
                     listenerId = Guid.NewGuid();
                     currentListener = sa.Map(v => Tuple.Create(v, listenerId)).Listen(@out.Node, trans2, (t, v) => sendIfNodeTargetMatches(t, v, listenerId), false);
                 };
