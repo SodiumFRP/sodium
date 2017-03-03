@@ -41,12 +41,12 @@
 
         public static bool operator ==(Unit x, Unit y)
         {
-            return x == null == (y == null);
+            return ReferenceEquals(x, null) == ReferenceEquals(y, null);
         }
 
         public static bool operator !=(Unit x, Unit y)
         {
-            return x == null != (y == null);
+            return ReferenceEquals(x, null) != ReferenceEquals(y, null);
         }
     }
 }

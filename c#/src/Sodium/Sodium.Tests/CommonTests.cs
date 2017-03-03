@@ -134,5 +134,65 @@ namespace Sodium.Tests
             }
             CollectionAssert.AreEqual(new[] { "b" }, out2);
         }
+
+        [Test]
+        public void TestUnitEqualsOperator_NonNull()
+        {
+            Unit u1 = Unit.Value;
+            Unit u2 = Unit.Value;
+
+            Assert.IsTrue(u1 == u2);
+            Assert.IsTrue(u2 == u1);
+        }
+
+        [Test]
+        public void TestUnitEqualsOperator_Null()
+        {
+            Unit u1 = null;
+            Unit u2 = null;
+
+            Assert.IsTrue(u1 == u2);
+            Assert.IsTrue(u2 == u1);
+        }
+
+        [Test]
+        public void TestUnitEqualsOperator_NonNullAndNull()
+        {
+            Unit u1 = Unit.Value;
+            Unit u2 = null;
+
+            Assert.IsFalse(u1 == u2);
+            Assert.IsFalse(u2 == u1);
+        }
+
+        [Test]
+        public void TestUnitNotEqualsOperator_NonNull()
+        {
+            Unit u1 = Unit.Value;
+            Unit u2 = Unit.Value;
+
+            Assert.IsFalse(u1 != u2);
+            Assert.IsFalse(u2 != u1);
+        }
+
+        [Test]
+        public void TestUnitNotEqualsOperator_Null()
+        {
+            Unit u1 = null;
+            Unit u2 = null;
+
+            Assert.IsFalse(u1 != u2);
+            Assert.IsFalse(u2 != u1);
+        }
+
+        [Test]
+        public void TestUnitNotEqualsOperator_NonNullAndNull()
+        {
+            Unit u1 = Unit.Value;
+            Unit u2 = null;
+
+            Assert.IsTrue(u1 != u2);
+            Assert.IsTrue(u2 != u1);
+        }
     }
 }
