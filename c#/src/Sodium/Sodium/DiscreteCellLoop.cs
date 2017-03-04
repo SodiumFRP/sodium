@@ -1,5 +1,3 @@
-using System;
-
 namespace Sodium
 {
     /// <summary>
@@ -12,14 +10,14 @@ namespace Sodium
         private readonly CellLoop<T> cellLoop;
 
         internal DiscreteCellLoop()
-            : this(new StreamLoop<T>(), new CellLoop<T>())
+            : this(new CellLoop<T>())
         {
         }
 
-        private DiscreteCellLoop(StreamLoop<T> streamLoop, CellLoop<T> cellLoop)
-            : base(streamLoop, cellLoop)
+        private DiscreteCellLoop(CellLoop<T> cellLoop)
+            : base(cellLoop)
         {
-            this.streamLoop = streamLoop;
+            this.streamLoop = new StreamLoop<T>();
             this.cellLoop = cellLoop;
         }
 
@@ -36,6 +34,8 @@ namespace Sodium
             this.streamLoop.Loop(c.Updates);
             this.cellLoop.Loop(c.Cell);
         }
+
+        protected override Stream<T> GetUpdatesStream() => this.streamLoop;
 
         /// <summary>
         ///     Return a reference to this <see cref="DiscreteCellLoop{T}" /> as a <see cref="DiscreteCell{T}" />.

@@ -21,7 +21,7 @@ namespace Sodium
         }
 
         private DiscreteCellSink(DiscreteCellStreamSink<T> streamSink, Cell<T> cell)
-            : base(streamSink, cell)
+            : base(cell)
         {
             this.StreamSink = streamSink;
         }
