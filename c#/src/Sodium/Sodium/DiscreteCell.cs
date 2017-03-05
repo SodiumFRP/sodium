@@ -50,7 +50,8 @@ namespace Sodium
             this.Cell = cell;
         }
 
-        protected virtual Stream<T> GetUpdatesStream() => Operational.Updates(this.Cell);
+        protected virtual Stream<T> GetUpdatesStream()
+            => Transaction.Apply(trans => this.Cell.Updates(trans).Coalesce(trans, (left, right) => right));
 
         /// <summary>
         ///     The stream of discrete updates to this cell.

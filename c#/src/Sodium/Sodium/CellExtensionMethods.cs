@@ -139,14 +139,15 @@ namespace Sodium
             return Transaction.Apply(trans1 =>
             {
                 T[] values = c.Select(cell => cell.SampleNoTransaction()).ToArray();
-                Stream<T[]> @out = new Stream<T[]>(new FanOutKeepListenersAlive(c.Select(cell => cell.KeepListenersAlive)));
+                Stream<Action> @out = new Stream<Action>(new FanOutKeepListenersAlive(c.Select(cell => cell.KeepListenersAlive)));
                 Lazy<T[]> initialValue = new Lazy<T[]>(() => values.ToArray());
-                IReadOnlyList<IListener> listeners = c.Select((cell, i) => cell.Updates(trans1).Listen(@out.Node, trans1, (trans2, v) =>
-                {
-                    values[i] = v;
-                    @out.Send(trans2, values.ToArray());
-                }, false)).ToArray();
-                return @out.UnsafeAddCleanup(new ImmutableCompositeListener(listeners)).HoldLazy(initialValue);
+                IReadOnlyList<IListener> listeners = c.Select((cell, i) => cell.Updates(trans1).Listen(@out.Node, trans1,
+                    (trans2, v) => @out.Send(trans2, () => values[i] = v), false)).ToArray();
+                return @out.Coalesce(trans1, (x, y) => x + y).Map(a =>
+                  {
+                      a();
+                      return values.ToArray();
+                  }).UnsafeAddCleanup(new ImmutableCompositeListener(listeners)).HoldLazy(initialValue);
             });
         }
 

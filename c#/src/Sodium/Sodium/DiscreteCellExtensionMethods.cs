@@ -20,6 +20,8 @@ namespace Sodium
         /// </summary>
         /// <typeparam name="T"></typeparam>
         /// <param name="stream">The stream which will provide updates to the discrete cell.</param>
+        /// <param name="initialValue">The lazy initial value of the discrete cell.</param>
+        /// <returns>A discrete cell with lazy initial value <see cref="initialValue"/> receiving updates from <see cref="stream"/>.</returns>
         public static DiscreteCell<T> HoldDiscreteLazy<T>(this Stream<T> stream, Lazy<T> initialValue) => DiscreteCell.Create(stream, initialValue);
 
         /// <summary>

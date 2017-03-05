@@ -471,7 +471,7 @@ namespace Sodium
             return Transaction.Apply(trans => this.Merge(s).Coalesce(trans, f));
         }
 
-        private Stream<T> Coalesce(Transaction trans1, Func<T, T, T> f)
+        internal Stream<T> Coalesce(Transaction trans1, Func<T, T, T> f)
         {
             Stream<T> @out = new Stream<T>(this.KeepListenersAlive);
             Action<Transaction, T> h = CoalesceHandler.Create(f, @out);
