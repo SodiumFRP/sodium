@@ -63,7 +63,7 @@ namespace Sodium
         /// <returns>A stream firing the split event firings.</returns>
         public static Stream<T> Split<T, TCollection>(Stream<TCollection> s) where TCollection : IEnumerable<T>
         {
-            Stream<T> @out = new Stream<T>(s.KeepListenersAlive);
+            Stream<T> @out = new Stream<T>();
             IListener l1 = s.Listen(@out.Node, (trans, aa) =>
             {
                 int childIx = 0;
@@ -73,7 +73,7 @@ namespace Sodium
                     childIx++;
                 }
             });
-            return @out.UnsafeAddCleanup(l1);
+            return @out.UnsafeAttachListener(l1);
         }
     }
 }

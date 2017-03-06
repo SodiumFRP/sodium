@@ -20,9 +20,7 @@ namespace Sodium
         {
             foreach (IListener l in this.listeners)
             {
-                using (l)
-                {
-                }
+                l?.Unlisten();
             }
         }
     }

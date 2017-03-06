@@ -90,7 +90,7 @@ namespace Sodium.Time
                     })),
                     Maybe.Nothing<ITimer>);
             });
-            return alarm.AddCleanup(l);
+            return alarm.AttachListener(l);
         }
     }
 }

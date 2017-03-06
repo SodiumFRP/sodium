@@ -57,12 +57,5 @@ namespace Sodium
 
             return base.SampleNoTransaction();
         }
-
-        public override void Dispose()
-        {
-            base.Dispose();
-
-            this.streamLoop.Dispose();
-        }
     }
 }

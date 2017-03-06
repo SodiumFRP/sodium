@@ -35,11 +35,11 @@ namespace Sodium
     ///     Represents a value that changes over time.
     /// </summary>
     /// <typeparam name="T">The type of the value.</typeparam>
-    public class Cell<T> : IDisposable
+    public class Cell<T>
     {
         private readonly Stream<T> stream;
         private readonly MutableMaybeValue<T> valueUpdate = new MutableMaybeValue<T>();
-        private readonly IListener cleanup;
+        private readonly IListener streamListener;
 
         private T valueProperty;
 
@@ -59,7 +59,7 @@ namespace Sodium
             this.valueProperty = initialValue;
             this.UsingInitialValue = true;
 
-            this.cleanup = Transaction.Apply(trans1 =>
+            this.streamListener = Transaction.Apply(trans1 =>
                 this.stream.Listen(Node<T>.Null, trans1, (trans2, a) =>
                 {
                     this.valueUpdate.Get().Match(
@@ -77,8 +77,6 @@ namespace Sodium
                 }, false));
         }
 
-        internal IKeepListenersAlive KeepListenersAlive => this.stream.KeepListenersAlive;
-
         protected T ValueProperty
         {
             get { return this.valueProperty; }
@@ -90,13 +88,6 @@ namespace Sodium
         }
 
         protected bool UsingInitialValue { get; private set; }
-
-        public virtual void Dispose()
-        {
-            using (this.cleanup)
-            {
-            }
-        }
 
         /// <summary>
         ///     Sample the current value of the cell.
@@ -156,7 +147,7 @@ namespace Sodium
 
         internal Stream<T> Value(Transaction trans1)
         {
-            Stream<Unit> spark = new Stream<Unit>(this.stream.KeepListenersAlive);
+            Stream<Unit> spark = new Stream<Unit>();
             trans1.Prioritized(spark.Node, trans2 => spark.Send(trans2, Unit.Value));
             Stream<T> initial = spark.Snapshot(this);
             return initial.Merge(this.Updates(trans1), (left, right) => right);
@@ -179,27 +170,6 @@ namespace Sodium
         ///     <para>
         ///         If the <see cref="IListener" /> is not disposed, it will continue to listen until this cell is either
         ///         disposed or garbage collected or the listener itself is garbage collected.
-        ///     </para>
-        /// </remarks>
-        public IListener ListenWeak(Action<T> handler) => Transaction.Apply(trans => this.Value(trans).ListenWeak(handler));
-
-        /// <summary>
-        ///     Listen for updates to the value of this cell.  The returned <see cref="IListener" /> may be
-        ///     disposed to stop listening.  This is an OPERATIONAL mechanism for interfacing between
-        ///     the world of I/O and FRP.
-        /// </summary>
-        /// <param name="handler">The handler to execute for each value.</param>
-        /// <returns>An <see cref="IListener" /> which may be disposed to stop listening.</returns>
-        /// <remarks>
-        ///     <para>
-        ///         No assumptions should be made about what thread the handler is called on and it should not block.
-        ///         Neither <see cref="StreamSink{T}.Send" /> nor <see cref="CellSink{T}.Send" /> may be called from the
-        ///         handler.
-        ///         They will throw an exception because this method is not meant to be used to create new primitives.
-        ///     </para>
-        ///     <para>
-        ///         If the <see cref="IListener" /> is not disposed, it will continue to listen until this cell is either
-        ///         disposed or garbage collected.
         ///     </para>
         /// </remarks>
         public IListener Listen(Action<T> handler) => Transaction.Apply(trans => this.Value(trans).Listen(handler));
@@ -332,7 +302,7 @@ namespace Sodium
         {
             return Transaction.Apply(trans0 =>
             {
-                Stream<TResult> @out = new Stream<TResult>(this.stream.KeepListenersAlive);
+                Stream<TResult> @out = new Stream<TResult>();
 
                 Node<TResult> outTarget = @out.Node;
                 Node<Unit> inTarget = new Node<Unit>(0);
@@ -360,7 +330,7 @@ namespace Sodium
                         h(trans1);
                     }
                 });
-                return @out.LastFiringOnly(trans0).UnsafeAddCleanup(l1).UnsafeAddCleanup(l2).UnsafeAddCleanup(
+                return @out.LastFiringOnly(trans0).UnsafeAttachListener(l1).UnsafeAttachListener(l2).UnsafeAttachListener(
                     new Listener(() => inTarget.Unlink(nodeTarget))).HoldLazy(new Lazy<TResult>(() => bf.SampleNoTransaction()(this.SampleNoTransaction())));
             });
         }
@@ -384,6 +354,11 @@ namespace Sodium
             Lazy<T> initA = this.SampleLazy();
             Lazy<IMaybe<T>> mInitA = initA.Map(Maybe.Just);
             return Transaction.Apply(trans => this.Updates(trans).Calm(mInitA, comparer).HoldLazy(initA));
+        }
+
+        protected void NoOp()
+        {
+            GC.KeepAlive(this.streamListener);
         }
 
         private class LazySample

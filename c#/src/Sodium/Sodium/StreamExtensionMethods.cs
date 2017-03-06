@@ -80,9 +80,9 @@ namespace Sodium
         /// </returns>
         public static Stream<T> FilterMaybe<T>(this Stream<IMaybe<T>> s)
         {
-            Stream<T> @out = new Stream<T>(s.KeepListenersAlive);
+            Stream<T> @out = new Stream<T>();
             IListener l = s.Listen(@out.Node, (trans2, a) => a.Match(v => @out.Send(trans2, v), () => { }));
-            return @out.UnsafeAddCleanup(l);
+            return @out.UnsafeAttachListener(l);
         }
     }
 }

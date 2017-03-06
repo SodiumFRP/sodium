@@ -53,12 +53,5 @@ namespace Sodium
         /// </summary>
         /// <returns>A reference to this <see cref="CellSink{T}" /> as a <see cref="Cell{T}" />.</returns>
         public Cell<T> AsCell() => this;
-
-        public override void Dispose()
-        {
-            base.Dispose();
-
-            this.streamSink.Dispose();
-        }
     }
 }

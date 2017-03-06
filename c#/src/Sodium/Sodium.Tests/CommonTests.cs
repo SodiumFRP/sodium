@@ -11,11 +11,10 @@ namespace Sodium.Tests
         {
             StreamSink<string> s = new StreamSink<string>();
             List<string> @out = new List<string>();
-            using (s.Listen(@out.Add))
-            {
-                s.Send("a");
-                s.Send("b");
-            }
+            IListener l = s.Listen(@out.Add);
+            s.Send("a");
+            s.Send("b");
+            l.Unlisten();
             CollectionAssert.AreEqual(new[] { "a", "b" }, @out);
         }
 
@@ -25,10 +24,9 @@ namespace Sodium.Tests
             StreamSink<List<string>> a = new StreamSink<List<string>>();
             Stream<string> b = Operational.Split<string, List<string>>(a);
             List<string> @out = new List<string>();
-            using (b.Listen(@out.Add))
-            {
-                a.Send(new List<string> { "a", "b" });
-            }
+            IListener l = b.Listen(@out.Add);
+            a.Send(new List<string> { "a", "b" });
+            l.Unlisten();
             CollectionAssert.AreEqual(new[] { "a", "b" }, @out);
         }
 
@@ -38,16 +36,14 @@ namespace Sodium.Tests
             StreamSink<string> a = new StreamSink<string>();
             Stream<string> b = Operational.Defer(a);
             List<string> @out = new List<string>();
-            using (b.Listen(@out.Add))
-            {
-                a.Send("a");
-            }
+            IListener l = b.Listen(@out.Add);
+            a.Send("a");
+            l.Unlisten();
             CollectionAssert.AreEqual(new[] { "a" }, @out);
             List<string> out2 = new List<string>();
-            using (b.Listen(out2.Add))
-            {
-                a.Send("b");
-            }
+            IListener l2 = b.Listen(out2.Add);
+            a.Send("b");
+            l2.Unlisten();
             CollectionAssert.AreEqual(new[] { "b" }, out2);
         }
 
@@ -58,20 +54,18 @@ namespace Sodium.Tests
             StreamSink<string> b = new StreamSink<string>();
             Stream<string> c = Operational.Defer(a).OrElse(b);
             List<string> @out = new List<string>();
-            using (c.Listen(@out.Add))
-            {
-                a.Send("a");
-            }
+            IListener l = c.Listen(@out.Add);
+            a.Send("a");
+            l.Unlisten();
             CollectionAssert.AreEqual(new[] { "a" }, @out);
             List<string> out2 = new List<string>();
-            using (c.Listen(out2.Add))
+            IListener l2 = c.Listen(out2.Add);
+            Transaction.RunVoid(() =>
             {
-                Transaction.RunVoid(() =>
-                {
-                    a.Send("b");
-                    b.Send("B");
-                });
-            }
+                a.Send("b");
+                b.Send("B");
+            });
+            l2.Unlisten();
             CollectionAssert.AreEqual(new[] { "B", "b" }, out2);
         }
 
@@ -82,32 +76,28 @@ namespace Sodium.Tests
             StreamSink<int> b = new StreamSink<int>();
             Stream<int> c = a.OrElse(b);
             List<int> @out = new List<int>();
-            using (c.Listen(@out.Add))
-            {
-                a.Send(0);
-            }
+            IListener l = c.Listen(@out.Add);
+            a.Send(0);
+            l.Unlisten();
             CollectionAssert.AreEqual(new[] { 0 }, @out);
             List<int> out2 = new List<int>();
-            using (c.Listen(out2.Add))
-            {
-                b.Send(10);
-            }
+            IListener l2 = c.Listen(out2.Add);
+            b.Send(10);
+            l2.Unlisten();
             CollectionAssert.AreEqual(new[] { 10 }, out2);
             List<int> out3 = new List<int>();
-            using (c.Listen(out3.Add))
+            IListener l3 = c.Listen(out3.Add);
+            Transaction.RunVoid(() =>
             {
-                Transaction.RunVoid(() =>
-                {
-                    a.Send(2);
-                    b.Send(20);
-                });
-            }
+                a.Send(2);
+                b.Send(20);
+            });
+            l3.Unlisten();
             CollectionAssert.AreEqual(new[] { 2 }, out3);
             List<int> out4 = new List<int>();
-            using (c.Listen(out4.Add))
-            {
-                b.Send(30);
-            }
+            IListener l4 = c.Listen(out4.Add);
+            b.Send(30);
+            l4.Unlisten();
             CollectionAssert.AreEqual(new[] { 30 }, out4);
         }
 
@@ -118,20 +108,18 @@ namespace Sodium.Tests
             StreamSink<string> b = new StreamSink<string>();
             Stream<string> c = Operational.Defer(a).OrElse(Operational.Defer(b));
             List<string> @out = new List<string>();
-            using (c.Listen(@out.Add))
-            {
-                b.Send("A");
-            }
+            IListener l = c.Listen(@out.Add);
+            b.Send("A");
+            l.Unlisten();
             CollectionAssert.AreEqual(new[] { "A" }, @out);
             List<string> out2 = new List<string>();
-            using (c.Listen(out2.Add))
+            IListener l2 = c.Listen(out2.Add);
+            Transaction.RunVoid(() =>
             {
-                Transaction.RunVoid(() =>
-                {
-                    a.Send("b");
-                    b.Send("B");
-                });
-            }
+                a.Send("b");
+                b.Send("B");
+            });
+            l2.Unlisten();
             CollectionAssert.AreEqual(new[] { "b" }, out2);
         }
 

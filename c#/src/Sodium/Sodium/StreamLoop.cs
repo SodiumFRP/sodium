@@ -55,8 +55,7 @@ namespace Sodium
 
             Transaction.RunVoid(() =>
             {
-                this.UnsafeAddCleanup(stream.Listen(this.Node, this.Send));
-                stream.KeepListenersAlive.Use(this.KeepListenersAlive);
+                this.UnsafeAttachListener(stream.Listen(this.Node, this.Send));
             });
         }
 

@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -26,89 +27,22 @@ namespace Sodium
     ///     Represents a stream of discrete events/firings.
     /// </summary>
     /// <typeparam name="T">The type of values fired by the stream.</typeparam>
-    public class Stream<T> : IDisposable
+    public class Stream<T>
     {
         internal readonly Node<T> Node;
-        private readonly List<IListener> disposables;
+        private readonly List<IListener> attachedListeners;
         private readonly List<T> firings;
-        internal readonly IKeepListenersAlive KeepListenersAlive;
 
         internal Stream()
-            : this(new KeepListenersAliveImplementation())
+            : this(new Node<T>(0L), new List<IListener>(), new List<T>())
         {
         }
 
-        internal Stream(IKeepListenersAlive keepListenersAlive)
-            : this(keepListenersAlive, new Node<T>(0L), new List<IListener>(), new List<T>())
+        private Stream(Node<T> node, List<IListener> attachedListeners, List<T> firings)
         {
-        }
-
-        private Stream(IKeepListenersAlive keepListenersAlive, Node<T> node, List<IListener> disposables, List<T> firings)
-        {
-            this.KeepListenersAlive = keepListenersAlive;
             this.Node = node;
-            this.disposables = disposables;
+            this.attachedListeners = attachedListeners;
             this.firings = firings;
-        }
-
-        public void Dispose()
-        {
-            foreach (IListener d in this.disposables)
-            {
-                d.Dispose();
-            }
-        }
-
-        /// <summary>
-        ///     Listen for events/firings on this stream.  The returned <see cref="IListener" /> may be
-        ///     disposed to stop listening.  This is an OPERATIONAL mechanism for interfacing between
-        ///     the world of I/O and FRP.
-        /// </summary>
-        /// <param name="handler">The handler to execute for values fired by the stream.</param>
-        /// <returns>An <see cref="IListener" /> which may be disposed to stop listening.</returns>
-        /// <remarks>
-        ///     <para>
-        ///         No assumptions should be made about what thread the handler is called on and it should not block.
-        ///         Neither <see cref="StreamSink{T}.Send" /> nor <see cref="CellSink{T}.Send" /> may be called from the
-        ///         handler.
-        ///         They will throw an exception because this method is not meant to be used to create new primitives.
-        ///     </para>
-        ///     <para>
-        ///         If the <see cref="IListener" /> is not disposed, it will continue to listen until this stream is either
-        ///         disposed or garbage collected.
-        ///     </para>
-        ///     <para>
-        ///         To ensure this <see cref="IListener" /> is disposed as soon as the stream it is listening to is either
-        ///         disposed, pass the returned listener to this stream's <see cref="AddCleanup" /> method.
-        ///     </para>
-        /// </remarks>
-        public IListener Listen(Action<T> handler)
-        {
-            IListener innerListener = this.ListenWeak(handler);
-            Listener listener = null;
-            listener = new Listener(() =>
-            {
-                using (innerListener)
-                {
-                }
-
-                lock (this.KeepListenersAlive)
-                {
-                    // ReSharper disable AccessToModifiedClosure
-                    if (listener != null)
-                    {
-                        this.KeepListenersAlive.StopKeepingListenerAlive(listener);
-                    }
-                    // ReSharper restore AccessToModifiedClosure
-                }
-            });
-
-            lock (this.KeepListenersAlive)
-            {
-                this.KeepListenersAlive.KeepListenerAlive(listener);
-            }
-
-            return listener;
         }
 
         /// <summary>
@@ -134,20 +68,20 @@ namespace Sodium
         ///         disposed, pass the returned listener to this stream's <see cref="AddCleanup" /> method.
         ///     </para>
         /// </remarks>
-        public IListener ListenWeak(Action<T> handler) => this.Listen(Node<T>.Null, (trans2, a) => handler(a));
+        public IListener Listen(Action<T> handler) => this.Listen(Node<T>.Null, (trans2, a) => handler(a));
 
         /// <summary>
-        ///     Attach a listener to this stream so it gets disposed when this stream is disposed.
+        ///     Attach a listener to this stream so it doesn't get garbage collected until this stream is garbage collected.
         /// </summary>
-        /// <param name="listener">The listener to dispose along with this stream.</param>
-        /// <returns>A new stream equivalent to this stream which will dispose <paramref name="listener" /> when it is disposed.</returns>
-        public Stream<T> AddCleanup(IListener listener)
+        /// <param name="listener">The listener to garbage collect along with this stream.</param>
+        /// <returns>A new stream equivalent to this stream which will garbage collect <paramref name="listener" /> when it is garbage collected.</returns>
+        public Stream<T> AttachListener(IListener listener)
         {
             return Transaction.Run(() =>
             {
-                List<IListener> fsNew = this.disposables.ToList();
+                List<IListener> fsNew = this.attachedListeners.ToList();
                 fsNew.Add(listener);
-                return new Stream<T>(this.KeepListenersAlive, this.Node, fsNew, this.firings);
+                return new Stream<T>(this.Node, fsNew, this.firings);
             });
         }
 
@@ -163,9 +97,7 @@ namespace Sodium
             listener = this.Listen(a =>
             {
                 // ReSharper disable once AccessToModifiedClosure
-                using (listener)
-                {
-                }
+                listener?.Unlisten();
 
                 handler(a);
             });
@@ -177,7 +109,7 @@ namespace Sodium
         /// </summary>
         /// <typeparam name="T">The type of values fired by the stream.</typeparam>
         /// <returns>A task which completes when a value is fired by this stream.</returns>
-        public Task<T> ListenOnce()
+        public TaskWithListener<T> ListenOnce()
         {
             return this.ListenOnce(CancellationToken.None);
         }
@@ -188,7 +120,7 @@ namespace Sodium
         /// <typeparam name="T">The type of values fired by the stream.</typeparam>
         /// <param name="token">The cancellation token.</param>
         /// <returns>A task which completes when a value is fired by this stream.</returns>
-        public Task<T> ListenOnce(CancellationToken token)
+        public TaskWithListener<T> ListenOnce(CancellationToken token)
         {
             TaskCompletionSource<T> tcs = new TaskCompletionSource<T>();
 
@@ -196,23 +128,19 @@ namespace Sodium
             listener = this.Listen(a =>
             {
                 // ReSharper disable once AccessToModifiedClosure
-                using (listener)
-                {
-                }
+                listener?.Unlisten();
 
                 tcs.TrySetResult(a);
             });
 
             token.Register(() =>
             {
-                using (listener)
-                {
-                }
+                listener?.Unlisten();
 
                 tcs.TrySetCanceled();
             });
 
-            return tcs.Task;
+            return new TaskWithListener<T>(tcs.Task, listener);
         }
 
         internal IListener Listen(Node target, Action<Transaction, T> action) => Transaction.Apply(trans1 => this.Listen(target, trans1, action, false));
@@ -265,9 +193,9 @@ namespace Sodium
         /// <returns>A stream which fires values transformed by <paramref name="f" /> for each value fired by this stream.</returns>
         public Stream<TResult> Map<TResult>(Func<T, TResult> f)
         {
-            Stream<TResult> @out = new Stream<TResult>(this.KeepListenersAlive);
+            Stream<TResult> @out = new Stream<TResult>();
             IListener l = this.Listen(@out.Node, (trans2, a) => @out.Send(trans2, f(a)));
-            return @out.UnsafeAddCleanup(l);
+            return @out.UnsafeAttachListener(l);
         }
 
         /// <summary>
@@ -333,9 +261,9 @@ namespace Sodium
         /// </returns>
         public Stream<TResult> Snapshot<T1, TResult>(Cell<T1> c, Func<T, T1, TResult> f)
         {
-            Stream<TResult> @out = new Stream<TResult>(this.KeepListenersAlive);
+            Stream<TResult> @out = new Stream<TResult>();
             IListener l = this.Listen(@out.Node, (trans2, a) => @out.Send(trans2, f(a, c.SampleNoTransaction())));
-            return @out.UnsafeAddCleanup(l);
+            return @out.UnsafeAttachListener(l);
         }
 
         /// <summary>
@@ -354,9 +282,9 @@ namespace Sodium
         /// </returns>
         public Stream<TResult> Snapshot<T1, T2, TResult>(Cell<T1> c1, Cell<T2> c2, Func<T, T1, T2, TResult> f)
         {
-            Stream<TResult> @out = new Stream<TResult>(this.KeepListenersAlive);
+            Stream<TResult> @out = new Stream<TResult>();
             IListener l = this.Listen(@out.Node, (trans2, a) => @out.Send(trans2, f(a, c1.SampleNoTransaction(), c2.SampleNoTransaction())));
-            return @out.UnsafeAddCleanup(l);
+            return @out.UnsafeAttachListener(l);
         }
 
         /// <summary>
@@ -377,9 +305,9 @@ namespace Sodium
         /// </returns>
         public Stream<TResult> Snapshot<T1, T2, T3, TResult>(Cell<T1> c1, Cell<T2> c2, Cell<T3> c3, Func<T, T1, T2, T3, TResult> f)
         {
-            Stream<TResult> @out = new Stream<TResult>(this.KeepListenersAlive);
+            Stream<TResult> @out = new Stream<TResult>();
             IListener l = this.Listen(@out.Node, (trans2, a) => @out.Send(trans2, f(a, c1.SampleNoTransaction(), c2.SampleNoTransaction(), c3.SampleNoTransaction())));
-            return @out.UnsafeAddCleanup(l);
+            return @out.UnsafeAttachListener(l);
         }
 
         /// <summary>
@@ -402,9 +330,9 @@ namespace Sodium
         /// </returns>
         public Stream<TResult> Snapshot<T1, T2, T3, T4, TResult>(Cell<T1> c1, Cell<T2> c2, Cell<T3> c3, Cell<T4> c4, Func<T, T1, T2, T3, T4, TResult> f)
         {
-            Stream<TResult> @out = new Stream<TResult>(this.KeepListenersAlive);
+            Stream<TResult> @out = new Stream<TResult>();
             IListener l = this.Listen(@out.Node, (trans2, a) => @out.Send(trans2, f(a, c1.SampleNoTransaction(), c2.SampleNoTransaction(), c3.SampleNoTransaction(), c4.SampleNoTransaction())));
-            return @out.UnsafeAddCleanup(l);
+            return @out.UnsafeAttachListener(l);
         }
 
         /// <summary>
@@ -435,14 +363,14 @@ namespace Sodium
 
         private Stream<T> Merge(Stream<T> s)
         {
-            Stream<T> @out = new Stream<T>(this.KeepListenersAlive);
+            Stream<T> @out = new Stream<T>();
             Node<T> left = new Node<T>(0);
             Node<T> right = @out.Node;
             Node<T>.Target nodeTarget = left.Link((t, v) => { }, right).Item2;
             Action<Transaction, T> h = @out.Send;
             IListener l1 = this.Listen(left, h);
             IListener l2 = s.Listen(right, h);
-            return @out.UnsafeAddCleanup(l1).UnsafeAddCleanup(l2).UnsafeAddCleanup(new Listener(() => left.Unlink(nodeTarget)));
+            return @out.UnsafeAttachListener(l1).UnsafeAttachListener(l2).UnsafeAttachListener(new Listener(() => left.Unlink(nodeTarget)));
         }
 
         /// <summary>
@@ -473,10 +401,10 @@ namespace Sodium
 
         internal Stream<T> Coalesce(Transaction trans1, Func<T, T, T> f)
         {
-            Stream<T> @out = new Stream<T>(this.KeepListenersAlive);
+            Stream<T> @out = new Stream<T>();
             Action<Transaction, T> h = CoalesceHandler.Create(f, @out);
             IListener l = this.Listen(@out.Node, trans1, h, false);
-            return @out.UnsafeAddCleanup(l);
+            return @out.UnsafeAttachListener(l);
         }
 
         /// <summary>
@@ -496,7 +424,7 @@ namespace Sodium
         /// <returns>A stream that only outputs events for which the predicate returns <code>true</code>.</returns>
         public Stream<T> Filter(Func<T, bool> predicate)
         {
-            Stream<T> @out = new Stream<T>(this.KeepListenersAlive);
+            Stream<T> @out = new Stream<T>();
             IListener l = this.Listen(@out.Node, (trans2, a) =>
             {
                 if (predicate(a))
@@ -504,7 +432,7 @@ namespace Sodium
                     @out.Send(trans2, a);
                 }
             });
-            return @out.UnsafeAddCleanup(l);
+            return @out.UnsafeAttachListener(l);
         }
 
         /// <summary>
@@ -630,7 +558,7 @@ namespace Sodium
         {
             // This is a bit long-winded but it's efficient because it unregisters
             // the listener.
-            Stream<T> @out = new Stream<T>(this.KeepListenersAlive);
+            Stream<T> @out = new Stream<T>();
             IListener l = null;
             l = this.Listen(@out.Node, (trans, a) =>
             {
@@ -639,15 +567,13 @@ namespace Sodium
                 {
                     @out.Send(trans, a);
 
-                    using (l)
-                    {
-                    }
+                    l?.Unlisten();
 
                     l = null;
                 }
                 // ReSharper restore AccessToModifiedClosure
             });
-            return @out.UnsafeAddCleanup(l);
+            return @out.UnsafeAttachListener(l);
         }
 
         // This is not thread-safe, so one of these two conditions must apply:
@@ -656,9 +582,9 @@ namespace Sodium
         // 2. The object on which this is being called was created has not yet
         //    been returned from the method where it was created, so it can't
         //    be shared between threads.
-        internal Stream<T> UnsafeAddCleanup(IListener cleanup)
+        internal Stream<T> UnsafeAttachListener(IListener cleanup)
         {
-            this.disposables.Add(cleanup);
+            this.attachedListeners.Add(cleanup);
             return this;
         }
 
@@ -701,6 +627,11 @@ namespace Sodium
             }
         }
 
+        protected void NoOp()
+        {
+            GC.KeepAlive(this.attachedListeners);
+        }
+
         private class ListenerImplementation : IListener
         {
             // It's essential that we keep the action alive, since the node uses
@@ -720,36 +651,28 @@ namespace Sodium
                 this.target = target;
             }
 
-            public void Dispose()
-            {
-                this.Unlisten();
-            }
-
             public void Unlisten()
             {
                 this.stream?.Node.Unlink(this.target);
             }
         }
+    }
 
-        private class KeepListenersAliveImplementation : IKeepListenersAlive
+    public class TaskWithListener<T>
+    {
+        private readonly Task<T> task;
+        // ReSharper disable once NotAccessedField.Local
+        private IListener listener;
+
+        public TaskWithListener(Task<T> task, IListener listener)
         {
-            private readonly HashSet<IListener> listeners = new HashSet<IListener>();
-            private readonly List<IKeepListenersAlive> childKeepListenersAliveList = new List<IKeepListenersAlive>();
+            this.task = task;
+            this.listener = listener;
+        }
 
-            public void KeepListenerAlive(IListener listener)
-            {
-                this.listeners.Add(listener);
-            }
-
-            public void StopKeepingListenerAlive(IListener listener)
-            {
-                this.listeners.Remove(listener);
-            }
-
-            public void Use(IKeepListenersAlive childKeepListenersAlive)
-            {
-                this.childKeepListenersAliveList.Add(childKeepListenersAlive);
-            }
+        public TaskAwaiter<T> GetAwaiter()
+        {
+            return this.task.GetAwaiter();
         }
     }
 }

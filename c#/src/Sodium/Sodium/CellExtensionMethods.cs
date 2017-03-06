@@ -17,18 +17,16 @@ namespace Sodium
             return Transaction.Apply(trans1 =>
             {
                 Lazy<T> za = cca.SampleLazy().Map(ca => ca.Sample());
-                Stream<T> @out = new Stream<T>(cca.KeepListenersAlive);
+                Stream<T> @out = new Stream<T>();
                 IListener currentListener = null;
                 Action<Transaction, Cell<T>> h = (trans2, ca) =>
                 {
-                    using (currentListener)
-                    {
-                    }
+                    currentListener?.Unlisten();
 
                     currentListener = ca.Value(trans2).Listen(@out.Node, trans2, @out.Send, false);
                 };
                 IListener l1 = cca.Value(trans1).Listen(@out.Node, trans1, h, false);
-                return @out.UnsafeAddCleanup(l1).HoldLazy(za);
+                return @out.UnsafeAttachListener(l1).HoldLazy(za);
             });
         }
 
@@ -43,13 +41,11 @@ namespace Sodium
         {
             return Transaction.Apply(trans1 =>
             {
-                Stream<T> @out = new Stream<T>(csa.KeepListenersAlive);
+                Stream<T> @out = new Stream<T>();
                 IListener currentListener = null;
                 Action<Transaction, Stream<T>> hInitial = (trans2, sa) =>
                 {
-                    using (currentListener)
-                    {
-                    }
+                    currentListener?.Unlisten();
 
                     currentListener = sa.Listen(@out.Node, trans2, @out.Send, false);
                 };
@@ -57,16 +53,14 @@ namespace Sodium
                 {
                     trans2.Last(() =>
                     {
-                        using (currentListener)
-                        {
-                        }
+                        currentListener?.Unlisten();
 
                         currentListener = sa.Listen(@out.Node, trans2, @out.Send, true);
                     });
                 };
                 trans1.Prioritized(new Node<T>(0), trans2 => hInitial(trans2, csa.SampleNoTransaction()));
                 IListener l1 = csa.Updates(trans1).Listen(@out.Node, trans1, h, false);
-                return @out.UnsafeAddCleanup(l1);
+                return @out.UnsafeAttachListener(l1);
             });
         }
 
@@ -81,7 +75,7 @@ namespace Sodium
         {
             return Transaction.Apply(trans1 =>
             {
-                Stream<T> @out = new Stream<T>(csa.KeepListenersAlive);
+                Stream<T> @out = new Stream<T>();
                 Node<T> node = new Node<T>(0);
                 Node<T>.Target nodeTarget = node.Link((t, v) => { }, @out.Node).Item2;
                 Guid listenerId;
@@ -95,15 +89,13 @@ namespace Sodium
                 IListener currentListener = null;
                 Action<Transaction, Stream<T>> h = (trans2, sa) =>
                 {
-                    using (currentListener)
-                    {
-                    }
+                    currentListener?.Unlisten();
 
                     listenerId = Guid.NewGuid();
                     currentListener = sa.Map(v => Tuple.Create(v, listenerId)).Listen(@out.Node, trans2, (t, v) => sendIfNodeTargetMatches(t, v, listenerId), false);
                 };
                 IListener l1 = csa.Value(trans1).Listen(node, trans1, h, false);
-                return @out.UnsafeAddCleanup(l1).UnsafeAddCleanup(new Listener(() => node.Unlink(nodeTarget)));
+                return @out.UnsafeAttachListener(l1).UnsafeAttachListener(new Listener(() => node.Unlink(nodeTarget)));
             });
         }
 
@@ -139,7 +131,7 @@ namespace Sodium
             return Transaction.Apply(trans1 =>
             {
                 T[] values = c.Select(cell => cell.SampleNoTransaction()).ToArray();
-                Stream<Action> @out = new Stream<Action>(new FanOutKeepListenersAlive(c.Select(cell => cell.KeepListenersAlive)));
+                Stream<Action> @out = new Stream<Action>();
                 Lazy<T[]> initialValue = new Lazy<T[]>(() => values.ToArray());
                 IReadOnlyList<IListener> listeners = c.Select((cell, i) => cell.Updates(trans1).Listen(@out.Node, trans1,
                     (trans2, v) => @out.Send(trans2, () => values[i] = v), false)).ToArray();
@@ -147,42 +139,8 @@ namespace Sodium
                   {
                       a();
                       return values.ToArray();
-                  }).UnsafeAddCleanup(new ImmutableCompositeListener(listeners)).HoldLazy(initialValue);
+                  }).UnsafeAttachListener(new ImmutableCompositeListener(listeners)).HoldLazy(initialValue);
             });
-        }
-
-        private class FanOutKeepListenersAlive : IKeepListenersAlive
-        {
-            private readonly IReadOnlyList<IKeepListenersAlive> keepListenersAliveList;
-
-            public FanOutKeepListenersAlive(IEnumerable<IKeepListenersAlive> keepListenersAliveEnumerable)
-            {
-                this.keepListenersAliveList = keepListenersAliveEnumerable.ToArray();
-            }
-
-            public void KeepListenerAlive(IListener listener)
-            {
-                foreach (IKeepListenersAlive keepListenersAlive in this.keepListenersAliveList)
-                {
-                    keepListenersAlive.KeepListenerAlive(listener);
-                }
-            }
-
-            public void StopKeepingListenerAlive(IListener listener)
-            {
-                foreach (IKeepListenersAlive keepListenersAlive in this.keepListenersAliveList)
-                {
-                    keepListenersAlive.StopKeepingListenerAlive(listener);
-                }
-            }
-
-            public void Use(IKeepListenersAlive childKeepListenersAlive)
-            {
-                foreach (IKeepListenersAlive keepListenersAlive in this.keepListenersAliveList)
-                {
-                    keepListenersAlive.Use(childKeepListenersAlive);
-                }
-            }
         }
     }
 }
