@@ -1,7 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
-using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -60,6 +59,7 @@ namespace Sodium
     public class Stream<T>
     {
         internal readonly Node<T> Node;
+        // ReSharper disable once NotAccessedField.Local - Used to keep object from being garbage collected
         private readonly List<IListener> attachedListeners;
         private readonly List<T> firings;
 
@@ -660,11 +660,6 @@ namespace Sodium
             }
         }
 
-        protected void NoOp()
-        {
-            GC.KeepAlive(this.attachedListeners);
-        }
-
         private class ListenerImplementation : IListener
         {
             // It's essential that we keep the action alive, since the node uses
@@ -688,28 +683,6 @@ namespace Sodium
             {
                 this.stream?.Node.Unlink(this.target);
             }
-        }
-    }
-
-    public class TaskWithListener<T>
-    {
-        private readonly Task<T> task;
-        private readonly IListener listener;
-
-        public TaskWithListener(Task<T> task, IListener listener)
-        {
-            this.task = task;
-            this.listener = listener;
-        }
-
-        public TaskAwaiter<T> GetAwaiter()
-        {
-            return this.task.GetAwaiter();
-        }
-
-        protected void NoOp()
-        {
-            GC.KeepAlive(this.listener);
         }
     }
 }

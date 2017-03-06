@@ -70,6 +70,7 @@ namespace Sodium
     {
         private readonly Stream<T> stream;
         private readonly MutableMaybeValue<T> valueUpdate = new MutableMaybeValue<T>();
+        // ReSharper disable once NotAccessedField.Local - Used to keep object from being garbage collected
         private readonly IListener streamListener;
 
         private T valueProperty;
@@ -343,11 +344,6 @@ namespace Sodium
                 return @out.LastFiringOnly(trans0).UnsafeAttachListener(l1).UnsafeAttachListener(l2).UnsafeAttachListener(
                     new Listener(() => inTarget.Unlink(nodeTarget))).HoldLazyInternal(new Lazy<TResult>(() => bf.SampleNoTransaction()(this.SampleNoTransaction())));
             });
-        }
-
-        protected void NoOp()
-        {
-            GC.KeepAlive(this.streamListener);
         }
 
         private class LazySample
