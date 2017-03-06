@@ -1,4 +1,3 @@
-using System;
 using System.Collections.Generic;
 using System.Linq;
 
@@ -6,24 +5,6 @@ namespace Sodium
 {
     public static class DiscreteCellExtensionMethods
     {
-        /// <summary>
-        ///     Convert the given stream into a discrete cell with the specified initial value.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="stream">The stream which will provide updates to the discrete cell.</param>
-        /// <param name="initialValue">The initial value of the discrete cell.</param>
-        /// <returns>A discrete cell with initial value <see cref="initialValue"/> receiving updates from <see cref="stream"/>.</returns>
-        public static DiscreteCell<T> HoldDiscrete<T>(this Stream<T> stream, T initialValue) => DiscreteCell.Create(stream, new Lazy<T>(() => initialValue));
-
-        /// <summary>
-        ///     Convert the given stream into a discrete cell with the specified lazy initial value.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="stream">The stream which will provide updates to the discrete cell.</param>
-        /// <param name="initialValue">The lazy initial value of the discrete cell.</param>
-        /// <returns>A discrete cell with lazy initial value <see cref="initialValue"/> receiving updates from <see cref="stream"/>.</returns>
-        public static DiscreteCell<T> HoldDiscreteLazy<T>(this Stream<T> stream, Lazy<T> initialValue) => DiscreteCell.Create(stream, initialValue);
-
         /// <summary>
         ///     Unwrap a discrete cell inside another discrete cell to give a time-varying cell implementation.
         /// </summary>

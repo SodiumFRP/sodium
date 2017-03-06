@@ -75,7 +75,7 @@ namespace Sodium.Tests.Performance
             {
                 this.Id = id;
                 this.IsSelectedStreamSink = Stream.CreateSink<bool>();
-                this.IsSelected = selectAllStream.OrElse(this.IsSelectedStreamSink).HoldDiscrete(false);
+                this.IsSelected = selectAllStream.OrElse(this.IsSelectedStreamSink).Hold(false);
             }
 
             public int Id { get; }

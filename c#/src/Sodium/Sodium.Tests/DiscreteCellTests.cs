@@ -15,7 +15,7 @@ namespace Sodium.Tests
                  DiscreteCellLoop<int> l = DiscreteCell.CreateLoop<int>();
                  DiscreteCell<int> cLocal = l.Map(v => v * 5);
                  DiscreteCellStreamSink<int> sLocal = new DiscreteCellStreamSink<int>();
-                 l.Loop(sLocal.HoldDiscrete(3));
+                 l.Loop(sLocal.Hold(3));
                  return Tuple.Create(cLocal, sLocal);
              });
 
