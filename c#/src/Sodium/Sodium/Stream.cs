@@ -21,6 +21,36 @@ namespace Sodium
         {
             return new Stream<T>();
         }
+
+        /// <summary>
+        ///     Creates a StreamSink that throws an exception if <see cref="Stream{T}.Send" /> is called more than once per transaction.
+        /// </summary>
+        /// <typeparam name="T">The type of values fired by the stream sink.</typeparam>
+        public static StreamSink<T> CreateSink<T>()
+        {
+            return new StreamSink<T>();
+        }
+
+        /// <summary>
+        ///     Construct a StreamSink that uses
+        ///     <param name="coalesce" />
+        ///     to combine values if <see cref="Stream{T}.Send" /> is called more than once per transaction.
+        /// </summary>
+        /// <param name="coalesce">Function to combine values when <see cref="Stream{T}.Send" /> is called more than once per transaction.</param>
+        /// <typeparam name="T">The type of values fired by the stream sink.</typeparam>
+        public static StreamSink<T> CreateSink<T>(Func<T, T, T> coalesce)
+        {
+            return new StreamSink<T>(coalesce);
+        }
+
+        /// <summary>
+        ///     Creates a <see cref="StreamLoop{T}" />.  This must be called and looped from within the same transaction.
+        /// </summary>
+        /// <typeparam name="T">The type of values in the stream loop.</typeparam>
+        public static StreamLoop<T> CreateLoop<T>()
+        {
+            return new StreamLoop<T>();
+        }
     }
 
     /// <summary>

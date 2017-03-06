@@ -28,12 +28,44 @@ namespace Sodium
         {
             return Stream.Never<T>().HoldLazyInternal(value);
         }
+
+        /// <summary>
+        ///     Creates a writable cell that uses the last value if <see cref="CellSink{T}.Send" /> is called more than once per transaction.
+        /// </summary>
+        /// <param name="initialValue">The initial value of the cell.</param>
+        /// <typeparam name="T">The type of values in the cell sink.</typeparam>
+        public static CellSink<T> CreateSink<T>(T initialValue)
+        {
+            return new CellSink<T>(initialValue);
+        }
+
+        /// <summary>
+        ///     Creates a writable cell that uses
+        ///     <param name="coalesce" />
+        ///     to combine values if <see cref="CellSink{T}.Send" /> is called more than once per transaction.
+        /// </summary>
+        /// <param name="initialValue">The initial value of the cell.</param>
+        /// <param name="coalesce">Function to combine values when <see cref="Send" /> is called more than once per transaction.</param>
+        /// <typeparam name="T">The type of values in the cell sink.</typeparam>
+        public static CellSink<T> CreateSink<T>(T initialValue, Func<T, T, T> coalesce)
+        {
+            return new CellSink<T>(initialValue, coalesce);
+        }
+
+        /// <summary>
+        ///     Creates a <see cref="CellLoop{T}" />.  This must be called and looped from within the same transaction.
+        /// </summary>
+        /// <typeparam name="T">The type of values in the cell loop.</typeparam>
+        public static CellLoop<T> CreateLoop<T>()
+        {
+            return new CellLoop<T>();
+        }
     }
 
     /// <summary>
     ///     Represents a value that changes over time.
     /// </summary>
-    /// <typeparam name="T">The type of the value.</typeparam>
+    /// <typeparam name="T">The type of values in the cell.</typeparam>
     public class Cell<T>
     {
         private readonly Stream<T> stream;

@@ -10,10 +10,7 @@ namespace Sodium
     {
         private readonly StreamLoop<T> streamLoop;
 
-        /// <summary>
-        ///     Create a <see cref="CellLoop{T}" />.
-        /// </summary>
-        public CellLoop()
+        internal CellLoop()
             : this(new StreamLoop<T>())
         {
         }

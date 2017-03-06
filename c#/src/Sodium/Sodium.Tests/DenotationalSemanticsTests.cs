@@ -343,7 +343,7 @@ namespace Sodium.Tests
         [Test]
         public void Test_Sample_TestCase()
         {
-            StreamSink<char> s = new StreamSink<char>();
+            StreamSink<char> s = Stream.CreateSink<char>();
             DiscreteCell<char> c = s.Hold('a');
             char sample1 = c.Cell.Sample();
             s.Send('b');
@@ -355,7 +355,7 @@ namespace Sodium.Tests
         [Test]
         public void Test_SampleLazy_TestCase()
         {
-            StreamSink<char> s = new StreamSink<char>();
+            StreamSink<char> s = Stream.CreateSink<char>();
             DiscreteCell<char> c = s.Hold('a');
             Lazy<char> sample1 = c.Cell.SampleLazy();
             s.Send('b');
@@ -366,7 +366,7 @@ namespace Sodium.Tests
 
         private static Tuple<Stream<T>, Dictionary<int, Action>> MkStream<T>(Dictionary<int, T> firings)
         {
-            StreamSink<T> s = new StreamSink<T>();
+            StreamSink<T> s = Stream.CreateSink<T>();
             Dictionary<int, Action> f = firings.ToDictionary(firing => firing.Key, firing => (Action)(() => s.Send(firing.Value)));
             if (f.Keys.Any(k => k < 0))
             {
@@ -378,7 +378,7 @@ namespace Sodium.Tests
 
         private static Tuple<Stream<T>, ILookup<int, Action>> MkStream<T>(IReadOnlyList<Tuple<int, T>> firings, Func<T, T, T> coalesce)
         {
-            StreamSink<T> s = new StreamSink<T>(coalesce);
+            StreamSink<T> s = Stream.CreateSink<T>(coalesce);
             ILookup<int, Action> f = firings.ToLookup(firing => firing.Item1, firing => (Action)(() => s.Send(firing.Item2)));
             if (f.Any(g => g.Key < 0))
             {

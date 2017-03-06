@@ -13,8 +13,8 @@ namespace Sodium.Tests.Performance
 
             var t = Transaction.Run(() =>
             {
-                CellLoop<bool?> allSelectedCellLoop = new CellLoop<bool?>();
-                StreamSink<Unit> toggleAllSelectedStream = new StreamSink<Unit>();
+                CellLoop<bool?> allSelectedCellLoop = Cell.CreateLoop<bool?>();
+                StreamSink<Unit> toggleAllSelectedStream = Stream.CreateSink<Unit>();
                 Stream<bool> selectAllStream = toggleAllSelectedStream.Snapshot(allSelectedCellLoop).Map(a => a != true);
 
                 DiscreteCellSink<IReadOnlyList<TestObject>> objects =
@@ -74,7 +74,7 @@ namespace Sodium.Tests.Performance
             public TestObject(int id, Stream<bool> selectAllStream)
             {
                 this.Id = id;
-                this.IsSelectedStreamSink = new StreamSink<bool>();
+                this.IsSelectedStreamSink = Stream.CreateSink<bool>();
                 this.IsSelected = selectAllStream.OrElse(this.IsSelectedStreamSink).HoldDiscrete(false);
             }
 

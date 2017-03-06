@@ -12,23 +12,12 @@ namespace Sodium
     {
         private readonly StreamSink<T> streamSink;
 
-        /// <summary>
-        ///     Construct a writable cell that uses the last value if <see cref="Send" /> is called more than once per transaction.
-        /// </summary>
-        /// <param name="initialValue">The initial value of the cell.</param>
-        public CellSink(T initialValue)
+        internal CellSink(T initialValue)
             : this(new StreamSink<T>((left, right) => right), initialValue)
         {
         }
 
-        /// <summary>
-        ///     Construct a writable cell that uses
-        ///     <param name="coalesce" />
-        ///     to combine values if <see cref="Send" /> is called more than once per transaction.
-        /// </summary>
-        /// <param name="initialValue">The initial value of the cell.</param>
-        /// <param name="coalesce">Function to combine values when <see cref="Send" /> is called more than once per transaction.</param>
-        public CellSink(T initialValue, Func<T, T, T> coalesce)
+        internal CellSink(T initialValue, Func<T, T, T> coalesce)
             : this(new StreamSink<T>(coalesce), initialValue)
         {
         }

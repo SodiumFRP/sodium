@@ -12,7 +12,7 @@ namespace Sodium.Tests
         [Test]
         public void TestStreamSend()
         {
-            StreamSink<int> s = new StreamSink<int>();
+            StreamSink<int> s = Stream.CreateSink<int>();
             List<int> @out = new List<int>();
             IListener l = s.Listen(@out.Add);
             s.Send(5);
@@ -25,7 +25,7 @@ namespace Sodium.Tests
         [Test]
         public void TestMap()
         {
-            StreamSink<int> s = new StreamSink<int>();
+            StreamSink<int> s = Stream.CreateSink<int>();
             Stream<string> m = s.Map(x => (x + 2).ToString());
             List<string> @out = new List<string>();
             IListener l = m.Listen(@out.Add);
@@ -38,8 +38,8 @@ namespace Sodium.Tests
         [Test]
         public void TestOrElseNonSimultaneous()
         {
-            StreamSink<int> s1 = new StreamSink<int>();
-            StreamSink<int> s2 = new StreamSink<int>();
+            StreamSink<int> s1 = Stream.CreateSink<int>();
+            StreamSink<int> s2 = Stream.CreateSink<int>();
             List<int> @out = new List<int>();
             IListener l = s1.OrElse(s2).Listen(@out.Add);
             s1.Send(7);
@@ -52,8 +52,8 @@ namespace Sodium.Tests
         [Test]
         public void TestOrElseSimultaneous1()
         {
-            StreamSink<int> s1 = new StreamSink<int>((_, r) => r);
-            StreamSink<int> s2 = new StreamSink<int>((_, r) => r);
+            StreamSink<int> s1 = Stream.CreateSink<int>((_, r) => r);
+            StreamSink<int> s2 = Stream.CreateSink<int>((_, r) => r);
             List<int> @out = new List<int>();
             IListener l = s2.OrElse(s1).Listen(@out.Add);
             Transaction.RunVoid(() =>
@@ -93,7 +93,7 @@ namespace Sodium.Tests
         [Test]
         public void TestOrElseSimultaneous2()
         {
-            StreamSink<int> s = new StreamSink<int>();
+            StreamSink<int> s = Stream.CreateSink<int>();
             Stream<int> s2 = s.Map(x => 2 * x);
             List<int> @out = new List<int>();
             IListener l = s.OrElse(s2).Listen(@out.Add);
@@ -106,7 +106,7 @@ namespace Sodium.Tests
         [Test]
         public void TestOrElseLeftBias()
         {
-            StreamSink<int> s = new StreamSink<int>();
+            StreamSink<int> s = Stream.CreateSink<int>();
             Stream<int> s2 = s.Map(x => 2 * x);
             List<int> @out = new List<int>();
             IListener l = s2.OrElse(s).Listen(@out.Add);
@@ -119,8 +119,8 @@ namespace Sodium.Tests
         [Test]
         public void TestMergeNonSimultaneous()
         {
-            StreamSink<int> s1 = new StreamSink<int>();
-            StreamSink<int> s2 = new StreamSink<int>();
+            StreamSink<int> s1 = Stream.CreateSink<int>();
+            StreamSink<int> s2 = Stream.CreateSink<int>();
             List<int> @out = new List<int>();
             IListener l = s1.Merge(s2, (x, y) => x + y).Listen(@out.Add);
             s1.Send(7);
@@ -133,7 +133,7 @@ namespace Sodium.Tests
         [Test]
         public void TestMergeSimultaneous()
         {
-            StreamSink<int> s = new StreamSink<int>();
+            StreamSink<int> s = Stream.CreateSink<int>();
             Stream<int> s2 = s.Map(x => 2 * x);
             List<int> @out = new List<int>();
             IListener l = s.Merge(s2, (x, y) => x + y).Listen(@out.Add);
@@ -146,7 +146,7 @@ namespace Sodium.Tests
         [Test]
         public void TestCoalesce1()
         {
-            StreamSink<int> s = new StreamSink<int>((x, y) => x + y);
+            StreamSink<int> s = Stream.CreateSink<int>((x, y) => x + y);
             List<int> @out = new List<int>();
             IListener l = s.Listen(@out.Add);
             Transaction.RunVoid(() =>
@@ -165,7 +165,7 @@ namespace Sodium.Tests
         [Test]
         public void TestCoalesce2()
         {
-            StreamSink<int> s = new StreamSink<int>((x, y) => x + y);
+            StreamSink<int> s = Stream.CreateSink<int>((x, y) => x + y);
             List<int> @out = new List<int>();
             IListener l = s.Listen(@out.Add);
             Transaction.RunVoid(() =>
@@ -191,7 +191,7 @@ namespace Sodium.Tests
         [Test]
         public void TestFilter()
         {
-            StreamSink<char> s = new StreamSink<char>();
+            StreamSink<char> s = Stream.CreateSink<char>();
             List<char> @out = new List<char>();
             IListener l = s.Filter(char.IsUpper).Listen(@out.Add);
             s.Send('H');
@@ -204,7 +204,7 @@ namespace Sodium.Tests
         [Test]
         public void TestFilterMaybe()
         {
-            StreamSink<IMaybe<string>> s = new StreamSink<IMaybe<string>>();
+            StreamSink<IMaybe<string>> s = Stream.CreateSink<IMaybe<string>>();
             List<string> @out = new List<string>();
             IListener l = s.FilterMaybe().Listen(@out.Add);
             s.Send(Maybe.Just("tomato"));
@@ -219,10 +219,10 @@ namespace Sodium.Tests
         [Test]
         public void TestLoopStream()
         {
-            StreamSink<int> sa = new StreamSink<int>();
+            StreamSink<int> sa = Stream.CreateSink<int>();
             Tuple<StreamLoop<int>, Stream<int>, Stream<int>> s = Transaction.Run(() =>
              {
-                 StreamLoop<int> sbLocal = new StreamLoop<int>();
+                 StreamLoop<int> sbLocal = Stream.CreateLoop<int>();
                  Stream<int> scLocal = sa.Map(x => x % 10).Merge(sbLocal, (x, y) => x * y);
                  Stream<int> sbOut = sa.Map(x => x / 10).Filter(x => x != 0);
                  sbLocal.Loop(sbOut);
@@ -281,8 +281,8 @@ namespace Sodium.Tests
         [Test]
         public void TestGate()
         {
-            StreamSink<char?> sc = new StreamSink<char?>();
-            CellSink<bool> cGate = new CellSink<bool>(true);
+            StreamSink<char?> sc = Stream.CreateSink<char?>();
+            CellSink<bool> cGate = Cell.CreateSink(true);
             List<char?> @out = new List<char?>();
             IListener l = sc.Gate(cGate).Listen(@out.Add);
             sc.Send('H');
@@ -297,7 +297,7 @@ namespace Sodium.Tests
         [Test]
         public void TestCalm()
         {
-            StreamSink<int> s = new StreamSink<int>();
+            StreamSink<int> s = Stream.CreateSink<int>();
             List<int> @out = new List<int>();
             IListener l = s.Calm().Listen(@out.Add);
             s.Send(2);
@@ -352,7 +352,7 @@ namespace Sodium.Tests
         [Test]
         public void TestCalm2()
         {
-            StreamSink<int> s = new StreamSink<int>();
+            StreamSink<int> s = Stream.CreateSink<int>();
             List<int> @out = new List<int>();
             IListener l = s.Calm().Listen(@out.Add);
             s.Send(2);
@@ -369,7 +369,7 @@ namespace Sodium.Tests
         [Test]
         public void TestCollect()
         {
-            StreamSink<int> sa = new StreamSink<int>();
+            StreamSink<int> sa = Stream.CreateSink<int>();
             List<int> @out = new List<int>();
             Stream<int> sum = sa.Collect(Tuple.Create(100, true), (a, s) =>
             {
@@ -389,7 +389,7 @@ namespace Sodium.Tests
         [Test]
         public void TestAccum()
         {
-            StreamSink<int> sa = new StreamSink<int>();
+            StreamSink<int> sa = Stream.CreateSink<int>();
             List<int> @out = new List<int>();
             DiscreteCell<int> sum = sa.Accum(100, (a, s) => a + s);
             IListener l = sum.Listen(@out.Add);
@@ -405,7 +405,7 @@ namespace Sodium.Tests
         [Test]
         public void TestOnce()
         {
-            StreamSink<char> s = new StreamSink<char>();
+            StreamSink<char> s = Stream.CreateSink<char>();
             List<char> @out = new List<char>();
             IListener l = s.Once().Listen(@out.Add);
             s.Send('A');
@@ -418,7 +418,7 @@ namespace Sodium.Tests
         [Test]
         public void TestHold()
         {
-            StreamSink<char> s = new StreamSink<char>();
+            StreamSink<char> s = Stream.CreateSink<char>();
             DiscreteCell<char> c = s.Hold(' ');
             List<char> @out = new List<char>();
             IListener l = c.Listen(@out.Add);
@@ -432,7 +432,7 @@ namespace Sodium.Tests
         [Test]
         public void TestHoldImplicitDelay()
         {
-            StreamSink<char> s = new StreamSink<char>();
+            StreamSink<char> s = Stream.CreateSink<char>();
             DiscreteCell<char> c = s.Hold(' ');
             List<char> @out = new List<char>();
             IListener l = s.Snapshot(c.Cell).Listen(@out.Add);
@@ -446,7 +446,7 @@ namespace Sodium.Tests
         [Test]
         public void TestDefer()
         {
-            StreamSink<char> s = new StreamSink<char>();
+            StreamSink<char> s = Stream.CreateSink<char>();
             DiscreteCell<char> c = s.Hold(' ');
             List<char> @out = new List<char>();
             IListener l = Operational.Defer(s).Snapshot(c.Cell).Listen(@out.Add);
@@ -460,7 +460,7 @@ namespace Sodium.Tests
         [Test]
         public void TestListen()
         {
-            StreamSink<int> s = new StreamSink<int>();
+            StreamSink<int> s = Stream.CreateSink<int>();
 
             List<int> @out = new List<int>();
 
@@ -483,7 +483,7 @@ namespace Sodium.Tests
         [Test]
         public void TestListenWithMap()
         {
-            StreamSink<int> s = new StreamSink<int>();
+            StreamSink<int> s = Stream.CreateSink<int>();
 
             List<int> @out = new List<int>();
 
@@ -523,7 +523,7 @@ namespace Sodium.Tests
         [Test]
         public void TestUnlisten()
         {
-            StreamSink<int> s = new StreamSink<int>();
+            StreamSink<int> s = Stream.CreateSink<int>();
 
             List<int> @out = new List<int>();
 
@@ -549,7 +549,7 @@ namespace Sodium.Tests
         [Test]
         public void TestMultipleUnlisten()
         {
-            StreamSink<int> s = new StreamSink<int>();
+            StreamSink<int> s = Stream.CreateSink<int>();
 
             List<int> @out = new List<int>();
 
@@ -578,7 +578,7 @@ namespace Sodium.Tests
         [Test]
         public void TestListenOnce()
         {
-            StreamSink<char> s = new StreamSink<char>();
+            StreamSink<char> s = Stream.CreateSink<char>();
             List<char> @out = new List<char>();
             IListener l = s.ListenOnce(@out.Add);
             s.Send('A');
@@ -591,7 +591,7 @@ namespace Sodium.Tests
         [Test]
         public async Task TestListenOnceTask()
         {
-            StreamSink<char> s = new StreamSink<char>();
+            StreamSink<char> s = Stream.CreateSink<char>();
             new Thread(() =>
             {
                 Thread.Sleep(250);
@@ -615,7 +615,7 @@ namespace Sodium.Tests
             {
                 DiscreteCell<int> result = a1.Lift(a2, (x, y) => x + y);
                 Stream<Unit> incrementStream = Operational.Value(result.Cell).MapTo(Unit.Value);
-                StreamSink<Unit> decrementStream = new StreamSink<Unit>();
+                StreamSink<Unit> decrementStream = Stream.CreateSink<Unit>();
                 DiscreteCellLoop<int> calledLoop = DiscreteCell.CreateLoop<int>();
                 calledLoop.Loop(incrementStream.MapTo(1).Merge(decrementStream.MapTo(-1), (x, y) => x + y).Snapshot(calledLoop.Cell, (u, c) => c + u).Hold(0));
                 List<int> r = new List<int>();

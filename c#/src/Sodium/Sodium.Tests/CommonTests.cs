@@ -9,7 +9,7 @@ namespace Sodium.Tests
         [Test]
         public void TestBaseSend1()
         {
-            StreamSink<string> s = new StreamSink<string>();
+            StreamSink<string> s = Stream.CreateSink<string>();
             List<string> @out = new List<string>();
             IListener l = s.Listen(@out.Add);
             s.Send("a");
@@ -21,7 +21,7 @@ namespace Sodium.Tests
         [Test]
         public void TestOperationalSplit()
         {
-            StreamSink<List<string>> a = new StreamSink<List<string>>();
+            StreamSink<List<string>> a = Stream.CreateSink<List<string>>();
             Stream<string> b = Operational.Split<string, List<string>>(a);
             List<string> @out = new List<string>();
             IListener l = b.Listen(@out.Add);
@@ -33,7 +33,7 @@ namespace Sodium.Tests
         [Test]
         public void TestOperationalDefer1()
         {
-            StreamSink<string> a = new StreamSink<string>();
+            StreamSink<string> a = Stream.CreateSink<string>();
             Stream<string> b = Operational.Defer(a);
             List<string> @out = new List<string>();
             IListener l = b.Listen(@out.Add);
@@ -50,8 +50,8 @@ namespace Sodium.Tests
         [Test]
         public void TestOperationalDefer2()
         {
-            StreamSink<string> a = new StreamSink<string>();
-            StreamSink<string> b = new StreamSink<string>();
+            StreamSink<string> a = Stream.CreateSink<string>();
+            StreamSink<string> b = Stream.CreateSink<string>();
             Stream<string> c = Operational.Defer(a).OrElse(b);
             List<string> @out = new List<string>();
             IListener l = c.Listen(@out.Add);
@@ -72,8 +72,8 @@ namespace Sodium.Tests
         [Test]
         public void TestStreamOrElse1()
         {
-            StreamSink<int> a = new StreamSink<int>();
-            StreamSink<int> b = new StreamSink<int>();
+            StreamSink<int> a = Stream.CreateSink<int>();
+            StreamSink<int> b = Stream.CreateSink<int>();
             Stream<int> c = a.OrElse(b);
             List<int> @out = new List<int>();
             IListener l = c.Listen(@out.Add);
@@ -104,8 +104,8 @@ namespace Sodium.Tests
         [Test]
         public void TestOperationalDeferSimultaneous()
         {
-            StreamSink<string> a = new StreamSink<string>();
-            StreamSink<string> b = new StreamSink<string>();
+            StreamSink<string> a = Stream.CreateSink<string>();
+            StreamSink<string> b = Stream.CreateSink<string>();
             Stream<string> c = Operational.Defer(a).OrElse(Operational.Defer(b));
             List<string> @out = new List<string>();
             IListener l = c.Listen(@out.Add);
