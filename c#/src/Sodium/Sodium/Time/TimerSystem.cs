@@ -70,7 +70,7 @@ namespace Sodium.Time
         /// </summary>
         /// <param name="t">The time to fire at.</param>
         /// <returns>A stream which fires at the specified time.</returns>
-        public Stream<T> At(Cell<IMaybe<T>> t)
+        public Stream<T> At(DiscreteCell<IMaybe<T>> t)
         {
             StreamSink<T> alarm = new StreamSink<T>();
             IMaybe<ITimer> currentTimer = Maybe.Nothing<ITimer>();

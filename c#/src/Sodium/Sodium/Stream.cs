@@ -225,16 +225,20 @@ namespace Sodium
         ///     it was before
         ///     any state changes from the current transaction.
         /// </remarks>
-        public Cell<T> Hold(T initialValue) => Transaction.Apply(trans => new Cell<T>(this, initialValue));
+        public DiscreteCell<T> Hold(T initialValue) => DiscreteCell.Create(this, new Lazy<T>(() => initialValue));
+
+        internal Cell<T> HoldInternal(T initialValue) => Transaction.Apply(trans => new Cell<T>(this, initialValue));
 
         /// <summary>
         ///     Create a cell with the specified lazily initialized initial value, that is updated by this stream's values.
         /// </summary>
         /// <param name="initialValue">The lazily initialized initial value of the cell.</param>
         /// <returns>A cell with the specified lazily initialized initial value, that is updated by this stream's values.</returns>
-        public Cell<T> HoldLazy(Lazy<T> initialValue) => Transaction.Apply(trans => this.HoldLazy(trans, initialValue));
+        public DiscreteCell<T> HoldLazy(Lazy<T> initialValue) => DiscreteCell.Create(this, initialValue);
 
-        internal Cell<T> HoldLazy(Transaction trans, Lazy<T> initialValue) => new LazyCell<T>(this, initialValue);
+        internal Cell<T> HoldLazyInternal(Lazy<T> initialValue) => Transaction.Apply(trans => this.HoldLazyInternal(trans, initialValue));
+
+        internal Cell<T> HoldLazyInternal(Transaction trans, Lazy<T> initialValue) => new LazyCell<T>(this, initialValue);
 
         /// <summary>
         ///     Return a stream whose events are the values of the cell at the time of the stream event firing.
@@ -420,7 +424,7 @@ namespace Sodium
         /// <summary>
         ///     Return a stream that only outputs events for which the predicate returns <code>true</code>.
         /// </summary>
-        /// <param name="predicate">The predicate used to filter the cell.</param>
+        /// <param name="predicate">The predicate used to filter the stream.</param>
         /// <returns>A stream that only outputs events for which the predicate returns <code>true</code>.</returns>
         public Stream<T> Filter(Func<T, bool> predicate)
         {
@@ -436,8 +440,7 @@ namespace Sodium
         }
 
         /// <summary>
-        ///     Return a stream that only outputs events from the input stream when the specified cell's value is <code>true</code>
-        ///     .
+        ///     Return a stream that only outputs events from the input stream when the specified cell's value is <code>true</code>.
         /// </summary>
         /// <param name="c">The cell that acts as a gate.</param>
         /// <returns>A stream that only outputs events from the input stream when the specified cell's value is <code>true</code>.</returns>
@@ -512,7 +515,7 @@ namespace Sodium
             return Transaction.Run(() =>
             {
                 StreamLoop<TState> es = new StreamLoop<TState>();
-                Cell<TState> s = es.HoldLazy(initialState);
+                Cell<TState> s = es.HoldLazyInternal(initialState);
                 Stream<Tuple<TReturn, TState>> ebs = this.Snapshot(s, f);
                 Stream<TReturn> eb = ebs.Map(bs => bs.Item1);
                 Stream<TState> esOut = ebs.Map(bs => bs.Item2);
@@ -532,14 +535,14 @@ namespace Sodium
         ///     <see cref="Snapshot{TReturn}(Cell{TReturn})" />.  Apart from this, the function must be pure.
         /// </param>
         /// <returns>A cell holding the accumulated state of this stream.</returns>
-        public Cell<TReturn> Accum<TReturn>(TReturn initialState, Func<T, TReturn, TReturn> f) => this.AccumLazy(new Lazy<TReturn>(() => initialState), f);
+        public DiscreteCell<TReturn> Accum<TReturn>(TReturn initialState, Func<T, TReturn, TReturn> f) => this.AccumLazy(new Lazy<TReturn>(() => initialState), f);
 
-        public Cell<TReturn> AccumLazy<TReturn>(Lazy<TReturn> initialState, Func<T, TReturn, TReturn> f)
+        public DiscreteCell<TReturn> AccumLazy<TReturn>(Lazy<TReturn> initialState, Func<T, TReturn, TReturn> f)
         {
             return Transaction.Run(() =>
             {
                 StreamLoop<TReturn> es = new StreamLoop<TReturn>();
-                Cell<TReturn> s = es.HoldLazy(initialState);
+                Cell<TReturn> s = es.HoldLazyInternal(initialState);
                 Stream<TReturn> esOut = this.Snapshot(s, f);
                 es.Loop(esOut);
                 return esOut.HoldLazy(initialState);
@@ -661,8 +664,7 @@ namespace Sodium
     public class TaskWithListener<T>
     {
         private readonly Task<T> task;
-        // ReSharper disable once NotAccessedField.Local
-        private IListener listener;
+        private readonly IListener listener;
 
         public TaskWithListener(Task<T> task, IListener listener)
         {
@@ -673,6 +675,11 @@ namespace Sodium
         public TaskAwaiter<T> GetAwaiter()
         {
             return this.task.GetAwaiter();
+        }
+
+        protected void NoOp()
+        {
+            GC.KeepAlive(this.listener);
         }
     }
 }

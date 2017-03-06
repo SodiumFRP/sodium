@@ -250,18 +250,18 @@ namespace Sodium.Tests
         [Test]
         public void TestLoopCell()
         {
-            CellSink<int> ca = new CellSink<int>(22);
-            Tuple<CellLoop<int>, Cell<int>, Cell<int>> c = Transaction.Run(() =>
+            DiscreteCellSink<int> ca = DiscreteCell.CreateSink(22);
+            Tuple<DiscreteCellLoop<int>, DiscreteCell<int>, DiscreteCell<int>> c = Transaction.Run(() =>
             {
-                CellLoop<int> cbLocal = new CellLoop<int>();
-                Cell<int> ccLocal = ca.Map(x => x % 10).Lift(cbLocal, (x, y) => x * y);
-                Cell<int> cbOut = ca.Map(x => x / 10);
+                DiscreteCellLoop<int> cbLocal = DiscreteCell.CreateLoop<int>();
+                DiscreteCell<int> ccLocal = ca.Map(x => x % 10).Lift(cbLocal, (x, y) => x * y);
+                DiscreteCell<int> cbOut = ca.Map(x => x / 10);
                 cbLocal.Loop(cbOut);
                 return Tuple.Create(cbLocal, cbOut, ccLocal);
             });
-            CellLoop<int> cb = c.Item1;
-            Cell<int> cb2 = c.Item2;
-            Cell<int> cc = c.Item3;
+            DiscreteCellLoop<int> cb = c.Item1;
+            DiscreteCell<int> cb2 = c.Item2;
+            DiscreteCell<int> cc = c.Item3;
             List<int> @out = new List<int>();
             List<int> out2 = new List<int>();
             List<int> out3 = new List<int>();
@@ -391,7 +391,7 @@ namespace Sodium.Tests
         {
             StreamSink<int> sa = new StreamSink<int>();
             List<int> @out = new List<int>();
-            Cell<int> sum = sa.Accum(100, (a, s) => a + s);
+            DiscreteCell<int> sum = sa.Accum(100, (a, s) => a + s);
             IListener l = sum.Listen(@out.Add);
             sa.Send(5);
             sa.Send(7);
@@ -419,7 +419,7 @@ namespace Sodium.Tests
         public void TestHold()
         {
             StreamSink<char> s = new StreamSink<char>();
-            Cell<char> c = s.Hold(' ');
+            DiscreteCell<char> c = s.Hold(' ');
             List<char> @out = new List<char>();
             IListener l = c.Listen(@out.Add);
             s.Send('C');
@@ -433,9 +433,9 @@ namespace Sodium.Tests
         public void TestHoldImplicitDelay()
         {
             StreamSink<char> s = new StreamSink<char>();
-            Cell<char> c = s.Hold(' ');
+            DiscreteCell<char> c = s.Hold(' ');
             List<char> @out = new List<char>();
-            IListener l = s.Snapshot(c).Listen(@out.Add);
+            IListener l = s.Snapshot(c.Cell).Listen(@out.Add);
             s.Send('C');
             s.Send('B');
             s.Send('A');
@@ -447,9 +447,9 @@ namespace Sodium.Tests
         public void TestDefer()
         {
             StreamSink<char> s = new StreamSink<char>();
-            Cell<char> c = s.Hold(' ');
+            DiscreteCell<char> c = s.Hold(' ');
             List<char> @out = new List<char>();
-            IListener l = Operational.Defer(s).Snapshot(c).Listen(@out.Add);
+            IListener l = Operational.Defer(s).Snapshot(c.Cell).Listen(@out.Add);
             s.Send('C');
             s.Send('B');
             s.Send('A');
@@ -608,16 +608,16 @@ namespace Sodium.Tests
         [Test]
         public async Task TestListenAsync()
         {
-            CellSink<int> a = new CellSink<int>(1);
-            Cell<int> a1 = a.Map(x => x + 1);
-            Cell<int> a2 = a.Map(x => x * 2);
-            Tuple<List<int>, CellLoop<int>> resultsAndCalled = Transaction.Run(() =>
+            DiscreteCellSink<int> a = DiscreteCell.CreateSink(1);
+            DiscreteCell<int> a1 = a.Map(x => x + 1);
+            DiscreteCell<int> a2 = a.Map(x => x * 2);
+            Tuple<List<int>, DiscreteCellLoop<int>> resultsAndCalled = Transaction.Run(() =>
             {
-                Cell<int> result = a1.Lift(a2, (x, y) => x + y);
-                Stream<Unit> incrementStream = Operational.Value(result).MapTo(Unit.Value);
+                DiscreteCell<int> result = a1.Lift(a2, (x, y) => x + y);
+                Stream<Unit> incrementStream = Operational.Value(result.Cell).MapTo(Unit.Value);
                 StreamSink<Unit> decrementStream = new StreamSink<Unit>();
-                CellLoop<int> calledLoop = new CellLoop<int>();
-                calledLoop.Loop(incrementStream.MapTo(1).Merge(decrementStream.MapTo(-1), (x, y) => x + y).Snapshot(calledLoop, (u, c) => c + u).Hold(0));
+                DiscreteCellLoop<int> calledLoop = DiscreteCell.CreateLoop<int>();
+                calledLoop.Loop(incrementStream.MapTo(1).Merge(decrementStream.MapTo(-1), (x, y) => x + y).Snapshot(calledLoop.Cell, (u, c) => c + u).Hold(0));
                 List<int> r = new List<int>();
                 result.Listen(v =>
                 {
@@ -632,7 +632,7 @@ namespace Sodium.Tests
             });
             // ReSharper disable once UnusedVariable
             List<int> results = resultsAndCalled.Item1;
-            Cell<int> called = resultsAndCalled.Item2;
+            DiscreteCell<int> called = resultsAndCalled.Item2;
             List<int> calledResults = new List<int>();
             called.Listen(calledResults.Add);
 

@@ -15,7 +15,7 @@ namespace Sodium
         /// <param name="stream">The stream which will provide updates to the discrete cell.</param>
         /// <param name="initialValue">The initial value of the discrete cell.</param>
         /// <returns>A discrete cell with initial value <see cref="initialValue"/> receiving updates from <see cref="stream"/>.</returns>
-        public static DiscreteCell<T> Create<T>(Stream<T> stream, Lazy<T> initialValue) => new DiscreteCell<T>(stream.HoldLazy(initialValue));
+        public static DiscreteCell<T> Create<T>(Stream<T> stream, Lazy<T> initialValue) => new DiscreteCell<T>(stream.HoldLazyInternal(initialValue));
 
         /// <summary>
         ///     Creates a discrete cell with a constant value.
@@ -24,6 +24,14 @@ namespace Sodium
         /// <param name="value">The value of the cell.</param>
         /// <returns>A discrete cell with a constant value.</returns>
         public static DiscreteCell<T> Constant<T>(T value) => Create(Stream.Never<T>(), new Lazy<T>(() => value));
+
+        /// <summary>
+        ///     Creates a discrete cell with a lazy constant value.
+        /// </summary>
+        /// <typeparam name="T">The type of the value of the cell.</typeparam>
+        /// <param name="value">The lazy value of the cell.</param>
+        /// <returns>A discrete cell with a lazy constant value.</returns>
+        public static DiscreteCell<T> ConstantLazy<T>(Lazy<T> value) => Create(Stream.Never<T>(), value);
 
         /// <summary>
         ///     Creates a discrete cell loop.
@@ -62,6 +70,31 @@ namespace Sodium
         ///     The underlying cell holding the current value of this discrete cell.
         /// </summary>
         public Cell<T> Cell { get; }
+
+        /// <summary>
+        ///     Listen for updates to the value of this discrete cell.  The returned <see cref="IListener" /> may be
+        ///     disposed to stop listening, or it will automatically stop listening when it is garbage collected.
+        ///     This is an OPERATIONAL mechanism for interfacing between the world of I/O and FRP.
+        /// </summary>
+        /// <param name="handler">The handler to execute for each value.</param>
+        /// <returns>An <see cref="IListener" /> which may be disposed to stop listening.</returns>
+        /// <remarks>
+        ///     <para>
+        ///         The only difference between listening to the discrete cell and listening to the <see cref="Updates"/> stream
+        ///         is that this method will instantly call the handler with the value at the point the listener is attached.
+        ///     </para>
+        ///     <para>
+        ///         No assumptions should be made about what thread the handler is called on and it should not block.
+        ///         Neither <see cref="StreamSink{T}.Send" /> nor <see cref="CellSink{T}.Send" /> may be called from the
+        ///         handler.
+        ///         They will throw an exception because this method is not meant to be used to create new primitives.
+        ///     </para>
+        ///     <para>
+        ///         If the <see cref="IListener" /> is not disposed, it will continue to listen until this cell is either
+        ///         disposed or garbage collected or the listener itself is garbage collected.
+        ///     </para>
+        /// </remarks>
+        public IListener Listen(Action<T> handler) => Transaction.Apply(trans => this.Cell.Value(trans).Listen(handler));
 
         /// <summary>
         ///     Transform the cell values according to the supplied function, so the returned
@@ -171,13 +204,21 @@ namespace Sodium
         ///     Return a discrete cell whose stream only receives events which have a different value than the previous event.
         /// </summary>
         /// <returns>A discrete cell whose stream only receives events which have a different value than the previous event.</returns>
-        public DiscreteCell<T> Calm() => new DiscreteCell<T>(this.Cell.Calm());
+        public DiscreteCell<T> Calm()
+        {
+            return this.Calm(EqualityComparer<T>.Default);
+        }
 
         /// <summary>
         ///     Return a discrete cell whose stream only receives events which have a different value than the previous event.
         /// </summary>
         /// <param name="comparer">The equality comparer to use to determine if two items are equal.</param>
         /// <returns>A discrete cell whose stream only receives events which have a different value than the previous event.</returns>
-        public DiscreteCell<T> Calm(IEqualityComparer<T> comparer) => new DiscreteCell<T>(this.Cell.Calm(comparer));
+        public DiscreteCell<T> Calm(IEqualityComparer<T> comparer)
+        {
+            Lazy<T> initA = this.Cell.SampleLazy();
+            Lazy<IMaybe<T>> mInitA = initA.Map(Maybe.Just);
+            return Transaction.Apply(trans => this.Cell.Updates(trans).Calm(mInitA, comparer).HoldLazy(initA));
+        }
     }
 }

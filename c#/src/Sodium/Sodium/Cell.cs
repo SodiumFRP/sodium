@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace Sodium
 {
@@ -27,7 +26,7 @@ namespace Sodium
         /// <returns>A cell with a lazily computed constant value.</returns>
         public static Cell<T> ConstantLazy<T>(Lazy<T> value)
         {
-            return Stream.Never<T>().HoldLazy(value);
+            return Stream.Never<T>().HoldLazyInternal(value);
         }
     }
 
@@ -154,27 +153,6 @@ namespace Sodium
         }
 
         /// <summary>
-        ///     Listen for updates to the value of this cell.  The returned <see cref="IListener" /> may be
-        ///     disposed to stop listening, or it will automatically stop listening when it is garbage collected.
-        ///     This is an OPERATIONAL mechanism for interfacing between the world of I/O and FRP.
-        /// </summary>
-        /// <param name="handler">The handler to execute for each value.</param>
-        /// <returns>An <see cref="IListener" /> which may be disposed to stop listening.</returns>
-        /// <remarks>
-        ///     <para>
-        ///         No assumptions should be made about what thread the handler is called on and it should not block.
-        ///         Neither <see cref="StreamSink{T}.Send" /> nor <see cref="CellSink{T}.Send" /> may be called from the
-        ///         handler.
-        ///         They will throw an exception because this method is not meant to be used to create new primitives.
-        ///     </para>
-        ///     <para>
-        ///         If the <see cref="IListener" /> is not disposed, it will continue to listen until this cell is either
-        ///         disposed or garbage collected or the listener itself is garbage collected.
-        ///     </para>
-        /// </remarks>
-        public IListener Listen(Action<T> handler) => Transaction.Apply(trans => this.Value(trans).Listen(handler));
-
-        /// <summary>
         ///     Transform the cell values according to the supplied function, so the returned
         ///     cell's values reflect the value of the function applied to the input cell's values.
         /// </summary>
@@ -185,7 +163,7 @@ namespace Sodium
         /// <returns>An cell which fires values transformed by <paramref name="f" /> for each value fired by this cell.</returns>
         public Cell<TResult> Map<TResult>(Func<T, TResult> f)
         {
-            return Transaction.Apply(trans => this.Updates(trans).Map(f).HoldLazy(trans, this.SampleLazy(trans).Map(f)));
+            return Transaction.Apply(trans => this.Updates(trans).Map(f).HoldLazyInternal(trans, this.SampleLazy(trans).Map(f)));
         }
 
         //      /**
@@ -331,29 +309,8 @@ namespace Sodium
                     }
                 });
                 return @out.LastFiringOnly(trans0).UnsafeAttachListener(l1).UnsafeAttachListener(l2).UnsafeAttachListener(
-                    new Listener(() => inTarget.Unlink(nodeTarget))).HoldLazy(new Lazy<TResult>(() => bf.SampleNoTransaction()(this.SampleNoTransaction())));
+                    new Listener(() => inTarget.Unlink(nodeTarget))).HoldLazyInternal(new Lazy<TResult>(() => bf.SampleNoTransaction()(this.SampleNoTransaction())));
             });
-        }
-
-        /// <summary>
-        ///     Return a cell whose stream only receives events which have a different value than the previous event.
-        /// </summary>
-        /// <returns>A cell whose stream only receives events which have a different value than the previous event.</returns>
-        public Cell<T> Calm()
-        {
-            return this.Calm(EqualityComparer<T>.Default);
-        }
-
-        /// <summary>
-        ///     Return a cell whose stream only receives events which have a different value than the previous event.
-        /// </summary>
-        /// <param name="comparer">The equality comparer to use to determine if two items are equal.</param>
-        /// <returns>A cell whose stream only receives events which have a different value than the previous event.</returns>
-        public Cell<T> Calm(IEqualityComparer<T> comparer)
-        {
-            Lazy<T> initA = this.SampleLazy();
-            Lazy<IMaybe<T>> mInitA = initA.Map(Maybe.Just);
-            return Transaction.Apply(trans => this.Updates(trans).Calm(mInitA, comparer).HoldLazy(initA));
         }
 
         protected void NoOp()

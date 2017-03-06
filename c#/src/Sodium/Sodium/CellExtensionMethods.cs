@@ -26,7 +26,7 @@ namespace Sodium
                     currentListener = ca.Value(trans2).Listen(@out.Node, trans2, @out.Send, false);
                 };
                 IListener l1 = cca.Value(trans1).Listen(@out.Node, trans1, h, false);
-                return @out.UnsafeAttachListener(l1).HoldLazy(za);
+                return @out.UnsafeAttachListener(l1).HoldLazyInternal(za);
             });
         }
 
@@ -139,7 +139,7 @@ namespace Sodium
                   {
                       a();
                       return values.ToArray();
-                  }).UnsafeAttachListener(new ImmutableCompositeListener(listeners)).HoldLazy(initialValue);
+                  }).UnsafeAttachListener(new ImmutableCompositeListener(listeners)).HoldLazyInternal(initialValue);
             });
         }
     }

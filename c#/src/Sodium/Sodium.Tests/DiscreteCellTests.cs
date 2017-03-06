@@ -24,7 +24,7 @@ namespace Sodium.Tests
 
             List<int> output1 = new List<int>();
             List<int> output2 = new List<int>();
-            c.Cell.Listen(output1.Add);
+            c.Listen(output1.Add);
             c.Updates.Listen(output2.Add);
 
             s.Send(5);
