@@ -6,5 +6,7 @@
     public interface IListener
     {
         void Unlisten();
+
+        IWeakListener GetWeakListener();
     }
 }

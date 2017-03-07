@@ -2,7 +2,7 @@ using System.Collections.Generic;
 
 namespace Sodium
 {
-    public class CompositeListener : IListener
+    public class CompositeListener : IListener, IWeakListener
     {
         private readonly List<IListener> listeners;
 
@@ -26,17 +26,17 @@ namespace Sodium
             this.listeners.AddRange(l);
         }
 
-        public void Dispose()
-        {
-            this.Unlisten();
-        }
-
         public void Unlisten()
         {
             foreach (IListener l in this.listeners)
             {
                 l?.Unlisten();
             }
+        }
+
+        public IWeakListener GetWeakListener()
+        {
+            return this;
         }
     }
 }

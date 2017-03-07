@@ -59,20 +59,18 @@ namespace Sodium
     public class Stream<T>
     {
         internal readonly Node<T> Node;
-        // ReSharper disable once NotAccessedField.Local - Used to keep object from being garbage collected
+        // ReSharper disable once CollectionNeverQueried.Local
         private readonly List<IListener> attachedListeners;
+        private readonly MemoryManager.StreamListeners<T> trackedListeners;
         private readonly List<T> firings;
 
         internal Stream()
-            : this(new Node<T>(0L), new List<IListener>(), new List<T>())
         {
-        }
-
-        private Stream(Node<T> node, List<IListener> attachedListeners, List<T> firings)
-        {
-            this.Node = node;
-            this.attachedListeners = attachedListeners;
-            this.firings = firings;
+            this.Node = new Node<T>(0L);
+            this.attachedListeners = new List<IListener>();
+            this.trackedListeners = new MemoryManager.StreamListeners<T>(this);
+            MemoryManager.Add(this.trackedListeners);
+            this.firings = new List<T>();
         }
 
         /// <summary>
@@ -95,7 +93,7 @@ namespace Sodium
         ///     </para>
         ///     <para>
         ///         To ensure this <see cref="IListener" /> is disposed as soon as the stream it is listening to is either
-        ///         disposed, pass the returned listener to this stream's <see cref="AddCleanup" /> method.
+        ///         disposed, pass the returned listener to this stream's <see cref="AttachListener" /> method.
         ///     </para>
         /// </remarks>
         public IListener Listen(Action<T> handler) => this.Listen(Node<T>.Null, (trans2, a) => handler(a));
@@ -107,12 +105,7 @@ namespace Sodium
         /// <returns>A new stream equivalent to this stream which will garbage collect <paramref name="listener" /> when it is garbage collected.</returns>
         public Stream<T> AttachListener(IListener listener)
         {
-            return Transaction.Run(() =>
-            {
-                List<IListener> fsNew = this.attachedListeners.ToList();
-                fsNew.Add(listener);
-                return new Stream<T>(this.Node, fsNew, this.firings);
-            });
+            return Transaction.Run(() => this.UnsafeAttachListener(listener));
         }
 
         /// <summary>
@@ -618,6 +611,7 @@ namespace Sodium
         internal Stream<T> UnsafeAttachListener(IListener cleanup)
         {
             this.attachedListeners.Add(cleanup);
+            this.trackedListeners.AddListener(cleanup.GetWeakListener());
             return this;
         }
 
@@ -670,18 +664,41 @@ namespace Sodium
             // the Listener, so that the garbage collector doesn't get triggered.
             private readonly Stream<T> stream;
 
-            private readonly Node<T>.Target target;
+            private readonly WeakListener weakListener;
 
             public ListenerImplementation(Stream<T> stream, Action<Transaction, T> action, Node<T>.Target target)
             {
                 this.stream = stream;
                 this.action = action;
+
+                this.weakListener = new WeakListener(stream?.Node, target);
+            }
+
+            public void Unlisten()
+            {
+                this.weakListener.Unlisten();
+            }
+
+            public IWeakListener GetWeakListener()
+            {
+                return this.weakListener;
+            }
+        }
+
+        private class WeakListener : IWeakListener
+        {
+            private readonly Node<T> node;
+            private readonly Node<T>.Target target;
+
+            public WeakListener(Node<T> node, Node<T>.Target target)
+            {
+                this.node = node;
                 this.target = target;
             }
 
             public void Unlisten()
             {
-                this.stream?.Node.Unlink(this.target);
+                this.node?.Unlink(this.target);
             }
         }
     }

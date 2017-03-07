@@ -32,9 +32,12 @@ namespace Sodium
 
             visited.Add(node);
             node.rank = limit + 1;
-            foreach (Node n in node.GetListenerNodesUnsafe())
+            lock (ListenersLock)
             {
-                EnsureBiggerThan(n, node.rank, visited);
+                foreach (Node n in node.GetListenerNodesUnsafe())
+                {
+                    EnsureBiggerThan(n, node.rank, visited);
+                }
             }
 
             return true;
@@ -42,11 +45,11 @@ namespace Sodium
 
         protected abstract IEnumerable<Node> GetListenerNodesUnsafe();
 
-        public class Target
+        public abstract class Target
         {
             public readonly Node Node;
 
-            public Target(Node node)
+            protected Target(Node node)
             {
                 this.Node = node;
             }
@@ -57,7 +60,7 @@ namespace Sodium
     {
         public static readonly Node<T> Null = new Node<T>(long.MaxValue);
 
-        private readonly List<Target> listeners = new List<Target>();
+        private readonly HashSet<Target> listeners = new HashSet<Target>();
 
         internal Node(long rank)
             : base(rank)
@@ -118,10 +121,7 @@ namespace Sodium
 
         protected override IEnumerable<Node> GetListenerNodesUnsafe()
         {
-            lock (ListenersLock)
-            {
-                return this.listeners.Select(l => l.Node);
-            }
+            return this.listeners.Select(l => l.Node);
         }
     }
 }

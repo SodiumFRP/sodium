@@ -5,7 +5,7 @@ namespace Sodium
     /// <summary>
     ///     A listener which runs the specified action when it is disposed.
     /// </summary>
-    public class Listener : IListener
+    public class Listener : IListener, IWeakListener
     {
         private readonly Action unlisten;
 
@@ -18,14 +18,14 @@ namespace Sodium
             this.unlisten = unlisten;
         }
 
-        public void Dispose()
-        {
-            this.Unlisten();
-        }
-
         public void Unlisten()
         {
             this.unlisten();
+        }
+
+        public IWeakListener GetWeakListener()
+        {
+            return this;
         }
     }
 }

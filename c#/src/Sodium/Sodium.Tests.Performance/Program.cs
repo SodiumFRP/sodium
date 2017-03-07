@@ -2,6 +2,7 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Threading;
 
 namespace Sodium.Tests.Performance
 {
@@ -9,6 +10,9 @@ namespace Sodium.Tests.Performance
     {
         public static void Main(string[] args)
         {
+            MemoryManager.StartCleaningUpAutomatically(TimeSpan.FromSeconds(5));
+
+            Console.WriteLine("Press any key");
             Console.ReadKey();
 
             var t = Transaction.Run(() =>
@@ -37,7 +41,8 @@ namespace Sodium.Tests.Performance
                 return Tuple.Create(toggleAllSelectedStream, objectsAndIsSelected, selectAllStream, objects);
             });
 
-            Transaction.RunVoid(() => t.Item2.Map(oo => oo.Count(o => o.IsSelected)).Updates.Listen(v => Console.WriteLine($"{v} selected")));
+            // ReSharper disable once UnusedVariable
+            IListener l = Transaction.Run(() => t.Item2.Map(oo => oo.Count(o => o.IsSelected)).Updates.Listen(v => Console.WriteLine($"{v} selected")));
 
             Stopwatch sw = new Stopwatch();
             sw.Start();
@@ -45,7 +50,55 @@ namespace Sodium.Tests.Performance
             t.Item1.Send(Unit.Value);
             t.Item1.Send(Unit.Value);
             t.Item1.Send(Unit.Value);
-            t.Item4.Send(Enumerable.Range(0, 5000).Select(n => new TestObject(n, t.Item3)).ToArray());
+            SendMore(t.Item4, t.Item3);
+            Thread.Sleep(500);
+            SendMore(t.Item4, t.Item3);
+            Thread.Sleep(500);
+            SendMore(t.Item4, t.Item3);
+            Thread.Sleep(500);
+            SendMore(t.Item4, t.Item3);
+            Thread.Sleep(500);
+            SendMore(t.Item4, t.Item3);
+            Thread.Sleep(500);
+            SendMore(t.Item4, t.Item3);
+            Thread.Sleep(500);
+            SendMore(t.Item4, t.Item3);
+            Thread.Sleep(500);
+            SendMore(t.Item4, t.Item3);
+            Thread.Sleep(500);
+            SendMore(t.Item4, t.Item3);
+            Thread.Sleep(500);
+            SendMore(t.Item4, t.Item3);
+            Thread.Sleep(500);
+            SendMore(t.Item4, t.Item3);
+            Thread.Sleep(500);
+            SendMore(t.Item4, t.Item3);
+            Thread.Sleep(500);
+            SendMore(t.Item4, t.Item3);
+            Thread.Sleep(500);
+            SendMore(t.Item4, t.Item3);
+            Thread.Sleep(500);
+            SendMore(t.Item4, t.Item3);
+            Thread.Sleep(500);
+            SendMore(t.Item4, t.Item3);
+            Thread.Sleep(500);
+            SendMore(t.Item4, t.Item3);
+            Thread.Sleep(500);
+            SendMore(t.Item4, t.Item3);
+            Thread.Sleep(500);
+            SendMore(t.Item4, t.Item3);
+            Thread.Sleep(500);
+            SendMore(t.Item4, t.Item3);
+            Thread.Sleep(500);
+            SendMore(t.Item4, t.Item3);
+            Thread.Sleep(500);
+            SendMore(t.Item4, t.Item3);
+            Thread.Sleep(500);
+            SendMore(t.Item4, t.Item3);
+            Thread.Sleep(500);
+            SendMore(t.Item4, t.Item3);
+            Thread.Sleep(500);
+            SendMore(t.Item4, t.Item3);
             t.Item4.Cell.Sample()[2].IsSelectedStreamSink.Send(true);
             Transaction.RunVoid(() =>
             {
@@ -59,6 +112,47 @@ namespace Sodium.Tests.Performance
             });
             t.Item1.Send(Unit.Value);
             t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
+            t.Item1.Send(Unit.Value);
 
             sw.Stop();
 
@@ -66,7 +160,14 @@ namespace Sodium.Tests.Performance
             Console.WriteLine();
             Console.WriteLine($"Elapsed: {sw.ElapsedMilliseconds}ms");
 
+            Console.WriteLine();
+            Console.WriteLine("Press any key");
             Console.ReadKey();
+        }
+
+        private static void SendMore(DiscreteCellSink<IReadOnlyList<TestObject>> cellSink, Stream<bool> selectAllStream)
+        {
+            cellSink.Send(Enumerable.Range(0, 20000).Select(n => new TestObject(n, selectAllStream)).ToArray());
         }
 
         private class TestObject
