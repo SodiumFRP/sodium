@@ -494,7 +494,7 @@ namespace Sodium.Tests
                 ((Action)(() =>
                 {
                     // ReSharper disable once UnusedVariable
-                    s2.Listen(@out.Add);
+                    IListener l = s2.Listen(@out.Add);
 
                     s.Send(1);
                     s.Send(2);
@@ -505,7 +505,7 @@ namespace Sodium.Tests
                 ((Action)(() =>
                 {
                     // ReSharper disable once UnusedVariable
-                    s2.Listen(@out.Add);
+                    IListener l = s2.Listen(@out.Add);
 
                     s.Send(3);
                     s.Send(4);
@@ -611,36 +611,39 @@ namespace Sodium.Tests
             DiscreteCellSink<int> a = DiscreteCell.CreateSink(1);
             DiscreteCell<int> a1 = a.Map(x => x + 1);
             DiscreteCell<int> a2 = a.Map(x => x * 2);
-            Tuple<List<int>, DiscreteCellLoop<int>> resultsAndCalled = Transaction.Run(() =>
-            {
-                DiscreteCell<int> result = a1.Lift(a2, (x, y) => x + y);
-                Stream<Unit> incrementStream = Operational.Value(result.Cell).MapTo(Unit.Value);
-                StreamSink<Unit> decrementStream = Stream.CreateSink<Unit>();
-                DiscreteCellLoop<int> calledLoop = DiscreteCell.CreateLoop<int>();
-                calledLoop.Loop(incrementStream.MapTo(1).Merge(decrementStream.MapTo(-1), (x, y) => x + y).Snapshot(calledLoop.Cell, (u, c) => c + u).Hold(0));
-                List<int> r = new List<int>();
-                result.Listen(v =>
-                {
-                    Task.Run(async () =>
-                    {
-                        await Task.Delay(900);
-                        r.Add(v);
-                        decrementStream.Send(Unit.Value);
-                    });
-                });
-                return Tuple.Create(r, calledLoop);
-            });
+            Tuple<List<int>, DiscreteCellLoop<int>, IListener> resultsAndCalled = Transaction.Run(() =>
+             {
+                 DiscreteCell<int> result = a1.Lift(a2, (x, y) => x + y);
+                 Stream<Unit> incrementStream = Operational.Value(result.Cell).MapTo(Unit.Value);
+                 StreamSink<Unit> decrementStream = Stream.CreateSink<Unit>();
+                 DiscreteCellLoop<int> calledLoop = DiscreteCell.CreateLoop<int>();
+                 calledLoop.Loop(incrementStream.MapTo(1).Merge(decrementStream.MapTo(-1), (x, y) => x + y).Snapshot(calledLoop.Cell, (u, c) => c + u).Hold(0));
+                 List<int> r = new List<int>();
+                 IListener l = result.Listen(v =>
+                 {
+                     Task.Run(async () =>
+                     {
+                         await Task.Delay(900);
+                         r.Add(v);
+                         decrementStream.Send(Unit.Value);
+                     });
+                 });
+                 return Tuple.Create(r, calledLoop, l);
+             });
             // ReSharper disable once UnusedVariable
             List<int> results = resultsAndCalled.Item1;
             DiscreteCell<int> called = resultsAndCalled.Item2;
             List<int> calledResults = new List<int>();
-            called.Listen(calledResults.Add);
+            IListener l2 = called.Listen(calledResults.Add);
 
             await Task.Delay(500);
             a.Send(2);
             await Task.Delay(500);
             a.Send(3);
             await Task.Delay(2500);
+
+            l2.Unlisten();
+            resultsAndCalled.Item3.Unlisten();
         }
     }
 }

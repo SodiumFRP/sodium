@@ -15,7 +15,7 @@ namespace Sodium
     {
         private static readonly TimeSpan Infinite = TimeSpan.FromMilliseconds(-1);
         private static readonly object StreamsLock = new object();
-        private static readonly HashSet<StreamListeners> Streams = new HashSet<StreamListeners>();
+        private static readonly List<StreamListeners> Streams = new List<StreamListeners>();
         private static readonly object TimerIntervalLock = new object();
         private static TimeSpan? timerInterval;
         private static readonly object TimerLock = new object();
@@ -120,7 +120,7 @@ namespace Sodium
             List<StreamListeners> streamsToCleanup = new List<StreamListeners>();
             lock (StreamsLock)
             {
-                Streams.RemoveWhere(stream =>
+                Streams.RemoveAll(stream =>
                 {
                     if (stream.ReadyToUnlisten())
                     {

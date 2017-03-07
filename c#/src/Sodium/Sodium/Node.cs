@@ -103,7 +103,7 @@ namespace Sodium
             }
         }
 
-        internal IReadOnlyList<Target> GetListeners()
+        internal IReadOnlyList<Target> GetListenersCopy()
         {
             lock (ListenersLock)
             {

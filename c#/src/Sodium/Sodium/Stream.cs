@@ -623,8 +623,7 @@ namespace Sodium
             }
             this.firings.Add(a);
 
-            HashSet<Node<T>.Target> targets = new HashSet<Node<T>.Target>(this.Node.GetListeners());
-            foreach (Node<T>.Target target in targets)
+            foreach (Node<T>.Target target in this.Node.GetListenersCopy())
             {
                 trans.Prioritized(target.Node, trans2 =>
                 {

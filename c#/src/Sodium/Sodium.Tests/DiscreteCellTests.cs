@@ -12,10 +12,10 @@ namespace Sodium.Tests
         {
             Tuple<DiscreteCell<int>, DiscreteCellStreamSink<int>> result = Transaction.Run(() =>
              {
-                 DiscreteCellLoop<int> l = DiscreteCell.CreateLoop<int>();
-                 DiscreteCell<int> cLocal = l.Map(v => v * 5);
+                 DiscreteCellLoop<int> loop = DiscreteCell.CreateLoop<int>();
+                 DiscreteCell<int> cLocal = loop.Map(v => v * 5);
                  DiscreteCellStreamSink<int> sLocal = new DiscreteCellStreamSink<int>();
-                 l.Loop(sLocal.Hold(3));
+                 loop.Loop(sLocal.Hold(3));
                  return Tuple.Create(cLocal, sLocal);
              });
 
@@ -24,11 +24,14 @@ namespace Sodium.Tests
 
             List<int> output1 = new List<int>();
             List<int> output2 = new List<int>();
-            c.Listen(output1.Add);
-            c.Updates.Listen(output2.Add);
+            IListener l = c.Listen(output1.Add);
+            IListener l2 = c.Updates.Listen(output2.Add);
 
             s.Send(5);
             s.Send(7);
+
+            l2.Unlisten();
+            l.Unlisten();
 
             CollectionAssert.AreEqual(new[] { 15, 25, 35 }, output1);
             CollectionAssert.AreEqual(new[] { 25, 35 }, output2);
