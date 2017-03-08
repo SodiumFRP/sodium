@@ -474,6 +474,8 @@ namespace Sodium.Tests
             }))();
 
             GC.Collect(0, GCCollectionMode.Forced);
+            MemoryManager.Cleanup();
+            GC.Collect(0, GCCollectionMode.Forced);
             s.Send(3);
             s.Send(4);
 
@@ -501,6 +503,8 @@ namespace Sodium.Tests
                 }))();
 
                 GC.Collect(0, GCCollectionMode.Forced);
+                MemoryManager.Cleanup();
+                GC.Collect(0, GCCollectionMode.Forced);
 
                 ((Action)(() =>
                 {
@@ -513,6 +517,8 @@ namespace Sodium.Tests
                 }))();
             }))();
 
+            GC.Collect(0, GCCollectionMode.Forced);
+            MemoryManager.Cleanup();
             GC.Collect(0, GCCollectionMode.Forced);
             s.Send(6);
             s.Send(7);
@@ -539,7 +545,6 @@ namespace Sodium.Tests
                 s.Send(2);
             }))();
 
-            GC.Collect(0, GCCollectionMode.Forced);
             s.Send(3);
             s.Send(4);
 
@@ -568,7 +573,6 @@ namespace Sodium.Tests
                 l.Unlisten();
             }))();
 
-            GC.Collect(0, GCCollectionMode.Forced);
             s.Send(3);
             s.Send(4);
 
@@ -600,6 +604,8 @@ namespace Sodium.Tests
                 s.Send('C');
             }).Start();
             TaskWithListener<char> t = s.ListenOnce();
+            GC.Collect(0, GCCollectionMode.Forced);
+            MemoryManager.Cleanup();
             GC.Collect(0, GCCollectionMode.Forced);
             char r = await t;
             Assert.AreEqual('A', r);

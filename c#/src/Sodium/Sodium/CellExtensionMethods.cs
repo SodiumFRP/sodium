@@ -77,7 +77,7 @@ namespace Sodium
             {
                 Stream<T> @out = new Stream<T>();
                 Node<T> node = new Node<T>(0);
-                Node<T>.Target nodeTarget = node.Link((t, v) => { }, @out.Node).Item2;
+                Node<T>.Target nodeTarget = node.Link(trans1, (t, v) => { }, @out.Node).Item2;
                 Guid listenerId;
                 Action<Transaction, Tuple<T, Guid>, Guid> sendIfNodeTargetMatches = (t, v, i) =>
                 {

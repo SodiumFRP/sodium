@@ -43,10 +43,10 @@ namespace Sodium
         public static Stream<T> Merge<T>(this IEnumerable<Stream<T>> s, Func<T, T, T> f)
         {
             IReadOnlyList<Stream<T>> v = s.ToArray();
-            return Merge(v, 0, v.Count, f);
+            return Transaction.Apply(trans => Merge(trans, v, 0, v.Count, f));
         }
 
-        private static Stream<T> Merge<T>(IReadOnlyList<Stream<T>> e, int start, int end, Func<T, T, T> f)
+        private static Stream<T> Merge<T>(Transaction trans, IReadOnlyList<Stream<T>> e, int start, int end, Func<T, T, T> f)
         {
             int n = end - start;
 
@@ -62,11 +62,11 @@ namespace Sodium
 
             if (n == 2)
             {
-                return e[start].Merge(e[start + 1], f);
+                return e[start].Merge(trans, e[start + 1], f);
             }
 
             int mid = (start + end) / 2;
-            return Merge(e, start, mid, f).Merge(Merge(e, mid, end, f), f);
+            return Merge(trans, e, start, mid, f).Merge(trans, Merge(trans, e, mid, end, f), f);
         }
 
         /// <summary>

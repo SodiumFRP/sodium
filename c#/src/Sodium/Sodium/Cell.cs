@@ -182,7 +182,7 @@ namespace Sodium
             Stream<Unit> spark = new Stream<Unit>();
             trans1.Prioritized(spark.Node, trans2 => spark.Send(trans2, Unit.Value));
             Stream<T> initial = spark.Snapshot(this);
-            return initial.Merge(this.Updates(trans1), (left, right) => right);
+            return initial.Merge(trans1, this.Updates(trans1), (left, right) => right);
         }
 
         /// <summary>
@@ -196,7 +196,7 @@ namespace Sodium
         /// <returns>An cell which fires values transformed by <paramref name="f" /> for each value fired by this cell.</returns>
         public Cell<TResult> Map<TResult>(Func<T, TResult> f)
         {
-            return Transaction.Apply(trans => this.Updates(trans).Map(f).HoldLazyInternal(trans, this.SampleLazy(trans).Map(f)));
+            return Transaction.Apply(trans => this.Updates(trans).Map(f).HoldLazyInternal(this.SampleLazy(trans).Map(f)));
         }
 
         //      /**
@@ -317,7 +317,7 @@ namespace Sodium
 
                 Node<TResult> outTarget = @out.Node;
                 Node<Unit> inTarget = new Node<Unit>(0);
-                Node<Unit>.Target nodeTarget = inTarget.Link((t, v) => { }, outTarget).Item2;
+                Node<Unit>.Target nodeTarget = inTarget.Link(trans0, (t, v) => { }, outTarget).Item2;
 
                 Func<T, TResult> f = null;
                 T a = default(T);

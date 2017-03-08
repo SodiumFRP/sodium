@@ -170,7 +170,7 @@ namespace Sodium
 
         internal IListener Listen(Node target, Transaction trans, Action<Transaction, T> action, bool suppressEarlierFirings)
         {
-            Tuple<bool, Node<T>.Target> t = this.Node.Link(action, target);
+            Tuple<bool, Node<T>.Target> t = this.Node.Link(trans, action, target);
             Node<T>.Target nodeTarget = t.Item2;
             if (t.Item1)
             {
@@ -250,8 +250,6 @@ namespace Sodium
         /// </remarks>
         public DiscreteCell<T> Hold(T initialValue) => DiscreteCell.Create(this, new Lazy<T>(() => initialValue));
 
-        internal Cell<T> HoldInternal(T initialValue) => Transaction.Apply(trans => new Cell<T>(this, initialValue));
-
         /// <summary>
         ///     Create a cell with the specified lazily initialized initial value, that is updated by this stream's values.
         /// </summary>
@@ -259,9 +257,7 @@ namespace Sodium
         /// <returns>A cell with the specified lazily initialized initial value, that is updated by this stream's values.</returns>
         public DiscreteCell<T> HoldLazy(Lazy<T> initialValue) => DiscreteCell.Create(this, initialValue);
 
-        internal Cell<T> HoldLazyInternal(Lazy<T> initialValue) => Transaction.Apply(trans => this.HoldLazyInternal(trans, initialValue));
-
-        internal Cell<T> HoldLazyInternal(Transaction trans, Lazy<T> initialValue) => new LazyCell<T>(this, initialValue);
+        internal Cell<T> HoldLazyInternal(Lazy<T> initialValue) => new LazyCell<T>(this, initialValue);
 
         /// <summary>
         ///     Return a stream whose events are the values of the cell at the time of the stream event firing.
@@ -388,12 +384,12 @@ namespace Sodium
             return this.Merge(s, (left, right) => left);
         }
 
-        private Stream<T> Merge(Stream<T> s)
+        private Stream<T> Merge(Transaction trans, Stream<T> s)
         {
             Stream<T> @out = new Stream<T>();
             Node<T> left = new Node<T>(0);
             Node<T> right = @out.Node;
-            Node<T>.Target nodeTarget = left.Link((t, v) => { }, right).Item2;
+            Node<T>.Target nodeTarget = left.Link(trans, (t, v) => { }, right).Item2;
             Action<Transaction, T> h = @out.Send;
             IListener l1 = this.Listen(left, h);
             IListener l2 = s.Listen(right, h);
@@ -423,7 +419,12 @@ namespace Sodium
         /// </remarks>
         public Stream<T> Merge(Stream<T> s, Func<T, T, T> f)
         {
-            return Transaction.Apply(trans => this.Merge(s).Coalesce(trans, f));
+            return Transaction.Apply(trans => this.Merge(trans, s, f));
+        }
+
+        internal Stream<T> Merge(Transaction trans, Stream<T> s, Func<T, T, T> f)
+        {
+            return this.Merge(trans, s).Coalesce(trans, f);
         }
 
         internal Stream<T> Coalesce(Transaction trans1, Func<T, T, T> f)

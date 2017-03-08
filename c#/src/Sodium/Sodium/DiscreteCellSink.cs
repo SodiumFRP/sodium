@@ -16,7 +16,7 @@ namespace Sodium
         }
 
         private DiscreteCellSink(DiscreteCellStreamSink<T> streamSink, T initialValue)
-            : this(streamSink, streamSink.HoldInternal(initialValue))
+            : this(streamSink, new Cell<T>(streamSink, initialValue))
         {
         }
 

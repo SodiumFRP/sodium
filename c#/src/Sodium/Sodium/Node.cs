@@ -9,34 +9,71 @@ namespace Sodium
         // Fine-grained lock that protects listeners and nodes.
         protected static readonly object ListenersLock = new object();
 
-        private long rank;
+        internal long Rank;
 
         internal Node(long rank)
         {
-            this.rank = rank;
+            this.Rank = rank;
         }
-
-        internal long Rank => this.rank;
 
         public int CompareTo(Node other)
         {
-            return this.rank.CompareTo(other.rank);
+            return this.Rank.CompareTo(other.Rank);
+        }
+
+        internal bool FixRank()
+        {
+            bool changed = false;
+            foreach (Node listener in this.GetListenerNodesUnsafe())
+            {
+                if (FixRankRecursive(listener, this.Rank, new HashSet<Node>()))
+                {
+                    changed = true;
+                }
+            }
+            return changed;
+        }
+
+        protected static bool FixRankRecursive(Node node, long limit, HashSet<Node> visited)
+        {
+            if (visited.Contains(node))
+            {
+                return false;
+            }
+
+            bool changed = false;
+            if (node.Rank <= limit)
+            {
+                node.Rank = limit + 1;
+                changed = true;
+            }
+
+            visited.Add(node);
+            foreach (Node n in node.GetListenerNodesUnsafe())
+            {
+                if (FixRankRecursive(n, node.Rank, visited))
+                {
+                    changed = true;
+                }
+            }
+
+            return changed;
         }
 
         protected static bool EnsureBiggerThan(Node node, long limit, HashSet<Node> visited)
         {
-            if (node.rank > limit || visited.Contains(node))
+            if (node.Rank > limit || visited.Contains(node))
             {
                 return false;
             }
 
             visited.Add(node);
-            node.rank = limit + 1;
+            node.Rank = limit + 1;
             lock (ListenersLock)
             {
                 foreach (Node n in node.GetListenerNodesUnsafe())
                 {
-                    EnsureBiggerThan(n, node.rank, visited);
+                    EnsureBiggerThan(n, node.Rank, visited);
                 }
             }
 
@@ -76,11 +113,11 @@ namespace Sodium
         ///     A tuple containing whether or not changes were made to the node rank
         ///     and the <see cref="Target" /> object created for this link.
         /// </returns>
-        internal Tuple<bool, Target> Link(Action<Transaction, T> action, Node target)
+        internal Tuple<bool, Target> Link(Transaction trans, Action<Transaction, T> action, Node target)
         {
             lock (ListenersLock)
             {
-                bool changed = EnsureBiggerThan(target, this.Rank, new HashSet<Node>());
+                bool changed = trans.ReachedClose && EnsureBiggerThan(target, this.Rank, new HashSet<Node>());
                 Target t = new Target(action, target);
                 this.listeners.Add(t);
                 return Tuple.Create(changed, t);

@@ -30,13 +30,15 @@ namespace Sodium
         /// <param name="a">The value to send.</param>
         public void Send(T a)
         {
-            Transaction.Run(trans =>
+            Transaction.Apply(trans =>
             {
                 if (Transaction.InCallback > 0)
                 {
                     throw new InvalidOperationException("Send() may not be called inside a Sodium callback.");
                 }
                 this.coalescer(trans, a);
+
+                return Unit.Value;
             });
         }
 

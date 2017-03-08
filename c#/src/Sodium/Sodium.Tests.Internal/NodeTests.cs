@@ -10,7 +10,12 @@ namespace Sodium.Tests.Internal
         {
             Node<int> a = new Node<int>(0);
             Node<int> b = new Node<int>(0);
-            a.Link((t, v) => { }, b);
+            Transaction.Apply(trans =>
+            {
+                a.Link(trans, (t, v) => { }, b);
+                trans.Prioritized(a, t => { });
+                return Unit.Value;
+            });
             Assert.That(a, Is.LessThan(b));
         }
     }

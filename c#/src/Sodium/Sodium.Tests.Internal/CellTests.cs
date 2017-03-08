@@ -9,7 +9,11 @@ namespace Sodium.Tests.Internal
         public void TestTransaction()
         {
             bool calledBack = false;
-            Transaction.Run(trans => trans.Prioritized(Node<Unit>.Null, trans2 => calledBack = true));
+            Transaction.Apply(trans =>
+            {
+                trans.Prioritized(Node<Unit>.Null, trans2 => calledBack = true);
+                return Unit.Value;
+            });
             Assert.IsTrue(calledBack);
         }
     }
