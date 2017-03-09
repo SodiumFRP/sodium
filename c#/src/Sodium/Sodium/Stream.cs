@@ -66,7 +66,7 @@ namespace Sodium
 
         internal Stream()
         {
-            this.Node = new Node<T>(0L);
+            this.Node = new Node<T>();
             this.attachedListeners = new List<IListener>();
             this.trackedListeners = new MemoryManager.StreamListeners<T>(this);
             MemoryManager.Add(this.trackedListeners);
@@ -166,7 +166,7 @@ namespace Sodium
             return new TaskWithListener<T>(tcs.Task, listener);
         }
 
-        internal IListener Listen(Node target, Action<Transaction, T> action) => Transaction.Apply(trans1 => this.Listen(target, trans1, action, false));
+        internal IListener Listen(Node target, Action<Transaction, T> action) => Transaction.Apply(trans1 => this.Listen(target, trans1, action, false), false);
 
         internal IListener Listen(Node target, Transaction trans, Action<Transaction, T> action, bool suppressEarlierFirings)
         {
@@ -387,7 +387,7 @@ namespace Sodium
         private Stream<T> Merge(Transaction trans, Stream<T> s)
         {
             Stream<T> @out = new Stream<T>();
-            Node<T> left = new Node<T>(0);
+            Node<T> left = new Node<T>();
             Node<T> right = @out.Node;
             Node<T>.Target nodeTarget = left.Link(trans, (t, v) => { }, right).Item2;
             Action<Transaction, T> h = @out.Send;
@@ -419,7 +419,7 @@ namespace Sodium
         /// </remarks>
         public Stream<T> Merge(Stream<T> s, Func<T, T, T> f)
         {
-            return Transaction.Apply(trans => this.Merge(trans, s, f));
+            return Transaction.Apply(trans => this.Merge(trans, s, f), false);
         }
 
         internal Stream<T> Merge(Transaction trans, Stream<T> s, Func<T, T, T> f)
@@ -638,7 +638,10 @@ namespace Sodium
                         if (target.Action.TryGetTarget(out action))
                         {
                             // If it hasn't been garbage collected, call it.
-                            action(trans2, a);
+                            if (target.IsActivated)
+                            {
+                                action(trans2, a);
+                            }
                         }
                         else
                         {

@@ -18,7 +18,7 @@ namespace Sodium
 
         internal StreamSink(Func<T, T, T> coalesce)
         {
-            this.coalescer = CoalesceHandler.Create(coalesce, this);
+            this.coalescer = CoalesceHandler.CreateSafe(coalesce, this);
         }
 
         /// <summary>
@@ -39,7 +39,7 @@ namespace Sodium
                 this.coalescer(trans, a);
 
                 return Unit.Value;
-            });
+            }, false);
         }
 
         /// <summary>

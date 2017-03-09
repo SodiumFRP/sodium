@@ -53,18 +53,33 @@ namespace Sodium
     /// <typeparam name="T">The type of the value.</typeparam>
     public class DiscreteCell<T>
     {
+        private readonly object updatesLock = new object();
+        private Stream<T> updates;
+
         internal DiscreteCell(Cell<T> cell)
         {
             this.Cell = cell;
         }
 
-        protected virtual Stream<T> GetUpdatesStream()
-            => Transaction.Apply(trans => this.Cell.Updates(trans).Coalesce(trans, (left, right) => right));
-
         /// <summary>
         ///     The stream of discrete updates to this cell.
         /// </summary>
-        public Stream<T> Updates => GetUpdatesStream();
+        public virtual Stream<T> Updates
+        {
+            get
+            {
+                lock (this.updatesLock)
+                {
+                    if (this.updates == null)
+                    {
+                        this.updates =
+                            Transaction.Apply(trans => this.Cell.Updates(trans).Coalesce(trans, (left, right) => right), false);
+                    }
+
+                    return this.updates;
+                }
+            }
+        }
 
         /// <summary>
         ///     The underlying cell holding the current value of this discrete cell.
@@ -94,7 +109,7 @@ namespace Sodium
         ///         disposed or garbage collected or the listener itself is garbage collected.
         ///     </para>
         /// </remarks>
-        public IListener Listen(Action<T> handler) => Transaction.Apply(trans => this.Cell.Value(trans).Listen(handler));
+        public IListener Listen(Action<T> handler) => Transaction.Apply(trans => this.Cell.Value(trans).Listen(Node<T>.Null, trans, (trans2, a) => handler(a), false), false);
 
         /// <summary>
         ///     Transform the cell values according to the supplied function, so the returned
@@ -218,7 +233,7 @@ namespace Sodium
         {
             Lazy<T> initA = this.Cell.SampleLazy();
             Lazy<IMaybe<T>> mInitA = initA.Map(Maybe.Just);
-            return Transaction.Apply(trans => this.Cell.Updates(trans).Calm(mInitA, comparer).HoldLazy(initA));
+            return Transaction.Apply(trans => this.Cell.Updates(trans).Calm(mInitA, comparer).HoldLazy(initA), false);
         }
     }
 }

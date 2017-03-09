@@ -1,3 +1,5 @@
+using System;
+
 namespace Sodium
 {
     /// <summary>
@@ -35,7 +37,7 @@ namespace Sodium
             this.cellLoop.Loop(c.Cell);
         }
 
-        protected override Stream<T> GetUpdatesStream() => this.streamLoop;
+        public override Stream<T> Updates => this.streamLoop;
 
         /// <summary>
         ///     Return a reference to this <see cref="DiscreteCellLoop{T}" /> as a <see cref="DiscreteCell{T}" />.

@@ -43,7 +43,7 @@ namespace Sodium
         public static Stream<T> Merge<T>(this IEnumerable<Stream<T>> s, Func<T, T, T> f)
         {
             IReadOnlyList<Stream<T>> v = s.ToArray();
-            return Transaction.Apply(trans => Merge(trans, v, 0, v.Count, f));
+            return Transaction.Apply(trans => Merge(trans, v, 0, v.Count, f), false);
         }
 
         private static Stream<T> Merge<T>(Transaction trans, IReadOnlyList<Stream<T>> e, int start, int end, Func<T, T, T> f)

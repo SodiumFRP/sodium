@@ -36,7 +36,7 @@ namespace Sodium
                 this.streamLoop.Loop(c.Updates(trans));
                 this.LazyInitialValue = c.SampleLazy(trans);
                 return Unit.Value;
-            });
+            }, false);
         }
 
         /// <summary>

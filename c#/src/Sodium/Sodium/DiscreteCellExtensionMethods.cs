@@ -12,7 +12,7 @@ namespace Sodium
         /// <param name="cca">The discrete cell containing another discrete cell.</param>
         /// <returns>The unwrapped discrete cell.</returns>
         public static DiscreteCell<T> Switch<T>(this DiscreteCell<DiscreteCell<T>> cca) =>
-            Transaction.Apply(trans => new DiscreteCell<T>(cca.Cell.Map(c => c.Cell).SwitchC()));
+            Transaction.Apply(trans => new DiscreteCell<T>(cca.Cell.Map(c => c.Cell).SwitchC()), false);
 
         /// <summary>
         ///     Lift into an enumerable of cells, so the returned cell always reflects a list of the input cells' values.

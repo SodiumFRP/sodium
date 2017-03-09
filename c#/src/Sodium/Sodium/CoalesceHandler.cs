@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Concurrent;
 
 namespace Sodium
 {
@@ -29,6 +30,12 @@ namespace Sodium
                     });
                 }
             };
+        }
+
+        internal static Action<Transaction, T> CreateSafe<T>(Func<T, T, T> f, Stream<T> @out)
+        {
+            ConcurrentDictionary<Transaction, Action<Transaction, T>> handlersByTransaction = new ConcurrentDictionary<Transaction, Action<Transaction, T>>();
+            return (t, a) => handlersByTransaction.GetOrAdd(t, Create(f, @out))(t, a);
         }
     }
 }

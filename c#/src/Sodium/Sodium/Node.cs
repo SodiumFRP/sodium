@@ -11,7 +11,11 @@ namespace Sodium
 
         internal long Rank;
 
-        internal Node(long rank)
+        internal Node()
+        {
+        }
+
+        protected Node(long rank)
         {
             this.Rank = rank;
         }
@@ -24,11 +28,14 @@ namespace Sodium
         internal bool FixRank()
         {
             bool changed = false;
-            foreach (Node listener in this.GetListenerNodesUnsafe())
+            lock (ListenersLock)
             {
-                if (FixRankRecursive(listener, this.Rank, new HashSet<Node>()))
+                foreach (Node listener in this.GetListenerNodesUnsafe())
                 {
-                    changed = true;
+                    if (FixRankRecursive(listener, this.Rank, new HashSet<Node>()))
+                    {
+                        changed = true;
+                    }
                 }
             }
             return changed;
@@ -85,10 +92,12 @@ namespace Sodium
         public abstract class Target
         {
             public readonly Node Node;
+            public bool IsActivated;
 
-            protected Target(Node node)
+            protected Target(Node node, bool isActivated)
             {
                 this.Node = node;
+                this.IsActivated = isActivated;
             }
         }
     }
@@ -99,7 +108,11 @@ namespace Sodium
 
         private readonly HashSet<Target> listeners = new HashSet<Target>();
 
-        internal Node(long rank)
+        internal Node()
+        {
+        }
+
+        private Node(long rank)
             : base(rank)
         {
         }
@@ -118,7 +131,11 @@ namespace Sodium
             lock (ListenersLock)
             {
                 bool changed = trans.ReachedClose && EnsureBiggerThan(target, this.Rank, new HashSet<Node>());
-                Target t = new Target(action, target);
+                Target t = new Target(action, target, !trans.IsConstructing);
+                if (trans.IsConstructing)
+                {
+                    trans.TargetsToActivate.Add(t);
+                }
                 this.listeners.Add(t);
                 return Tuple.Create(changed, t);
             }
@@ -133,8 +150,8 @@ namespace Sodium
         {
             public readonly WeakReference<Action<Transaction, T>> Action;
 
-            public Target(Action<Transaction, T> action, Node node)
-                : base(node)
+            public Target(Action<Transaction, T> action, Node node, bool isActivated)
+                : base(node, isActivated)
             {
                 this.Action = new WeakReference<Action<Transaction, T>>(action);
             }

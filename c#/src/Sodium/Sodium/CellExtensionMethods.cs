@@ -27,7 +27,7 @@ namespace Sodium
                 };
                 IListener l1 = cca.Value(trans1).Listen(@out.Node, trans1, h, false);
                 return @out.UnsafeAttachListener(l1).HoldLazyInternal(za);
-            });
+            }, false);
         }
 
         /// <summary>
@@ -58,10 +58,10 @@ namespace Sodium
                         currentListener = sa.Listen(@out.Node, trans2, @out.Send, true);
                     });
                 };
-                trans1.Prioritized(new Node<T>(0), trans2 => hInitial(trans2, csa.SampleNoTransaction()));
+                trans1.Prioritized(new Node<T>(), trans2 => hInitial(trans2, csa.SampleNoTransaction()));
                 IListener l1 = csa.Updates(trans1).Listen(@out.Node, trans1, h, false);
                 return @out.UnsafeAttachListener(l1);
-            });
+            }, false);
         }
 
         /// <summary>
@@ -76,7 +76,7 @@ namespace Sodium
             return Transaction.Apply(trans1 =>
             {
                 Stream<T> @out = new Stream<T>();
-                Node<T> node = new Node<T>(0);
+                Node<T> node = new Node<T>();
                 Node<T>.Target nodeTarget = node.Link(trans1, (t, v) => { }, @out.Node).Item2;
                 Guid listenerId;
                 Action<Transaction, Tuple<T, Guid>, Guid> sendIfNodeTargetMatches = (t, v, i) =>
@@ -96,7 +96,7 @@ namespace Sodium
                 };
                 IListener l1 = csa.Value(trans1).Listen(node, trans1, h, false);
                 return @out.UnsafeAttachListener(l1).UnsafeAttachListener(new Listener(() => node.Unlink(nodeTarget)));
-            });
+            }, false);
         }
 
         /// <summary>
@@ -130,17 +130,17 @@ namespace Sodium
         {
             return Transaction.Apply(trans1 =>
             {
-                T[] values = c.Select(cell => cell.SampleNoTransaction()).ToArray();
+                Lazy<T[]> values = new Lazy<T[]>(() => c.Select(cell => cell.SampleNoTransaction()).ToArray());
                 Stream<Action> @out = new Stream<Action>();
-                Lazy<T[]> initialValue = new Lazy<T[]>(() => values.ToArray());
+                Lazy<T[]> initialValue = new Lazy<T[]>(() => values.Value.ToArray());
                 IReadOnlyList<IListener> listeners = c.Select((cell, i) => cell.Updates(trans1).Listen(@out.Node, trans1,
-                    (trans2, v) => @out.Send(trans2, () => values[i] = v), false)).ToArray();
+                    (trans2, v) => @out.Send(trans2, () => values.Value[i] = v), false)).ToArray();
                 return @out.Coalesce(trans1, (x, y) => x + y).Map(a =>
                   {
                       a();
-                      return values.ToArray();
+                      return values.Value.ToArray();
                   }).UnsafeAttachListener(new ImmutableCompositeListener(listeners)).HoldLazyInternal(initialValue);
-            });
+            }, false);
         }
     }
 }

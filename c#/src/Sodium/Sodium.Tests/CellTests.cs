@@ -563,6 +563,35 @@ namespace Sodium.Tests
         }
 
         [Test]
+        public void TestLiftLoopList()
+        {
+            Tuple<DiscreteCell<int>, IReadOnlyList<DiscreteCellSink<int>>> t = Transaction.Run(() =>
+            {
+                IReadOnlyList<DiscreteCellLoop<int>> cellLoops = Enumerable.Range(0, 50).Select(_ => DiscreteCell.CreateLoop<int>()).ToArray();
+                DiscreteCell<int> sum = cellLoops.Lift().Map(v => v.Sum());
+                IReadOnlyList<DiscreteCellSink<int>> cellSinks = Enumerable.Range(0, 50).Select(_ => DiscreteCell.CreateSink(1)).ToArray();
+                for (int i = 0; i < 50; i++)
+                {
+                    cellLoops[i].Loop(cellSinks[i]);
+                }
+                return Tuple.Create(sum, cellSinks);
+            });
+            List<int> @out = new List<int>();
+            IListener l = t.Item1.Listen(@out.Add);
+            t.Item2[4].Send(5);
+            t.Item2[5].Send(5);
+            Transaction.RunVoid(() =>
+            {
+                t.Item2[9].Send(5);
+                t.Item2[17].Send(5);
+                t.Item2[41].Send(5);
+                t.Item2[48].Send(5);
+            });
+            l.Unlisten();
+            CollectionAssert.AreEqual(new[] { 50, 54, 58, 74 }, @out);
+        }
+
+        [Test]
         public void TestLiftListLarge()
         {
             IReadOnlyList<DiscreteCellSink<int>> cellSinks = Enumerable.Range(0, 500).Select(_ => DiscreteCell.CreateSink(1)).ToArray();

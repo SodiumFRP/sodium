@@ -13,7 +13,7 @@ namespace Sodium.Tests.Internal
             {
                 trans.Prioritized(Node<Unit>.Null, trans2 => calledBack = true);
                 return Unit.Value;
-            });
+            }, false);
             Assert.IsTrue(calledBack);
         }
     }

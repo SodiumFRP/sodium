@@ -106,7 +106,7 @@ namespace Sodium
                         });
 
                     this.valueUpdate.Set(a);
-                }, false));
+                }, false), false);
         }
 
         protected T ValueProperty
@@ -145,7 +145,15 @@ namespace Sodium
         ///         current value and any updates without risk of missing any in between.
         ///     </para>
         /// </remarks>
-        public T Sample() => Transaction.Apply(trans => this.SampleNoTransaction());
+        public T Sample() => Transaction.Apply(trans =>
+        {
+            if (trans.IsConstructing)
+            {
+                throw new InvalidOperationException("A cell may not be sampled during the construction phase of Transaction.RunConstruct.");
+            }
+
+            return this.SampleNoTransaction();
+        }, false);
 
         /// <summary>
         ///     Sample the current value of the cell lazily.
@@ -156,7 +164,7 @@ namespace Sodium
         ///     when the cell loop has not yet been looped.  It should be used in any code that is general
         ///     enough that it may be passed a <see cref="CellLoop{T}" />.  See <see cref="Stream{T}.HoldLazy(Lazy{T})" />.
         /// </remarks>
-        public Lazy<T> SampleLazy() => Transaction.Apply(this.SampleLazy);
+        public Lazy<T> SampleLazy() => Transaction.Apply(this.SampleLazy, false);
 
         internal Lazy<T> SampleLazy(Transaction trans)
         {
@@ -196,7 +204,7 @@ namespace Sodium
         /// <returns>An cell which fires values transformed by <paramref name="f" /> for each value fired by this cell.</returns>
         public Cell<TResult> Map<TResult>(Func<T, TResult> f)
         {
-            return Transaction.Apply(trans => this.Updates(trans).Map(f).HoldLazyInternal(this.SampleLazy(trans).Map(f)));
+            return Transaction.Apply(trans => this.Updates(trans).Map(f).HoldLazyInternal(this.SampleLazy(trans).Map(f)), false);
         }
 
         //      /**
@@ -316,7 +324,7 @@ namespace Sodium
                 Stream<TResult> @out = new Stream<TResult>();
 
                 Node<TResult> outTarget = @out.Node;
-                Node<Unit> inTarget = new Node<Unit>(0);
+                Node<Unit> inTarget = new Node<Unit>();
                 Node<Unit>.Target nodeTarget = inTarget.Link(trans0, (t, v) => { }, outTarget).Item2;
 
                 Func<T, TResult> f = null;
@@ -324,15 +332,15 @@ namespace Sodium
                 bool isASet = false;
                 // ReSharper disable once PossibleNullReferenceException
                 Action<Transaction> h = trans1 => trans1.Prioritized(@out.Node, trans2 => @out.Send(trans2, f(a)));
-                IListener l1 = bf.Value(trans0).Listen(inTarget, (trans1, ff) =>
+                IListener l1 = bf.Value(trans0).Listen(inTarget, trans0, (trans1, ff) =>
                 {
                     f = ff;
                     if (isASet)
                     {
                         h(trans1);
                     }
-                });
-                IListener l2 = this.Value(trans0).Listen(inTarget, (trans1, aa) =>
+                }, false);
+                IListener l2 = this.Value(trans0).Listen(inTarget, trans0, (trans1, aa) =>
                 {
                     a = aa;
                     isASet = true;
@@ -340,10 +348,10 @@ namespace Sodium
                     {
                         h(trans1);
                     }
-                });
+                }, false);
                 return @out.LastFiringOnly(trans0).UnsafeAttachListener(l1).UnsafeAttachListener(l2).UnsafeAttachListener(
                     new Listener(() => inTarget.Unlink(nodeTarget))).HoldLazyInternal(new Lazy<TResult>(() => bf.SampleNoTransaction()(this.SampleNoTransaction())));
-            });
+            }, false);
         }
 
         private class LazySample

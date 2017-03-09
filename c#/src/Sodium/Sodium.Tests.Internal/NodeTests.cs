@@ -8,14 +8,14 @@ namespace Sodium.Tests.Internal
         [Test]
         public void TestNode()
         {
-            Node<int> a = new Node<int>(0);
-            Node<int> b = new Node<int>(0);
+            Node<int> a = new Node<int>();
+            Node<int> b = new Node<int>();
             Transaction.Apply(trans =>
             {
                 a.Link(trans, (t, v) => { }, b);
                 trans.Prioritized(a, t => { });
                 return Unit.Value;
-            });
+            }, false);
             Assert.That(a, Is.LessThan(b));
         }
     }

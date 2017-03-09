@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.Remoting.Messaging;
 using System.Threading;
 using Priority_Queue;
 
@@ -10,17 +11,21 @@ namespace Sodium
     /// </summary>
     public sealed class Transaction
     {
+        private static readonly ThreadLocal<Transaction> LocalTransaction = new ThreadLocal<Transaction>();
+
+        internal bool IsConstructing;
+
         // Coarse-grained lock that's held during the whole transaction.
         private static readonly object TransactionLock = new object();
 
         private static Transaction currentTransaction;
-        private static readonly ThreadLocal<Transaction> localTransaction = new ThreadLocal<Transaction>();
         internal static int InCallback;
         private static readonly List<Action> OnStartHooks = new List<Action>();
         private static bool runningOnStartHooks;
         private readonly HashSet<Entry> entries = new HashSet<Entry>();
         private readonly List<Action> lastQueue = new List<Action>();
         private readonly Dictionary<int, Action<Transaction>> postQueue = new Dictionary<int, Action<Transaction>>();
+        internal readonly List<Node.Target> TargetsToActivate;
 
         private readonly SimplePriorityQueue<Entry> prioritizedQueue = new SimplePriorityQueue<Entry>();
 
@@ -29,21 +34,37 @@ namespace Sodium
 
         internal bool ReachedClose;
 
+        internal Transaction(bool isConstructing)
+        {
+            this.IsConstructing = isConstructing;
+            if (isConstructing)
+            {
+                this.TargetsToActivate = new List<Node.Target>();
+            }
+        }
+
         /// <summary>
         ///     Return whether or not there is a current transaction.
         /// </summary>
         /// <returns><code>true</code> if there is a current transaction, <code>false</code> otherwise.</returns>
         internal static bool HasCurrentTransaction()
         {
-            if (localTransaction.Value != null)
+            if (Monitor.TryEnter(TransactionLock))
             {
-                return true;
+                try
+                {
+                    if (currentTransaction != null)
+                    {
+                        return true;
+                    }
+                }
+                finally
+                {
+                    Monitor.Exit(TransactionLock);
+                }
             }
 
-            lock (TransactionLock)
-            {
-                return currentTransaction != null;
-            }
+            return LocalTransaction.Value != null;
         }
 
         /// <summary>
@@ -60,7 +81,7 @@ namespace Sodium
             {
                 action();
                 return Unit.Value;
-            });
+            }, false);
         }
 
         /// <summary>
@@ -75,13 +96,13 @@ namespace Sodium
         /// </remarks>
         public static T Run<T>(Func<T> f)
         {
-            return Apply(_ => f());
+            return Apply(_ => f(), false);
         }
 
         /// <summary>
         ///     Execute the specified function inside a single transaction.
         ///     The function should only be used to construct FRP logic and may not close over any other FRP logic.
-        ///     This transaction will not block other transactions from running.
+        ///     This transaction will not block other transactions from running until it reaches the end of the transaction.
         /// </summary>
         /// <typeparam name="T">The type of the value returned.</typeparam>
         /// <param name="f">The function to execute.</param>
@@ -93,18 +114,18 @@ namespace Sodium
         /// </remarks>
         public static T RunConstruct<T>(Func<T> f)
         {
-            return Apply(localTransaction.Value, true, _ => f());
+            return Apply(_ => f(), true);
         }
 
-        private static T Apply<T>(Transaction transaction, bool usingLocal, Func<Transaction, T> code)
+        private static T Apply<T>(Transaction transaction, bool createLocal, Func<Transaction, T> code)
         {
             Transaction newTransaction = transaction;
             try
             {
                 if (newTransaction == null)
                 {
-                    newTransaction = usingLocal ? new Transaction() : Start();
-                    SetCurrentTransaction(newTransaction, usingLocal);
+                    newTransaction = createLocal ? new Transaction(true) : Start();
+                    SetCurrentTransaction(newTransaction, createLocal);
                 }
 
                 return code(newTransaction);
@@ -113,32 +134,90 @@ namespace Sodium
             {
                 try
                 {
-                    if (transaction == null)
+                    if (transaction == null && newTransaction != null)
                     {
-                        newTransaction?.Close(usingLocal);
+                        if (createLocal)
+                        {
+                            lock (TransactionLock)
+                            {
+                                newTransaction.IsConstructing = false;
+
+                                foreach (Node.Target target in newTransaction.TargetsToActivate)
+                                {
+                                    target.IsActivated = true;
+                                }
+
+                                newTransaction.Close(true);
+                            }
+                        }
+                        else
+                        {
+                            newTransaction.Close(false);
+                        }
                     }
                 }
                 finally
                 {
                     if (transaction == null)
                     {
-                        SetCurrentTransaction(null, usingLocal);
+                        SetCurrentTransaction(null, createLocal);
                     }
                 }
             }
         }
 
-        internal static T Apply<T>(Func<Transaction, T> code)
+        internal static T Apply<T>(Func<Transaction, T> code, bool createLocal)
         {
-            Transaction lt = localTransaction.Value;
-            if (lt != null)
+            Transaction localTransaction = null;
+
+            bool createLocalNow = false;
+            if (Monitor.TryEnter(TransactionLock))
             {
-                return Apply(lt, true, code);
+                try
+                {
+                    if (currentTransaction != null)
+                    {
+                        return Apply(currentTransaction, false, code);
+                    }
+
+                    localTransaction = LocalTransaction.Value;
+                    if (localTransaction == null && !createLocal)
+                    {
+                        return Apply(null, false, code);
+                    }
+                    else if (createLocal)
+                    {
+                        createLocalNow = true;
+                    }
+                }
+                finally
+                {
+                    Monitor.Exit(TransactionLock);
+                }
+            }
+            if (createLocalNow)
+            {
+                return Apply(null, true, code);
+            }
+
+            if (localTransaction == null)
+            {
+                localTransaction = LocalTransaction.Value;
+            }
+
+            if (localTransaction != null)
+            {
+                return Apply(localTransaction, true, code);
+            }
+
+            if (createLocal)
+            {
+                return Apply(null, true, code);
             }
 
             lock (TransactionLock)
             {
-                return Apply(currentTransaction, false, code);
+                return Apply(null, false, code);
             }
         }
 
@@ -176,13 +255,13 @@ namespace Sodium
                 }
             }
 
-            return new Transaction();
+            return new Transaction(false);
         }
 
-        internal void Prioritized(Node rank, Action<Transaction> action)
+        internal void Prioritized(Node node, Action<Transaction> action)
         {
-            Entry e = new Entry(rank, action);
-            this.prioritizedQueue.Enqueue(e, rank.Rank);
+            Entry e = new Entry(node, action);
+            this.prioritizedQueue.Enqueue(e, node.Rank);
             this.entries.Add(e);
         }
 
@@ -235,7 +314,7 @@ namespace Sodium
         {
             // -1 will mean it runs before anything split/deferred, and will run
             // outside a transaction context.
-            Apply(trans => trans.Post(-1, _ => action()));
+            Apply(trans => trans.Post(-1, _ => action()), false);
         }
 
         internal void SetNeedsRegenerating()
@@ -253,7 +332,7 @@ namespace Sodium
                 this.prioritizedQueue.Clear();
                 foreach (Entry e in this.entries)
                 {
-                    this.prioritizedQueue.Enqueue(e, e.Rank.Rank);
+                    this.prioritizedQueue.Enqueue(e, e.Node.Rank);
                 }
             }
         }
@@ -264,7 +343,7 @@ namespace Sodium
 
             foreach (Entry entry in this.entries)
             {
-                if (entry.Rank.FixRank())
+                if (entry.Node.FixRank())
                 {
                     this.SetNeedsRegenerating();
                 }
@@ -285,6 +364,7 @@ namespace Sodium
                 this.CheckRegen();
             }
 
+            var nullOnes = System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Where(System.Linq.Enumerable.Select(this.lastQueue, (a, i) => Tuple.Create(a, i)), o => o.Item1 == null));
             foreach (Action action in this.lastQueue)
             {
                 action();
@@ -302,7 +382,7 @@ namespace Sodium
                     }
                     else
                     {
-                        Transaction transaction = new Transaction();
+                        Transaction transaction = new Transaction(false);
                         SetCurrentTransaction(transaction, usingLocal);
                         try
                         {
@@ -326,7 +406,7 @@ namespace Sodium
         {
             if (usingLocal)
             {
-                localTransaction.Value = transaction;
+                LocalTransaction.Value = transaction;
             }
             else
             {
@@ -338,20 +418,20 @@ namespace Sodium
         {
             private static long nextSeq;
 
-            public readonly Node Rank;
+            public readonly Node Node;
             public readonly Action<Transaction> Action;
             private readonly long seq;
 
-            public Entry(Node rank, Action<Transaction> action)
+            public Entry(Node node, Action<Transaction> action)
             {
-                this.Rank = rank;
+                this.Node = node;
                 this.Action = action;
                 this.seq = nextSeq++;
             }
 
             public int CompareTo(Entry other)
             {
-                int answer = this.Rank.CompareTo(other.Rank);
+                int answer = this.Node.CompareTo(other.Node);
                 return answer != 0 ? answer : this.seq.CompareTo(other.seq);
             }
         }
