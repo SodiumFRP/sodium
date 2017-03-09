@@ -393,9 +393,10 @@ namespace Sodium
                 this.CheckRegen();
             }
 
-            foreach (Action action in this.lastQueue)
+            // ReSharper disable once ForCanBeConvertedToForeach
+            for (int i = 0; i < this.lastQueue.Count; i++)
             {
-                action();
+                this.lastQueue[i]();
             }
             this.lastQueue.Clear();
 

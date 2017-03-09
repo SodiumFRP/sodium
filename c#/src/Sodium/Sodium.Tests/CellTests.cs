@@ -975,5 +975,105 @@ namespace Sodium.Tests
 
             CollectionAssert.AreEqual(new[] { 12, 13, 4, 5 }, output);
         }
+
+        [Test]
+        public void TestLiftInSwitchC()
+        {
+            IReadOnlyList<Test> list1 = new[] { new Test(0), new Test(1), new Test(2), new Test(3), new Test(4) };
+            IReadOnlyList<Test> list2 = new[] { new Test(5), new Test(6), new Test(7), new Test(8), new Test(9) };
+
+            CellSink<IReadOnlyList<Test>> v = Cell.CreateSink(list1);
+
+            Cell<IReadOnlyList<int>> c = v.Map(oo => oo.Select(o => o.Value).Lift()).SwitchC();
+
+            List<IReadOnlyList<int>> streamOutput = new List<IReadOnlyList<int>>();
+            IListener l = Operational.Updates(c).Listen(streamOutput.Add);
+
+            List<IReadOnlyList<int>> cellOutput = new List<IReadOnlyList<int>>();
+            IListener l2 = Transaction.Run(() => Operational.Value(c).Listen(cellOutput.Add));
+
+            list1[2].Value.Send(12);
+            list2[1].Value.Send(16);
+            list1[4].Value.Send(14);
+            Transaction.RunVoid(() =>
+            {
+                list2[2].Value.Send(17);
+                list1[0].Value.Send(10);
+                v.Send(list2);
+            });
+            list1[3].Value.Send(13);
+            list2[3].Value.Send(18);
+
+            l2.Unlisten();
+            l.Unlisten();
+
+            Assert.AreEqual(4, streamOutput.Count);
+            Assert.AreEqual(5, cellOutput.Count);
+
+            CollectionAssert.AreEqual(new[] { 0, 1, 2, 3, 4 }, cellOutput[0]);
+            CollectionAssert.AreEqual(new[] { 0, 1, 12, 3, 4 }, streamOutput[0]);
+            CollectionAssert.AreEqual(new[] { 0, 1, 12, 3, 4 }, cellOutput[1]);
+            CollectionAssert.AreEqual(new[] { 0, 1, 12, 3, 14 }, streamOutput[1]);
+            CollectionAssert.AreEqual(new[] { 0, 1, 12, 3, 14 }, cellOutput[2]);
+            CollectionAssert.AreEqual(new[] { 5, 16, 17, 8, 9 }, streamOutput[2]);
+            CollectionAssert.AreEqual(new[] { 5, 16, 17, 8, 9 }, cellOutput[3]);
+            CollectionAssert.AreEqual(new[] { 5, 16, 17, 18, 9 }, streamOutput[3]);
+            CollectionAssert.AreEqual(new[] { 5, 16, 17, 18, 9 }, cellOutput[4]);
+        }
+
+        [Test]
+        public void TestMapWithSwitchC()
+        {
+            IReadOnlyList<Test> list1 = new[] { new Test(0), new Test(1), new Test(2), new Test(3), new Test(4) };
+            IReadOnlyList<Test> list2 = new[] { new Test(5), new Test(6), new Test(7), new Test(8), new Test(9) };
+
+            CellSink<IReadOnlyList<Test>> v = Cell.CreateSink(list1);
+
+            Cell<IReadOnlyList<int>> c = v.Map(oo => oo.Select(o => o.Value).Lift()).Map(o => o).SwitchC();
+
+            List<IReadOnlyList<int>> streamOutput = new List<IReadOnlyList<int>>();
+            IListener l = Operational.Updates(c).Listen(streamOutput.Add);
+
+            List<IReadOnlyList<int>> cellOutput = new List<IReadOnlyList<int>>();
+            IListener l2 = Transaction.Run(() => Operational.Value(c).Listen(cellOutput.Add));
+
+            list1[2].Value.Send(12);
+            list2[1].Value.Send(16);
+            list1[4].Value.Send(14);
+            Transaction.RunVoid(() =>
+            {
+                list2[2].Value.Send(17);
+                list1[0].Value.Send(10);
+                v.Send(list2);
+            });
+            list1[3].Value.Send(13);
+            list2[3].Value.Send(18);
+
+            l2.Unlisten();
+            l.Unlisten();
+
+            Assert.AreEqual(4, streamOutput.Count);
+            Assert.AreEqual(5, cellOutput.Count);
+
+            CollectionAssert.AreEqual(new[] { 0, 1, 2, 3, 4 }, cellOutput[0]);
+            CollectionAssert.AreEqual(new[] { 0, 1, 12, 3, 4 }, streamOutput[0]);
+            CollectionAssert.AreEqual(new[] { 0, 1, 12, 3, 4 }, cellOutput[1]);
+            CollectionAssert.AreEqual(new[] { 0, 1, 12, 3, 14 }, streamOutput[1]);
+            CollectionAssert.AreEqual(new[] { 0, 1, 12, 3, 14 }, cellOutput[2]);
+            CollectionAssert.AreEqual(new[] { 5, 16, 17, 8, 9 }, streamOutput[2]);
+            CollectionAssert.AreEqual(new[] { 5, 16, 17, 8, 9 }, cellOutput[3]);
+            CollectionAssert.AreEqual(new[] { 5, 16, 17, 18, 9 }, streamOutput[3]);
+            CollectionAssert.AreEqual(new[] { 5, 16, 17, 18, 9 }, cellOutput[4]);
+        }
+
+        public class Test
+        {
+            public Test(int initialValue)
+            {
+                this.Value = Cell.CreateSink(initialValue);
+            }
+
+            public CellSink<int> Value { get; }
+        }
     }
 }
