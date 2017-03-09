@@ -9,21 +9,12 @@ namespace Sodium
     public static class DiscreteCell
     {
         /// <summary>
-        ///     Creates a discrete cell with the specified initial value using the given stream for updates.
-        /// </summary>
-        /// <typeparam name="T"></typeparam>
-        /// <param name="stream">The stream which will provide updates to the discrete cell.</param>
-        /// <param name="initialValue">The initial value of the discrete cell.</param>
-        /// <returns>A discrete cell with initial value <see cref="initialValue"/> receiving updates from <see cref="stream"/>.</returns>
-        public static DiscreteCell<T> Create<T>(Stream<T> stream, Lazy<T> initialValue) => new DiscreteCell<T>(stream.HoldLazyInternal(initialValue));
-
-        /// <summary>
         ///     Creates a discrete cell with a constant value.
         /// </summary>
         /// <typeparam name="T">The type of the value of the cell.</typeparam>
         /// <param name="value">The value of the cell.</param>
         /// <returns>A discrete cell with a constant value.</returns>
-        public static DiscreteCell<T> Constant<T>(T value) => Create(Stream.Never<T>(), new Lazy<T>(() => value));
+        public static DiscreteCell<T> Constant<T>(T value) => new DiscreteCell<T>(Stream.Never<T>().HoldInternal(value));
 
         /// <summary>
         ///     Creates a discrete cell with a lazy constant value.
@@ -31,7 +22,7 @@ namespace Sodium
         /// <typeparam name="T">The type of the value of the cell.</typeparam>
         /// <param name="value">The lazy value of the cell.</param>
         /// <returns>A discrete cell with a lazy constant value.</returns>
-        public static DiscreteCell<T> ConstantLazy<T>(Lazy<T> value) => Create(Stream.Never<T>(), value);
+        public static DiscreteCell<T> ConstantLazy<T>(Lazy<T> value) => new DiscreteCell<T>(Stream.Never<T>().HoldLazyInternal(value));
 
         /// <summary>
         ///     Creates a discrete cell loop.
@@ -45,6 +36,23 @@ namespace Sodium
         /// </summary>
         /// <param name="initialValue">The initial value of the discrete cell.</param>
         public static DiscreteCellSink<T> CreateSink<T>(T initialValue) => new DiscreteCellSink<T>(initialValue);
+
+        /// <summary>
+        ///     Construct a writable discrete cell stream sink that uses the last value if <see cref="DiscreteCellSink{T}.Send" /> is called more than once per transaction.
+        ///     This stream sink is meant to be turned into a <see cref="DiscreteCell{T}"/> through the use of <see cref="DiscreteCellStreamSink{T}.Hold(T)"/>.
+        /// </summary>
+        /// <typeparam name="T">The type of values in the discrete cell stream sink.</typeparam>
+        public static DiscreteCellStreamSink<T> CreateStreamSink<T>() => new DiscreteCellStreamSink<T>();
+
+        /// <summary>
+        ///     Construct a writable discrete cell stream sink that uses
+        ///     <param name="coalesce" />
+        ///     to combine values if <see cref="DiscreteCellStreamSink{T}.Send(T)" /> is called more than once per transaction.
+        ///     This stream sink is meant to be turned into a <see cref="DiscreteCell{T}"/> through the use of <see cref="DiscreteCellStreamSink{T}.Hold(T)"/>.
+        /// </summary>
+        /// <param name="coalesce">Function to combine values when <see cref="DiscreteCellStreamSink{T}.Send(T)" /> is called more than once per transaction.</param>
+        /// <typeparam name="T">The type of values in the discrete cell stream sink.</typeparam>
+        public static DiscreteCellStreamSink<T> CreateStreamSink<T>(Func<T, T, T> coalesce) => new DiscreteCellStreamSink<T>(coalesce);
     }
 
     /// <summary>

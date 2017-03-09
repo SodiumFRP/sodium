@@ -10,7 +10,7 @@ namespace Sodium
     /// <typeparam name="T">The type of values in the cell sink.</typeparam>
     public class DiscreteCellSink<T> : DiscreteCell<T>
     {
-        internal DiscreteCellSink(T initialValue)
+        public DiscreteCellSink(T initialValue)
             : this(new DiscreteCellStreamSink<T>(), initialValue)
         {
         }
@@ -33,7 +33,7 @@ namespace Sodium
 
         /// <summary>
         ///     Send a value, modifying the value of the cell.  This method may not be called from inside handlers registered with
-        ///     <see cref="Stream{T}.Listen(Action{T})" /> or <see cref="Cell{T}.Listen(Action{T})" />.
+        ///     <see cref="Stream{T}.Listen(Action{T})" /> or <see cref="DiscreteCell{T}.Listen(Action{T})" />.
         ///     An exception will be thrown, because sinks are for interfacing I/O to FRP only.  They are not meant to be used to
         ///     define new primitives.
         /// </summary>

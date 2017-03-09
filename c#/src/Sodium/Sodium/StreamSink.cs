@@ -11,12 +11,12 @@ namespace Sodium
     {
         private readonly Action<Transaction, T> coalescer;
 
-        internal StreamSink()
+        public StreamSink()
             : this((left, right) => { throw new InvalidOperationException("Send was called more than once in a transaction, which isn't allowed.  To combine the streams, pass a coalescing function to the StreamSink constructor."); })
         {
         }
 
-        internal StreamSink(Func<T, T, T> coalesce)
+        public StreamSink(Func<T, T, T> coalesce)
         {
             this.coalescer = CoalesceHandler.CreateSafe(coalesce, this);
         }

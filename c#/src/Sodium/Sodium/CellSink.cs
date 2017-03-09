@@ -12,12 +12,12 @@ namespace Sodium
     {
         private readonly StreamSink<T> streamSink;
 
-        internal CellSink(T initialValue)
+        public CellSink(T initialValue)
             : this(new StreamSink<T>((left, right) => right), initialValue)
         {
         }
 
-        internal CellSink(T initialValue, Func<T, T, T> coalesce)
+        public CellSink(T initialValue, Func<T, T, T> coalesce)
             : this(new StreamSink<T>(coalesce), initialValue)
         {
         }

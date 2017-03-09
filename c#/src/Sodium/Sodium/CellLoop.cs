@@ -10,7 +10,7 @@ namespace Sodium
     {
         private readonly StreamLoop<T> streamLoop;
 
-        internal CellLoop()
+        public CellLoop()
             : this(new StreamLoop<T>())
         {
         }

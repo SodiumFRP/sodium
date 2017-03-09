@@ -11,7 +11,7 @@ namespace Sodium
         private readonly object isAssignedLock = new object();
         private bool isAssigned;
 
-        internal StreamLoop()
+        public StreamLoop()
         {
             if (!Transaction.HasCurrentTransaction())
             {

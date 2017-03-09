@@ -11,7 +11,7 @@ namespace Sodium
         private readonly StreamLoop<T> streamLoop;
         private readonly CellLoop<T> cellLoop;
 
-        internal DiscreteCellLoop()
+        public DiscreteCellLoop()
             : this(new CellLoop<T>())
         {
         }

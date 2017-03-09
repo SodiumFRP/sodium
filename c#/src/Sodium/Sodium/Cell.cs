@@ -45,7 +45,7 @@ namespace Sodium
         ///     to combine values if <see cref="CellSink{T}.Send" /> is called more than once per transaction.
         /// </summary>
         /// <param name="initialValue">The initial value of the cell.</param>
-        /// <param name="coalesce">Function to combine values when <see cref="Send" /> is called more than once per transaction.</param>
+        /// <param name="coalesce">Function to combine values when <see cref="CellSink{T}.Send(T)" /> is called more than once per transaction.</param>
         /// <typeparam name="T">The type of values in the cell sink.</typeparam>
         public static CellSink<T> CreateSink<T>(T initialValue, Func<T, T, T> coalesce)
         {

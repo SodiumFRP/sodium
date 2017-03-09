@@ -248,14 +248,16 @@ namespace Sodium
         ///     it was before
         ///     any state changes from the current transaction.
         /// </remarks>
-        public DiscreteCell<T> Hold(T initialValue) => DiscreteCell.Create(this, new Lazy<T>(() => initialValue));
+        public DiscreteCell<T> Hold(T initialValue) => new DiscreteCell<T>(this.HoldInternal(initialValue));
+
+        internal Cell<T> HoldInternal(T initialValue) => new Cell<T>(this, initialValue);
 
         /// <summary>
         ///     Create a cell with the specified lazily initialized initial value, that is updated by this stream's values.
         /// </summary>
         /// <param name="initialValue">The lazily initialized initial value of the cell.</param>
         /// <returns>A cell with the specified lazily initialized initial value, that is updated by this stream's values.</returns>
-        public DiscreteCell<T> HoldLazy(Lazy<T> initialValue) => DiscreteCell.Create(this, initialValue);
+        public DiscreteCell<T> HoldLazy(Lazy<T> initialValue) => new DiscreteCell<T>(this.HoldLazyInternal(initialValue));
 
         internal Cell<T> HoldLazyInternal(Lazy<T> initialValue) => new LazyCell<T>(this, initialValue);
 
