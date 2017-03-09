@@ -142,6 +142,8 @@ namespace Sodium
                             {
                                 newTransaction.IsConstructing = false;
 
+                                RunStartHooks();
+
                                 foreach (Node.Target target in newTransaction.TargetsToActivate)
                                 {
                                     target.IsActivated = true;
@@ -175,19 +177,30 @@ namespace Sodium
             {
                 try
                 {
+                    //if lock was obtained and we have a regular transaction, use it
                     if (currentTransaction != null)
                     {
                         return Apply(currentTransaction, false, code);
                     }
 
+                    //check if we have a local transaction
                     localTransaction = LocalTransaction.Value;
-                    if (localTransaction == null && !createLocal)
+
+                    //if lock was obtained and we have a local transaction, we will use it outside of the critical section
+                    if (localTransaction == null)
                     {
-                        return Apply(null, false, code);
-                    }
-                    else if (createLocal)
-                    {
-                        createLocalNow = true;
+                        //if lock was obtained and we do not have either a regular transaction or a local transaction and we are looking to create a regular transaction,
+                        //create a regular transaction
+                        if (!createLocal)
+                        {
+                            return Apply(null, false, code);
+                        }
+                        //if lock was obtained and we do not have either a regular transaction or a local transaction and we are looking to create a local transaction,
+                        //create a local transaction as soon as we leave the critical section
+                        else
+                        {
+                            createLocalNow = true;
+                        }
                     }
                 }
                 finally
@@ -195,26 +208,37 @@ namespace Sodium
                     Monitor.Exit(TransactionLock);
                 }
             }
+            //if lock was obtained and we do not have either a regular transaction or a local transaction and we are looking to create a local transaction,
+            //create a local transaction
             if (createLocalNow)
             {
                 return Apply(null, true, code);
             }
 
+            //if lock was not obtained, we still need to check if we have a local transaction
+            //if locak was obtained and we found a local transaction, we can skip this check
             if (localTransaction == null)
             {
                 localTransaction = LocalTransaction.Value;
             }
 
+            //if we have a local transaction, use it
             if (localTransaction != null)
             {
                 return Apply(localTransaction, true, code);
             }
 
+            //if lock was obtained, we will have returned by now
+
+            //if lock was not obtained and we do not have either a regular transaction or a local transaction and we are looking to create a local transaction,
+            //create a local transaction
             if (createLocal)
             {
                 return Apply(null, true, code);
             }
 
+            //if lock was not obtained and we do not have either a regular transaction or a local transaction and we are looking to create a regular transaction,
+            //create a regular transaction inside a critical section
             lock (TransactionLock)
             {
                 return Apply(null, false, code);
@@ -237,7 +261,7 @@ namespace Sodium
             }
         }
 
-        private static Transaction Start()
+        private static void RunStartHooks()
         {
             if (!runningOnStartHooks)
             {
@@ -254,6 +278,11 @@ namespace Sodium
                     runningOnStartHooks = false;
                 }
             }
+        }
+
+        private static Transaction Start()
+        {
+            RunStartHooks();
 
             return new Transaction(false);
         }
@@ -364,7 +393,6 @@ namespace Sodium
                 this.CheckRegen();
             }
 
-            var nullOnes = System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Where(System.Linq.Enumerable.Select(this.lastQueue, (a, i) => Tuple.Create(a, i)), o => o.Item1 == null));
             foreach (Action action in this.lastQueue)
             {
                 action();
