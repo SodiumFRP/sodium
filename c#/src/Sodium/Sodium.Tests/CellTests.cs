@@ -123,6 +123,30 @@ namespace Sodium.Tests
         }
 
         [Test]
+        public void TestDiscreteCellValues()
+        {
+            DiscreteCellSink<int> c = DiscreteCell.CreateSink(9);
+            List<int> @out = new List<int>();
+            IListener l = Transaction.Run(() => c.Values.Listen(@out.Add));
+            c.Send(2);
+            c.Send(7);
+            l.Unlisten();
+            CollectionAssert.AreEqual(new[] { 9, 2, 7 }, @out);
+        }
+
+        [Test]
+        public void TestDiscreteCellValuesNoTransaction()
+        {
+            DiscreteCellSink<int> c = DiscreteCell.CreateSink(9);
+            List<int> @out = new List<int>();
+            IListener l = c.Values.Listen(@out.Add);
+            c.Send(2);
+            c.Send(7);
+            l.Unlisten();
+            CollectionAssert.AreEqual(new[] { 2, 7 }, @out);
+        }
+
+        [Test]
         public void TestValueThenMap()
         {
             CellSink<int> c = Cell.CreateSink(9);
@@ -135,18 +159,51 @@ namespace Sodium.Tests
         }
 
         [Test]
+        public void TestDiscreteCellValuesThenMap()
+        {
+            DiscreteCellSink<int> c = DiscreteCell.CreateSink(9);
+            List<int> @out = new List<int>();
+            IListener l = Transaction.Run(() => c.Values.Map(x => x + 100).Listen(@out.Add));
+            c.Send(2);
+            c.Send(7);
+            l.Unlisten();
+            CollectionAssert.AreEqual(new[] { 109, 102, 107 }, @out);
+        }
+
+        [Test]
         public void TestValueThenMerge()
         {
             CellSink<int> c1 = Cell.CreateSink(9);
             CellSink<int> c2 = Cell.CreateSink(2);
             List<int> @out = new List<int>();
-            IListener l =
-                Transaction.Run(
-                    () => Operational.Value(c1).Merge(Operational.Value(c2), (x, y) => x + y).Listen(@out.Add));
+            IListener l = Transaction.Run(() => Operational.Value(c1).Merge(Operational.Value(c2), (x, y) => x + y).Listen(@out.Add));
             c1.Send(1);
             c2.Send(4);
+            Transaction.RunVoid(() =>
+            {
+                c1.Send(7);
+                c2.Send(5);
+            });
             l.Unlisten();
-            CollectionAssert.AreEqual(new[] { 11, 1, 4 }, @out);
+            CollectionAssert.AreEqual(new[] { 11, 1, 4, 12 }, @out);
+        }
+
+        [Test]
+        public void TestDiscreteCellValuesThenMerge()
+        {
+            DiscreteCellSink<int> c1 = DiscreteCell.CreateSink(9);
+            DiscreteCellSink<int> c2 = DiscreteCell.CreateSink(2);
+            List<int> @out = new List<int>();
+            IListener l = Transaction.Run(() => c1.Values.Merge(c2.Values, (x, y) => x + y).Listen(@out.Add));
+            c1.Send(1);
+            c2.Send(4);
+            Transaction.RunVoid(() =>
+            {
+                c1.Send(7);
+                c2.Send(5);
+            });
+            l.Unlisten();
+            CollectionAssert.AreEqual(new[] { 11, 1, 4, 12 }, @out);
         }
 
         [Test]
@@ -155,6 +212,18 @@ namespace Sodium.Tests
             CellSink<int> c = Cell.CreateSink(9);
             List<int> @out = new List<int>();
             IListener l = Transaction.Run(() => Operational.Value(c).Filter(x => x % 2 != 0).Listen(@out.Add));
+            c.Send(2);
+            c.Send(7);
+            l.Unlisten();
+            CollectionAssert.AreEqual(new[] { 9, 7 }, @out);
+        }
+
+        [Test]
+        public void TestDiscreteCellValuesThenFilter()
+        {
+            DiscreteCellSink<int> c = DiscreteCell.CreateSink(9);
+            List<int> @out = new List<int>();
+            IListener l = Transaction.Run(() => c.Values.Filter(x => x % 2 != 0).Listen(@out.Add));
             c.Send(2);
             c.Send(7);
             l.Unlisten();
@@ -174,11 +243,37 @@ namespace Sodium.Tests
         }
 
         [Test]
+        public void TestDiscreteCellValuesThenOnce()
+        {
+            DiscreteCellSink<int> c = DiscreteCell.CreateSink(9);
+            List<int> @out = new List<int>();
+            IListener l = Transaction.Run(() => c.Values.Once().Listen(@out.Add));
+            c.Send(2);
+            c.Send(7);
+            l.Unlisten();
+            CollectionAssert.AreEqual(new[] { 9 }, @out);
+        }
+
+        [Test]
         public void TestValueThenLateListen()
         {
             CellSink<int> c = Cell.CreateSink(9);
             List<int> @out = new List<int>();
             Stream<int> value = Operational.Value(c);
+            c.Send(8);
+            IListener l = value.Listen(@out.Add);
+            c.Send(2);
+            c.Send(7);
+            l.Unlisten();
+            CollectionAssert.AreEqual(new[] { 2, 7 }, @out);
+        }
+
+        [Test]
+        public void TestDiscreteCellValuesThenLateListen()
+        {
+            DiscreteCellSink<int> c = DiscreteCell.CreateSink(9);
+            List<int> @out = new List<int>();
+            Stream<int> value = c.Values;
             c.Send(8);
             IListener l = value.Listen(@out.Add);
             c.Send(2);

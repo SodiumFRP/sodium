@@ -80,5 +80,133 @@ namespace Sodium.Tests
 
             CollectionAssert.AreEqual(new[] { 8, 14 }, @out);
         }
+
+        [Test]
+        public void Post()
+        {
+            DiscreteCell<int> cell = Transaction.Run(() =>
+            {
+                StreamSink<int> s = Stream.CreateSink<int>();
+                s.Send(2);
+                return s.Hold(1);
+            });
+            int value = 0;
+            Transaction.Post(() => value = cell.Cell.Sample());
+
+            Assert.AreEqual(value, 2);
+        }
+
+        [Test]
+        public void PostInTransaction()
+        {
+            int value = 0;
+            Transaction.RunVoid(() =>
+            {
+                StreamSink<int> s = Stream.CreateSink<int>();
+                s.Send(2);
+                DiscreteCell<int> c = s.Hold(1);
+                Transaction.Post(() => value = c.Cell.Sample());
+                Assert.AreEqual(value, 0);
+            });
+
+            Assert.AreEqual(value, 2);
+        }
+
+        [Test]
+        public void PostInNestedTransaction()
+        {
+            int value = 0;
+            Transaction.RunVoid(() =>
+            {
+                StreamSink<int> s = Stream.CreateSink<int>();
+                s.Send(2);
+                Transaction.RunVoid(() =>
+                {
+                    DiscreteCell<int> c = s.Hold(1);
+                    Transaction.Post(() => value = c.Cell.Sample());
+                });
+                Assert.AreEqual(value, 0);
+            });
+
+            Assert.AreEqual(value, 2);
+        }
+
+        [Test]
+        public void PostInNestedTransaction2()
+        {
+            int value = 0;
+            Transaction.RunVoid(() =>
+            {
+                StreamSink<int> s = Stream.CreateSink<int>();
+                s.Send(2);
+                Transaction.RunConstruct(() =>
+                {
+                    DiscreteCell<int> c = s.Hold(1);
+                    Transaction.Post(() => value = c.Cell.Sample());
+                    return Unit.Value;
+                });
+                Assert.AreEqual(value, 0);
+            });
+
+            Assert.AreEqual(value, 2);
+        }
+
+        [Test]
+        public void PostInConstructTransaction()
+        {
+            int value = 0;
+            Transaction.RunConstruct(() =>
+            {
+                StreamSink<int> s = Stream.CreateSink<int>();
+                s.Send(2);
+                DiscreteCell<int> c = s.Hold(1);
+                Transaction.Post(() => value = c.Cell.Sample());
+                Assert.AreEqual(value, 0);
+                return Unit.Value;
+            });
+
+            Assert.AreEqual(value, 2);
+        }
+
+        [Test]
+        public void PostInNestedConstructTransaction()
+        {
+            int value = 0;
+            Transaction.RunConstruct(() =>
+            {
+                StreamSink<int> s = Stream.CreateSink<int>();
+                s.Send(2);
+                Transaction.RunVoid(() =>
+                {
+                    DiscreteCell<int> c = s.Hold(1);
+                    Transaction.Post(() => value = c.Cell.Sample());
+                });
+                Assert.AreEqual(value, 0);
+                return Unit.Value;
+            });
+
+            Assert.AreEqual(value, 2);
+        }
+
+        [Test]
+        public void PostInNestedConstructTransaction2()
+        {
+            int value = 0;
+            Transaction.RunConstruct(() =>
+            {
+                StreamSink<int> s = Stream.CreateSink<int>();
+                s.Send(2);
+                Transaction.RunConstruct(() =>
+                {
+                    DiscreteCell<int> c = s.Hold(1);
+                    Transaction.Post(() => value = c.Cell.Sample());
+                    return Unit.Value;
+                });
+                Assert.AreEqual(value, 0);
+                return Unit.Value;
+            });
+
+            Assert.AreEqual(value, 2);
+        }
     }
 }

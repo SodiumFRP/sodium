@@ -82,6 +82,15 @@ namespace Sodium
         }
 
         /// <summary>
+        ///     The stream of values of this cell.  This stream is identical to <see cref="Updates"/> except that it also fires during the transaction in which it was obtained.
+        ///     To observe the first value, this property must be accessed and used within the same explicit transaction.
+        /// </summary>
+        public virtual Stream<T> Values
+        {
+            get { return Transaction.Apply(trans => this.Cell.Value(trans), false); }
+        }
+
+        /// <summary>
         ///     The underlying cell holding the current value of this discrete cell.
         /// </summary>
         public Cell<T> Cell { get; }
