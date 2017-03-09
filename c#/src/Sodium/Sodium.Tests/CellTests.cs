@@ -435,7 +435,7 @@ namespace Sodium.Tests
             DiscreteCell<char> ca = ssc.Map(s => s.A).FilterMaybe().Hold('A');
             DiscreteCell<char> cb = ssc.Map(s => s.B).FilterMaybe().Hold('a');
             DiscreteCell<DiscreteCell<char>> csw = ssc.Map(s => s.Sw).FilterMaybe().Hold(ca);
-            DiscreteCell<char> co = csw.Switch();
+            DiscreteCell<char> co = csw.SwitchC();
             List<char> @out = new List<char>();
             IListener l = co.Listen(@out.Add);
             ssc.Send(new Sc(Maybe.Just('B'), Maybe.Just('b'), Maybe.Nothing<DiscreteCell<char>>()));
@@ -467,7 +467,7 @@ namespace Sodium.Tests
         {
             Sc2 sc1 = new Sc2(0);
             DiscreteCellSink<Sc2> csc = DiscreteCell.CreateSink(sc1);
-            DiscreteCell<int> co = csc.Map<DiscreteCell<int>>(b => b.C).Switch();
+            DiscreteCell<int> co = csc.Map<DiscreteCell<int>>(b => b.C).SwitchC();
             List<int> @out = new List<int>();
             IListener l = co.Listen(@out.Add);
             Sc2 sc2 = new Sc2(3);
@@ -762,7 +762,7 @@ namespace Sodium.Tests
                 DiscreteCellLoop<DiscreteCell<int>> loop = DiscreteCell.CreateLoop<DiscreteCell<int>>();
                 DiscreteCellSink<int> c1 = DiscreteCell.CreateSink(1);
                 DiscreteCellSink<int> c2 = DiscreteCell.CreateSink(11);
-                DiscreteCell<int> c = loop.Switch();
+                DiscreteCell<int> c = loop.SwitchC();
                 DiscreteCellSink<DiscreteCell<int>> s = DiscreteCell.CreateSink(c1.AsDiscreteCell());
                 loop.Loop(s);
                 return Tuple.Create(c, c1, c2, s);
@@ -869,7 +869,7 @@ namespace Sodium.Tests
                  DiscreteCellSink<int> c1 = DiscreteCell.CreateSink(1);
                  DiscreteCellSink<int> c2 = DiscreteCell.CreateSink(11);
                  DiscreteCellSink<DiscreteCell<int>> s = DiscreteCell.CreateSink(c1.AsDiscreteCell());
-                 DiscreteCell<int> c = s.Switch();
+                 DiscreteCell<int> c = s.SwitchC();
 
                  c1.Send(2);
                  c2.Send(12);

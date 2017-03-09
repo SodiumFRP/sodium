@@ -24,9 +24,7 @@ namespace Sodium.Tests.Performance
                 DiscreteCellSink<IReadOnlyList<TestObject>> objects =
                     DiscreteCell.CreateSink((IReadOnlyList<TestObject>)Enumerable.Range(0, 10000).Select(n => new TestObject(n, selectAllStream)).ToArray());
 
-                var objectsAndIsSelected =
-                    objects.Map(oo => oo.Select(o => o.IsSelected.Map(s => new { Object = o, IsSelected = s })).Lift())
-                        .Switch();
+                var objectsAndIsSelected = objects.Map(oo => oo.Select(o => o.IsSelected.Map(s => new { Object = o, IsSelected = s })).Lift()).SwitchC();
 
                 DiscreteCell<bool?> allSelected =
                     objectsAndIsSelected.Map(

@@ -240,7 +240,7 @@ namespace Sodium.Tests
                     Tuple.Create("switcher", switcherF)
                 };
 
-                return createFiringsListAndListener(firings, c.Switch().Listen);
+                return createFiringsListAndListener(firings, c.SwitchC().Listen);
             },
                 @out => CollectionAssert.AreEqual(new[] { 'b', 'X', 'Y', 'Z' }, @out));
         }
@@ -270,7 +270,7 @@ namespace Sodium.Tests
                     Tuple.Create("switcher", switcherF)
                 };
 
-                return createFiringsListAndListener(firings, c.Switch().Listen);
+                return createFiringsListAndListener(firings, c.SwitchC().Listen);
             },
                 @out => CollectionAssert.AreEqual(new[] { 'b', 'X', 'Y', 'Z' }, @out));
         }
@@ -300,7 +300,7 @@ namespace Sodium.Tests
                     Tuple.Create("switcher", switcherF)
                 };
 
-                return createFiringsListAndListener(firings, c.Switch().Listen);
+                return createFiringsListAndListener(firings, c.SwitchC().Listen);
             },
                 @out => CollectionAssert.AreEqual(new[] { 'b', 'X', 'Y', 'Z' }, @out));
         }
@@ -335,7 +335,7 @@ namespace Sodium.Tests
                     Tuple.Create("switcher", switcherF)
                 };
 
-                return createFiringsListAndListener(firings, c.Switch().Listen);
+                return createFiringsListAndListener(firings, c.SwitchC().Listen);
             },
                 @out => CollectionAssert.AreEqual(new[] { 'b', 'X', 'Y', '5' }, @out));
         }

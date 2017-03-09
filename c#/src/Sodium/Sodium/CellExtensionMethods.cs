@@ -31,6 +31,14 @@ namespace Sodium
         }
 
         /// <summary>
+        ///     Unwrap a discrete cell inside a cell to give a time-varying cell implementation.
+        /// </summary>
+        /// <typeparam name="T">The type of the discrete cell.</typeparam>
+        /// <param name="cca">The cell containing a discrete cell.</param>
+        /// <returns>The unwrapped discrete cell.</returns>
+        public static DiscreteCell<T> SwitchC<T>(this Cell<DiscreteCell<T>> cca) => new DiscreteCell<T>(cca.Map(c => c.Cell).SwitchC());
+
+        /// <summary>
         ///     Unwrap a stream inside a cell to give a time-varying stream implementation.
         ///     When the cell changes value, the output stream will fire the simultaneous firing (if one exists) from the stream which the cell held at the beginning of the transaction.
         /// </summary>
