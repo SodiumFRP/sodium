@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Runtime.Remoting.Messaging;
 using System.Threading;
 using Priority_Queue;
 
@@ -27,7 +26,7 @@ namespace Sodium
         private readonly Dictionary<int, Action<Transaction>> postQueue = new Dictionary<int, Action<Transaction>>();
         internal readonly List<Node.Target> TargetsToActivate;
 
-        private readonly SimplePriorityQueue<Entry> prioritizedQueue = new SimplePriorityQueue<Entry>();
+        private readonly SimplePriorityQueue<Entry, long> prioritizedQueue = new SimplePriorityQueue<Entry, long>();
 
         // True if we need to re-generate the priority queue.
         private bool toRegen;
@@ -290,7 +289,10 @@ namespace Sodium
         internal void Prioritized(Node node, Action<Transaction> action)
         {
             Entry e = new Entry(node, action);
-            this.prioritizedQueue.Enqueue(e, node.Rank);
+            if (this.ReachedClose)
+            {
+                this.prioritizedQueue.Enqueue(e, node.Rank);
+            }
             this.entries.Add(e);
         }
 
@@ -372,11 +374,9 @@ namespace Sodium
 
             foreach (Entry entry in this.entries)
             {
-                if (entry.Node.FixRank())
-                {
-                    this.SetNeedsRegenerating();
-                }
+                entry.Node.FixRank();
             }
+            this.SetNeedsRegenerating();
             this.CheckRegen();
 
             while (true)

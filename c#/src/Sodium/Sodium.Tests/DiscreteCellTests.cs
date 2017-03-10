@@ -39,6 +39,22 @@ namespace Sodium.Tests
         }
 
         [Test]
+        public void TestLiftSimultaneousUpdates()
+        {
+            List<int> @out = new List<int>();
+            DiscreteCellSink<int> cellSink = DiscreteCell.CreateSink(1);
+            DiscreteCell<int> cell = cellSink.Map(v => 2 * v);
+            IListener l = cellSink.Lift(cell, (x, y) => x + y).Updates.Listen(@out.Add);
+
+            cellSink.Send(2);
+            cellSink.Send(7);
+
+            l.Unlisten();
+
+            CollectionAssert.AreEqual(new[] { 6, 21 }, @out);
+        }
+
+        [Test]
         public void TestLiftInSwitchC()
         {
             IReadOnlyList<Test> list1 = new[] { new Test(0), new Test(1), new Test(2), new Test(3), new Test(4) };

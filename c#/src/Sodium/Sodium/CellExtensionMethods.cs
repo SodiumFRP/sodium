@@ -108,6 +108,46 @@ namespace Sodium
         }
 
         /// <summary>
+        ///     Lift a function into an enumerable of cells, so the returned cell always reflects the specified function applied to the
+        ///     input cells' values.
+        /// </summary>
+        /// <typeparam name="T">The type of the cells.</typeparam>
+        /// <typeparam name="TResult">The type of the result.</typeparam>
+        /// <param name="c">The enumerable of cells.</param>
+        /// <param name="f">The binary function to lift into the cells.</param>
+        /// <returns>A cell containing values resulting from the function applied to the input cells' values.</returns>
+        public static Cell<TResult> Lift<T, TResult>(this IEnumerable<Cell<T>> c, Func<IReadOnlyList<T>, TResult> f)
+        {
+            return c.ToArray().Lift(f);
+        }
+
+        /// <summary>
+        ///     Lift a function into a collection of cells, so the returned cell always reflects the specified function applied to the
+        ///     input cells' values.
+        /// </summary>
+        /// <typeparam name="T">The type of the cells.</typeparam>
+        /// <typeparam name="TResult">The type of the result.</typeparam>
+        /// <param name="c">The collection of cells.</param>
+        /// <param name="f">The binary function to lift into the cells.</param>
+        /// <returns>A cell containing values resulting from the function applied to the input cells' values.</returns>
+        public static Cell<TResult> Lift<T, TResult>(this IReadOnlyCollection<Cell<T>> c, Func<IReadOnlyList<T>, TResult> f)
+        {
+            return Transaction.Apply(trans1 =>
+            {
+                Lazy<T[]> values = new Lazy<T[]>(() => c.Select(cell => cell.SampleNoTransaction()).ToArray());
+                Stream<Action> @out = new Stream<Action>();
+                Lazy<TResult> initialValue = new Lazy<TResult>(() => f(values.Value.ToArray()));
+                IReadOnlyList<IListener> listeners = c.Select((cell, i) => cell.Updates(trans1).Listen(@out.Node, trans1,
+                    (trans2, v) => @out.Send(trans2, () => values.Value[i] = v), false)).ToArray();
+                return @out.Coalesce(trans1, (x, y) => x + y).Map(a =>
+                {
+                    a();
+                    return f(values.Value.ToArray());
+                }).UnsafeAttachListener(new ImmutableCompositeListener(listeners)).HoldLazyInternal(initialValue);
+            }, false);
+        }
+
+        /// <summary>
         ///     Lift into an enumerable of cells, so the returned cell always reflects a list of the input cells' values.
         /// </summary>
         /// <typeparam name="T">The type of the cells.</typeparam>
@@ -126,29 +166,7 @@ namespace Sodium
         /// <returns>A cell containing a list of the input cells' values.</returns>
         public static Cell<IReadOnlyList<T>> Lift<T>(this IReadOnlyCollection<Cell<T>> c)
         {
-            return c.LiftToArray().Map<IReadOnlyList<T>>(v => v);
-        }
-
-        internal static Cell<T[]> LiftToArray<T>(this IEnumerable<Cell<T>> c)
-        {
-            return c.ToArray().LiftToArray();
-        }
-
-        internal static Cell<T[]> LiftToArray<T>(this IReadOnlyCollection<Cell<T>> c)
-        {
-            return Transaction.Apply(trans1 =>
-            {
-                Lazy<T[]> values = new Lazy<T[]>(() => c.Select(cell => cell.SampleNoTransaction()).ToArray());
-                Stream<Action> @out = new Stream<Action>();
-                Lazy<T[]> initialValue = new Lazy<T[]>(() => values.Value.ToArray());
-                IReadOnlyList<IListener> listeners = c.Select((cell, i) => cell.Updates(trans1).Listen(@out.Node, trans1,
-                    (trans2, v) => @out.Send(trans2, () => values.Value[i] = v), false)).ToArray();
-                return @out.Coalesce(trans1, (x, y) => x + y).Map(a =>
-                  {
-                      a();
-                      return values.Value.ToArray();
-                  }).UnsafeAttachListener(new ImmutableCompositeListener(listeners)).HoldLazyInternal(initialValue);
-            }, false);
+            return c.Lift(v => (IReadOnlyList<T>)v.ToArray());
         }
     }
 }
