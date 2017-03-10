@@ -77,10 +77,10 @@ namespace Sodium.Tests
         }
 
         [Test]
-        public async Task TestListenOnceTask()
+        public async Task TestListenOnceAsync()
         {
             CellSink<int> c = Cell.CreateSink(9);
-            int result = await Transaction.Run(() => Operational.Value(c).ListenOnce());
+            int result = await Transaction.Run(() => Operational.Value(c).ListenOnceAsync());
             c.Send(2);
             c.Send(7);
             Assert.AreEqual(9, result);

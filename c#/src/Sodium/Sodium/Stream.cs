@@ -132,9 +132,9 @@ namespace Sodium
         /// </summary>
         /// <typeparam name="T">The type of values fired by the stream.</typeparam>
         /// <returns>A task which completes when a value is fired by this stream.</returns>
-        public TaskWithListener<T> ListenOnce()
+        public TaskWithListener<T> ListenOnceAsync()
         {
-            return this.ListenOnce(CancellationToken.None);
+            return this.ListenOnceAsync(CancellationToken.None);
         }
 
         /// <summary>
@@ -143,7 +143,60 @@ namespace Sodium
         /// <typeparam name="T">The type of values fired by the stream.</typeparam>
         /// <param name="token">The cancellation token.</param>
         /// <returns>A task which completes when a value is fired by this stream.</returns>
-        public TaskWithListener<T> ListenOnce(CancellationToken token)
+        public TaskWithListener<T> ListenOnceAsync(CancellationToken token)
+        {
+            return this.ListenOnceAsync(t => t, CancellationToken.None);
+        }
+
+        /// <summary>
+        ///     Handle the first event on this stream and then automatically unregister.
+        /// </summary>
+        /// <typeparam name="T">The type of values fired by the stream.</typeparam>
+        /// <param name="modifyTask">A function to modify the task produced by this method.</param>
+        /// <returns>A task which completes when a value is fired by this stream.</returns>
+        public TaskWithListener ListenOnceAsync(Func<Task<T>, Task> modifyTask)
+        {
+            return this.ListenOnceAsync(modifyTask, CancellationToken.None);
+        }
+
+        /// <summary>
+        ///     Handle the first event on this stream and then automatically unregister.
+        /// </summary>
+        /// <typeparam name="T">The type of values fired by the stream.</typeparam>
+        /// <param name="modifyTask">A function to modify the task produced by this method.</param>
+        /// <param name="token">The cancellation token.</param>
+        /// <returns>A task which completes when a value is fired by this stream.</returns>
+        public TaskWithListener ListenOnceAsync(Func<Task<T>, Task> modifyTask, CancellationToken token)
+        {
+            return this.ListenOnceAsyncInternal((t, l) => new TaskWithListener(modifyTask(t), l), token);
+        }
+
+        /// <summary>
+        ///     Handle the first event on this stream and then automatically unregister.
+        /// </summary>
+        /// <typeparam name="T">The type of values fired by the stream.</typeparam>
+        /// <typeparam name="TResult">The type of the result of the task.</typeparam>
+        /// <param name="modifyTask">A function to modify the task produced by this method.</param>
+        /// <returns>A task which completes when a value is fired by this stream.</returns>
+        public TaskWithListener<TResult> ListenOnceAsync<TResult>(Func<Task<T>, Task<TResult>> modifyTask)
+        {
+            return this.ListenOnceAsync(modifyTask, CancellationToken.None);
+        }
+
+        /// <summary>
+        ///     Handle the first event on this stream and then automatically unregister.
+        /// </summary>
+        /// <typeparam name="T">The type of values fired by the stream.</typeparam>
+        /// <typeparam name="TResult">The type of the result of the task.</typeparam>
+        /// <param name="modifyTask">A function to modify the task produced by this method.</param>
+        /// <param name="token">The cancellation token.</param>
+        /// <returns>A task which completes when a value is fired by this stream.</returns>
+        public TaskWithListener<TResult> ListenOnceAsync<TResult>(Func<Task<T>, Task<TResult>> modifyTask, CancellationToken token)
+        {
+            return this.ListenOnceAsyncInternal((t, l) => new TaskWithListener<TResult>(modifyTask(t), l), token);
+        }
+
+        private TResult ListenOnceAsyncInternal<TResult>(Func<Task<T>, IListener, TResult> generateResult, CancellationToken token)
         {
             TaskCompletionSource<T> tcs = new TaskCompletionSource<T>();
 
@@ -163,7 +216,7 @@ namespace Sodium
                 tcs.TrySetCanceled();
             });
 
-            return new TaskWithListener<T>(tcs.Task, listener);
+            return generateResult(tcs.Task, listener);
         }
 
         internal IListener Listen(Node target, Action<Transaction, T> action) => Transaction.Apply(trans1 => this.Listen(target, trans1, action, false), false);

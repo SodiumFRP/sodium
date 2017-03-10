@@ -144,7 +144,7 @@ namespace Sodium.Tests
         }
 
         [Test]
-        public void TestCoalesce1()
+        public void TestCoalesce()
         {
             StreamSink<int> s = Stream.CreateSink<int>((x, y) => x + y);
             List<int> @out = new List<int>();
@@ -593,7 +593,7 @@ namespace Sodium.Tests
         }
 
         [Test]
-        public async Task TestListenOnceTask()
+        public async Task TestListenOnceAsync()
         {
             StreamSink<char> s = Stream.CreateSink<char>();
             new Thread(() =>
@@ -603,11 +603,101 @@ namespace Sodium.Tests
                 s.Send('B');
                 s.Send('C');
             }).Start();
-            TaskWithListener<char> t = s.ListenOnce();
+            char r = await s.ListenOnceAsync();
+            Assert.AreEqual('A', r);
+        }
+
+        [Test]
+        public async Task TestListenOnceAsyncWithCleanup()
+        {
+            StreamSink<char> s = Stream.CreateSink<char>();
+            new Thread(() =>
+            {
+                Thread.Sleep(250);
+                s.Send('A');
+                s.Send('B');
+                s.Send('C');
+            }).Start();
+            TaskWithListener<char> t = s.ListenOnceAsync();
             GC.Collect(0, GCCollectionMode.Forced);
             MemoryManager.Cleanup();
             GC.Collect(0, GCCollectionMode.Forced);
             char r = await t;
+            Assert.AreEqual('A', r);
+        }
+
+        [Test]
+        public async Task TestListenOnceAsyncSameThread()
+        {
+            StreamSink<char> s = Stream.CreateSink<char>();
+            TaskWithListener<char> t = s.ListenOnceAsync();
+            s.Send('A');
+            s.Send('B');
+            s.Send('C');
+            char r = await t;
+            Assert.AreEqual('A', r);
+        }
+
+        [Test]
+        public async Task TestListenOnceAsyncSameThreadWithCleanup()
+        {
+            StreamSink<char> s = Stream.CreateSink<char>();
+            TaskWithListener<char> t = s.ListenOnceAsync();
+            GC.Collect(0, GCCollectionMode.Forced);
+            MemoryManager.Cleanup();
+            GC.Collect(0, GCCollectionMode.Forced);
+            s.Send('A');
+            s.Send('B');
+            s.Send('C');
+            char r = await t;
+            Assert.AreEqual('A', r);
+        }
+
+        [Test]
+        public async Task TestListenOnceAsyncModify()
+        {
+            StreamSink<char> s = Stream.CreateSink<char>();
+            TaskWithListener<char> t = s.ListenOnceAsync(async t2 => await t2.ConfigureAwait(false));
+            GC.Collect(0, GCCollectionMode.Forced);
+            MemoryManager.Cleanup();
+            GC.Collect(0, GCCollectionMode.Forced);
+            s.Send('A');
+            s.Send('B');
+            s.Send('C');
+            char r = await t;
+            Assert.AreEqual('A', r);
+        }
+
+        [Test]
+        public async Task TestListenOnceAsyncModifyVoid()
+        {
+            char r = ' ';
+            Action<char> setResult = v => r = v;
+            StreamSink<char> s = Stream.CreateSink<char>();
+            TaskWithListener t = s.ListenOnceAsync(t2 => t2.ContinueWith(t3 => setResult(t3.Result), TaskContinuationOptions.ExecuteSynchronously));
+            GC.Collect(0, GCCollectionMode.Forced);
+            MemoryManager.Cleanup();
+            GC.Collect(0, GCCollectionMode.Forced);
+            s.Send('A');
+            s.Send('B');
+            s.Send('C');
+            await t;
+            Assert.AreEqual('A', r);
+        }
+
+        [Test]
+        public async Task TestListenOnceAsyncModifyVoid2()
+        {
+            char r = ' ';
+            StreamSink<char> s = Stream.CreateSink<char>();
+            TaskWithListener t = s.ListenOnceAsync(t2 => t2.ContinueWith(t3 => r = t3.Result, TaskContinuationOptions.ExecuteSynchronously));
+            GC.Collect(0, GCCollectionMode.Forced);
+            MemoryManager.Cleanup();
+            GC.Collect(0, GCCollectionMode.Forced);
+            s.Send('A');
+            s.Send('B');
+            s.Send('C');
+            await t;
             Assert.AreEqual('A', r);
         }
 
