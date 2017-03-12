@@ -474,8 +474,6 @@ namespace Sodium.Tests
             }))();
 
             GC.Collect(0, GCCollectionMode.Forced);
-            MemoryManager.Cleanup();
-            GC.Collect(0, GCCollectionMode.Forced);
             s.Send(3);
             s.Send(4);
 
@@ -503,8 +501,6 @@ namespace Sodium.Tests
                 }))();
 
                 GC.Collect(0, GCCollectionMode.Forced);
-                MemoryManager.Cleanup();
-                GC.Collect(0, GCCollectionMode.Forced);
 
                 ((Action)(() =>
                 {
@@ -517,8 +513,6 @@ namespace Sodium.Tests
                 }))();
             }))();
 
-            GC.Collect(0, GCCollectionMode.Forced);
-            MemoryManager.Cleanup();
             GC.Collect(0, GCCollectionMode.Forced);
             s.Send(6);
             s.Send(7);
@@ -620,8 +614,6 @@ namespace Sodium.Tests
             }).Start();
             TaskWithListener<char> t = s.ListenOnceAsync();
             GC.Collect(0, GCCollectionMode.Forced);
-            MemoryManager.Cleanup();
-            GC.Collect(0, GCCollectionMode.Forced);
             char r = await t;
             Assert.AreEqual('A', r);
         }
@@ -644,8 +636,6 @@ namespace Sodium.Tests
             StreamSink<char> s = Stream.CreateSink<char>();
             TaskWithListener<char> t = s.ListenOnceAsync();
             GC.Collect(0, GCCollectionMode.Forced);
-            MemoryManager.Cleanup();
-            GC.Collect(0, GCCollectionMode.Forced);
             s.Send('A');
             s.Send('B');
             s.Send('C');
@@ -658,8 +648,6 @@ namespace Sodium.Tests
         {
             StreamSink<char> s = Stream.CreateSink<char>();
             TaskWithListener<char> t = s.ListenOnceAsync(async t2 => await t2.ConfigureAwait(false));
-            GC.Collect(0, GCCollectionMode.Forced);
-            MemoryManager.Cleanup();
             GC.Collect(0, GCCollectionMode.Forced);
             s.Send('A');
             s.Send('B');
@@ -676,8 +664,6 @@ namespace Sodium.Tests
             StreamSink<char> s = Stream.CreateSink<char>();
             TaskWithListener t = s.ListenOnceAsync(t2 => t2.ContinueWith(t3 => setResult(t3.Result), TaskContinuationOptions.ExecuteSynchronously));
             GC.Collect(0, GCCollectionMode.Forced);
-            MemoryManager.Cleanup();
-            GC.Collect(0, GCCollectionMode.Forced);
             s.Send('A');
             s.Send('B');
             s.Send('C');
@@ -691,8 +677,6 @@ namespace Sodium.Tests
             char r = ' ';
             StreamSink<char> s = Stream.CreateSink<char>();
             TaskWithListener t = s.ListenOnceAsync(t2 => t2.ContinueWith(t3 => r = t3.Result, TaskContinuationOptions.ExecuteSynchronously));
-            GC.Collect(0, GCCollectionMode.Forced);
-            MemoryManager.Cleanup();
             GC.Collect(0, GCCollectionMode.Forced);
             s.Send('A');
             s.Send('B');

@@ -10,8 +10,6 @@ namespace Sodium.Tests.Performance
     {
         public static void Main(string[] args)
         {
-            MemoryManager.StartCleaningUpAutomatically(TimeSpan.FromSeconds(5));
-
             Console.WriteLine("Press any key");
             Console.ReadKey();
 

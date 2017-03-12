@@ -350,7 +350,7 @@ namespace Sodium
                     }
                 }, false);
                 return @out.LastFiringOnly(trans0).UnsafeAttachListener(l1).UnsafeAttachListener(l2).UnsafeAttachListener(
-                    new Listener(() => inTarget.Unlink(nodeTarget))).HoldLazyInternal(new Lazy<TResult>(() => bf.SampleNoTransaction()(this.SampleNoTransaction())));
+                    Listener.Create(inTarget, nodeTarget)).HoldLazyInternal(new Lazy<TResult>(() => bf.SampleNoTransaction()(this.SampleNoTransaction())));
             }, false);
         }
 

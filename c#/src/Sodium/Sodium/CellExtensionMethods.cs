@@ -103,7 +103,7 @@ namespace Sodium
                     currentListener = sa.Map(v => Tuple.Create(v, listenerId)).Listen(@out.Node, trans2, (t, v) => sendIfNodeTargetMatches(t, v, listenerId), false);
                 };
                 IListener l1 = csa.Value(trans1).Listen(node, trans1, h, false);
-                return @out.UnsafeAttachListener(l1).UnsafeAttachListener(new Listener(() => node.Unlink(nodeTarget)));
+                return @out.UnsafeAttachListener(l1).UnsafeAttachListener(Listener.Create(node, nodeTarget));
             }, false);
         }
 

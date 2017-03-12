@@ -58,18 +58,19 @@ namespace Sodium
     /// <typeparam name="T">The type of values fired by the stream.</typeparam>
     public class Stream<T>
     {
+        private readonly Guid streamId;
         internal readonly Node<T> Node;
         // ReSharper disable once CollectionNeverQueried.Local
         private readonly List<IListener> attachedListeners;
-        private readonly MemoryManager.StreamListeners<T> trackedListeners;
+        private readonly StreamListenerManager.StreamListeners trackedListeners;
         private readonly List<T> firings;
 
         internal Stream()
         {
+            this.streamId = Guid.NewGuid();
             this.Node = new Node<T>();
             this.attachedListeners = new List<IListener>();
-            this.trackedListeners = new MemoryManager.StreamListeners<T>(this);
-            MemoryManager.Add(this.trackedListeners);
+            this.trackedListeners = new StreamListenerManager.StreamListeners(this.streamId);
             this.firings = new List<T>();
         }
 
@@ -539,7 +540,7 @@ namespace Sodium
             Action<Transaction, T> h = @out.Send;
             IListener l1 = this.Listen(left, h);
             IListener l2 = s.Listen(right, h);
-            return @out.UnsafeAttachListener(l1).UnsafeAttachListener(l2).UnsafeAttachListener(new Listener(() => left.Unlink(nodeTarget)));
+            return @out.UnsafeAttachListener(l1).UnsafeAttachListener(l2).UnsafeAttachListener(Listener.Create(left, nodeTarget));
         }
 
         /// <summary>
@@ -811,6 +812,11 @@ namespace Sodium
                     }
                 });
             }
+        }
+
+        ~Stream()
+        {
+            StreamListenerManager.Remove(this.streamId);
         }
 
         private class ListenerImplementation : IListener
