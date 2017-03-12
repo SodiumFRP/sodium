@@ -55,7 +55,6 @@
     <Compile Include="CellSink.cs" />
     <Compile Include="CoalesceHandler.cs" />
     <Compile Include="CompositeListener.cs" />
-    <Compile Include="ImmutableCompositeListener.cs" />
     <Compile Include="IWeakListener.cs" />
     <Compile Include="MaybeMonad.cs" />
     <Compile Include="StreamListenerManager.cs" />

@@ -1,29 +1,15 @@
 using System.Collections.Generic;
+using System.Linq;
 
 namespace Sodium
 {
     public class CompositeListener : IListener, IWeakListener
     {
-        private readonly List<IListener> listeners;
+        private readonly IReadOnlyList<IListener> listeners;
 
-        public CompositeListener()
-            : this(null)
+        public CompositeListener(IReadOnlyList<IListener> listeners)
         {
-        }
-
-        public CompositeListener(IEnumerable<IListener> listeners)
-        {
-            this.listeners = new List<IListener>(listeners ?? new IListener[0]);
-        }
-
-        public void Add(IListener l)
-        {
-            this.listeners.Add(l);
-        }
-
-        public void AddRange(IEnumerable<IListener> l)
-        {
-            this.listeners.AddRange(l);
+            this.listeners = listeners;
         }
 
         public void Unlisten()
@@ -36,7 +22,25 @@ namespace Sodium
 
         public IWeakListener GetWeakListener()
         {
-            return this;
+            return new CompositeWeakListener(this.listeners.Select(l => l.GetWeakListener()).ToArray());
+        }
+
+        private class CompositeWeakListener : IWeakListener
+        {
+            private readonly IReadOnlyList<IWeakListener> weakListeners;
+
+            public CompositeWeakListener(IReadOnlyList<IWeakListener> weakListeners)
+            {
+                this.weakListeners = weakListeners;
+            }
+
+            public void Unlisten()
+            {
+                foreach (IWeakListener l in this.weakListeners)
+                {
+                    l?.Unlisten();
+                }
+            }
         }
     }
 }

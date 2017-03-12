@@ -143,7 +143,7 @@ namespace Sodium
                 {
                     a();
                     return f(values.Value.ToArray());
-                }).UnsafeAttachListener(new ImmutableCompositeListener(listeners)).HoldLazyInternal(initialValue);
+                }).UnsafeAttachListener(new CompositeListener(listeners)).HoldLazyInternal(initialValue);
             }, false);
         }
 
