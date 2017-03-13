@@ -12,6 +12,13 @@ namespace Sodium
             this.LazyInitialValue = lazyInitialValue;
         }
 
+        protected override void NotUsingInitialValue()
+        {
+            base.NotUsingInitialValue();
+
+            this.LazyInitialValue = null;
+        }
+
         internal override T SampleNoTransaction()
         {
             if (this.UsingInitialValue && this.LazyInitialValue != null)

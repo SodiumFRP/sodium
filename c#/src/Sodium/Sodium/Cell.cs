@@ -115,8 +115,13 @@ namespace Sodium
             set
             {
                 this.valueProperty = value;
-                this.UsingInitialValue = false;
+                this.NotUsingInitialValue();
             }
+        }
+
+        protected virtual void NotUsingInitialValue()
+        {
+            this.UsingInitialValue = false;
         }
 
         protected bool UsingInitialValue { get; private set; }

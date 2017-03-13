@@ -106,7 +106,8 @@ namespace Sodium
     {
         public static readonly Node<T> Null = new Node<T>(long.MaxValue);
 
-        private readonly HashSet<Target> listeners = new HashSet<Target>();
+        private HashSet<Target> listeners = new HashSet<Target>();
+        private long listenersCapacity;
 
         internal Node()
         {
@@ -137,6 +138,7 @@ namespace Sodium
                     trans.TargetsToActivate.Add(t);
                 }
                 this.listeners.Add(t);
+                this.listenersCapacity++;
                 return Tuple.Create(changed, t);
             }
         }
@@ -170,6 +172,12 @@ namespace Sodium
             lock (ListenersLock)
             {
                 this.listeners.Remove(target);
+                // HashSet does not reclaim space after items are removed, so we will create a new one if we can reclaim a substantial amount of space
+                if (this.listenersCapacity > 100 && this.listeners.Count < this.listenersCapacity / 2)
+                {
+                    this.listeners = new HashSet<Target>(this.listeners);
+                    this.listenersCapacity = this.listeners.Count;
+                }
             }
         }
 

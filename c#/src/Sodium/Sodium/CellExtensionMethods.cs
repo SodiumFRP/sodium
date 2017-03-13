@@ -18,15 +18,15 @@ namespace Sodium
             {
                 Lazy<T> za = cca.SampleLazy().Map(ca => ca.Sample());
                 Stream<T> @out = new Stream<T>();
-                IListener currentListener = null;
+                MutableListener currentListener = new MutableListener();
                 Action<Transaction, Cell<T>> h = (trans2, ca) =>
                 {
-                    currentListener?.Unlisten();
+                    currentListener.Unlisten();
 
-                    currentListener = ca.Value(trans2).Listen(@out.Node, trans2, @out.Send, false);
+                    currentListener.SetListener(ca.Value(trans2).Listen(@out.Node, trans2, @out.Send, false));
                 };
                 IListener l1 = cca.Value(trans1).Listen(@out.Node, trans1, h, false);
-                return @out.UnsafeAttachListener(l1).HoldLazyInternal(za);
+                return @out.UnsafeAttachListener(l1).UnsafeAttachListener(currentListener).HoldLazyInternal(za);
             }, false);
         }
 
@@ -50,25 +50,25 @@ namespace Sodium
             return Transaction.Apply(trans1 =>
             {
                 Stream<T> @out = new Stream<T>();
-                IListener currentListener = null;
+                MutableListener currentListener = new MutableListener();
                 Action<Transaction, Stream<T>> hInitial = (trans2, sa) =>
                 {
-                    currentListener?.Unlisten();
+                    currentListener.Unlisten();
 
-                    currentListener = sa.Listen(@out.Node, trans2, @out.Send, false);
+                    currentListener.SetListener(sa.Listen(@out.Node, trans2, @out.Send, false));
                 };
                 Action<Transaction, Stream<T>> h = (trans2, sa) =>
                 {
                     trans2.Last(() =>
                     {
-                        currentListener?.Unlisten();
+                        currentListener.Unlisten();
 
-                        currentListener = sa.Listen(@out.Node, trans2, @out.Send, true);
+                        currentListener.SetListener(sa.Listen(@out.Node, trans2, @out.Send, true));
                     });
                 };
                 trans1.Prioritized(new Node<T>(), trans2 => hInitial(trans2, csa.SampleNoTransaction()));
                 IListener l1 = csa.Updates(trans1).Listen(@out.Node, trans1, h, false);
-                return @out.UnsafeAttachListener(l1);
+                return @out.UnsafeAttachListener(l1).UnsafeAttachListener(currentListener);
             }, false);
         }
 
@@ -94,16 +94,16 @@ namespace Sodium
                         @out.Send(t, v.Item1);
                     }
                 };
-                IListener currentListener = null;
+                MutableListener currentListener = new MutableListener();
                 Action<Transaction, Stream<T>> h = (trans2, sa) =>
                 {
-                    currentListener?.Unlisten();
+                    currentListener.Unlisten();
 
                     listenerId = Guid.NewGuid();
-                    currentListener = sa.Map(v => Tuple.Create(v, listenerId)).Listen(@out.Node, trans2, (t, v) => sendIfNodeTargetMatches(t, v, listenerId), false);
+                    currentListener.SetListener(sa.Map(v => Tuple.Create(v, listenerId)).Listen(@out.Node, trans2, (t, v) => sendIfNodeTargetMatches(t, v, listenerId), false));
                 };
                 IListener l1 = csa.Value(trans1).Listen(node, trans1, h, false);
-                return @out.UnsafeAttachListener(l1).UnsafeAttachListener(Listener.Create(node, nodeTarget));
+                return @out.UnsafeAttachListener(l1).UnsafeAttachListener(currentListener).UnsafeAttachListener(Listener.Create(node, nodeTarget));
             }, false);
         }
 
@@ -167,6 +167,38 @@ namespace Sodium
         public static Cell<IReadOnlyList<T>> Lift<T>(this IReadOnlyCollection<Cell<T>> c)
         {
             return c.Lift(v => (IReadOnlyList<T>)v.ToArray());
+        }
+
+        private class MutableListener : IListener
+        {
+            private readonly WeakMutableListener weakMutableListener = new WeakMutableListener();
+            private IListener listener;
+
+            public void SetListener(IListener listener)
+            {
+                this.listener = listener;
+                this.weakMutableListener.WeakListener = listener.GetWeakListener();
+            }
+
+            public void Unlisten()
+            {
+                this.listener?.Unlisten();
+            }
+
+            public IWeakListener GetWeakListener()
+            {
+                return this.weakMutableListener;
+            }
+
+            private class WeakMutableListener : IWeakListener
+            {
+                public IWeakListener WeakListener;
+
+                public void Unlisten()
+                {
+                    this.WeakListener?.Unlisten();
+                }
+            }
         }
     }
 }

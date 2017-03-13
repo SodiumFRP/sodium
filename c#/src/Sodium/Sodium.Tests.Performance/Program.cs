@@ -8,6 +8,76 @@ namespace Sodium.Tests.Performance
 {
     internal class Program
     {
+        public static void Main3(string[] args)
+        {
+            DiscreteCellSink<bool> c = new DiscreteCellSink<bool>(false);
+
+            Console.WriteLine("Press any key");
+            Console.ReadKey();
+
+            ((Action) (() =>
+            {
+                List<DiscreteCell<bool>> cc = new List<DiscreteCell<bool>>();
+                for (int i = 0; i < 5000; i++)
+                {
+                    cc.Add(c.Map(v => !v));
+                }
+
+                Console.WriteLine("Press any key");
+                Console.ReadKey();
+            }))();
+
+            Console.WriteLine("Press any key");
+            Console.ReadKey();
+        }
+
+        public static void Main2(string[] args)
+        {
+            Console.WriteLine("Press any key");
+            Console.ReadKey();
+
+            //DiscreteCellSink<IReadOnlyList<SmallTestObject>> s = ((Func<DiscreteCellSink<IReadOnlyList<SmallTestObject>>>)(() =>
+            //   new DiscreteCellSink<IReadOnlyList<SmallTestObject>>(new SmallTestObject[0])))();
+            DiscreteCellSink<IReadOnlyList<SmallTestObject>> s = ((Func<DiscreteCellSink<IReadOnlyList<SmallTestObject>>>) (() =>
+                new DiscreteCellSink<IReadOnlyList<SmallTestObject>>(Enumerable.Range(0, 500).Select(_ => new SmallTestObject()).ToArray())))();
+            DiscreteCell<IReadOnlyList<bool>> s2 = s.Map(oo => oo.Select(o => o.S).Lift()).SwitchC();
+
+            ((Action)(() =>
+            {
+                for (int i = 0; i < 5; i++)
+                {
+                    s.Send(Enumerable.Range(0, 500).Select(_ => new SmallTestObject()).ToArray());
+                }
+            }))();
+            s.Send(new SmallTestObject[0]);
+
+            Console.WriteLine("Press any key");
+            Console.ReadKey();
+
+            ((Action)(() =>
+            {
+                for (int i = 0; i < 5; i++)
+                {
+                    s.Send(Enumerable.Range(0, 500).Select(_ => new SmallTestObject()).ToArray());
+                }
+            }))();
+
+            s.Send(new SmallTestObject[0]);
+
+            Console.WriteLine("Press any key");
+            Console.ReadKey();
+        }
+
+        private class SmallTestObject
+        {
+            public SmallTestObject()
+            {
+                this.S = new DiscreteCellSink<bool>(false);
+            }
+
+            public DiscreteCellSink<bool> S { get; }
+        }
+
         public static void Main(string[] args)
         {
             Console.WriteLine("Press any key");
@@ -19,16 +89,18 @@ namespace Sodium.Tests.Performance
                 StreamSink<Unit> toggleAllSelectedStream = Stream.CreateSink<Unit>();
                 Stream<bool> selectAllStream = toggleAllSelectedStream.Snapshot(allSelectedCellLoop).Map(a => a != true);
 
+                IReadOnlyList<TestObject> o2 = Enumerable.Range(0, 10000).Select(n => new TestObject(n, selectAllStream)).ToArray();
                 DiscreteCellSink<IReadOnlyList<TestObject>> objects =
-                    DiscreteCell.CreateSink((IReadOnlyList<TestObject>)Enumerable.Range(0, 10000).Select(n => new TestObject(n, selectAllStream)).ToArray());
+                    DiscreteCell.CreateSink((IReadOnlyList<TestObject>)new TestObject[0]);
 
                 var objectsAndIsSelected = objects.Map(oo => oo.Select(o => o.IsSelected.Map(s => new { Object = o, IsSelected = s })).Lift()).SwitchC();
 
+                bool defaultValue = o2.Count < 1;
                 DiscreteCell<bool?> allSelected =
                     objectsAndIsSelected.Map(
                         oo =>
                             !oo.Any()
-                                ? false
+                                ? defaultValue
                                 : (oo.All(o => o.IsSelected)
                                     ? true
                                     : (oo.All(o => !o.IsSelected) ? (bool?)false : null)));
@@ -39,6 +111,9 @@ namespace Sodium.Tests.Performance
 
             // ReSharper disable once UnusedVariable
             IListener l = Transaction.Run(() => t.Item2.Map(oo => oo.Count(o => o.IsSelected)).Updates.Listen(v => Console.WriteLine($"{v} selected")));
+
+            Console.WriteLine("Press any key");
+            Console.ReadKey();
 
             Stopwatch sw = new Stopwatch();
             sw.Start();
@@ -149,6 +224,7 @@ namespace Sodium.Tests.Performance
             t.Item1.Send(Unit.Value);
             t.Item1.Send(Unit.Value);
             t.Item1.Send(Unit.Value);
+            t.Item4.Send(new TestObject[0]);
 
             sw.Stop();
 

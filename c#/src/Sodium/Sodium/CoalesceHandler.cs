@@ -35,7 +35,19 @@ namespace Sodium
         internal static Action<Transaction, T> CreateSafe<T>(Func<T, T, T> f, Stream<T> @out)
         {
             ConcurrentDictionary<Transaction, Action<Transaction, T>> handlersByTransaction = new ConcurrentDictionary<Transaction, Action<Transaction, T>>();
-            return (t, a) => handlersByTransaction.GetOrAdd(t, Create(f, @out))(t, a);
+            return (t, a) =>
+                handlersByTransaction.GetOrAdd(
+                    t,
+                    t2 =>
+                    {
+                        Action<Transaction, T> handler = Create(f, @out);
+                        t2.Post(-1, _ =>
+                        {
+                            Action<Transaction, T> temp;
+                            handlersByTransaction.TryRemove(t2, out temp);
+                        });
+                        return handler;
+                    })(t, a);
         }
     }
 }

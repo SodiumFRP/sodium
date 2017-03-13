@@ -14,7 +14,8 @@ namespace Sodium
     /// </remarks>
     internal static class StreamListenerManager
     {
-        private static readonly Dictionary<Guid, StreamListeners> StreamsById = new Dictionary<Guid, StreamListeners>();
+        private static Dictionary<Guid, StreamListeners> StreamsById = new Dictionary<Guid, StreamListeners>();
+        private static long StreamsByIdCapacity;
         private static readonly object StreamsByIdLock = new object();
         private static readonly BlockingCollection<Guid> StreamIdsToRemove = new BlockingCollection<Guid>();
 
@@ -30,13 +31,12 @@ namespace Sodium
                         streamListeners = StreamsById[streamId];
                     }
                     streamListeners.Unlisten();
-                    lock (StreamsByIdLock)
-                    {
-                        StreamsById.Remove(streamId);
-                    }
                 }
             })
-            { Name = "Sodium Cleanup Thread" };
+            {
+                Name = "Sodium Cleanup Thread",
+                IsBackground = true
+            };
             cleanupThread.Start();
         }
 
@@ -58,6 +58,7 @@ namespace Sodium
                 lock (StreamsByIdLock)
                 {
                     StreamsById.Add(streamId, this);
+                    StreamsByIdCapacity++;
                 }
             }
 
@@ -71,6 +72,12 @@ namespace Sodium
                 lock (StreamsByIdLock)
                 {
                     StreamsById.Remove(this.streamId);
+                    // Dictionary does not reclaim space after items are removed, so we will create a new one if we can reclaim a substantial amount of space
+                    if (StreamsByIdCapacity > 100 && StreamsById.Count < StreamsByIdCapacity / 2)
+                    {
+                        StreamsById = new Dictionary<Guid, StreamListeners>(StreamsById);
+                        StreamsByIdCapacity = StreamsById.Count;
+                    }
                 }
             }
 
