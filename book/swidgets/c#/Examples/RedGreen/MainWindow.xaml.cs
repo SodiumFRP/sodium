@@ -15,7 +15,7 @@ namespace RedGreen
             Stream<string> sRed = red.SClicked.Map(_ => "red");
             Stream<string> sGreen = green.SClicked.Map(_ => "green");
             Stream<string> sColor = sRed.OrElse(sGreen);
-            Cell<string> color = sColor.Hold(string.Empty);
+            DiscreteCell<string> color = sColor.Hold(string.Empty);
             SLabel lbl = new SLabel(color) { Width = 75, Margin = new Thickness(5, 0, 0, 0) };
 
             this.Container.Children.Add(red);

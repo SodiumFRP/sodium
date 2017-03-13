@@ -47,7 +47,7 @@ namespace SWidgets
             sSetValue.Loop(sDelta.Snapshot(this.Value, (d, v) => v + d));
         }
 
-        public Cell<int> Value { get; }
+        public DiscreteCell<int> Value { get; }
 
         public static SSpinner Create(int initialValue)
         {

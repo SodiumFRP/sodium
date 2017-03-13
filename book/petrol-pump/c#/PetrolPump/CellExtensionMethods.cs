@@ -5,9 +5,9 @@ namespace PetrolPump
 {
     public static class CellExtensionMethods
     {
-        public static Stream<T> Changes<T>(this Cell<T> cell)
+        public static Stream<T> Changes<T>(this DiscreteCell<T> cell)
         {
-            return Operational.Value(cell).Snapshot(cell, (n, o) => EqualityComparer<T>.Default.Equals(o, n) ? Maybe.Nothing<T>() : Maybe.Just(n)).FilterMaybe();
+            return cell.Values.Snapshot(cell, (n, o) => EqualityComparer<T>.Default.Equals(o, n) ? Maybe.Nothing<T>() : Maybe.Just(n)).FilterMaybe();
         }
     }
 }

@@ -61,10 +61,10 @@ namespace Shared
             return new Signal(this.T0, this.B / 2, this.C, initial);
         }
 
-        public static Cell<Signal> Integrate(Cell<Signal> sig, double initial)
+        public static DiscreteCell<Signal> Integrate(DiscreteCell<Signal> sig, double initial)
         {
-            Stream<Signal> sSig = Operational.Updates(sig);
-            return sSig.Accum(sig.Sample().Integrate(initial), (n, o) => n.Integrate(o.ValueAt(n.T0)));
+            Stream<Signal> sSig = sig.Updates;
+            return sSig.Accum(sig.Cell.Sample().Integrate(initial), (n, o) => n.Integrate(o.ValueAt(n.T0)));
         }
     }
 }

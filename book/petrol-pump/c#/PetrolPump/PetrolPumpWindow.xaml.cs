@@ -323,23 +323,23 @@ namespace PetrolPump
                     };
                 }
 
-                CellLoop<UpDown> nozzle1 = new CellLoop<UpDown>();
-                CellLoop<UpDown> nozzle2 = new CellLoop<UpDown>();
-                CellLoop<UpDown> nozzle3 = new CellLoop<UpDown>();
+                DiscreteCellLoop<UpDown> nozzle1 = new DiscreteCellLoop<UpDown>();
+                DiscreteCellLoop<UpDown> nozzle2 = new DiscreteCellLoop<UpDown>();
+                DiscreteCellLoop<UpDown> nozzle3 = new DiscreteCellLoop<UpDown>();
 
-                Cell<double> calibration = Cell.Constant(0.001);
-                Cell<double> price1 = textPrice1.Text.Map(parseDoubleSafe);
-                Cell<double> price2 = textPrice2.Text.Map(parseDoubleSafe);
-                Cell<double> price3 = textPrice3.Text.Map(parseDoubleSafe);
-                CellSink<Stream<Unit>> csClearSale = new CellSink<Stream<Unit>>(Sodium.Stream.Never<Unit>());
+                DiscreteCell<double> calibration = DiscreteCell.Constant(0.001);
+                DiscreteCell<double> price1 = textPrice1.Text.Map(parseDoubleSafe);
+                DiscreteCell<double> price2 = textPrice2.Text.Map(parseDoubleSafe);
+                DiscreteCell<double> price3 = textPrice3.Text.Map(parseDoubleSafe);
+                DiscreteCellSink<Stream<Unit>> csClearSale = new DiscreteCellSink<Stream<Unit>>(Sodium.Stream.Never<Unit>());
                 Stream<Unit> sClearSale = csClearSale.SwitchS();
 
                 StreamSink<int> sFuelPulses = new StreamSink<int>();
                 Cell<Outputs> outputs = logic.SelectedItem.Map(
                     pump => pump.Create(new Inputs(
-                        Operational.Updates(nozzle1),
-                        Operational.Updates(nozzle2),
-                        Operational.Updates(nozzle3),
+                        nozzle1.Updates,
+                        nozzle2.Updates,
+                        nozzle3.Updates,
                         sKey,
                         sFuelPulses,
                         calibration,
@@ -348,13 +348,13 @@ namespace PetrolPump
                         price3,
                         sClearSale)));
 
-                Cell<Delivery> delivery = outputs.Map(o => o.Delivery).SwitchC();
-                Cell<string> presetLcd = outputs.Map(o => o.PresetLcd).SwitchC();
-                Cell<string> saleCostLcd = outputs.Map(o => o.SaleCostLcd).SwitchC();
-                Cell<string> saleQuantityLcd = outputs.Map(o => o.SaleQuantityLcd).SwitchC();
-                Cell<string> priceLcd1 = outputs.Map(o => o.PriceLcd1).SwitchC();
-                Cell<string> priceLcd2 = outputs.Map(o => o.PriceLcd2).SwitchC();
-                Cell<string> priceLcd3 = outputs.Map(o => o.PriceLcd3).SwitchC();
+                DiscreteCell<Delivery> delivery = outputs.Map(o => o.Delivery).SwitchC();
+                DiscreteCell<string> presetLcd = outputs.Map(o => o.PresetLcd).SwitchC();
+                DiscreteCell<string> saleCostLcd = outputs.Map(o => o.SaleCostLcd).SwitchC();
+                DiscreteCell<string> saleQuantityLcd = outputs.Map(o => o.SaleQuantityLcd).SwitchC();
+                DiscreteCell<string> priceLcd1 = outputs.Map(o => o.PriceLcd1).SwitchC();
+                DiscreteCell<string> priceLcd2 = outputs.Map(o => o.PriceLcd2).SwitchC();
+                DiscreteCell<string> priceLcd3 = outputs.Map(o => o.PriceLcd3).SwitchC();
                 Stream<Unit> sBeep = outputs.Map(o => o.SBeep).SwitchS();
                 Stream<Sale> sSaleComplete = outputs.Map(o => o.SSaleComplete).SwitchS();
 
@@ -439,7 +439,7 @@ namespace PetrolPump
                 petrolPump.Fuel3Placeholder.Children.Add(priceLcd3StackPanel);
                 this.listeners.Add(priceLcd3.Listen(t => petrolPump.Dispatcher.InvokeIfNecessary(() => petrolPump.SetLcdDigits(priceLcd3StackPanel, t, 5, false))));
 
-                Dictionary<CellLoop<UpDown>, Image> nozzles = new Dictionary<CellLoop<UpDown>, Image>
+                Dictionary<DiscreteCellLoop<UpDown>, Image> nozzles = new Dictionary<DiscreteCellLoop<UpDown>, Image>
                 {
                     { nozzle1, petrolPump.Nozzle1Image },
                     { nozzle2, petrolPump.Nozzle2Image },
@@ -447,7 +447,7 @@ namespace PetrolPump
                 };
                 this.listeners.AddRange(nozzles.Select(nozzle => nozzle.Key.Listen(p => petrolPump.Dispatcher.InvokeIfNecessary(() => nozzle.Value.Margin = p == UpDown.Up ? new Thickness(0, 0, 0, 0) : new Thickness(0, 30, 0, 0)))));
 
-                foreach (KeyValuePair<CellLoop<UpDown>, Image> nozzle in nozzles)
+                foreach (KeyValuePair<DiscreteCellLoop<UpDown>, Image> nozzle in nozzles)
                 {
                     StreamSink<Unit> nozzleClicks = new StreamSink<Unit>();
                     nozzle.Value.MouseDown += async (sender, args) =>
@@ -481,9 +481,7 @@ namespace PetrolPump
                                 petrolPump.Dispatcher.InvokeIfNecessary(() => dialog.Close());
 
                                 // ReSharper disable once AccessToModifiedClosure
-                                using (l)
-                                {
-                                }
+                                l?.Unlisten();
                             });
                         });
                     });
@@ -495,7 +493,7 @@ namespace PetrolPump
                     {
                         Transaction.RunVoid(() =>
                         {
-                            switch (delivery.Sample())
+                            switch (delivery.Cell.Sample())
                             {
                                 case Delivery.Fast1:
                                 case Delivery.Fast2:
@@ -520,9 +518,7 @@ namespace PetrolPump
             {
                 foreach (IListener l in this.listeners)
                 {
-                    using (l)
-                    {
-                    }
+                    l.Unlisten();
                 }
             }
 

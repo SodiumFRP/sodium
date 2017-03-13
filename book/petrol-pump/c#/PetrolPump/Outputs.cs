@@ -5,13 +5,13 @@ namespace PetrolPump
     public class Outputs
     {
         private Outputs(
-            Cell<Delivery> delivery,
-            Cell<string> presetLcd,
-            Cell<string> saleCostLcd,
-            Cell<string> saleQuantityLcd,
-            Cell<string> priceLcd1,
-            Cell<string> priceLcd2,
-            Cell<string> priceLcd3,
+            DiscreteCell<Delivery> delivery,
+            DiscreteCell<string> presetLcd,
+            DiscreteCell<string> saleCostLcd,
+            DiscreteCell<string> saleQuantityLcd,
+            DiscreteCell<string> priceLcd1,
+            DiscreteCell<string> priceLcd2,
+            DiscreteCell<string> priceLcd3,
             Stream<Unit> sBeep,
             Stream<Sale> sSaleComplete)
         {
@@ -28,70 +28,70 @@ namespace PetrolPump
 
         public Outputs()
         {
-            this.Delivery = Cell.Constant(global::PetrolPump.Delivery.Off);
-            this.PresetLcd = Cell.Constant(string.Empty);
-            this.SaleCostLcd = Cell.Constant(string.Empty);
-            this.SaleQuantityLcd = Cell.Constant(string.Empty);
-            this.PriceLcd1 = Cell.Constant(string.Empty);
-            this.PriceLcd2 = Cell.Constant(string.Empty);
-            this.PriceLcd3 = Cell.Constant(string.Empty);
+            this.Delivery = DiscreteCell.Constant(PetrolPump.Delivery.Off);
+            this.PresetLcd = DiscreteCell.Constant(string.Empty);
+            this.SaleCostLcd = DiscreteCell.Constant(string.Empty);
+            this.SaleQuantityLcd = DiscreteCell.Constant(string.Empty);
+            this.PriceLcd1 = DiscreteCell.Constant(string.Empty);
+            this.PriceLcd2 = DiscreteCell.Constant(string.Empty);
+            this.PriceLcd3 = DiscreteCell.Constant(string.Empty);
             this.SBeep = Stream.Never<Unit>();
             this.SSaleComplete = Stream.Never<Sale>();
         }
 
-        public Cell<Delivery> Delivery { get; }
-        public Cell<string> PresetLcd { get; }
-        public Cell<string> SaleCostLcd { get; }
-        public Cell<string> SaleQuantityLcd { get; }
-        public Cell<string> PriceLcd1 { get; }
-        public Cell<string> PriceLcd2 { get; }
-        public Cell<string> PriceLcd3 { get; }
+        public DiscreteCell<Delivery> Delivery { get; }
+        public DiscreteCell<string> PresetLcd { get; }
+        public DiscreteCell<string> SaleCostLcd { get; }
+        public DiscreteCell<string> SaleQuantityLcd { get; }
+        public DiscreteCell<string> PriceLcd1 { get; }
+        public DiscreteCell<string> PriceLcd2 { get; }
+        public DiscreteCell<string> PriceLcd3 { get; }
         public Stream<Unit> SBeep { get; }
         public Stream<Sale> SSaleComplete { get; }
 
-        public Outputs SetDelivery(Cell<Delivery> delivery)
+        public Outputs SetDelivery(DiscreteCell<Delivery> delivery)
         {
             return new Outputs(delivery, this.PresetLcd, this.SaleCostLcd,
                 this.SaleQuantityLcd, this.PriceLcd1, this.PriceLcd2, this.PriceLcd3, this.SBeep,
                 this.SSaleComplete);
         }
 
-        public Outputs SetPresetLcd(Cell<string> presetLcd)
+        public Outputs SetPresetLcd(DiscreteCell<string> presetLcd)
         {
             return new Outputs(this.Delivery, presetLcd, this.SaleCostLcd,
                 this.SaleQuantityLcd, this.PriceLcd1, this.PriceLcd2, this.PriceLcd3, this.SBeep,
                 this.SSaleComplete);
         }
 
-        public Outputs SetSaleCostLcd(Cell<string> saleCostLcd)
+        public Outputs SetSaleCostLcd(DiscreteCell<string> saleCostLcd)
         {
             return new Outputs(this.Delivery, this.PresetLcd, saleCostLcd,
                 this.SaleQuantityLcd, this.PriceLcd1, this.PriceLcd2, this.PriceLcd3, this.SBeep,
                 this.SSaleComplete);
         }
 
-        public Outputs SetSaleQuantityLcd(Cell<string> saleQuantityLcd)
+        public Outputs SetSaleQuantityLcd(DiscreteCell<string> saleQuantityLcd)
         {
             return new Outputs(this.Delivery, this.PresetLcd, this.SaleCostLcd,
                 saleQuantityLcd, this.PriceLcd1, this.PriceLcd2, this.PriceLcd3, this.SBeep,
                 this.SSaleComplete);
         }
 
-        public Outputs SetPriceLcd1(Cell<string> priceLcd1)
+        public Outputs SetPriceLcd1(DiscreteCell<string> priceLcd1)
         {
             return new Outputs(this.Delivery, this.PresetLcd, this.SaleCostLcd,
                 this.SaleQuantityLcd, priceLcd1, this.PriceLcd2, this.PriceLcd3, this.SBeep,
                 this.SSaleComplete);
         }
 
-        public Outputs SetPriceLcd2(Cell<string> priceLcd2)
+        public Outputs SetPriceLcd2(DiscreteCell<string> priceLcd2)
         {
             return new Outputs(this.Delivery, this.PresetLcd, this.SaleCostLcd,
                 this.SaleQuantityLcd, this.PriceLcd1, priceLcd2, this.PriceLcd3, this.SBeep,
                 this.SSaleComplete);
         }
 
-        public Outputs SetPriceLcd3(Cell<string> priceLcd3)
+        public Outputs SetPriceLcd3(DiscreteCell<string> priceLcd3)
         {
             return new Outputs(this.Delivery, this.PresetLcd, this.SaleCostLcd,
                 this.SaleQuantityLcd, this.PriceLcd1, this.PriceLcd2, priceLcd3, this.SBeep,

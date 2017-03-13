@@ -18,15 +18,15 @@ namespace Lookup
             Transaction.RunVoid(() =>
             {
                 STextBox word = new STextBox(string.Empty);
-                CellLoop<bool> enabled = new CellLoop<bool>();
+                DiscreteCellLoop<bool> enabled = new DiscreteCellLoop<bool>();
                 SButton button = new SButton(enabled) { Content = "look up" };
                 Stream<string> sWord = button.SClicked.Snapshot(word.Text);
                 IsBusy<string, IMaybe<string>> ib = new IsBusy<string, IMaybe<string>>(Lookup, sWord);
                 Stream<string> sDefinition = ib.SOut.Map(o => o.Match(v => v, () => "ERROR!"));
-                Cell<string> definition = sDefinition.Hold(string.Empty);
-                Cell<string> output = definition.Lift(ib.Busy, (def, bsy) => bsy ? "Looking up..." : def);
+                DiscreteCell<string> definition = sDefinition.Hold(string.Empty);
+                DiscreteCell<string> output = definition.Lift(ib.Busy, (def, bsy) => bsy ? "Looking up..." : def);
                 enabled.Loop(ib.Busy.Map(b => !b));
-                STextBox outputArea = new STextBox(Operational.Value(output), string.Empty, enabled) { TextWrapping = TextWrapping.Wrap, AcceptsReturn = true };
+                STextBox outputArea = new STextBox(output.Values, string.Empty, enabled) { TextWrapping = TextWrapping.Wrap, AcceptsReturn = true };
                 this.TextBoxPlaceholder.Child = word;
                 this.ButtonPlaceholder.Child = button;
                 this.OutputPlaceholder.Child = outputArea;
@@ -36,7 +36,7 @@ namespace Lookup
         public static Stream<IMaybe<string>> Lookup(Stream<string> sWord)
         {
             StreamSink<IMaybe<string>> sDefinition = new StreamSink<IMaybe<string>>();
-            IListener listener = sWord.ListenWeak(wrd =>
+            IListener listener = sWord.Listen(wrd =>
             {
                 Task.Run(() =>
                 {
@@ -104,7 +104,7 @@ namespace Lookup
                     }
                 });
             });
-            return sDefinition.AddCleanup(listener);
+            return sDefinition.AttachListener(listener);
         }
 
         private class IsBusy<T, TResult>
@@ -116,7 +116,7 @@ namespace Lookup
             }
 
             public Stream<TResult> SOut { get; }
-            public Cell<bool> Busy { get; }
+            public DiscreteCell<bool> Busy { get; }
         }
     }
 }
