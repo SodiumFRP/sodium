@@ -57,6 +57,7 @@
     <Compile Include="CompositeListener.cs" />
     <Compile Include="IWeakListener.cs" />
     <Compile Include="MaybeMonad.cs" />
+    <Compile Include="MutableListener.cs" />
     <Compile Include="StreamListenerManager.cs" />
     <Compile Include="StreamExtensionMethods.cs" />
     <Compile Include="CellLoop.cs" />

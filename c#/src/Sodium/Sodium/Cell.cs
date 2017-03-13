@@ -94,13 +94,13 @@ namespace Sodium
             this.streamListener = Transaction.Apply(trans1 =>
                 this.stream.Listen(Node<T>.Null, trans1, (trans2, a) =>
                 {
-                    this.valueUpdate.Get().Match(
+                    this.valueUpdate.Match(
                         v => { },
                         () =>
                         {
                             trans2.Last(() =>
                             {
-                                this.valueUpdate.Get().Match(v => this.ValueProperty = v, () => { });
+                                this.valueUpdate.Match(v => this.ValueProperty = v, () => { });
                                 this.valueUpdate.Reset();
                             });
                         });
@@ -176,7 +176,7 @@ namespace Sodium
             LazySample s = new LazySample(this);
             trans.Last(() =>
             {
-                s.Value = this.valueUpdate.Get().Match(v => v, this.SampleNoTransaction);
+                s.Value = this.valueUpdate.Match(v => v, this.SampleNoTransaction);
                 s.HasValue = true;
                 s.Cell = null;
             });
