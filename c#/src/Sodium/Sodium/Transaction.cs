@@ -22,6 +22,7 @@ namespace Sodium
         private static readonly List<Action> OnStartHooks = new List<Action>();
         private static bool runningOnStartHooks;
         private readonly HashSet<Entry> entries = new HashSet<Entry>();
+        private readonly List<Action<Transaction>> sendQueue = new List<Action<Transaction>>();
         private readonly List<Action> lastQueue = new List<Action>();
         private readonly Dictionary<int, Action<Transaction>> postQueue = new Dictionary<int, Action<Transaction>>();
         internal readonly List<Node.Target> TargetsToActivate;
@@ -286,6 +287,11 @@ namespace Sodium
             return new Transaction(false);
         }
 
+        internal void Send(Action<Transaction> action)
+        {
+            this.sendQueue.Add(action);
+        }
+
         internal void Prioritized(Node node, Action<Transaction> action)
         {
             Entry e = new Entry(node, action);
@@ -370,6 +376,13 @@ namespace Sodium
 
         internal void Close(bool usingLocal)
         {
+            // ReSharper disable once ForCanBeConvertedToForeach
+            for (int i = 0; i < this.sendQueue.Count; i++)
+            {
+                this.sendQueue[i](this);
+            }
+            this.sendQueue.Clear();
+
             ReachedClose = true;
 
             foreach (Entry entry in this.entries)

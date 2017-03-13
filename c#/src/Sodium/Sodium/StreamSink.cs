@@ -18,7 +18,7 @@ namespace Sodium
 
         public StreamSink(Func<T, T, T> coalesce)
         {
-            this.coalescer = CoalesceHandler.CreateSafe(coalesce, this);
+            this.coalescer = CoalesceHandler.Create(coalesce, this);
         }
 
         /// <summary>
@@ -36,7 +36,8 @@ namespace Sodium
                 {
                     throw new InvalidOperationException("Send() may not be called inside a Sodium callback.");
                 }
-                this.coalescer(trans, a);
+
+                trans.Send(t => this.coalescer(t, a));
 
                 return Unit.Value;
             }, false);
