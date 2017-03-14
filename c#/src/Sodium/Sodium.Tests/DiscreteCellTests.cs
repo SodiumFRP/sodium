@@ -11,13 +11,13 @@ namespace Sodium.Tests
         [Test]
         public void TestLoop()
         {
-            Tuple<DiscreteCell<int>, DiscreteCellStreamSink<int>> result = Transaction.Run(() =>
+            ValueTuple<DiscreteCell<int>, DiscreteCellStreamSink<int>> result = Transaction.Run(() =>
              {
                  DiscreteCellLoop<int> loop = DiscreteCell.CreateLoop<int>();
                  DiscreteCell<int> cLocal = loop.Map(v => v * 5);
                  DiscreteCellStreamSink<int> sLocal = new DiscreteCellStreamSink<int>();
                  loop.Loop(sLocal.Hold(3));
-                 return Tuple.Create(cLocal, sLocal);
+                 return ValueTuple.Create(cLocal, sLocal);
              });
 
             DiscreteCell<int> c = result.Item1;

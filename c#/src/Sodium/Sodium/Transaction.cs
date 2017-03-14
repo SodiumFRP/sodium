@@ -12,7 +12,7 @@ namespace Sodium
     {
         private static readonly ThreadLocal<Transaction> LocalTransaction = new ThreadLocal<Transaction>();
 
-        internal bool IsConstructing;
+        internal readonly bool IsConstructing;
 
         // Coarse-grained lock that's held during the whole transaction.
         private static readonly object TransactionLock = new object();
@@ -100,6 +100,26 @@ namespace Sodium
         }
 
         /// <summary>
+        ///     Execute the specified action inside a single transaction.
+        ///     The action should only be used to construct FRP logic and may not close over any other FRP logic.
+        ///     This transaction will not block other transactions from running until it reaches the end of the transaction.
+        /// </summary>
+        /// <param name="f">The action to execute.</param>
+        /// <remarks>
+        ///     This method is most useful for creatung FRP logic which must be created within a Transaction (such as in a loop),
+        ///     but which should not block other transactions from running.  A use case for this is if the construction of FRP logic takes
+        ///     a significant amount of time, is being done asynchronously, and may be cancelled by another stream event.
+        /// </remarks>
+        public static void RunConstructVoid(Action action)
+        {
+            Apply(_ =>
+            {
+                action();
+                return Unit.Value;
+            }, true);
+        }
+
+        /// <summary>
         ///     Execute the specified function inside a single transaction.
         ///     The function should only be used to construct FRP logic and may not close over any other FRP logic.
         ///     This transaction will not block other transactions from running until it reaches the end of the transaction.
@@ -140,8 +160,6 @@ namespace Sodium
                         {
                             lock (TransactionLock)
                             {
-                                newTransaction.IsConstructing = false;
-
                                 RunStartHooks();
 
                                 foreach (Node.Target target in newTransaction.TargetsToActivate)
@@ -216,7 +234,7 @@ namespace Sodium
             }
 
             //if lock was not obtained, we still need to check if we have a local transaction
-            //if locak was obtained and we found a local transaction, we can skip this check
+            //if lock was obtained and we found a local transaction, we can skip this check
             if (localTransaction == null)
             {
                 localTransaction = LocalTransaction.Value;
@@ -295,7 +313,7 @@ namespace Sodium
         internal void Prioritized(Node node, Action<Transaction> action)
         {
             Entry e = new Entry(node, action);
-            if (this.ReachedClose)
+            lock (Node.NodeRanksLock)
             {
                 this.prioritizedQueue.Enqueue(e, node.Rank);
             }
@@ -367,9 +385,12 @@ namespace Sodium
             {
                 this.toRegen = false;
                 this.prioritizedQueue.Clear();
-                foreach (Entry e in this.entries)
+                lock (Node.NodeRanksLock)
                 {
-                    this.prioritizedQueue.Enqueue(e, e.Node.Rank);
+                    foreach (Entry e in this.entries)
+                    {
+                        this.prioritizedQueue.Enqueue(e, e.Node.Rank);
+                    }
                 }
             }
         }
@@ -383,13 +404,8 @@ namespace Sodium
             }
             this.sendQueue.Clear();
 
-            ReachedClose = true;
+            this.ReachedClose = true;
 
-            foreach (Entry entry in this.entries)
-            {
-                entry.Node.FixRank();
-            }
-            this.SetNeedsRegenerating();
             this.CheckRegen();
 
             while (true)
@@ -456,7 +472,7 @@ namespace Sodium
             }
         }
 
-        private class Entry : IComparable<Entry>
+        private class Entry
         {
             private static long nextSeq;
 
@@ -469,12 +485,6 @@ namespace Sodium
                 this.Node = node;
                 this.Action = action;
                 this.seq = nextSeq++;
-            }
-
-            public int CompareTo(Entry other)
-            {
-                int answer = this.Node.CompareTo(other.Node);
-                return answer != 0 ? answer : this.seq.CompareTo(other.seq);
             }
         }
     }

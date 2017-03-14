@@ -85,9 +85,14 @@ namespace Sodium
             {
                 Stream<T> @out = new Stream<T>();
                 Node<T> node = new Node<T>();
-                Node<T>.Target nodeTarget = node.Link(trans1, (t, v) => { }, @out.Node).Item2;
+                ValueTuple<bool, Node<T>.Target> r = node.Link(trans1, (t, v) => { }, @out.Node);
+                Node<T>.Target nodeTarget = r.Item2;
+                if (r.Item1)
+                {
+                    trans1.SetNeedsRegenerating();
+                }
                 Guid listenerId;
-                Action<Transaction, Tuple<T, Guid>, Guid> sendIfNodeTargetMatches = (t, v, i) =>
+                Action<Transaction, ValueTuple<T, Guid>, Guid> sendIfNodeTargetMatches = (t, v, i) =>
                 {
                     if (v.Item2 == i)
                     {
@@ -100,7 +105,7 @@ namespace Sodium
                     currentListener.Unlisten();
 
                     listenerId = Guid.NewGuid();
-                    currentListener.SetListener(sa.Map(v => Tuple.Create(v, listenerId)).Listen(@out.Node, trans2, (t, v) => sendIfNodeTargetMatches(t, v, listenerId), false));
+                    currentListener.SetListener(sa.Map(v => ValueTuple.Create(v, listenerId)).Listen(@out.Node, trans2, (t, v) => sendIfNodeTargetMatches(t, v, listenerId), false));
                 };
                 IListener l1 = csa.Value(trans1).Listen(node, trans1, h, false);
                 return @out.UnsafeAttachListener(l1).UnsafeAttachListener(currentListener).UnsafeAttachListener(Listener.Create(node, nodeTarget));
@@ -134,15 +139,15 @@ namespace Sodium
         {
             return Transaction.Apply(trans1 =>
             {
-                Lazy<T[]> values = new Lazy<T[]>(() => c.Select(cell => cell.SampleNoTransaction()).ToArray());
-                Stream<Action> @out = new Stream<Action>();
-                Lazy<TResult> initialValue = new Lazy<TResult>(() => f(values.Value.ToArray()));
+                Stream<Action<T[]>> @out = new Stream<Action<T[]>>();
+                Lazy<TResult> initialValue = new Lazy<TResult>(() => f(c.Select(cell => cell.SampleNoTransaction()).ToArray()));
                 IReadOnlyList<IListener> listeners = c.Select((cell, i) => cell.Updates(trans1).Listen(@out.Node, trans1,
-                    (trans2, v) => @out.Send(trans2, () => values.Value[i] = v), false)).ToArray();
+                    (trans2, v) => @out.Send(trans2, vv => vv[i] = v), false)).ToArray();
                 return @out.Coalesce(trans1, (x, y) => x + y).Map(a =>
                 {
-                    a();
-                    return f(values.Value.ToArray());
+                    T[] values = c.Select(cell => cell.SampleNoTransaction()).ToArray();
+                    a(values);
+                    return f(values);
                 }).UnsafeAttachListener(new CompositeListener(listeners)).HoldLazyInternal(initialValue);
             }, false);
         }

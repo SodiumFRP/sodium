@@ -220,14 +220,14 @@ namespace Sodium.Tests
         public void TestLoopStream()
         {
             StreamSink<int> sa = Stream.CreateSink<int>();
-            Tuple<StreamLoop<int>, Stream<int>, Stream<int>> s = Transaction.Run(() =>
-             {
-                 StreamLoop<int> sbLocal = Stream.CreateLoop<int>();
-                 Stream<int> scLocal = sa.Map(x => x % 10).Merge(sbLocal, (x, y) => x * y);
-                 Stream<int> sbOut = sa.Map(x => x / 10).Filter(x => x != 0);
-                 sbLocal.Loop(sbOut);
-                 return Tuple.Create(sbLocal, sbOut, scLocal);
-             });
+            ValueTuple<StreamLoop<int>, Stream<int>, Stream<int>> s = Transaction.Run(() =>
+            {
+                StreamLoop<int> sbLocal = Stream.CreateLoop<int>();
+                Stream<int> scLocal = sa.Map(x => x % 10).Merge(sbLocal, (x, y) => x * y);
+                Stream<int> sbOut = sa.Map(x => x / 10).Filter(x => x != 0);
+                sbLocal.Loop(sbOut);
+                return ValueTuple.Create(sbLocal, sbOut, scLocal);
+            });
             StreamLoop<int> sb = s.Item1;
             Stream<int> sb2 = s.Item2;
             Stream<int> sc = s.Item3;
@@ -251,13 +251,13 @@ namespace Sodium.Tests
         public void TestLoopCell()
         {
             DiscreteCellSink<int> ca = DiscreteCell.CreateSink(22);
-            Tuple<DiscreteCellLoop<int>, DiscreteCell<int>, DiscreteCell<int>> c = Transaction.Run(() =>
+            ValueTuple<DiscreteCellLoop<int>, DiscreteCell<int>, DiscreteCell<int>> c = Transaction.Run(() =>
             {
                 DiscreteCellLoop<int> cbLocal = DiscreteCell.CreateLoop<int>();
                 DiscreteCell<int> ccLocal = ca.Map(x => x % 10).Lift(cbLocal, (x, y) => x * y);
                 DiscreteCell<int> cbOut = ca.Map(x => x / 10);
                 cbLocal.Loop(cbOut);
-                return Tuple.Create(cbLocal, cbOut, ccLocal);
+                return ValueTuple.Create(cbLocal, cbOut, ccLocal);
             });
             DiscreteCellLoop<int> cb = c.Item1;
             DiscreteCell<int> cb2 = c.Item2;
@@ -371,10 +371,10 @@ namespace Sodium.Tests
         {
             StreamSink<int> sa = Stream.CreateSink<int>();
             List<int> @out = new List<int>();
-            Stream<int> sum = sa.Collect(Tuple.Create(100, true), (a, s) =>
+            Stream<int> sum = sa.Collect(ValueTuple.Create(100, true), (a, s) =>
             {
                 int outputValue = s.Item1 + (s.Item2 ? a * 3 : a);
-                return Tuple.Create(outputValue, Tuple.Create(outputValue, outputValue % 2 == 0));
+                return ValueTuple.Create(outputValue, ValueTuple.Create(outputValue, outputValue % 2 == 0));
             });
             IListener l = sum.Listen(@out.Add);
             sa.Send(5);
@@ -691,7 +691,7 @@ namespace Sodium.Tests
             DiscreteCellSink<int> a = DiscreteCell.CreateSink(1);
             DiscreteCell<int> a1 = a.Map(x => x + 1);
             DiscreteCell<int> a2 = a.Map(x => x * 2);
-            Tuple<List<int>, DiscreteCellLoop<int>, IListener> resultsAndCalled = Transaction.Run(() =>
+            ValueTuple<List<int>, DiscreteCellLoop<int>, IListener> resultsAndCalled = Transaction.Run(() =>
              {
                  DiscreteCell<int> result = a1.Lift(a2, (x, y) => x + y);
                  Stream<Unit> incrementStream = Operational.Value(result.Cell).MapTo(Unit.Value);
@@ -708,7 +708,7 @@ namespace Sodium.Tests
                          decrementStream.Send(Unit.Value);
                      });
                  });
-                 return Tuple.Create(r, calledLoop, l);
+                 return ValueTuple.Create(r, calledLoop, l);
              });
             // ReSharper disable once UnusedVariable
             List<int> results = resultsAndCalled.Item1;

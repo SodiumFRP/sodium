@@ -15,17 +15,17 @@ namespace Sodium.Tests.Performance
             Console.WriteLine("Press any key");
             Console.ReadKey();
 
-            ((Action) (() =>
-            {
-                List<DiscreteCell<bool>> cc = new List<DiscreteCell<bool>>();
-                for (int i = 0; i < 5000; i++)
-                {
-                    cc.Add(c.Map(v => !v));
-                }
+            ((Action)(() =>
+           {
+               List<DiscreteCell<bool>> cc = new List<DiscreteCell<bool>>();
+               for (int i = 0; i < 5000; i++)
+               {
+                   cc.Add(c.Map(v => !v));
+               }
 
-                Console.WriteLine("Press any key");
-                Console.ReadKey();
-            }))();
+               Console.WriteLine("Press any key");
+               Console.ReadKey();
+           }))();
 
             Console.WriteLine("Press any key");
             Console.ReadKey();
@@ -38,8 +38,8 @@ namespace Sodium.Tests.Performance
 
             //DiscreteCellSink<IReadOnlyList<SmallTestObject>> s = ((Func<DiscreteCellSink<IReadOnlyList<SmallTestObject>>>)(() =>
             //   new DiscreteCellSink<IReadOnlyList<SmallTestObject>>(new SmallTestObject[0])))();
-            DiscreteCellSink<IReadOnlyList<SmallTestObject>> s = ((Func<DiscreteCellSink<IReadOnlyList<SmallTestObject>>>) (() =>
-                new DiscreteCellSink<IReadOnlyList<SmallTestObject>>(Enumerable.Range(0, 500).Select(_ => new SmallTestObject()).ToArray())))();
+            DiscreteCellSink<IReadOnlyList<SmallTestObject>> s = ((Func<DiscreteCellSink<IReadOnlyList<SmallTestObject>>>)(() =>
+               new DiscreteCellSink<IReadOnlyList<SmallTestObject>>(Enumerable.Range(0, 500).Select(_ => new SmallTestObject()).ToArray())))();
             DiscreteCell<IReadOnlyList<bool>> s2 = s.Map(oo => oo.Select(o => o.S).Lift()).SwitchC();
 
             ((Action)(() =>
@@ -106,7 +106,7 @@ namespace Sodium.Tests.Performance
                                     : (oo.All(o => !o.IsSelected) ? (bool?)false : null)));
                 allSelectedCellLoop.Loop(allSelected.Cell);
 
-                return Tuple.Create(toggleAllSelectedStream, objectsAndIsSelected, selectAllStream, objects);
+                return ValueTuple.Create(toggleAllSelectedStream, objectsAndIsSelected, selectAllStream, objects);
             });
 
             // ReSharper disable once UnusedVariable
@@ -239,7 +239,7 @@ namespace Sodium.Tests.Performance
 
         private static void SendMore(DiscreteCellSink<IReadOnlyList<TestObject>> cellSink, Stream<bool> selectAllStream)
         {
-            cellSink.Send(Enumerable.Range(0, 20000).Select(n => new TestObject(n, selectAllStream)).ToArray());
+            Transaction.RunConstructVoid(() => cellSink.Send(Enumerable.Range(0, 20000).Select(n => new TestObject(n, selectAllStream)).ToArray()));
         }
 
         private class TestObject

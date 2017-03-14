@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 
 namespace Sodium
 {
@@ -152,7 +153,7 @@ namespace Sodium
         /// </remarks>
         public T Sample() => Transaction.Apply(trans =>
         {
-            if (trans.IsConstructing)
+            if (trans.IsConstructing && !trans.ReachedClose)
             {
                 throw new InvalidOperationException("A cell may not be sampled during the construction phase of Transaction.RunConstruct.");
             }
@@ -330,7 +331,12 @@ namespace Sodium
 
                 Node<TResult> outTarget = @out.Node;
                 Node<Unit> inTarget = new Node<Unit>();
-                Node<Unit>.Target nodeTarget = inTarget.Link(trans0, (t, v) => { }, outTarget).Item2;
+                ValueTuple<bool, Node<Unit>.Target> r = inTarget.Link(trans0, (t, v) => { }, outTarget);
+                Node<Unit>.Target nodeTarget = r.Item2;
+                if (r.Item1)
+                {
+                    trans0.SetNeedsRegenerating();
+                }
 
                 Func<T, TResult> f = null;
                 T a = default(T);

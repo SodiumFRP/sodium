@@ -31,7 +31,7 @@ namespace Sodium.Tests
 
             public TestObject(Stream<bool> s, Stream<int> s1, Stream<int> s2)
             {
-                var t = Transaction.Run(() =>
+                ValueTuple<DiscreteCell<int>, IListener> t = Transaction.Run(() =>
                 {
                     var cell = s.Map(v => v ? 1 : 0).OrElse(s1).OrElse(s2).Hold(0);
                     var cell2 = s1.Snapshot(cell.Cell, (left, right) => left + right).Filter(v => v > 5).OrElse(s.Snapshot(s1.Hold(0).Lift(s2.Hold(1), (left, right) => left + right).Cell).Map(v => v + 1)).Hold(3);
@@ -49,7 +49,7 @@ namespace Sodium.Tests
                         return cell.Updates.Listen(v => this.CurrentValue = v);
                     });
 
-                    return Tuple.Create(cell, l);
+                    return ValueTuple.Create(cell, l);
                 });
 
                 this.Cell = t.Item1;

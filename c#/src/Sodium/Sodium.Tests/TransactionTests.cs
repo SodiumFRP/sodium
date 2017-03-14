@@ -13,13 +13,13 @@ namespace Sodium.Tests
         public void RunConstruct()
         {
             List<int> @out = new List<int>();
-            Tuple<StreamSink<int>, IListener> t = Transaction.RunConstruct(() =>
+            ValueTuple<StreamSink<int>, IListener> t = Transaction.RunConstruct(() =>
             {
                 StreamSink<int> sink = Stream.CreateSink<int>();
                 sink.Send(4);
                 Stream<int> s = sink.Map(v => v * 2);
                 IListener l = s.Listen(@out.Add);
-                return Tuple.Create(sink, l);
+                return ValueTuple.Create(sink, l);
             });
             t.Item1.Send(5);
             t.Item1.Send(6);

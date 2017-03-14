@@ -383,12 +383,12 @@ namespace Sodium.Tests
         [Test]
         public void TestLiftFromSimultaneous()
         {
-            Tuple<DiscreteCellSink<int>, DiscreteCellSink<int>> t = Transaction.Run(() =>
+            ValueTuple<DiscreteCellSink<int>, DiscreteCellSink<int>> t = Transaction.Run(() =>
             {
                 DiscreteCellSink<int> localC1 = DiscreteCell.CreateSink(3);
                 DiscreteCellSink<int> localC2 = DiscreteCell.CreateSink(5);
                 localC2.Send(7);
-                return Tuple.Create(localC1, localC2);
+                return ValueTuple.Create(localC1, localC2);
             });
             DiscreteCellSink<int> c1 = t.Item1;
             DiscreteCellSink<int> c2 = t.Item2;
@@ -660,7 +660,7 @@ namespace Sodium.Tests
         [Test]
         public void TestLiftLoopList()
         {
-            Tuple<DiscreteCell<int>, IReadOnlyList<DiscreteCellSink<int>>> t = Transaction.Run(() =>
+            ValueTuple<DiscreteCell<int>, IReadOnlyList<DiscreteCellSink<int>>> t = Transaction.Run(() =>
             {
                 IReadOnlyList<DiscreteCellLoop<int>> cellLoops = Enumerable.Range(0, 50).Select(_ => DiscreteCell.CreateLoop<int>()).ToArray();
                 DiscreteCell<int> sum = cellLoops.Lift().Map(v => v.Sum());
@@ -669,7 +669,7 @@ namespace Sodium.Tests
                 {
                     cellLoops[i].Loop(cellSinks[i]);
                 }
-                return Tuple.Create(sum, cellSinks);
+                return ValueTuple.Create(sum, cellSinks);
             });
             List<int> @out = new List<int>();
             IListener l = t.Item1.Listen(@out.Add);
@@ -757,7 +757,7 @@ namespace Sodium.Tests
         [Test]
         public void SwitchCOnCellLoop()
         {
-            Tuple<DiscreteCell<int>, DiscreteCellSink<int>, DiscreteCellSink<int>, DiscreteCellSink<DiscreteCell<int>>> t = Transaction.Run(() =>
+            ValueTuple<DiscreteCell<int>, DiscreteCellSink<int>, DiscreteCellSink<int>, DiscreteCellSink<DiscreteCell<int>>> t = Transaction.Run(() =>
             {
                 DiscreteCellLoop<DiscreteCell<int>> loop = DiscreteCell.CreateLoop<DiscreteCell<int>>();
                 DiscreteCellSink<int> c1 = DiscreteCell.CreateSink(1);
@@ -765,7 +765,7 @@ namespace Sodium.Tests
                 DiscreteCell<int> c = loop.SwitchC();
                 DiscreteCellSink<DiscreteCell<int>> s = DiscreteCell.CreateSink(c1.AsDiscreteCell());
                 loop.Loop(s);
-                return Tuple.Create(c, c1, c2, s);
+                return ValueTuple.Create(c, c1, c2, s);
             });
 
             List<int> output = new List<int>();
@@ -792,7 +792,7 @@ namespace Sodium.Tests
         [Test]
         public void SwitchSOnCellLoop()
         {
-            Tuple<Stream<int>, StreamSink<int>, StreamSink<int>, CellSink<Stream<int>>> t = Transaction.Run(() =>
+            ValueTuple<Stream<int>, StreamSink<int>, StreamSink<int>, CellSink<Stream<int>>> t = Transaction.Run(() =>
             {
                 CellLoop<Stream<int>> loop = Cell.CreateLoop<Stream<int>>();
                 StreamSink<int> c1 = Stream.CreateSink<int>();
@@ -800,7 +800,7 @@ namespace Sodium.Tests
                 Stream<int> c = loop.SwitchS();
                 CellSink<Stream<int>> s = Cell.CreateSink(c1.AsStream());
                 loop.Loop(s);
-                return Tuple.Create(c, c1, c2, s);
+                return ValueTuple.Create(c, c1, c2, s);
             });
 
             List<int> output = new List<int>();
@@ -827,7 +827,7 @@ namespace Sodium.Tests
         [Test]
         public void SwitchEarlySOnCellLoop()
         {
-            Tuple<Stream<int>, StreamSink<int>, StreamSink<int>, CellSink<Stream<int>>> t = Transaction.Run(() =>
+            ValueTuple<Stream<int>, StreamSink<int>, StreamSink<int>, CellSink<Stream<int>>> t = Transaction.Run(() =>
             {
                 CellLoop<Stream<int>> loop = Cell.CreateLoop<Stream<int>>();
                 StreamSink<int> c1 = Stream.CreateSink<int>();
@@ -835,7 +835,7 @@ namespace Sodium.Tests
                 Stream<int> c = loop.SwitchEarlyS();
                 CellSink<Stream<int>> s = Cell.CreateSink(c1.AsStream());
                 loop.Loop(s);
-                return Tuple.Create(c, c1, c2, s);
+                return ValueTuple.Create(c, c1, c2, s);
             });
 
             List<int> output = new List<int>();
@@ -864,7 +864,7 @@ namespace Sodium.Tests
         {
             List<int> output = new List<int>();
 
-            Tuple<DiscreteCell<int>, DiscreteCellSink<int>, DiscreteCellSink<int>, DiscreteCellSink<DiscreteCell<int>>, IListener> t = Transaction.Run(() =>
+            ValueTuple<DiscreteCell<int>, DiscreteCellSink<int>, DiscreteCellSink<int>, DiscreteCellSink<DiscreteCell<int>>, IListener> t = Transaction.Run(() =>
              {
                  DiscreteCellSink<int> c1 = DiscreteCell.CreateSink(1);
                  DiscreteCellSink<int> c2 = DiscreteCell.CreateSink(11);
@@ -877,7 +877,7 @@ namespace Sodium.Tests
 
                  IListener l = c.Listen(output.Add);
 
-                 return Tuple.Create(c, c1, c2, s, l);
+                 return ValueTuple.Create(c, c1, c2, s, l);
              });
 
             t.Item2.Send(3);
@@ -903,7 +903,7 @@ namespace Sodium.Tests
         {
             List<int> output = new List<int>();
 
-            Tuple<Stream<int>, StreamSink<int>, StreamSink<int>, CellSink<Stream<int>>, IListener> t = Transaction.Run(() =>
+            ValueTuple<Stream<int>, StreamSink<int>, StreamSink<int>, CellSink<Stream<int>>, IListener> t = Transaction.Run(() =>
              {
                  StreamSink<int> c1 = Stream.CreateSink<int>();
                  StreamSink<int> c2 = Stream.CreateSink<int>();
@@ -916,7 +916,7 @@ namespace Sodium.Tests
 
                  IListener l = c.Listen(output.Add);
 
-                 return Tuple.Create(c, c1, c2, s, l);
+                 return ValueTuple.Create(c, c1, c2, s, l);
              });
 
             t.Item2.Send(3);
@@ -942,7 +942,7 @@ namespace Sodium.Tests
         {
             List<int> output = new List<int>();
 
-            Tuple<Stream<int>, StreamSink<int>, StreamSink<int>, CellSink<Stream<int>>, IListener> t = Transaction.Run(() =>
+            ValueTuple<Stream<int>, StreamSink<int>, StreamSink<int>, CellSink<Stream<int>>, IListener> t = Transaction.Run(() =>
              {
                  StreamSink<int> c1 = Stream.CreateSink<int>();
                  StreamSink<int> c2 = Stream.CreateSink<int>();
@@ -955,7 +955,7 @@ namespace Sodium.Tests
 
                  IListener l = c.Listen(output.Add);
 
-                 return Tuple.Create(c, c1, c2, s, l);
+                 return ValueTuple.Create(c, c1, c2, s, l);
              });
 
             t.Item2.Send(3);
