@@ -3,7 +3,7 @@
 namespace Sodium.Tests.Internal
 {
     [TestFixture]
-    public class NodeTester
+    public class NodeTests
     {
         [Test]
         public void TestNode()
@@ -16,7 +16,7 @@ namespace Sodium.Tests.Internal
                 trans.Prioritized(a, t => { });
                 return Unit.Value;
             }, false);
-            Assert.That(a, Is.LessThan(b));
+            Assert.That(a.Rank, Is.LessThan(b.Rank));
         }
     }
 }
