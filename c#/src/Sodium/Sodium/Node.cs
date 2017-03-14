@@ -22,34 +22,37 @@ namespace Sodium
             this.Rank = rank;
         }
 
-        protected static bool EnsureBiggerThan(Node node, long limit, HashSet<Node> visited, bool isLocked)
+        protected static bool EnsureBiggerThan(Node node, long limit)
         {
-            if (node.Rank > limit || visited.Contains(node))
+            if (node.Rank > limit)
             {
                 return false;
             }
 
-            visited.Add(node);
             node.Rank = limit + 1;
-            if (isLocked)
+            lock (ListenersLock)
             {
                 foreach (Node n in node.GetListenerNodesUnsafe())
                 {
-                    EnsureBiggerThan(n, node.Rank, visited, true);
-                }
-            }
-            else
-            {
-                lock (ListenersLock)
-                {
-                    foreach (Node n in node.GetListenerNodesUnsafe())
-                    {
-                        EnsureBiggerThan(n, node.Rank, visited, true);
-                    }
+                    EnsureBiggerThanRecursive(node, n, node.Rank);
                 }
             }
 
             return true;
+        }
+
+        private static void EnsureBiggerThanRecursive(Node originalNode, Node node, long limit)
+        {
+            if (node.Rank > limit || ReferenceEquals(originalNode, node))
+            {
+                return;
+            }
+
+            node.Rank = limit + 1;
+            foreach (Node n in node.GetListenerNodesUnsafe())
+            {
+                EnsureBiggerThanRecursive(originalNode, n, node.Rank);
+            }
         }
 
         protected abstract IEnumerable<Node> GetListenerNodesUnsafe();
@@ -97,7 +100,7 @@ namespace Sodium
             bool changed;
             lock (NodeRanksLock)
             {
-                changed = EnsureBiggerThan(target, this.Rank, new HashSet<Node>(), false);
+                changed = EnsureBiggerThan(target, this.Rank);
             }
             Target t = new Target(action, target, !trans.IsConstructing || trans.ReachedClose);
             if (trans.IsConstructing && !trans.ReachedClose)
