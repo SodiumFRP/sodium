@@ -92,7 +92,7 @@ namespace Sodium
         ///     A tuple containing whether or not changes were made to the node rank
         ///     and the <see cref="Target" /> object created for this link.
         /// </returns>
-        internal ValueTuple<bool, Target> Link(Transaction trans, Action<Transaction, T> action, Node target)
+        internal (bool changed, Target nodeTarget) Link(Transaction trans, Action<Transaction, T> action, Node target)
         {
             bool changed;
             lock (NodeRanksLock)
@@ -109,7 +109,7 @@ namespace Sodium
                 this.listeners.Add(t);
                 this.listenersCapacity++;
             }
-            return ValueTuple.Create(changed, t);
+            return (changed, t);
         }
 
         internal void Unlink(Target target)

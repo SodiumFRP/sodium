@@ -228,3 +228,6 @@ target/
 # IntelliJ Idea
 **/.idea/workspace.xml
 **/.idea/tasks.xml
+
+#Visual Studio 2017
+.vs/
