@@ -55,13 +55,12 @@ namespace Operational
 
             public void Run()
             {
-                CellSink<int> x = new CellSink<int>(0);
-                using (x.Listen(Console.WriteLine))
-                {
-                    x.Send(10);
-                    x.Send(20);
-                    x.Send(30);
-                }
+                DiscreteCellSink<int> x = new DiscreteCellSink<int>(0);
+                IListener l = x.Listen(Console.WriteLine);
+                x.Send(10);
+                x.Send(20);
+                x.Send(30);
+                l.Unlisten();
             }
         }
 
@@ -73,15 +72,14 @@ namespace Operational
             {
                 StreamSink<int> sX = new StreamSink<int>();
                 Stream<int> sXPlus1 = sX.Map(x => x + 1);
-                using (Transaction.Run(() =>
+                IListener l = Transaction.Run(() =>
                 {
                     sX.Send(1);
                     return sXPlus1.Listen(Console.WriteLine);
-                }))
-                {
-                    sX.Send(2);
-                    sX.Send(3);
-                }
+                });
+                sX.Send(2);
+                sX.Send(3);
+                l.Unlisten();
             }
         }
 
@@ -95,16 +93,15 @@ namespace Operational
                 StreamSink<int> sY = new StreamSink<int>();
                 // Should throw an exception because you're not allowed to use Send() inside
                 // a callback.
-                using (new ImmutableCompositeListener(new[]
+                IListener l = new CompositeListener(new[]
                 {
                     sX.Listen(x => sY.Send(x)),
                     sY.Listen(Console.WriteLine)
-                }))
-                {
-                    sX.Send(1);
-                    sX.Send(2);
-                    sX.Send(3);
-                }
+                });
+                sX.Send(1);
+                sX.Send(2);
+                sX.Send(3);
+                l.Unlisten();
             }
         }
 
@@ -115,11 +112,10 @@ namespace Operational
             public void Run()
             {
                 StreamSink<IReadOnlyList<int>> @as = new StreamSink<IReadOnlyList<int>>();
-                using (Sodium.Operational.Updates(Sodium.Operational.Split<int, IReadOnlyList<int>>(@as).Accum(0, (a, b) => a + b)).Listen(Console.WriteLine))
-                {
-                    @as.Send(new[] { 100, 15, 60 });
-                    @as.Send(new[] { 1, 5 });
-                }
+                IListener l = Sodium.Operational.Split<int, IReadOnlyList<int>>(@as).Accum(0, (a, b) => a + b).Updates.Listen(Console.WriteLine);
+                @as.Send(new[] { 100, 15, 60 });
+                @as.Send(new[] { 1, 5 });
+                l.Unlisten();
             }
         }
 
@@ -131,12 +127,11 @@ namespace Operational
             {
                 StreamSink<int> sX = new StreamSink<int>();
                 Stream<int> sXPlus1 = sX.Map(x => x + 1);
-                using (sXPlus1.Listen(Console.WriteLine))
-                {
-                    sX.Send(1);
-                    sX.Send(2);
-                    sX.Send(3);
-                }
+                IListener l = sXPlus1.Listen(Console.WriteLine);
+                sX.Send(1);
+                sX.Send(2);
+                sX.Send(3);
+                l.Unlisten();
             }
         }
 
@@ -146,13 +141,12 @@ namespace Operational
 
             public void Run()
             {
-                CellSink<int> x = new CellSink<int>(0);
+                DiscreteCellSink<int> x = new DiscreteCellSink<int>(0);
                 x.Send(1);
-                using (Sodium.Operational.Updates(x).Listen(Console.WriteLine))
-                {
-                    x.Send(2);
-                    x.Send(3);
-                }
+                IListener l = x.Updates.Listen(Console.WriteLine);
+                x.Send(2);
+                x.Send(3);
+                l.Unlisten();
             }
         }
 
@@ -162,13 +156,12 @@ namespace Operational
 
             public void Run()
             {
-                CellSink<int> x = new CellSink<int>(0);
+                DiscreteCellSink<int> x = new DiscreteCellSink<int>(0);
                 x.Send(1);
-                using (Sodium.Operational.Value(x).Listen(Console.WriteLine))
-                {
-                    x.Send(2);
-                    x.Send(3);
-                }
+                IListener l = x.Values.Listen(Console.WriteLine);
+                x.Send(2);
+                x.Send(3);
+                l.Unlisten();
             }
         }
 
@@ -180,11 +173,10 @@ namespace Operational
             {
                 CellSink<int> x = new CellSink<int>(0);
                 x.Send(1);
-                using (Transaction.Run(() => Sodium.Operational.Value(x).Listen(Console.WriteLine)))
-                {
-                    x.Send(2);
-                    x.Send(3);
-                }
+                IListener l = Transaction.Run(() => Sodium.Operational.Value(x).Listen(Console.WriteLine));
+                x.Send(2);
+                x.Send(3);
+                l.Unlisten();
             }
         }
     }

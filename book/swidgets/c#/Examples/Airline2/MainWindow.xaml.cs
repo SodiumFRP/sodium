@@ -15,7 +15,7 @@ namespace Airline2
             Rule r1 = new Rule((d, r) => d <= r);
             Rule r2 = new Rule((d, r) => !Unlucky(d) && !Unlucky(r));
             Rule rule = r1.And(r2);
-            Cell<bool> valid = rule.Reify(dep.SelectedDate, ret.SelectedDate);
+            DiscreteCell<bool> valid = rule.Reify(dep.SelectedDate, ret.SelectedDate);
             SButton ok = new SButton(valid) { Content = "OK", Width = 75 };
 
             this.DeparturePlaceholder.Children.Add(dep);
@@ -38,7 +38,7 @@ namespace Airline2
                 this.f = f;
             }
 
-            public Cell<bool> Reify(Cell<DateTime> dep, Cell<DateTime> ret) => dep.Lift(ret, this.f);
+            public DiscreteCell<bool> Reify(DiscreteCell<DateTime> dep, DiscreteCell<DateTime> ret) => dep.Lift(ret, this.f);
 
             public Rule And(Rule other) => new Rule((d, r) => this.f(d, r) && other.f(d, r));
         }

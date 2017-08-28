@@ -1,7 +1,7 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio 14
-VisualStudioVersion = 14.0.23107.0
+VisualStudioVersion = 14.0.25123.0
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sodium", "Sodium\Sodium.csproj", "{944A49E8-4F77-4193-91C9-6B9DDD1AB077}"
 EndProject
@@ -10,6 +10,8 @@ EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sodium.Tests.Memory", "Sodium.Tests.Memory\Sodium.Tests.Memory.csproj", "{26FAB81B-113A-4524-9D02-E229727CEA13}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sodium.Tests.Internal", "Sodium.Tests.Internal\Sodium.Tests.Internal.csproj", "{90E01B46-906D-4F50-88B3-A6D9C02FB4C3}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sodium.Tests.Performance", "Sodium.Tests.Performance\Sodium.Tests.Performance.csproj", "{29840928-79D0-46E1-A9A1-99F70EE48354}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -33,6 +35,10 @@ Global
 		{90E01B46-906D-4F50-88B3-A6D9C02FB4C3}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{90E01B46-906D-4F50-88B3-A6D9C02FB4C3}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{90E01B46-906D-4F50-88B3-A6D9C02FB4C3}.Release|Any CPU.Build.0 = Release|Any CPU
+		{29840928-79D0-46E1-A9A1-99F70EE48354}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{29840928-79D0-46E1-A9A1-99F70EE48354}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{29840928-79D0-46E1-A9A1-99F70EE48354}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{29840928-79D0-46E1-A9A1-99F70EE48354}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

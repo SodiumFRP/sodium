@@ -9,16 +9,129 @@ namespace Sodium.Tests.Memory
     public class StreamTests
     {
         [Test]
-        public void TestStreamGarbageCollection()
+        [Ignore("Requires dotMemory.")]
+        public void TestListen()
         {
+            int? listenerCount = null;
+            int? listenerCount2 = null;
+            int? listenerCount3 = null;
+            int? listenerCount4 = null;
             int? beforeListenerCount = null;
-            int? duringListenerCount = 3;
-            int? duringListenerCount2 = 3;
+            int? duringListenerCount = null;
+            int? duringStreamCount = null;
             int? afterListenerCount = null;
 
             ((Action)(() =>
             {
-                IDisposable listener = null;
+                StreamSink<int> s = new StreamSink<int>();
+
+                dotMemory.Check(memory => listenerCount = memory.GetObjects(where => where.Interface.Is<IListener>()).ObjectsCount);
+                dotMemory.Check(memory => beforeListenerCount = memory.GetObjects(where => where.Type.Is<Stream<string>>()).ObjectsCount);
+
+                Stream<string> m = s.Map(x => (x + 2).ToString());
+                List<string> @out = new List<string>();
+
+                ((Action)(() =>
+                {
+                    // ReSharper disable once UnusedVariable
+                    IListener listener = m.Listen(@out.Add);
+
+                    dotMemory.Check(memory => listenerCount2 = memory.GetObjects(where => where.Interface.Is<IListener>()).ObjectsCount);
+                    dotMemory.Check(memory => duringListenerCount = memory.GetObjects(where => where.Type.Is<Stream<string>>()).ObjectsCount);
+                }))();
+
+                dotMemory.Check(memory => listenerCount3 = memory.GetObjects(where => where.Interface.Is<IListener>()).ObjectsCount);
+                dotMemory.Check(memory => duringStreamCount = memory.GetObjects(where => where.Type.Is<Stream<string>>()).ObjectsCount);
+            }))();
+
+            dotMemory.Check(memory => listenerCount4 = memory.GetObjects(where => where.Interface.Is<IListener>()).ObjectsCount);
+            dotMemory.Check(memory => afterListenerCount = memory.GetObjects(where => where.Type.Is<Stream<string>>()).ObjectsCount);
+
+            Assert.IsNotNull(beforeListenerCount);
+            Assert.IsNotNull(listenerCount);
+            Assert.IsNotNull(listenerCount2);
+            Assert.IsNotNull(duringListenerCount);
+            Assert.IsNotNull(duringStreamCount);
+            Assert.IsNotNull(afterListenerCount);
+
+            Assert.AreEqual(listenerCount, listenerCount4, "BeforeL == AfterL");
+            Assert.IsTrue(listenerCount2 > listenerCount3, "DuringL > AfterL");
+            Assert.IsTrue(listenerCount2 > listenerCount, "DuringL > BeforeL");
+
+            Assert.AreEqual(beforeListenerCount, afterListenerCount, "Before == After");
+            Assert.AreEqual(duringListenerCount, duringStreamCount, "During == During2");
+            Assert.IsTrue(duringListenerCount > beforeListenerCount, "During > Before");
+        }
+
+        [Test]
+        [Ignore("Requires dotMemory.")]
+        public void TestUnlisten()
+        {
+            int? listenerCount = null;
+            int? listenerCount2 = null;
+            int? listenerCount3 = null;
+            int? listenerCount4 = null;
+            int? beforeListenerCount = null;
+            int? duringListenerCount = null;
+            int? duringStreamCount = null;
+            int? afterListenerCount = null;
+
+            ((Action)(() =>
+            {
+                StreamSink<int> s = new StreamSink<int>();
+
+                dotMemory.Check(memory => listenerCount = memory.GetObjects(where => where.Interface.Is<IListener>()).ObjectsCount);
+                dotMemory.Check(memory => beforeListenerCount = memory.GetObjects(where => where.Type.Is<Stream<string>>()).ObjectsCount);
+
+                Stream<string> m = s.Map(x => (x + 2).ToString());
+                List<string> @out = new List<string>();
+
+                ((Action)(() =>
+                {
+                    IListener listener = m.Listen(@out.Add);
+
+                    listener.Unlisten();
+
+                    dotMemory.Check(memory => listenerCount2 = memory.GetObjects(where => where.Interface.Is<IListener>()).ObjectsCount);
+                    dotMemory.Check(memory => duringListenerCount = memory.GetObjects(where => where.Type.Is<Stream<string>>()).ObjectsCount);
+                }))();
+
+                dotMemory.Check(memory => listenerCount3 = memory.GetObjects(where => where.Interface.Is<IListener>()).ObjectsCount);
+                dotMemory.Check(memory => duringStreamCount = memory.GetObjects(where => where.Type.Is<Stream<string>>()).ObjectsCount);
+            }))();
+
+            dotMemory.Check(memory => listenerCount4 = memory.GetObjects(where => where.Interface.Is<IListener>()).ObjectsCount);
+            dotMemory.Check(memory => afterListenerCount = memory.GetObjects(where => where.Type.Is<Stream<string>>()).ObjectsCount);
+
+            Assert.IsNotNull(beforeListenerCount);
+            Assert.IsNotNull(listenerCount);
+            Assert.IsNotNull(listenerCount2);
+            Assert.IsNotNull(duringListenerCount);
+            Assert.IsNotNull(duringStreamCount);
+            Assert.IsNotNull(afterListenerCount);
+
+            Assert.AreEqual(listenerCount, listenerCount4, "BeforeL == After2L");
+            Assert.IsTrue(listenerCount2 > listenerCount3, "DuringL > AfterL");
+            Assert.IsTrue(listenerCount2 > listenerCount, "DuringL > BeforeL");
+
+            Assert.AreEqual(beforeListenerCount, afterListenerCount, "Before == After");
+            Assert.AreEqual(duringListenerCount, duringStreamCount, "During == During2");
+            Assert.IsTrue(duringListenerCount > beforeListenerCount, "During > Before");
+        }
+
+        [Test]
+        [Ignore("Requires dotMemory.")]
+        public void TestStreamGarbageCollection()
+        {
+            int? beforeListenerCount = null;
+            int? duringListenerCount = null;
+            int? duringListenerCount2 = null;
+            int? afterListenerCount = null;
+
+            ((Action)(() =>
+            {
+                // ReSharper disable once NotAccessedVariable
+                IListener listener = null;
 
                 StreamSink<int> s = new StreamSink<int>();
 
@@ -35,10 +148,6 @@ namespace Sodium.Tests.Memory
                 }))();
 
                 dotMemory.Check(memory => duringListenerCount2 = memory.GetObjects(where => where.Type.Is<Stream<string>>()).ObjectsCount);
-
-                using (listener)
-                {
-                }
             }))();
 
             dotMemory.Check(memory => afterListenerCount = memory.GetObjects(where => where.Type.Is<Stream<string>>()).ObjectsCount);
@@ -54,6 +163,7 @@ namespace Sodium.Tests.Memory
         }
 
         [Test]
+        [Ignore("Requires dotMemory.")]
         public void TestMapMemory()
         {
             int? beforeListenerCount = null;
@@ -68,12 +178,11 @@ namespace Sodium.Tests.Memory
 
             ((Action)(() =>
             {
-                using (m.Listen(@out.Add))
-                {
-                    dotMemory.Check(memory => duringListenerCount = memory.GetObjects(where => where.Interface.Is<IListener>()).ObjectsCount);
-                    s.Send(5);
-                    s.Send(3);
-                }
+                IListener l = m.Listen(@out.Add);
+                dotMemory.Check(memory => duringListenerCount = memory.GetObjects(where => where.Interface.Is<IListener>()).ObjectsCount);
+                s.Send(5);
+                s.Send(3);
+                l.Unlisten();
                 CollectionAssert.AreEqual(new[] { "7", "5" }, @out);
             }))();
 
@@ -88,6 +197,7 @@ namespace Sodium.Tests.Memory
         }
 
         [Test]
+        [Ignore("Requires dotMemory.")]
         public void TestNestedMapGarbageCollection()
         {
             int? beforeStreamCount = null;
@@ -106,13 +216,12 @@ namespace Sodium.Tests.Memory
             ((Action)(() =>
             {
                 Stream<string> m = s.Map(x => x + 2).Map(x => 2 * x).Map(x => x + 1).Map(x => x.ToString());
-                using (m.Listen(@out.Add))
-                {
-                    dotMemory.Check(memory => duringStreamCount = memory.GetObjects(where => where.Type.Is<Stream<int>>()).ObjectsCount + memory.GetObjects(where => where.Type.Is<Stream<string>>()).ObjectsCount);
-                    dotMemory.Check(memory => duringListenerCount = memory.GetObjects(where => where.Interface.Is<IListener>()).ObjectsCount);
-                    s.Send(5);
-                    s.Send(3);
-                }
+                IListener l = m.Listen(@out.Add);
+                dotMemory.Check(memory => duringStreamCount = memory.GetObjects(where => where.Type.Is<Stream<int>>()).ObjectsCount + memory.GetObjects(where => where.Type.Is<Stream<string>>()).ObjectsCount);
+                dotMemory.Check(memory => duringListenerCount = memory.GetObjects(where => where.Interface.Is<IListener>()).ObjectsCount);
+                s.Send(5);
+                s.Send(3);
+                l.Unlisten();
                 CollectionAssert.AreEqual(new[] { "15", "11" }, @out);
             }))();
 
@@ -120,9 +229,9 @@ namespace Sodium.Tests.Memory
             dotMemory.Check(memory => afterListenerCount = memory.GetObjects(where => where.Interface.Is<IListener>()).ObjectsCount);
 
             // although all listeners and streams have been cleand up, the nodes will not be disconnected until the stream fires next
-            Assert.AreEqual(1, s.Node.GetListeners().Count);
+            Assert.AreEqual(1, s.Node.GetListenersCopy().Count);
             s.Send(1);
-            Assert.AreEqual(0, s.Node.GetListeners().Count);
+            Assert.AreEqual(0, s.Node.GetListenersCopy().Count);
 
             Assert.IsNotNull(beforeStreamCount);
             Assert.IsNotNull(beforeListenerCount);

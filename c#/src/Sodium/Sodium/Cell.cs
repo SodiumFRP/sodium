@@ -27,19 +27,52 @@ namespace Sodium
         /// <returns>A cell with a lazily computed constant value.</returns>
         public static Cell<T> ConstantLazy<T>(Lazy<T> value)
         {
-            return Stream.Never<T>().HoldLazy(value);
+            return Stream.Never<T>().HoldLazyInternal(value);
+        }
+
+        /// <summary>
+        ///     Creates a writable cell that uses the last value if <see cref="CellSink{T}.Send" /> is called more than once per transaction.
+        /// </summary>
+        /// <param name="initialValue">The initial value of the cell.</param>
+        /// <typeparam name="T">The type of values in the cell sink.</typeparam>
+        public static CellSink<T> CreateSink<T>(T initialValue)
+        {
+            return new CellSink<T>(initialValue);
+        }
+
+        /// <summary>
+        ///     Creates a writable cell that uses
+        ///     <param name="coalesce" />
+        ///     to combine values if <see cref="CellSink{T}.Send" /> is called more than once per transaction.
+        /// </summary>
+        /// <param name="initialValue">The initial value of the cell.</param>
+        /// <param name="coalesce">Function to combine values when <see cref="CellSink{T}.Send(T)" /> is called more than once per transaction.</param>
+        /// <typeparam name="T">The type of values in the cell sink.</typeparam>
+        public static CellSink<T> CreateSink<T>(T initialValue, Func<T, T, T> coalesce)
+        {
+            return new CellSink<T>(initialValue, coalesce);
+        }
+
+        /// <summary>
+        ///     Creates a <see cref="CellLoop{T}" />.  This must be called and looped from within the same transaction.
+        /// </summary>
+        /// <typeparam name="T">The type of values in the cell loop.</typeparam>
+        public static CellLoop<T> CreateLoop<T>()
+        {
+            return new CellLoop<T>();
         }
     }
 
     /// <summary>
     ///     Represents a value that changes over time.
     /// </summary>
-    /// <typeparam name="T">The type of the value.</typeparam>
-    public class Cell<T> : IDisposable
+    /// <typeparam name="T">The type of values in the cell.</typeparam>
+    public class Cell<T>
     {
         private readonly Stream<T> stream;
         private readonly MutableMaybeValue<T> valueUpdate = new MutableMaybeValue<T>();
-        private readonly IListener cleanup;
+        // ReSharper disable once NotAccessedField.Local - Used to keep object from being garbage collected
+        private readonly IListener streamListener;
 
         private T valueProperty;
 
@@ -59,25 +92,23 @@ namespace Sodium
             this.valueProperty = initialValue;
             this.UsingInitialValue = true;
 
-            this.cleanup = Transaction.Apply(trans1 =>
+            this.streamListener = Transaction.Apply(trans1 =>
                 this.stream.Listen(Node<T>.Null, trans1, (trans2, a) =>
                 {
-                    this.valueUpdate.Get().Match(
+                    this.valueUpdate.Match(
                         v => { },
                         () =>
                         {
                             trans2.Last(() =>
                             {
-                                this.valueUpdate.Get().Match(v => this.ValueProperty = v, () => { });
+                                this.valueUpdate.Match(v => this.ValueProperty = v, () => { });
                                 this.valueUpdate.Reset();
                             });
                         });
 
                     this.valueUpdate.Set(a);
-                }, false));
+                }, false), false);
         }
-
-        internal IKeepListenersAlive KeepListenersAlive => this.stream.KeepListenersAlive;
 
         protected T ValueProperty
         {
@@ -85,18 +116,16 @@ namespace Sodium
             set
             {
                 this.valueProperty = value;
-                this.UsingInitialValue = false;
+                this.NotUsingInitialValue();
             }
+        }
+
+        protected virtual void NotUsingInitialValue()
+        {
+            this.UsingInitialValue = false;
         }
 
         protected bool UsingInitialValue { get; private set; }
-
-        public virtual void Dispose()
-        {
-            using (this.cleanup)
-            {
-            }
-        }
 
         /// <summary>
         ///     Sample the current value of the cell.
@@ -122,7 +151,15 @@ namespace Sodium
         ///         current value and any updates without risk of missing any in between.
         ///     </para>
         /// </remarks>
-        public T Sample() => Transaction.Apply(trans => this.SampleNoTransaction());
+        public T Sample() => Transaction.Apply(trans =>
+        {
+            if (trans.IsConstructing && !trans.ReachedClose)
+            {
+                throw new InvalidOperationException("A cell may not be sampled during the construction phase of Transaction.RunConstruct.");
+            }
+
+            return this.SampleNoTransaction();
+        }, false);
 
         /// <summary>
         ///     Sample the current value of the cell lazily.
@@ -133,14 +170,14 @@ namespace Sodium
         ///     when the cell loop has not yet been looped.  It should be used in any code that is general
         ///     enough that it may be passed a <see cref="CellLoop{T}" />.  See <see cref="Stream{T}.HoldLazy(Lazy{T})" />.
         /// </remarks>
-        public Lazy<T> SampleLazy() => Transaction.Apply(this.SampleLazy);
+        public Lazy<T> SampleLazy() => Transaction.Apply(this.SampleLazy, false);
 
         internal Lazy<T> SampleLazy(Transaction trans)
         {
             LazySample s = new LazySample(this);
             trans.Last(() =>
             {
-                s.Value = this.valueUpdate.Get().Match(v => v, this.SampleNoTransaction);
+                s.Value = this.valueUpdate.Match(v => v, this.SampleNoTransaction);
                 s.HasValue = true;
                 s.Cell = null;
             });
@@ -156,53 +193,11 @@ namespace Sodium
 
         internal Stream<T> Value(Transaction trans1)
         {
-            Stream<Unit> spark = new Stream<Unit>(this.stream.KeepListenersAlive);
+            Stream<Unit> spark = new Stream<Unit>();
             trans1.Prioritized(spark.Node, trans2 => spark.Send(trans2, Unit.Value));
             Stream<T> initial = spark.Snapshot(this);
-            return initial.Merge(this.Updates(trans1), (left, right) => right);
+            return initial.Merge(trans1, this.Updates(trans1), (left, right) => right);
         }
-
-        /// <summary>
-        ///     Listen for updates to the value of this cell.  The returned <see cref="IListener" /> may be
-        ///     disposed to stop listening, or it will automatically stop listening when it is garbage collected.
-        ///     This is an OPERATIONAL mechanism for interfacing between the world of I/O and FRP.
-        /// </summary>
-        /// <param name="handler">The handler to execute for each value.</param>
-        /// <returns>An <see cref="IListener" /> which may be disposed to stop listening.</returns>
-        /// <remarks>
-        ///     <para>
-        ///         No assumptions should be made about what thread the handler is called on and it should not block.
-        ///         Neither <see cref="StreamSink{T}.Send" /> nor <see cref="CellSink{T}.Send" /> may be called from the
-        ///         handler.
-        ///         They will throw an exception because this method is not meant to be used to create new primitives.
-        ///     </para>
-        ///     <para>
-        ///         If the <see cref="IListener" /> is not disposed, it will continue to listen until this cell is either
-        ///         disposed or garbage collected or the listener itself is garbage collected.
-        ///     </para>
-        /// </remarks>
-        public IListener ListenWeak(Action<T> handler) => Transaction.Apply(trans => this.Value(trans).ListenWeak(handler));
-
-        /// <summary>
-        ///     Listen for updates to the value of this cell.  The returned <see cref="IListener" /> may be
-        ///     disposed to stop listening.  This is an OPERATIONAL mechanism for interfacing between
-        ///     the world of I/O and FRP.
-        /// </summary>
-        /// <param name="handler">The handler to execute for each value.</param>
-        /// <returns>An <see cref="IListener" /> which may be disposed to stop listening.</returns>
-        /// <remarks>
-        ///     <para>
-        ///         No assumptions should be made about what thread the handler is called on and it should not block.
-        ///         Neither <see cref="StreamSink{T}.Send" /> nor <see cref="CellSink{T}.Send" /> may be called from the
-        ///         handler.
-        ///         They will throw an exception because this method is not meant to be used to create new primitives.
-        ///     </para>
-        ///     <para>
-        ///         If the <see cref="IListener" /> is not disposed, it will continue to listen until this cell is either
-        ///         disposed or garbage collected.
-        ///     </para>
-        /// </remarks>
-        public IListener Listen(Action<T> handler) => Transaction.Apply(trans => this.Value(trans).Listen(handler));
 
         /// <summary>
         ///     Transform the cell values according to the supplied function, so the returned
@@ -215,7 +210,7 @@ namespace Sodium
         /// <returns>An cell which fires values transformed by <paramref name="f" /> for each value fired by this cell.</returns>
         public Cell<TResult> Map<TResult>(Func<T, TResult> f)
         {
-            return Transaction.Apply(trans => this.Updates(trans).Map(f).HoldLazy(trans, this.SampleLazy(trans).Map(f)));
+            return Transaction.Apply(trans => this.Updates(trans).Map(f).HoldLazyInternal(this.SampleLazy(trans).Map(f)), false);
         }
 
         //      /**
@@ -332,26 +327,31 @@ namespace Sodium
         {
             return Transaction.Apply(trans0 =>
             {
-                Stream<TResult> @out = new Stream<TResult>(this.stream.KeepListenersAlive);
+                Stream<TResult> @out = new Stream<TResult>();
 
                 Node<TResult> outTarget = @out.Node;
-                Node<Unit> inTarget = new Node<Unit>(0);
-                Node<Unit>.Target nodeTarget = inTarget.Link((t, v) => { }, outTarget).Item2;
+                Node<Unit> inTarget = new Node<Unit>();
+                ValueTuple<bool, Node<Unit>.Target> r = inTarget.Link(trans0, (t, v) => { }, outTarget);
+                Node<Unit>.Target nodeTarget = r.Item2;
+                if (r.Item1)
+                {
+                    trans0.SetNeedsRegenerating();
+                }
 
                 Func<T, TResult> f = null;
                 T a = default(T);
                 bool isASet = false;
                 // ReSharper disable once PossibleNullReferenceException
                 Action<Transaction> h = trans1 => trans1.Prioritized(@out.Node, trans2 => @out.Send(trans2, f(a)));
-                IListener l1 = bf.Value(trans0).Listen(inTarget, (trans1, ff) =>
+                IListener l1 = bf.Value(trans0).Listen(inTarget, trans0, (trans1, ff) =>
                 {
                     f = ff;
                     if (isASet)
                     {
                         h(trans1);
                     }
-                });
-                IListener l2 = this.Value(trans0).Listen(inTarget, (trans1, aa) =>
+                }, false);
+                IListener l2 = this.Value(trans0).Listen(inTarget, trans0, (trans1, aa) =>
                 {
                     a = aa;
                     isASet = true;
@@ -359,31 +359,10 @@ namespace Sodium
                     {
                         h(trans1);
                     }
-                });
-                return @out.LastFiringOnly(trans0).UnsafeAddCleanup(l1).UnsafeAddCleanup(l2).UnsafeAddCleanup(
-                    new Listener(() => inTarget.Unlink(nodeTarget))).HoldLazy(new Lazy<TResult>(() => bf.SampleNoTransaction()(this.SampleNoTransaction())));
-            });
-        }
-
-        /// <summary>
-        ///     Return a cell whose stream only receives events which have a different value than the previous event.
-        /// </summary>
-        /// <returns>A cell whose stream only receives events which have a different value than the previous event.</returns>
-        public Cell<T> Calm()
-        {
-            return this.Calm(EqualityComparer<T>.Default);
-        }
-
-        /// <summary>
-        ///     Return a cell whose stream only receives events which have a different value than the previous event.
-        /// </summary>
-        /// <param name="comparer">The equality comparer to use to determine if two items are equal.</param>
-        /// <returns>A cell whose stream only receives events which have a different value than the previous event.</returns>
-        public Cell<T> Calm(IEqualityComparer<T> comparer)
-        {
-            Lazy<T> initA = this.SampleLazy();
-            Lazy<IMaybe<T>> mInitA = initA.Map(Maybe.Just);
-            return Transaction.Apply(trans => this.Updates(trans).Calm(mInitA, comparer).HoldLazy(initA));
+                }, false);
+                return @out.LastFiringOnly(trans0).UnsafeAttachListener(l1).UnsafeAttachListener(l2).UnsafeAttachListener(
+                    Listener.Create(inTarget, nodeTarget)).HoldLazyInternal(new Lazy<TResult>(() => bf.SampleNoTransaction()(this.SampleNoTransaction())));
+            }, false);
         }
 
         private class LazySample

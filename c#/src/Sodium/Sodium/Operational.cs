@@ -19,7 +19,7 @@ namespace Sodium
         ///     The rule with this primitive is that you should only use it in functions
         ///     that do not allow the caller to detect the cell updates.
         /// </remarks>
-        public static Stream<T> Updates<T>(Cell<T> c) => Transaction.Apply(c.Updates);
+        public static Stream<T> Updates<T>(Cell<T> c) => Transaction.Apply(trans => c.Updates(trans).Coalesce(trans, (left, right) => right), false);
 
         /// <summary>
         ///     A stream that is guaranteed to fire once upon listening, giving the current
@@ -34,7 +34,7 @@ namespace Sodium
         ///     The rule with this primitive is that you should only use it in functions
         ///     that do not allow the caller to detect the cell updates.
         /// </remarks>
-        public static Stream<T> Value<T>(Cell<T> c) => Transaction.Apply(c.Value);
+        public static Stream<T> Value<T>(Cell<T> c) => Transaction.Apply(c.Value, false);
 
         /// <summary>
         ///     Push each stream event onto a new transaction guaranteed to come before the next externally
@@ -63,7 +63,7 @@ namespace Sodium
         /// <returns>A stream firing the split event firings.</returns>
         public static Stream<T> Split<T, TCollection>(Stream<TCollection> s) where TCollection : IEnumerable<T>
         {
-            Stream<T> @out = new Stream<T>(s.KeepListenersAlive);
+            Stream<T> @out = new Stream<T>();
             IListener l1 = s.Listen(@out.Node, (trans, aa) =>
             {
                 int childIx = 0;
@@ -73,7 +73,7 @@ namespace Sodium
                     childIx++;
                 }
             });
-            return @out.UnsafeAddCleanup(l1);
+            return @out.UnsafeAttachListener(l1);
         }
     }
 }

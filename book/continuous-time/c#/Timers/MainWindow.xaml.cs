@@ -22,7 +22,7 @@ namespace Timers
                     DateTime t0 = time.Sample();
                     IListener l1 = Periodic(sys, TimeSpan.FromSeconds(1)).Listen(t => this.AddMessage(t - t0 + " timer"));
                     IListener l2 = sMain.Snapshot(time).Listen(t => this.AddMessage(t - t0 + " main"));
-                    return new ImmutableCompositeListener(new[] { l1, l2 });
+                    return new CompositeListener(new[] { l1, l2 });
                 });
                 for (int i = 0; i < 5; i++)
                 {
@@ -36,7 +36,7 @@ namespace Timers
         private static Stream<DateTime> Periodic(ITimerSystem<DateTime> sys, TimeSpan period)
         {
             Cell<DateTime> time = sys.Time;
-            CellLoop<IMaybe<DateTime>> oAlarm = new CellLoop<IMaybe<DateTime>>();
+            DiscreteCellLoop<IMaybe<DateTime>> oAlarm = new DiscreteCellLoop<IMaybe<DateTime>>();
             Stream<DateTime> sAlarm = sys.At(oAlarm);
             oAlarm.Loop(sAlarm.Map(t => Maybe.Just(t + period)).Hold(Maybe.Just(time.Sample() + period)));
             return sAlarm;

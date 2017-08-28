@@ -15,16 +15,20 @@ public class NotifyPointOfSale {
     public final Stream<Unit> sBeep;
     public final Stream<Sale> sSaleComplete;
 
+    private enum Phase { IDLE, FILLING, POS };
+
     public NotifyPointOfSale(
              LifeCycle lc,
              Stream<Unit> sClearSale,
              Fill fi) {
-        Cell<Boolean> locked =
-                lc.sStart.map(u -> true).orElse(
-                    sClearSale.map(u -> false)
-                ).hold(false);
-        sStart = lc.sStart.gate(locked.map(l -> !l));
-        sEnd   = lc.sEnd.gate(locked);
+        CellLoop<Phase> phase = new CellLoop<>();
+        sStart = lc.sStart.gate(phase.map(p -> p == Phase.IDLE));
+        sEnd   = lc.sEnd.gate(phase.map(p -> p == Phase.FILLING));
+        phase.loop(
+                sStart.map(u -> Phase.FILLING)
+                .orElse(sEnd.map(u -> Phase.POS))
+                .orElse(sClearSale.map(u -> Phase.IDLE))
+                .hold(Phase.IDLE));
         fuelFlowing =
                 sStart.map(f -> Optional.of(f)).orElse(
                 sEnd.map(f -> Optional.empty())).hold(Optional.empty());

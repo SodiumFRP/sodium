@@ -7,12 +7,12 @@ namespace Fridgets
 {
     public class FrButton : Fridget
     {
-        public FrButton(Cell<string> label)
+        public FrButton(DiscreteCell<string> label)
             : this(label, new StreamLoop<Unit>())
         {
         }
 
-        private FrButton(Cell<string> label, StreamLoop<Unit> sClicked)
+        private FrButton(DiscreteCell<string> label, StreamLoop<Unit> sClicked)
             : base((size, sMouse, sKey, focus, idSupply) =>
             {
                 Stream<Unit> sPressed = sMouse.Snapshot(size,
@@ -37,10 +37,10 @@ namespace Fridgets
                                 : Maybe.Nothing<Unit>();
                         },
                         Maybe.Nothing<Unit>)).FilterMaybe();
-                Cell<bool> pressed = sPressed.Map(_ => true).OrElse(sReleased.Map(_ => false)).Hold(false);
+                DiscreteCell<bool> pressed = sPressed.MapTo(true).OrElse(sReleased.MapTo(false)).Hold(false);
                 sClicked.Loop(sReleased.Gate(pressed));
                 Typeface typeface = new Typeface(new FontFamily("Helvetica"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
-                Cell<Size> desiredSize = label.Map(l =>
+                DiscreteCell<Size> desiredSize = label.Map(l =>
                 {
                     Size labelSize = FontUtilities.MeasureString(l, typeface, 13);
                     return new Size(labelSize.Width + 14, labelSize.Height + 10);

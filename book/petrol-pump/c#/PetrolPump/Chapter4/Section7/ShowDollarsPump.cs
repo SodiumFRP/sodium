@@ -28,13 +28,13 @@ namespace PetrolPump.Chapter4.Section7
                 .SetPriceLcd3(PriceLcd(lc.FillActive, fi.Price, Fuel.Three, inputs));
         }
 
-        public static Cell<string> PriceLcd(
-            Cell<IMaybe<Fuel>> fillActive,
-            Cell<double> fillPrice,
+        public static DiscreteCell<string> PriceLcd(
+            DiscreteCell<IMaybe<Fuel>> fillActive,
+            DiscreteCell<double> fillPrice,
             Fuel fuel,
             Inputs inputs)
         {
-            Cell<double> idlePrice;
+            DiscreteCell<double> idlePrice;
             switch (fuel)
             {
                 case Fuel.One:

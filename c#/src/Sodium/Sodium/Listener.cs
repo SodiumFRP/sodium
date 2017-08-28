@@ -5,7 +5,7 @@ namespace Sodium
     /// <summary>
     ///     A listener which runs the specified action when it is disposed.
     /// </summary>
-    public class Listener : IListener
+    public class Listener : IListener, IWeakListener
     {
         private readonly Action unlisten;
 
@@ -13,19 +13,24 @@ namespace Sodium
         ///     Creates a listener which runs the specified action when it is disposed.
         /// </summary>
         /// <param name="unlisten">The action to run when this listener should stop listening.</param>
-        public Listener(Action unlisten)
+        private Listener(Action unlisten)
         {
             this.unlisten = unlisten;
         }
 
-        public void Dispose()
+        internal static IListener Create<T>(Node<T> node, Node<T>.Target target)
         {
-            this.Unlisten();
+            return new Listener(() => node.Unlink(target));
         }
 
         public void Unlisten()
         {
             this.unlisten();
+        }
+
+        public IWeakListener GetWeakListener()
+        {
+            return this;
         }
     }
 }

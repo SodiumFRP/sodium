@@ -3,15 +3,20 @@
 namespace Sodium.Tests.Internal
 {
     [TestFixture]
-    public class NodeTester
+    public class NodeTests
     {
         [Test]
         public void TestNode()
         {
-            Node<int> a = new Node<int>(0);
-            Node<int> b = new Node<int>(0);
-            a.Link((t, v) => { }, b);
-            Assert.That(a, Is.LessThan(b));
+            Node<int> a = new Node<int>();
+            Node<int> b = new Node<int>();
+            Transaction.Apply(trans =>
+            {
+                a.Link(trans, (t, v) => { }, b);
+                trans.Prioritized(a, t => { });
+                return Unit.Value;
+            }, false);
+            Assert.That(a.Rank, Is.LessThan(b.Rank));
         }
     }
 }

@@ -1,0 +1,6 @@
+FRAMEWORK: >= NET46
+NUGET
+  remote: https://api.nuget.org/v3/index.json
+    OptimizedPriorityQueue (4.0.3)
+    SodiumFRP (2.0.17)
+      OptimizedPriorityQueue (>= 4.0.3)

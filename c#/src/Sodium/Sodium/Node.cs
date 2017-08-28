@@ -4,51 +4,68 @@ using System.Linq;
 
 namespace Sodium
 {
-    internal abstract class Node : IComparable<Node>
+    internal abstract class Node
     {
         // Fine-grained lock that protects listeners and nodes.
         protected static readonly object ListenersLock = new object();
 
-        private long rank;
+        internal static readonly object NodeRanksLock = new object();
 
-        internal Node(long rank)
+        internal long Rank;
+
+        internal Node()
         {
-            this.rank = rank;
         }
 
-        internal long Rank => this.rank;
-
-        public int CompareTo(Node other)
+        protected Node(long rank)
         {
-            return this.rank.CompareTo(other.rank);
+            this.Rank = rank;
         }
 
-        protected static bool EnsureBiggerThan(Node node, long limit, HashSet<Node> visited)
+        protected static bool EnsureBiggerThan(Node node, long limit)
         {
-            if (node.rank > limit || visited.Contains(node))
+            if (node.Rank > limit)
             {
                 return false;
             }
 
-            visited.Add(node);
-            node.rank = limit + 1;
-            foreach (Node n in node.GetListenerNodesUnsafe())
+            node.Rank = limit + 1;
+            lock (ListenersLock)
             {
-                EnsureBiggerThan(n, node.rank, visited);
+                foreach (Node n in node.GetListenerNodesUnsafe())
+                {
+                    EnsureBiggerThanRecursive(node, n, node.Rank);
+                }
             }
 
             return true;
         }
 
+        private static void EnsureBiggerThanRecursive(Node originalNode, Node node, long limit)
+        {
+            if (node.Rank > limit || ReferenceEquals(originalNode, node))
+            {
+                return;
+            }
+
+            node.Rank = limit + 1;
+            foreach (Node n in node.GetListenerNodesUnsafe())
+            {
+                EnsureBiggerThanRecursive(originalNode, n, node.Rank);
+            }
+        }
+
         protected abstract IEnumerable<Node> GetListenerNodesUnsafe();
 
-        public class Target
+        public abstract class Target
         {
             public readonly Node Node;
+            public bool IsActivated;
 
-            public Target(Node node)
+            protected Target(Node node, bool isActivated)
             {
                 this.Node = node;
+                this.IsActivated = isActivated;
             }
         }
     }
@@ -57,9 +74,14 @@ namespace Sodium
     {
         public static readonly Node<T> Null = new Node<T>(long.MaxValue);
 
-        private readonly List<Target> listeners = new List<Target>();
+        private HashSet<Target> listeners = new HashSet<Target>();
+        private long listenersCapacity;
 
-        internal Node(long rank)
+        internal Node()
+        {
+        }
+
+        private Node(long rank)
             : base(rank)
         {
         }
@@ -73,15 +95,24 @@ namespace Sodium
         ///     A tuple containing whether or not changes were made to the node rank
         ///     and the <see cref="Target" /> object created for this link.
         /// </returns>
-        internal Tuple<bool, Target> Link(Action<Transaction, T> action, Node target)
+        internal ValueTuple<bool, Target> Link(Transaction trans, Action<Transaction, T> action, Node target)
         {
+            bool changed;
+            lock (NodeRanksLock)
+            {
+                changed = EnsureBiggerThan(target, this.Rank);
+            }
+            Target t = new Target(action, target, !trans.IsConstructing || trans.ReachedClose);
+            if (trans.IsConstructing && !trans.ReachedClose)
+            {
+                trans.TargetsToActivate.Add(t);
+            }
             lock (ListenersLock)
             {
-                bool changed = EnsureBiggerThan(target, this.Rank, new HashSet<Node>());
-                Target t = new Target(action, target);
                 this.listeners.Add(t);
-                return Tuple.Create(changed, t);
+                this.listenersCapacity++;
             }
+            return ValueTuple.Create(changed, t);
         }
 
         internal void Unlink(Target target)
@@ -93,14 +124,14 @@ namespace Sodium
         {
             public readonly WeakReference<Action<Transaction, T>> Action;
 
-            public Target(Action<Transaction, T> action, Node node)
-                : base(node)
+            public Target(Action<Transaction, T> action, Node node, bool isActivated)
+                : base(node, isActivated)
             {
                 this.Action = new WeakReference<Action<Transaction, T>>(action);
             }
         }
 
-        internal IReadOnlyList<Target> GetListeners()
+        internal IReadOnlyList<Target> GetListenersCopy()
         {
             lock (ListenersLock)
             {
@@ -113,15 +144,18 @@ namespace Sodium
             lock (ListenersLock)
             {
                 this.listeners.Remove(target);
+                // HashSet does not reclaim space after items are removed, so we will create a new one if we can reclaim a substantial amount of space
+                if (this.listenersCapacity > 100 && this.listeners.Count < this.listenersCapacity / 2)
+                {
+                    this.listeners = new HashSet<Target>(this.listeners);
+                    this.listenersCapacity = this.listeners.Count;
+                }
             }
         }
 
         protected override IEnumerable<Node> GetListenerNodesUnsafe()
         {
-            lock (ListenersLock)
-            {
-                return this.listeners.Select(l => l.Node);
-            }
+            return this.listeners.Select(l => l.Node);
         }
     }
 }

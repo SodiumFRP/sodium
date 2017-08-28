@@ -5,14 +5,11 @@ namespace Sodium
     /// <summary>
     ///     A forward reference for a <see cref="Cell{T}" /> equivalent to the <see cref="Cell{T}" /> that is referenced.
     /// </summary>
-    /// <typeparam name="T">The type of values in the cell.</typeparam>
+    /// <typeparam name="T">The type of values in the cell loop.</typeparam>
     public class CellLoop<T> : LazyCell<T>
     {
         private readonly StreamLoop<T> streamLoop;
 
-        /// <summary>
-        ///     Create a <see cref="CellLoop{T}" />.
-        /// </summary>
         public CellLoop()
             : this(new StreamLoop<T>())
         {
@@ -39,8 +36,14 @@ namespace Sodium
                 this.streamLoop.Loop(c.Updates(trans));
                 this.LazyInitialValue = c.SampleLazy(trans);
                 return Unit.Value;
-            });
+            }, false);
         }
+
+        /// <summary>
+        ///     Return a reference to this <see cref="CellLoop{T}" /> as a <see cref="Cell{T}" />.
+        /// </summary>
+        /// <returns>A reference to this <see cref="CellLoop{T}" /> as a <see cref="Cell{T}" />.</returns>
+        public Cell<T> AsCell() => this;
 
         internal override T SampleNoTransaction()
         {
@@ -50,13 +53,6 @@ namespace Sodium
             }
 
             return base.SampleNoTransaction();
-        }
-
-        public override void Dispose()
-        {
-            base.Dispose();
-
-            this.streamLoop.Dispose();
         }
     }
 }

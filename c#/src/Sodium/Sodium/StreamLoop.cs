@@ -5,15 +5,12 @@ namespace Sodium
     /// <summary>
     ///     A forward reference for a <see cref="Stream{T}" /> equivalent to the <see cref="Stream{T}" /> that is referenced.
     /// </summary>
-    /// <typeparam name="T">The type of values fired by the stream.</typeparam>
+    /// <typeparam name="T">The type of values fired by the stream loop.</typeparam>
     public class StreamLoop<T> : Stream<T>
     {
         private readonly object isAssignedLock = new object();
         private bool isAssigned;
 
-        /// <summary>
-        ///     Create an <see cref="StreamLoop{T}" />.  This must be called from within a transaction.
-        /// </summary>
         public StreamLoop()
         {
             if (!Transaction.HasCurrentTransaction())
@@ -55,9 +52,14 @@ namespace Sodium
 
             Transaction.RunVoid(() =>
             {
-                this.UnsafeAddCleanup(stream.Listen(this.Node, this.Send));
-                stream.KeepListenersAlive.Use(this.KeepListenersAlive);
+                this.UnsafeAttachListener(stream.Listen(this.Node, this.Send));
             });
         }
+
+        /// <summary>
+        ///     Return a reference to this <see cref="StreamLoop{T}" /> as a <see cref="Stream{T}" />.
+        /// </summary>
+        /// <returns>A reference to this <see cref="StreamLoop{T}" /> as a <see cref="Stream{T}" />.</returns>
+        public Stream<T> AsStream() => this;
     }
 }

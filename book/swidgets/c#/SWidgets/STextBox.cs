@@ -14,24 +14,24 @@ namespace SWidgets
         {
         }
 
-        public STextBox(string initText, Cell<bool> enabled)
+        public STextBox(string initText, DiscreteCell<bool> enabled)
             : this(Stream.Never<string>(), initText, enabled)
         {
         }
 
         public STextBox(Stream<string> setText, string initText)
-            : this(setText, initText, Cell.Constant(true))
+            : this(setText, initText, DiscreteCell.Constant(true))
         {
         }
 
-        public STextBox(Stream<string> setText, string initText, Cell<bool> enabled)
+        public STextBox(Stream<string> setText, string initText, DiscreteCell<bool> enabled)
         {
             base.Text = initText;
 
             List<IListener> listeners = new List<IListener>();
 
             StreamSink<int> sDecrement = new StreamSink<int>();
-            Cell<bool> allow = setText.Map(_ => 1).OrElse(sDecrement).Accum(0, (b, d) => b + d).Map(b => b == 0);
+            DiscreteCell<bool> allow = setText.Map(_ => 1).OrElse(sDecrement).Accum(0, (b, d) => b + d).Map(b => b == 0);
 
             StreamSink<string> sUserChanges = new StreamSink<string>();
             this.SUserChanges = sUserChanges;
@@ -46,7 +46,7 @@ namespace SWidgets
             this.TextChanged += textChangedEventHandler;
 
             // Set the initial value at the end of the transaction so it works with CellLoops.
-            Transaction.Post(() => this.Dispatcher.InvokeIfNecessary(() => this.IsEnabled = enabled.Sample()));
+            Transaction.Post(() => this.Dispatcher.InvokeIfNecessary(() => this.IsEnabled = enabled.Cell.Sample()));
 
             listeners.Add(setText.Listen(t =>
             {
@@ -59,15 +59,13 @@ namespace SWidgets
                 });
             }));
 
-            listeners.Add(Operational.Updates(enabled).Listen(e => this.Dispatcher.InvokeIfNecessary(() => this.IsEnabled = e)));
+            listeners.Add(enabled.Updates.Listen(e => this.Dispatcher.InvokeIfNecessary(() => this.IsEnabled = e)));
 
             this.disposeListeners = () =>
             {
                 foreach (IListener l in listeners)
                 {
-                    using (l)
-                    {
-                    }
+                    l.Unlisten();
                 }
             };
         }
@@ -77,7 +75,7 @@ namespace SWidgets
             this.disposeListeners();
         }
 
-        public new Cell<string> Text { get; }
+        public new DiscreteCell<string> Text { get; }
         public Stream<string> SUserChanges { get; }
     }
 }

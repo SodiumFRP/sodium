@@ -61,9 +61,12 @@ namespace Tasks
                 Console.WriteLine("*** test 1");
                 {
                     StreamSink<string> s1 = new StreamSink<string>();
-                    Task<string> t1 = s1.ListenOnce();
+                    TaskWithListener t1 = s1.ListenOnceAsync(t => t.ContinueWith(t2 => Console.WriteLine(t2.Result), TaskContinuationOptions.ExecuteSynchronously));
                     s1.Send("Early");
-                    Console.WriteLine(await t1);
+                    await Task.Delay(500);
+                    Console.WriteLine("Before await");
+                    await t1;
+                    Console.WriteLine("After await");
                 }
 
                 Console.WriteLine();
@@ -71,9 +74,12 @@ namespace Tasks
                 Console.WriteLine("*** test 2");
                 {
                     StreamSink<string> s1 = new StreamSink<string>();
-                    Task t1 = s1.ListenOnce().ContinueWith(t => Console.WriteLine(t.Result), TaskContinuationOptions.ExecuteSynchronously);
+                    TaskWithListener<string> t1 = s1.ListenOnceAsync();
                     s1.Send("Late");
-                    await t1;
+                    await Task.Delay(500);
+                    Console.WriteLine("Before await");
+                    Console.WriteLine(await t1);
+                    Console.WriteLine("After await");
                 }
             }
         }
@@ -87,7 +93,7 @@ namespace Tasks
                 Console.WriteLine("*** test");
                 {
                     StreamSink<string> s1 = new StreamSink<string>();
-                    Task<string> t1 = s1.ListenOnce();
+                    TaskWithListener<string> t1 = s1.ListenOnceAsync();
 
                     new Thread(() =>
                     {
@@ -109,13 +115,11 @@ namespace Tasks
                 {
                     StreamSink<string> sa = new StreamSink<string>();
                     StreamSink<string> sb = new StreamSink<string>();
-                    Task<string> ta = sa.ListenOnce();
-                    Task<string> tb = sb.ListenOnce();
-                    Func<Task<string>> t = async () => await ta + " " + await tb;
+                    TaskWithListener<string> ta = sa.ListenOnceAsync();
+                    TaskWithListener<string> tb = sb.ListenOnceAsync();
                     sa.Send("Hello");
-                    Func<Task> task = () => t().ContinueWith(t1 => Console.WriteLine(t1.Result), TaskContinuationOptions.ExecuteSynchronously);
                     sb.Send("World");
-                    await task();
+                    Console.WriteLine(await ta + " " + await tb);
                 }
 
                 Console.WriteLine();
@@ -124,16 +128,14 @@ namespace Tasks
                 {
                     StreamSink<string> sa = new StreamSink<string>();
                     StreamSink<string> sb = new StreamSink<string>();
-                    Task<string> ta = sa.ListenOnce();
-                    Task<string> tb = sb.ListenOnce();
-                    Func<Task<string>> t = async () => await ta + " " + await tb;
-                    Func<Task> task = () => t().ContinueWith(t1 => Console.WriteLine(t1.Result), TaskContinuationOptions.ExecuteSynchronously);
+                    TaskWithListener<string> ta = sa.ListenOnceAsync();
+                    TaskWithListener<string> tb = sb.ListenOnceAsync();
                     Transaction.RunVoid(() =>
                     {
                         sa.Send("Hello");
                         sb.Send("World");
                     });
-                    await task();
+                    Console.WriteLine(await ta + " " + await tb);
                 }
             }
         }
@@ -148,8 +150,8 @@ namespace Tasks
                 {
                     StreamSink<string> sa = new StreamSink<string>();
                     StreamSink<string> sb = new StreamSink<string>();
-                    Task<string> ta = sa.ListenOnce();
-                    Task<string> tb = sb.ListenOnce();
+                    TaskWithListener<string> ta = sa.ListenOnceAsync();
+                    TaskWithListener<string> tb = sb.ListenOnceAsync();
 
                     new Thread(() =>
                     {
@@ -166,8 +168,8 @@ namespace Tasks
                 {
                     StreamSink<string> sa = new StreamSink<string>();
                     StreamSink<string> sb = new StreamSink<string>();
-                    Task<string> ta = sa.ListenOnce();
-                    Task<string> tb = sb.ListenOnce();
+                    TaskWithListener<string> ta = sa.ListenOnceAsync();
+                    TaskWithListener<string> tb = sb.ListenOnceAsync();
 
                     new Thread(() =>
                     {

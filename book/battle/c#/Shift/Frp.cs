@@ -17,12 +17,12 @@ namespace Shift
         {
             this.listener = Transaction.Run(() =>
             {
-                Cell<IMaybe<DragInfo>> dragInfo =
+                DiscreteCell<IMaybe<DragInfo>> dragInfo =
                     this.sMouseDown.Map(me => Maybe.Just(new DragInfo(me, Canvas.GetLeft(me.Element.Polygon).ZeroIfNaN(), Canvas.GetTop(me.Element.Polygon).ZeroIfNaN())))
                         .OrElse(this.sMouseUp.Map(_ => Maybe.Nothing<DragInfo>())).Hold(Maybe.Nothing<DragInfo>());
-                Cell<bool> axisLock = this.sShift.Hold(false);
-                Stream<MouseEvt> mouseMoveWhileDragging = dragInfo.Map(md => md.Match(d => this.sMouseMove, Stream.Never<MouseEvt>)).SwitchS();
-                IListener listener1 = Operational.Value(dragInfo).FilterMaybe().Listen(d => addMessage("FRP dragging " + d.Me.Element.Name));
+                DiscreteCell<bool> axisLock = this.sShift.Hold(false);
+                Stream<MouseEvt> mouseMoveWhileDragging = dragInfo.Cell.Map(md => md.Match(d => this.sMouseMove, Stream.Never<MouseEvt>)).SwitchS();
+                IListener listener1 = dragInfo.Updates.FilterMaybe().Listen(d => addMessage("FRP dragging " + d.Me.Element.Name));
                 IListener listener2 = mouseMoveWhileDragging.Snapshot(dragInfo, axisLock, (me, md, a) => md.Match(
                     d => Maybe.Just(new Reposition(d, me, a)),
                     Maybe.Nothing<Reposition>)).FilterMaybe().Listen(p =>
@@ -30,7 +30,7 @@ namespace Shift
                         Canvas.SetLeft(p.Polygon, p.Left);
                         Canvas.SetTop(p.Polygon, p.Top);
                     });
-                return new ImmutableCompositeListener(new[] { listener1, listener2 });
+                return new CompositeListener(new[] { listener1, listener2 });
             });
         }
 
@@ -41,9 +41,7 @@ namespace Shift
 
         public void Dispose()
         {
-            using (this.listener)
-            {
-            }
+            this.listener.Unlisten();
         }
     }
 }

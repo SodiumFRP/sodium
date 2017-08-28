@@ -59,9 +59,9 @@ tests = test [
         let s = Value c [0]
         assertEqual "s" [([0],'b'),([1],'c'),([3],'d')] (occs s),
     "Split" ~: do
-        let s1 = MkStream [([0], ['a', 'b']), ([1],['c']),([1],['d','e'])]
+        let s1 = MkStream [([0], ['a', 'b']), ([1],['c'])]
         let s2 = Split s1
-        assertEqual "s2" [([0,0],'a'),([0,1],'b'),([1,0],'c'),([1,1],'d'),([1,2],'e')] (occs s2),
+        assertEqual "s2" [([0,0],'a'),([0,1],'b'),([1,0],'c')] (occs s2),
     "Constant" ~: do
         let c = Constant 'a'
         assertEqual "c" ('a',[]) (steps c),

@@ -67,78 +67,7 @@ public class TestCell extends TestCase {
         assertEquals(Arrays.asList(12), out);
     }
 
-    public void testValueThenMap() {
-        CellSink<Integer> b = new CellSink<Integer>(9);
-        List<Integer> out = new ArrayList<Integer>();
-        Listener l = Transaction.run(
-                () -> Operational.value(b).map(x -> x + 100).listen(x -> {
-                    out.add(x);
-                })
-        );
-        b.send(2);
-        b.send(7);
-        l.unlisten();
-        assertEquals(Arrays.asList(109, 102, 107), out);
-    }
-
-    public void testValuesThenMerge() {
-        CellSink<Integer> bi = new CellSink<Integer>(9);
-        CellSink<Integer> bj = new CellSink<Integer>(2);
-        List<Integer> out = new ArrayList<Integer>();
-        Listener l = Transaction.run(
-                () -> Operational.value(bi).merge(Operational.value(bj), (x, y) -> x + y)
-                        .listen(x -> {
-                            out.add(x);
-                        })
-        );
-        bi.send(1);
-        bj.send(4);
-        l.unlisten();
-        assertEquals(Arrays.asList(11, 1, 4), out);
-    }
-
-    public void testValuesThenFilter() {
-        CellSink<Integer> b = new CellSink<Integer>(9);
-        List<Integer> out = new ArrayList<Integer>();
-        Listener l = Transaction.run(
-                () -> Operational.value(b).filter(a -> true).listen(x -> {
-                    out.add(x);
-                })
-        );
-        b.send(2);
-        b.send(7);
-        l.unlisten();
-        assertEquals(Arrays.asList(9, 2, 7), out);
-    }
-
-    public void testValuesThenOnce() {
-        CellSink<Integer> b = new CellSink<Integer>(9);
-        List<Integer> out = new ArrayList<Integer>();
-        Listener l = Transaction.run(
-                () -> Operational.value(b).once().listen(x -> {
-                    out.add(x);
-                })
-        );
-        b.send(2);
-        b.send(7);
-        l.unlisten();
-        assertEquals(Arrays.asList(9), out);
-    }
-
-    public void testValuesLateListen() {
-        CellSink<Integer> b = new CellSink<Integer>(9);
-        List<Integer> out = new ArrayList<Integer>();
-        Stream<Integer> value = Operational.value(b);
-        b.send(8);
-        Listener l = value.listen(x -> {
-            out.add(x);
-        });
-        b.send(2);
-        l.unlisten();
-        assertEquals(Arrays.asList(2), out);
-    }
-
-    public void testMapB() {
+    public void testMapC() {
         CellSink<Integer> b = new CellSink<Integer>(6);
         List<String> out = new ArrayList<String>();
         Listener l = b.map(x -> x.toString())
@@ -150,7 +79,7 @@ public class TestCell extends TestCase {
         assertEquals(Arrays.asList("6", "8"), out);
     }
 
-    public void testMapBLateListen() {
+    public void testMapCLateListen() {
         CellSink<Integer> b = new CellSink<Integer>(6);
         List<String> out = new ArrayList<String>();
         Cell<String> bm = b.map(x -> x.toString());
@@ -161,16 +90,6 @@ public class TestCell extends TestCase {
         b.send(8);
         l.unlisten();
         assertEquals(Arrays.asList("2", "8"), out);
-    }
-
-    public void testTransaction() {
-        final boolean[] calledBack = new boolean[1];
-        Transaction.run((Transaction trans) -> {
-            trans.prioritized(Node.NULL, trans2 -> {
-                calledBack[0] = true;
-            });
-        });
-        assertEquals(true, calledBack[0]);
     }
 
     public void testApply() {
@@ -362,11 +281,11 @@ public class TestCell extends TestCase {
         assertEquals(Arrays.asList(0, 1, 2, 3, 4, 5, 6, 7, 8, 9), out);
     }
 
-    public void testLoopBehavior() {
-        final StreamSink<Integer> ea = new StreamSink();
+    public void testLoopCell() {
+        final StreamSink<Integer> sa = new StreamSink();
         Cell<Integer> sum_out = Transaction.<Cell<Integer>>run(() -> {
             CellLoop<Integer> sum = new CellLoop<Integer>();
-            Cell<Integer> sum_out_ = ea.snapshot(sum, (x, y) -> x + y).hold(0);
+            Cell<Integer> sum_out_ = sa.snapshot(sum, (x, y) -> x + y).hold(0);
             sum.loop(sum_out_);
             return sum_out_;
         });
@@ -374,26 +293,26 @@ public class TestCell extends TestCase {
         Listener l = sum_out.listen(x -> {
             out.add(x);
         });
-        ea.send(2);
-        ea.send(3);
-        ea.send(1);
+        sa.send(2);
+        sa.send(3);
+        sa.send(1);
         l.unlisten();
         assertEquals(Arrays.asList(0, 2, 5, 6), out);
         assertEquals((int) 6, (int) sum_out.sample());
     }
 
     public void testAccum() {
-        StreamSink<Integer> ea = new StreamSink();
+        StreamSink<Integer> sa = new StreamSink();
         List<Integer> out = new ArrayList();
-        Cell<Integer> sum = ea.accum(100, (a, s) -> a + s);
+        Cell<Integer> sum = sa.accum(100, (a, s) -> a + s);
         Listener l = sum.listen((x) -> {
             out.add(x);
         });
-        ea.send(5);
-        ea.send(7);
-        ea.send(1);
-        ea.send(2);
-        ea.send(3);
+        sa.send(5);
+        sa.send(7);
+        sa.send(1);
+        sa.send(2);
+        sa.send(3);
         l.unlisten();
         assertEquals(Arrays.asList(100, 105, 112, 113, 115, 118), out);
     }

@@ -1,11 +1,14 @@
 package sodium
 
-import java.util.ArrayList
-import java.util.Arrays
+
+
+
 
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Test
+
+import scala.collection.mutable.ListBuffer
 
 class CellTester {
   import CellTester._
@@ -18,19 +21,19 @@ class CellTester {
   @Test
   def testHold() {
     val e = new StreamSink[Int]()
-    val out = new ArrayList[Int]()
-    val l = e.hold(0).updates().listen(out.add(_))
+    val out = new ListBuffer[Int]()
+    val l = e.hold(0).updates().listen(out.+=(_))
     List(2, 9).foreach(e.send(_))
     l.unlisten()
-    assertEquals(Arrays.asList(2, 9), out)
+    assertEquals(List(2, 9), out)
   }
 
   @Test
   def testSnapshot() {
     val b = new CellSink(0)
     val trigger = new StreamSink[Long]()
-    val out = new ArrayList[String]()
-    val l = trigger.snapshot[Int, String](b, (x, y) => x + " " + y).listen(out.add(_))
+    val out = new ListBuffer[String]()
+    val l = trigger.snapshot[Int, String](b, (x, y) => x + " " + y).listen(out.+=(_))
     trigger.send(100L)
     b.send(2)
     trigger.send(200L)
@@ -38,179 +41,179 @@ class CellTester {
     b.send(1)
     trigger.send(300L)
     l.unlisten()
-    assertEquals(Arrays.asList("100 0", "200 2", "300 1"), out)
+    assertEquals(List("100 0", "200 2", "300 1"), out)
   }
 
   @Test
   def testValues() {
     val b = new CellSink(9)
-    val out = new ArrayList[Int]()
-    val l = b.value().listen(out.add(_))
+    val out = new ListBuffer[Int]()
+    val l = b.value().listen(out.+=(_))
     List(2, 7).foreach(b.send(_))
     l.unlisten()
-    assertEquals(Arrays.asList(9, 2, 7), out)
+    assertEquals(List(9, 2, 7), out)
   }
 
   @Test
   def testConstantBehavior() {
     val b = new Cell(12)
-    val out = new ArrayList[Int]()
-    val l = b.value().listen(out.add(_))
+    val out = new ListBuffer[Int]()
+    val l = b.value().listen(out.+=(_))
     l.unlisten()
-    assertEquals(Arrays.asList(12), out)
+    assertEquals(List(12), out)
   }
 
   @Test
   def testValuesThenMap() {
     val b = new CellSink(9)
-    val out = new ArrayList[Int]()
-    val l = b.value().map(x => x + 100).listen(out.add(_))
+    val out = new ListBuffer[Int]()
+    val l = b.value().map(x => x + 100).listen(out.+=(_))
     List(2, 7).foreach(b.send(_))
     l.unlisten()
-    assertEquals(Arrays.asList(109, 102, 107), out)
+    assertEquals(List(109, 102, 107), out)
   }
 
   @Test
   def testValuesTwiceThenMap() {
     val b = new CellSink(9)
-    val out = new ArrayList[Int]()
-    val l = doubleUp(b.value()).map(x => x + 100).listen(out.add(_))
+    val out = new ListBuffer[Int]()
+    val l = doubleUp(b.value()).map(x => x + 100).listen(out.+=(_))
     List(2, 7).foreach(b.send(_))
     l.unlisten()
-    assertEquals(Arrays.asList(109, 109, 102, 102, 107, 107), out)
+    assertEquals(List(109, 109, 102, 102, 107, 107), out)
   }
 
   @Test
   def testValuesThenCoalesce() {
     val b = new CellSink(9)
-    val out = new ArrayList[Int]()
-    val l = b.value().coalesce((fst, snd) => snd).listen(out.add(_))
+    val out = new ListBuffer[Int]()
+    val l = b.value().coalesce((fst, snd) => snd).listen(out.+=(_))
     List(2, 7).foreach(b.send(_))
     l.unlisten()
-    assertEquals(Arrays.asList(9, 2, 7), out)
+    assertEquals(List(9, 2, 7), out)
   }
 
   @Test
   def testValuesTwiceThenCoalesce() {
     val b = new CellSink(9)
-    val out = new ArrayList[Int]()
-    val l = doubleUp(b.value()).coalesce((fst, snd) => fst + snd).listen(out.add(_))
+    val out = new ListBuffer[Int]()
+    val l = doubleUp(b.value()).coalesce((fst, snd) => fst + snd).listen(out.+=(_))
     List(2, 7).foreach(b.send(_))
     l.unlisten()
-    assertEquals(Arrays.asList(18, 4, 14), out)
+    assertEquals(List(18, 4, 14), out)
   }
 
   @Test
   def testValuesThenSnapshot() {
     val bi = new CellSink(9)
     val bc = new CellSink('a')
-    val out = new ArrayList[Character]()
-    val l = bi.value().snapshot(bc).listen(out.add(_))
+    val out = new ListBuffer[Character]()
+    val l = bi.value().snapshot(bc).listen(out.+=(_))
     bc.send('b')
     bi.send(2)
     bc.send('c')
     bi.send(7)
     l.unlisten()
-    assertEquals(Arrays.asList('a', 'b', 'c'), out)
+    assertEquals(List('a', 'b', 'c'), out)
   }
 
   @Test
   def testValuesTwiceThenSnapshot() {
     val bi = new CellSink(9)
     val bc = new CellSink('a')
-    val out = new ArrayList[Character]()
-    val l = doubleUp(bi.value()).snapshot(bc).listen(out.add(_))
+    val out = new ListBuffer[Character]()
+    val l = doubleUp(bi.value()).snapshot(bc).listen(out.+=(_))
     bc.send('b')
     bi.send(2)
     bc.send('c')
     bi.send(7)
     l.unlisten()
-    assertEquals(Arrays.asList('a', 'a', 'b', 'b', 'c', 'c'), out)
+    assertEquals(List('a', 'a', 'b', 'b', 'c', 'c'), out)
   }
 
   @Test
   def testValuesThenMerge() {
     val bi = new CellSink(9)
     val bj = new CellSink(2)
-    val out = new ArrayList[Int]()
-    val l = bi.value().merge(bj.value(), (x, y) => x + y).listen(out.add(_))
+    val out = new ListBuffer[Int]()
+    val l = bi.value().merge(bj.value(), (x, y) => x + y).listen(out.+=(_))
     bi.send(1)
     bj.send(4)
     l.unlisten()
-    assertEquals(Arrays.asList(11, 1, 4), out)
+    assertEquals(List(11, 1, 4), out)
   }
 
   @Test
   def testValuesThenFilter() {
     val b = new CellSink(9)
-    val out = new ArrayList[Int]()
-    val l = b.value().filter(a => true).listen(out.add(_))
+    val out = new ListBuffer[Int]()
+    val l = b.value().filter(a => true).listen(out.+=(_))
     List(2, 7).foreach(b.send(_))
     l.unlisten()
-    assertEquals(Arrays.asList(9, 2, 7), out)
+    assertEquals(List(9, 2, 7), out)
   }
 
   @Test
   def testValuesTwiceThenFilter() {
     val b = new CellSink(9)
-    val out = new ArrayList[Int]()
-    val l = doubleUp(b.value()).filter(a => true).listen(out.add(_))
+    val out = new ListBuffer[Int]()
+    val l = doubleUp(b.value()).filter(a => true).listen(out.+=(_))
     List(2, 7).foreach(b.send(_))
     l.unlisten()
-    assertEquals(Arrays.asList(9, 9, 2, 2, 7, 7), out)
+    assertEquals(List(9, 9, 2, 2, 7, 7), out)
   }
 
   @Test
   def testValuesThenOnce() {
     val b = new CellSink(9)
-    val out = new ArrayList[Int]()
-    val l = b.value().once().listen(out.add(_))
+    val out = new ListBuffer[Int]()
+    val l = b.value().once().listen(out.+=(_))
     List(2, 7).foreach(b.send(_))
     l.unlisten()
-    assertEquals(Arrays.asList(9), out)
+    assertEquals(List(9), out)
   }
 
   @Test
   def testValuesTwiceThenOnce() {
     val b = new CellSink(9)
-    val out = new ArrayList[Int]()
-    val l = doubleUp(b.value()).once().listen(out.add(_))
+    val out = new ListBuffer[Int]()
+    val l = doubleUp(b.value()).once().listen(out.+=(_))
     List(2, 7).foreach(b.send(_))
     l.unlisten()
-    assertEquals(Arrays.asList(9), out)
+    assertEquals(List(9), out)
   }
 
   @Test
   def testValuesLateListen() {
     val b = new CellSink(9)
-    val out = new ArrayList[Int]()
+    val out = new ListBuffer[Int]()
     val value = b.value()
     b.send(8)
-    val l = value.listen(out.add(_))
+    val l = value.listen(out.+=(_))
     b.send(2)
     l.unlisten()
-    assertEquals(Arrays.asList(8, 2), out)
+    assertEquals(List(8, 2), out)
   }
 
   @Test
   def testMapB() {
     val b = new CellSink(6)
-    val out = new ArrayList[String]()
-    val l = b.map(x => x.toString()).value().listen(out.add(_))
+    val out = new ListBuffer[String]()
+    val l = b.map(x => x.toString()).value().listen(out.+=(_))
     b.send(8)
     l.unlisten()
-    assertEquals(Arrays.asList("6", "8"), out)
+    assertEquals(List("6", "8"), out)
   }
 
   def testMapBLateListen() {
     val b = new CellSink(6)
-    val out = new ArrayList[String]()
+    val out = new ListBuffer[String]()
     val bm = b.map(x => x.toString())
     b.send(2)
-    val l = bm.value().listen(out.add(_))
+    val l = bm.value().listen(out.+=(_))
     b.send(8)
     l.unlisten()
-    assertEquals(Arrays.asList("2", "8"), out)
+    assertEquals(List("2", "8"), out)
   }
 
   @Test
@@ -224,24 +227,24 @@ class CellTester {
   def testApply() {
     val bf = new CellSink[Long => String](b => "1 " + b)
     val ba = new CellSink(5L)
-    val out = new ArrayList[String]()
-    val l = Cell(bf, ba).value().listen(x => out.add(x))
+    val out = new ListBuffer[String]()
+    val l = Cell(bf, ba).value().listen(x => out.+=(x))
     bf.send(b => "12 " + b)
     ba.send(6L)
     l.unlisten()
-    assertEquals(Arrays.asList("1 5", "12 5", "12 6"), out)
+    assertEquals(List("1 5", "12 5", "12 6"), out)
   }
 
   @Test
   def testLift() {
     val a = new CellSink(1)
     val b = new CellSink(5L)
-    val out = new ArrayList[String]()
-    val l = Cell.lift[Int, Long, String]((x, y) => x + " " + y, a, b).value().listen(out.add(_))
+    val out = new ListBuffer[String]()
+    val l = Cell.lift[Int, Long, String]((x, y) => x + " " + y, a, b).value().listen(out.+=(_))
     a.send(12)
     b.send(6L)
     l.unlisten()
-    assertEquals(Arrays.asList("1 5", "12 5", "12 6"), out)
+    assertEquals(List("1 5", "12 5", "12 6"), out)
   }
 
   @Test
@@ -249,22 +252,22 @@ class CellTester {
     val a = new CellSink(1)
     val a3 = a.map(x => x * 3)
     val a5 = a.map(x => x * 5)
-    val out = new ArrayList[String]()
-    val l = Cell.lift[Int, Int, String]((x, y) => x + " " + y, a3, a5).value().listen(out.add(_))
+    val out = new ListBuffer[String]()
+    val l = Cell.lift[Int, Int, String]((x, y) => x + " " + y, a3, a5).value().listen(out.+=(_))
     a.send(2)
     l.unlisten()
-    assertEquals(Arrays.asList("3 5", "6 10"), out)
+    assertEquals(List("3 5", "6 10"), out)
   }
 
   @Test
   def testHoldIsDelayed() {
     val e = new StreamSink[Int]()
     val h = e.hold(0)
-    val out = new ArrayList[String]()
-    val l = e.snapshot[Int, String](h, (a, b) => a + " " + b).listen(out.add(_))
+    val out = new ListBuffer[String]()
+    val l = e.snapshot[Int, String](h, (a, b) => a + " " + b).listen(out.+=(_))
     List(2, 3).foreach(e.send(_))
     l.unlisten()
-    assertEquals(Arrays.asList("2 0", "3 2"), out)
+    assertEquals(List("2 0", "3 2"), out)
   }
 
   @Test
@@ -276,8 +279,8 @@ class CellTester {
     val bb = esb.map(s => s.b).filterNotNull().hold('a')
     val bsw = esb.map(s => s.sw).filterNotNull().hold(ba)
     val bo = Cell.switchC(bsw)
-    val out = new ArrayList[Character]()
-    val l = bo.value().listen(out.add(_))
+    val out = new ListBuffer[Character]()
+    val l = bo.value().listen(out.+=(_))
     List(
       new SB('B', 'b', null),
       new SB('C', 'c', bb),
@@ -290,7 +293,7 @@ class CellTester {
       new SB('H', 'h', ba),
       new SB('I', 'i', ba)).foreach(esb.send(_))
     l.unlisten()
-    assertEquals(Arrays.asList('A', 'B', 'c', 'd', 'E', 'F', 'f', 'F', 'g', 'H', 'I'), out)
+    assertEquals(List('A', 'B', 'c', 'd', 'E', 'F', 'f', 'F', 'g', 'H', 'I'), out)
   }
 
   @Test
@@ -299,9 +302,9 @@ class CellTester {
     val ea = ese.map(s => s.a).filterNotNull()
     val eb = ese.map(s => s.b).filterNotNull()
     val bsw = ese.map(s => s.sw).filterNotNull().hold(ea)
-    val out = new ArrayList[Char]()
+    val out = new ListBuffer[Char]()
     val eo = Cell.switchS(bsw)
-    val l = eo.listen(out.add(_))
+    val l = eo.listen(out.+=(_))
     List(
       new SE('A', 'a', null),
       new SE('B', 'b', null),
@@ -313,7 +316,7 @@ class CellTester {
       new SE('H', 'h', ea),
       new SE('I', 'i', ea)).foreach(ese.send(_))
     l.unlisten()
-    assertEquals(Arrays.asList('A', 'B', 'C', 'd', 'e', 'F', 'G', 'h', 'I'), out)
+    assertEquals(List('A', 'B', 'C', 'd', 'e', 'F', 'G', 'h', 'I'), out)
   }
 
   @Test
@@ -325,39 +328,39 @@ class CellTester {
       sum.loop(sum_out_)
       sum_out_
     })
-    val out = new ArrayList[Int]()
-    val l = sum_out.value().listen(out.add(_))
+    val out = new ListBuffer[Int]()
+    val l = sum_out.value().listen(out.+=(_))
     List(2, 3, 1).foreach(ea.send(_))
     l.unlisten()
-    assertEquals(Arrays.asList(0, 2, 5, 6), out)
+    assertEquals(List(0, 2, 5, 6), out)
     assertEquals(6, sum_out.sample())
   }
 
   @Test
   def testCollect() {
     val ea = new StreamSink[Int]()
-    val out = new ArrayList[Int]()
+    val out = new ListBuffer[Int]()
     val sum = ea.hold(100).collect[Int, Int](0, (a, s) => (a + s, a + s))
-    val l = sum.value().listen(out.add(_))
+    val l = sum.value().listen(out.+=(_))
     List(5, 7, 1, 2, 3).foreach(ea.send(_))
     l.unlisten()
-    assertEquals(Arrays.asList(100, 105, 112, 113, 115, 118), out)
+    assertEquals(List(100, 105, 112, 113, 115, 118), out)
   }
 
   @Test
   def testAccum() {
     val ea = new StreamSink[Int]()
-    val out = new ArrayList[Int]()
+    val out = new ListBuffer[Int]()
     val sum = ea.accum[Int](100, (a, s) => a + s)
-    val l = sum.value().listen(out.add(_))
+    val l = sum.value().listen(out.+=(_))
     List(5, 7, 1, 2, 3).foreach(ea.send(_))
     l.unlisten()
-    assertEquals(Arrays.asList(100, 105, 112, 113, 115, 118), out)
+    assertEquals(List(100, 105, 112, 113, 115, 118), out)
   }
 
   @Test
   def testLoopValueSnapshot() {
-    val out = new ArrayList[String]()
+    val out = new ListBuffer[String]()
     val eSnap = Transaction(_ => {
       val a = new Cell("lettuce")
       val b = new CellLoop[String]()
@@ -365,14 +368,14 @@ class CellTester {
       b.loop(new Cell[String]("cheese"))
       eSnap_
     })
-    val l = eSnap.listen(out.add(_))
+    val l = eSnap.listen(out.+=(_))
     l.unlisten()
-    assertEquals(Arrays.asList("lettuce cheese"), out)
+    assertEquals(List("lettuce cheese"), out)
   }
 
   @Test
   def testLoopValueHold() {
-    val out = new ArrayList[String]()
+    val out = new ListBuffer[String]()
     val value = Transaction(_ => {
       val a = new CellLoop[String]()
       val value_ = a.value().hold("onion")
@@ -380,15 +383,15 @@ class CellTester {
       value_
     })
     val eTick = new StreamSink[Int]()
-    val l = eTick.snapshot(value).listen(out.add(_))
+    val l = eTick.snapshot(value).listen(out.+=(_))
     eTick.send(0)
     l.unlisten()
-    assertEquals(Arrays.asList("cheese"), out)
+    assertEquals(List("cheese"), out)
   }
 
   @Test
   def testLiftLoop() {
-    val out = new ArrayList[String]()
+    val out = new ListBuffer[String]()
     val b = new CellSink("kettle")
     val c = Transaction(_ => {
       val a = new CellLoop[String]()
@@ -396,10 +399,10 @@ class CellTester {
       a.loop(new Cell[String]("tea"))
       c_
     })
-    val l = c.value().listen(out.add(_))
+    val l = c.value().listen(out.+=(_))
     b.send("caddy")
     l.unlisten()
-    assertEquals(Arrays.asList("tea kettle", "tea caddy"), out)
+    assertEquals(List("tea kettle", "tea caddy"), out)
   }
 }
 

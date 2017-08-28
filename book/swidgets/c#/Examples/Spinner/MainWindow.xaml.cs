@@ -12,7 +12,7 @@ namespace Spinner
 
             Transaction.RunVoid(() =>
             {
-                CellLoop<int> value = new CellLoop<int>();
+                DiscreteCellLoop<int> value = new DiscreteCellLoop<int>();
                 SLabel lblValue = new SLabel(value.Map(i => i.ToString()));
                 SButton plus = new SButton { Content = "+", Width = 25, Margin = new Thickness(5, 0, 0, 0) };
                 SButton minus = new SButton { Content = "-", Width = 25, Margin = new Thickness(5, 0, 0, 0) };

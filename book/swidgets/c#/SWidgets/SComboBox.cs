@@ -44,7 +44,7 @@ namespace SWidgets
             List<IListener> listeners = new List<IListener>();
 
             StreamSink<int> sDecrement = new StreamSink<int>();
-            Cell<bool> allow = setSelectedItem.Map(_ => 1).OrElse(sDecrement).Accum(0, (b, d) => b + d).Map(b => b == 0);
+            DiscreteCell<bool> allow = setSelectedItem.Map(_ => 1).OrElse(sDecrement).Accum(0, (b, d) => b + d).Map(b => b == 0);
 
             Func<IMaybe<T>> getSelectedItem = () =>
             {
@@ -79,14 +79,12 @@ namespace SWidgets
             {
                 foreach (IListener l in listeners)
                 {
-                    using (l)
-                    {
-                    }
+                    l.Unlisten();
                 }
             };
         }
 
-        public new Cell<IMaybe<T>> SelectedItem { get; }
+        public new DiscreteCell<IMaybe<T>> SelectedItem { get; }
         public Stream<IMaybe<T>> SUserSelectedItem { get; }
 
         public void Dispose()

@@ -9,11 +9,11 @@ namespace Fridgets
     public class FrTextField : Fridget
     {
         public FrTextField(string initText)
-            : this(initText, new CellLoop<string>())
+            : this(initText, new DiscreteCellLoop<string>())
         {
         }
 
-        private FrTextField(string initText, CellLoop<string> text)
+        private FrTextField(string initText, DiscreteCellLoop<string> text)
             : base((size, sMouse, sKey, focus, idSupply) =>
             {
                 Stream<double> sPressed = sMouse.Snapshot(size, (e, mSize) =>
@@ -28,35 +28,34 @@ namespace Fridgets
                                 : Maybe.Nothing<double>();
                         },
                         Maybe.Nothing<double>)).FilterMaybe();
-                CellLoop<int> x = new CellLoop<int>();
+                DiscreteCellLoop<int> x = new DiscreteCellLoop<int>();
                 long myId = idSupply.Get();
-                Cell<bool> haveFocus = focus.Map(fId => fId == myId);
+                DiscreteCell<bool> haveFocus = focus.Map(fId => fId == myId);
                 Typeface typeface = new Typeface(new FontFamily("Helvetica"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
-                Stream<TextUpdate> sTextUpdate = sKey.Gate(haveFocus).Snapshot(text, (key, txt) =>
-                {
-                    int xValue = x.Sample();
-                    if (key is BackspaceKeyEvent)
-                    {
-                        return xValue > 0 ? Maybe.Just(new TextUpdate(
-                            txt.Substring(0, xValue - 1) +
-                            txt.Substring(xValue),
-                            xValue - 1)) : Maybe.Nothing<TextUpdate>();
-                    }
+                Stream<TextUpdate> sTextUpdate = sKey.Gate(haveFocus).Snapshot(text, x, (key, txt, xValue) =>
+                 {
+                     if (key is BackspaceKeyEvent)
+                     {
+                         return xValue > 0 ? Maybe.Just(new TextUpdate(
+                             txt.Substring(0, xValue - 1) +
+                             txt.Substring(xValue),
+                             xValue - 1)) : Maybe.Nothing<TextUpdate>();
+                     }
 
-                    StringKeyEvent stringKey = key as StringKeyEvent;
-                    if (stringKey == null)
-                    {
-                        throw new InvalidOperationException("Unexpected type encountered for " + typeof(KeyEvent).FullName + ": " + key.GetType().FullName + ".");
-                    }
+                     StringKeyEvent stringKey = key as StringKeyEvent;
+                     if (stringKey == null)
+                     {
+                         throw new InvalidOperationException("Unexpected type encountered for " + typeof(KeyEvent).FullName + ": " + key.GetType().FullName + ".");
+                     }
 
-                    string keyString = stringKey.String;
-                    return keyString == "\b" ? Maybe.Nothing<TextUpdate>() :
-                        Maybe.Just(new TextUpdate(
-                            txt.Substring(0, xValue) +
-                            keyString +
-                            txt.Substring(xValue),
-                            xValue + 1));
-                }).FilterMaybe();
+                     string keyString = stringKey.String;
+                     return keyString == "\b" ? Maybe.Nothing<TextUpdate>() :
+                         Maybe.Just(new TextUpdate(
+                             txt.Substring(0, xValue) +
+                             keyString +
+                             txt.Substring(xValue),
+                             xValue + 1));
+                 }).FilterMaybe();
                 x.Loop(sPressed.Snapshot(text,
                     (xCoord, txt) =>
                     {
@@ -72,7 +71,7 @@ namespace Fridgets
                     .OrElse(sTextUpdate.Map(tu => tu.NewX))
                     .Hold(0));
                 text.Loop(sTextUpdate.Map(tu => tu.Txt).Hold(initText));
-                Cell<Size> desiredSize = text.Map(txt =>
+                DiscreteCell<Size> desiredSize = text.Map(txt =>
                 {
                     Size s = FontUtilities.MeasureString(txt, typeface, 13);
                     return new Size(s.Width + 14, s.Height + 10);
@@ -104,7 +103,7 @@ namespace Fridgets
             this.Text = text;
         }
 
-        public Cell<string> Text { get; }
+        public DiscreteCell<string> Text { get; }
 
         private class TextUpdate
         {
