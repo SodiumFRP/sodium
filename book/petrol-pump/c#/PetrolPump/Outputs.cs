@@ -28,7 +28,7 @@ namespace PetrolPump
 
         public Outputs()
         {
-            this.Delivery = Cell.Constant(global::PetrolPump.Delivery.Off);
+            this.Delivery = Cell.Constant(PetrolPump.Delivery.Off);
             this.PresetLcd = Cell.Constant(string.Empty);
             this.SaleCostLcd = Cell.Constant(string.Empty);
             this.SaleQuantityLcd = Cell.Constant(string.Empty);

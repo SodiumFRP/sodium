@@ -216,7 +216,7 @@ namespace PetrolPump
                     return isLarge ? this.largeDotImage() : this.smallDotImage();
             }
 
-            return null;
+            throw new ArgumentException(@"Character must be a dot, dash, or number between 0 and 9.", nameof(c));
         }
 
         private void SetLcdDigits(StackPanel placeholder, string text, int maxDigits, bool isLarge)

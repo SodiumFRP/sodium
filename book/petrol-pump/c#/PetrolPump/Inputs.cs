@@ -1,4 +1,3 @@
-using System.Windows.Input;
 using Sodium;
 
 namespace PetrolPump

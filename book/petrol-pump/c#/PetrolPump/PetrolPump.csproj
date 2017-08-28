@@ -74,7 +74,6 @@
     <Compile Include="Delivery.cs" />
     <Compile Include="DispatcherExtensionMethods.cs" />
     <Compile Include="FillState.cs" />
-    <Compile Include="FillStateType.cs" />
     <Compile Include="Formatters.cs" />
     <Compile Include="Fuel.cs" />
     <Compile Include="Inputs.cs" />
