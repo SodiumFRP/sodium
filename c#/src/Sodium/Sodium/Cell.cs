@@ -110,6 +110,8 @@ namespace Sodium
                 }, false), false);
         }
 
+        internal IKeepListenersAlive KeepListenersAlive => this.stream.KeepListenersAlive;
+
         protected T ValueProperty
         {
             get { return this.valueProperty; }
@@ -193,7 +195,7 @@ namespace Sodium
 
         internal Stream<T> Value(Transaction trans1)
         {
-            Stream<Unit> spark = new Stream<Unit>();
+            Stream<Unit> spark = new Stream<Unit>(this.stream.KeepListenersAlive);
             trans1.Prioritized(spark.Node, trans2 => spark.Send(trans2, Unit.Value));
             Stream<T> initial = spark.Snapshot(this);
             return initial.Merge(trans1, this.Updates(trans1), (left, right) => right);
@@ -327,7 +329,7 @@ namespace Sodium
         {
             return Transaction.Apply(trans0 =>
             {
-                Stream<TResult> @out = new Stream<TResult>();
+                Stream<TResult> @out = new Stream<TResult>(this.stream.KeepListenersAlive);
 
                 Node<TResult> outTarget = @out.Node;
                 Node<Unit> inTarget = new Node<Unit>();

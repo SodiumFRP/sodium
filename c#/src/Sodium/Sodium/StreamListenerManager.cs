@@ -87,12 +87,12 @@ namespace Sodium
         internal class StreamListeners
         {
             private readonly Guid streamId;
-            private readonly List<IWeakListener> listeners;
+            private readonly List<IListenerWithWeakReference> listeners;
 
             public StreamListeners(Guid streamId)
             {
                 this.streamId = streamId;
-                this.listeners = new List<IWeakListener>();
+                this.listeners = new List<IListenerWithWeakReference>();
 
                 lock (StreamsByIdLock)
                 {
@@ -103,7 +103,7 @@ namespace Sodium
 
             public void Unlisten()
             {
-                foreach (IWeakListener l in this.listeners)
+                foreach (IListenerWithWeakReference l in this.listeners)
                 {
                     l.Unlisten();
                 }
@@ -120,7 +120,7 @@ namespace Sodium
                 }
             }
 
-            public void AddListener(IWeakListener listener)
+            public void AddListener(IListenerWithWeakReference listener)
             {
                 this.listeners.Add(listener);
             }

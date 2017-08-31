@@ -17,7 +17,7 @@ namespace Sodium
             return Transaction.Apply(trans1 =>
             {
                 Lazy<T> za = cca.SampleLazy().Map(ca => ca.Sample());
-                Stream<T> @out = new Stream<T>();
+                Stream<T> @out = new Stream<T>(cca.KeepListenersAlive);
                 MutableListener currentListener = new MutableListener();
                 Action<Transaction, Cell<T>> h = (trans2, ca) =>
                 {
@@ -49,7 +49,7 @@ namespace Sodium
         {
             return Transaction.Apply(trans1 =>
             {
-                Stream<T> @out = new Stream<T>();
+                Stream<T> @out = new Stream<T>(csa.KeepListenersAlive);
                 MutableListener currentListener = new MutableListener();
                 Action<Transaction, Stream<T>> hInitial = (trans2, sa) =>
                 {
@@ -83,7 +83,7 @@ namespace Sodium
         {
             return Transaction.Apply(trans1 =>
             {
-                Stream<T> @out = new Stream<T>();
+                Stream<T> @out = new Stream<T>(csa.KeepListenersAlive);
                 Node<T> node = new Node<T>();
                 ValueTuple<bool, Node<T>.Target> r = node.Link(trans1, (t, v) => { }, @out.Node);
                 Node<T>.Target nodeTarget = r.Item2;
@@ -139,7 +139,7 @@ namespace Sodium
         {
             return Transaction.Apply(trans1 =>
             {
-                Stream<Action<T[]>> @out = new Stream<Action<T[]>>();
+                Stream<Action<T[]>> @out = new Stream<Action<T[]>>(new FanOutKeepListenersAlive(c.Select(cell => cell.KeepListenersAlive)));
                 Lazy<TResult> initialValue = new Lazy<TResult>(() => f(c.Select(cell => cell.SampleNoTransaction()).ToArray()));
                 IReadOnlyList<IListener> listeners = c.Select((cell, i) => cell.Updates(trans1).Listen(@out.Node, trans1,
                     (trans2, v) => @out.Send(trans2, vv => vv[i] = v), false)).ToArray();
@@ -172,6 +172,40 @@ namespace Sodium
         public static Cell<IReadOnlyList<T>> Lift<T>(this IReadOnlyCollection<Cell<T>> c)
         {
             return c.Lift(v => (IReadOnlyList<T>)v.ToArray());
+        }
+
+        private class FanOutKeepListenersAlive : IKeepListenersAlive
+        {
+            private readonly IReadOnlyList<IKeepListenersAlive> keepListenersAliveList;
+
+            public FanOutKeepListenersAlive(IEnumerable<IKeepListenersAlive> keepListenersAliveEnumerable)
+            {
+                this.keepListenersAliveList = keepListenersAliveEnumerable.ToArray();
+            }
+
+            public void KeepListenerAlive(IListener listener)
+            {
+                foreach (IKeepListenersAlive keepListenersAlive in this.keepListenersAliveList)
+                {
+                    keepListenersAlive.KeepListenerAlive(listener);
+                }
+            }
+
+            public void StopKeepingListenerAlive(IListener listener)
+            {
+                foreach (IKeepListenersAlive keepListenersAlive in this.keepListenersAliveList)
+                {
+                    keepListenersAlive.StopKeepingListenerAlive(listener);
+                }
+            }
+
+            public void Use(IKeepListenersAlive childKeepListenersAlive)
+            {
+                foreach (IKeepListenersAlive keepListenersAlive in this.keepListenersAliveList)
+                {
+                    keepListenersAlive.Use(childKeepListenersAlive);
+                }
+            }
         }
     }
 }

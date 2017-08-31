@@ -458,7 +458,7 @@ namespace Sodium.Tests
         }
 
         [Test]
-        public void TestListen()
+        public void TestListenWeak()
         {
             StreamSink<int> s = Stream.CreateSink<int>();
 
@@ -467,7 +467,7 @@ namespace Sodium.Tests
             ((Action)(() =>
             {
                 // ReSharper disable once UnusedVariable
-                IListener l = s.Listen(@out.Add);
+                IWeakListener l = s.ListenWeak(@out.Add);
 
                 s.Send(1);
                 s.Send(2);
@@ -481,7 +481,7 @@ namespace Sodium.Tests
         }
 
         [Test]
-        public void TestListenWithMap()
+        public void TestListenWeakWithMap()
         {
             StreamSink<int> s = Stream.CreateSink<int>();
 
@@ -494,7 +494,7 @@ namespace Sodium.Tests
                 ((Action)(() =>
                 {
                     // ReSharper disable once UnusedVariable
-                    IListener l = s2.Listen(@out.Add);
+                    IWeakListener l = s2.ListenWeak(@out.Add);
 
                     s.Send(1);
                     s.Send(2);
@@ -505,7 +505,7 @@ namespace Sodium.Tests
                 ((Action)(() =>
                 {
                     // ReSharper disable once UnusedVariable
-                    IListener l = s2.Listen(@out.Add);
+                    IWeakListener l = s2.ListenWeak(@out.Add);
 
                     s.Send(3);
                     s.Send(4);
@@ -530,7 +530,32 @@ namespace Sodium.Tests
             ((Action)(() =>
             {
                 // ReSharper disable once UnusedVariable
-                IListener l = s.Listen(@out.Add);
+                IStrongListener l = s.Listen(@out.Add);
+
+                s.Send(1);
+
+                l.Unlisten();
+
+                s.Send(2);
+            }))();
+
+            s.Send(3);
+            s.Send(4);
+
+            Assert.AreEqual(1, @out.Count);
+        }
+
+        [Test]
+        public void TestUnlistenWeak()
+        {
+            StreamSink<int> s = Stream.CreateSink<int>();
+
+            List<int> @out = new List<int>();
+
+            ((Action)(() =>
+            {
+                // ReSharper disable once UnusedVariable
+                IWeakListener l = s.ListenWeak(@out.Add);
 
                 s.Send(1);
 
@@ -555,7 +580,35 @@ namespace Sodium.Tests
             ((Action)(() =>
             {
                 // ReSharper disable once UnusedVariable
-                IListener l = s.Listen(@out.Add);
+                IStrongListener l = s.Listen(@out.Add);
+
+                s.Send(1);
+
+                l.Unlisten();
+                l.Unlisten();
+
+                s.Send(2);
+
+                l.Unlisten();
+            }))();
+
+            s.Send(3);
+            s.Send(4);
+
+            Assert.AreEqual(1, @out.Count);
+        }
+
+        [Test]
+        public void TestMultipleUnlistenWeak()
+        {
+            StreamSink<int> s = Stream.CreateSink<int>();
+
+            List<int> @out = new List<int>();
+
+            ((Action)(() =>
+            {
+                // ReSharper disable once UnusedVariable
+                IWeakListener l = s.ListenWeak(@out.Add);
 
                 s.Send(1);
 

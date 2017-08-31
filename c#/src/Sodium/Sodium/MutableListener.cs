@@ -8,7 +8,7 @@ namespace Sodium
         public void SetListener(IListener listener)
         {
             this.listener = listener;
-            this.weakMutableListener.WeakListener = listener.GetWeakListener();
+            this.weakMutableListener.WeakListener = listener.GetListenerWithWeakReference();
         }
 
         public void Unlisten()
@@ -16,14 +16,14 @@ namespace Sodium
             this.listener?.Unlisten();
         }
 
-        public IWeakListener GetWeakListener()
+        public IListenerWithWeakReference GetListenerWithWeakReference()
         {
             return this.weakMutableListener;
         }
 
-        private class WeakMutableListener : IWeakListener
+        private class WeakMutableListener : IListenerWithWeakReference
         {
-            public IWeakListener WeakListener;
+            public IListenerWithWeakReference WeakListener;
 
             public void Unlisten()
             {

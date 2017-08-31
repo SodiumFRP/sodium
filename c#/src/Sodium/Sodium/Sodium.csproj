@@ -51,6 +51,8 @@
   <ItemGroup>
     <Compile Include="Cell.cs" />
     <Compile Include="CellExtensionMethods.cs" />
+    <Compile Include="CompositeStrongListener.cs" />
+    <Compile Include="CompositeWeakListener.cs" />
     <Compile Include="DiscreteCell.cs" />
     <Compile Include="DiscreteCellExtensionMethods.cs" />
     <Compile Include="DiscreteCellLoop.cs" />
@@ -59,6 +61,9 @@
     <Compile Include="CellSink.cs" />
     <Compile Include="CoalesceHandler.cs" />
     <Compile Include="CompositeListener.cs" />
+    <Compile Include="IKeepListenersAlive.cs" />
+    <Compile Include="IListenerWithWeakReference.cs" />
+    <Compile Include="IStrongListener.cs" />
     <Compile Include="IWeakListener.cs" />
     <Compile Include="MaybeMonad.cs" />
     <Compile Include="MutableListener.cs" />

@@ -31,7 +31,7 @@ namespace Sodium.Tests
 
             public TestObject(Stream<bool> s, Stream<int> s1, Stream<int> s2)
             {
-                ValueTuple<DiscreteCell<int>, IListener> t = Transaction.Run(() =>
+                ValueTuple<DiscreteCell<int>, IStrongListener> t = Transaction.Run(() =>
                 {
                     var cell = s.Map(v => v ? 1 : 0).OrElse(s1).OrElse(s2).Hold(0);
                     var cell2 = s1.Snapshot(cell.Cell, (left, right) => left + right).Filter(v => v > 5).OrElse(s.Snapshot(s1.Hold(0).Lift(s2.Hold(1), (left, right) => left + right).Cell).Map(v => v + 1)).Hold(3);

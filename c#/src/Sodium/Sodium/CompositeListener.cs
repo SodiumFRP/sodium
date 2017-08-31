@@ -3,40 +3,48 @@ using System.Linq;
 
 namespace Sodium
 {
-    public class CompositeListener : IListener, IWeakListener
+    public class CompositeListener : CompositeListener<IListener>
     {
-        private readonly IReadOnlyList<IListener> listeners;
-
         public CompositeListener(IReadOnlyList<IListener> listeners)
+            : base(listeners)
+        {
+        }
+    }
+
+    public class CompositeListener<T> : IListener, IListenerWithWeakReference where T : IListener
+    {
+        private readonly IReadOnlyList<T> listeners;
+
+        public CompositeListener(IReadOnlyList<T> listeners)
         {
             this.listeners = listeners;
         }
 
         public void Unlisten()
         {
-            foreach (IListener l in this.listeners)
+            foreach (T l in this.listeners)
             {
                 l?.Unlisten();
             }
         }
 
-        public IWeakListener GetWeakListener()
+        public IListenerWithWeakReference GetListenerWithWeakReference()
         {
-            return new CompositeWeakListener(this.listeners.Select(l => l.GetWeakListener()).ToArray());
+            return new CompositeWeakListener(this.listeners.Select(l => l.GetListenerWithWeakReference()).ToArray());
         }
 
-        private class CompositeWeakListener : IWeakListener
+        private class CompositeWeakListener : IListenerWithWeakReference
         {
-            private readonly IReadOnlyList<IWeakListener> weakListeners;
+            private readonly IReadOnlyList<IListenerWithWeakReference> weakListeners;
 
-            public CompositeWeakListener(IReadOnlyList<IWeakListener> weakListeners)
+            public CompositeWeakListener(IReadOnlyList<IListenerWithWeakReference> weakListeners)
             {
                 this.weakListeners = weakListeners;
             }
 
             public void Unlisten()
             {
-                foreach (IWeakListener l in this.weakListeners)
+                foreach (IListenerWithWeakReference l in this.weakListeners)
                 {
                     l?.Unlisten();
                 }
