@@ -44,7 +44,7 @@ namespace Shift2
 
         private void Reposition()
         {
-            this.dragInfo.Get().Match(
+            this.dragInfo.Match(
                 d =>
                 {
                     this.lastMe.Match(

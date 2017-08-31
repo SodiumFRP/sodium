@@ -22,7 +22,7 @@ namespace Battle
 
         public void HandleMouseMove(MouseEvt me)
         {
-            this.dragInfo.Get().Match(
+            this.dragInfo.Match(
                 d =>
                 {
                     Reposition r = new Reposition(d, me);
