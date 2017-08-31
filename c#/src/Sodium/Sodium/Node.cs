@@ -41,9 +41,15 @@ namespace Sodium
             return true;
         }
 
+        // ReSharper disable once UnusedParameter.Local
         private static void EnsureBiggerThanRecursive(Node originalNode, Node node, long limit)
         {
-            if (node.Rank > limit || ReferenceEquals(originalNode, node))
+            if (ReferenceEquals(originalNode, node))
+            {
+                throw new Exception("A dependency cycle was detected.");
+            }
+
+            if (node.Rank > limit)
             {
                 return;
             }
@@ -98,10 +104,6 @@ namespace Sodium
         internal ValueTuple<bool, Target> Link(Transaction trans, Action<Transaction, T> action, Node target)
         {
             bool changed;
-            lock (NodeRanksLock)
-            {
-                changed = EnsureBiggerThan(target, this.Rank);
-            }
             Target t = new Target(action, target, !trans.IsConstructing || trans.ReachedClose);
             if (trans.IsConstructing && !trans.ReachedClose)
             {
@@ -111,6 +113,10 @@ namespace Sodium
             {
                 this.listeners.Add(t);
                 this.listenersCapacity++;
+            }
+            lock (NodeRanksLock)
+            {
+                changed = EnsureBiggerThan(target, this.Rank);
             }
             return ValueTuple.Create(changed, t);
         }
