@@ -67,7 +67,7 @@ namespace Sodium
                     });
                 };
                 trans1.Prioritized(new Node<T>(), trans2 => hInitial(trans2, csa.SampleNoTransaction()));
-                IListener l1 = csa.Updates(trans1).Listen(@out.Node, trans1, h, false);
+                IListener l1 = csa.Updates(trans1).Listen(new Node<T>(), trans1, h, false);
                 return @out.UnsafeAttachListener(l1).UnsafeAttachListener(currentListener);
             }, false);
         }

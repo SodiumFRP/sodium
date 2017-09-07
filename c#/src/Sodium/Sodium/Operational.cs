@@ -64,7 +64,7 @@ namespace Sodium
         public static Stream<T> Split<T, TCollection>(Stream<TCollection> s) where TCollection : IEnumerable<T>
         {
             Stream<T> @out = new Stream<T>(s.KeepListenersAlive);
-            IListener l1 = s.Listen(@out.Node, (trans, aa) =>
+            IListener l1 = s.Listen(new Node<T>(), (trans, aa) =>
             {
                 int childIx = 0;
                 foreach (T a in aa)

@@ -301,26 +301,40 @@ namespace Sodium.Tests
         }
 
         [Test]
-        public void TestStreamLoop()
+        public void TestDiscreteCellLoopSwitchS()
         {
-            StreamSink<int> streamSink = new StreamSink<int>();
-            Stream<int> s = Transaction.Run(() =>
+            StreamSink<TestObject> addStreamSink = new StreamSink<TestObject>();
+            DiscreteCell<IReadOnlyList<TestObject>> cell = Transaction.Run(() =>
             {
-                StreamLoop<int> sl = new StreamLoop<int>();
-                DiscreteCell<int> c = sl.Map(v => v + 2).Hold(0);
-                Stream<int> s2 = streamSink.Snapshot(c, (x, y) => x + y);
-                sl.Loop(s2);
-                return s2;
+                DiscreteCellLoop<IReadOnlyList<TestObject>> cellLoop = new DiscreteCellLoop<IReadOnlyList<TestObject>>();
+                DiscreteCell<IReadOnlyList<TestObject>> cellLocal =
+                    cellLoop.Map(oo => oo.Select(o => o.RemoveStream.MapTo(new[] { o })).Merge((x, y) => x.Concat(y).ToArray())).SwitchS().Map<Func<IReadOnlyList<TestObject>, IReadOnlyList<TestObject>>>(o => c => c.Except(o).ToArray())
+                        .Merge(addStreamSink.Map<Func<IReadOnlyList<TestObject>, IReadOnlyList<TestObject>>>(o => c => c.Concat(new[] { o }).ToArray()), (f, g) => c => g(f(c)))
+                        .Snapshot(cellLoop, (f, c) => f(c))
+                        .Hold(new TestObject[0]);
+                cellLoop.Loop(cellLocal);
+                return cellLocal;
             });
             List<int> @out = new List<int>();
-            IListener l = s.Listen(@out.Add);
-            streamSink.Send(3);
-            streamSink.Send(4);
-            streamSink.Send(7);
-            streamSink.Send(8);
+            IListener l = cell.Listen(c => @out.Add(c.Count));
+            TestObject t1 = new TestObject(1, 1);
+            addStreamSink.Send(t1);
+            TestObject t2 = new TestObject(2, 2);
+            addStreamSink.Send(t2);
+            TestObject t3 = new TestObject(3, 3);
+            addStreamSink.Send(t3);
+            t2.Remove();
+            TestObject t4 = new TestObject(4, 4);
+            Transaction.RunVoid(() =>
+            {
+                addStreamSink.Send(t4);
+                t3.Remove();
+            });
+            TestObject t5 = new TestObject(5, 5);
+            addStreamSink.Send(t5);
             l.Unlisten();
 
-            CollectionAssert.AreEqual(new[] { 3, 9, 18, 28 }, @out);
+            CollectionAssert.AreEqual(new[] { 0, 1, 2, 3, 2, 2, 3 }, @out);
         }
 
         [Test]
@@ -1114,6 +1128,46 @@ namespace Sodium.Tests
                 c1.Send(2);
                 c2.Send(12);
                 s.Send(c2);
+
+                IListener l = c.Listen(output.Add);
+
+                return ValueTuple.Create(c, c1, c2, s, l);
+            });
+
+            t.Item2.Send(3);
+            t.Item3.Send(13);
+
+            Transaction.RunVoid(() =>
+            {
+                t.Item2.Send(4);
+                t.Item3.Send(14);
+                t.Item4.Send(t.Item2);
+            });
+
+            t.Item2.Send(5);
+            t.Item3.Send(15);
+
+            t.Item5.Unlisten();
+
+            CollectionAssert.AreEqual(new[] { 2, 13, 14, 5 }, output);
+        }
+
+        [Test]
+        public void SwitchSCatchFirstBefore()
+        {
+            List<int> output = new List<int>();
+
+            ValueTuple<Stream<int>, StreamSink<int>, StreamSink<int>, CellSink<Stream<int>>, IListener> t = Transaction.Run(() =>
+            {
+                StreamSink<int> c1 = Stream.CreateSink<int>();
+                StreamSink<int> c2 = Stream.CreateSink<int>();
+                CellSink<Stream<int>> s = Cell.CreateSink(c1.AsStream());
+
+                c1.Send(2);
+                c2.Send(12);
+                s.Send(c2);
+
+                Stream<int> c = s.SwitchS();
 
                 IListener l = c.Listen(output.Add);
 

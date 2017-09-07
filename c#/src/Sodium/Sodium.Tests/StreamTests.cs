@@ -778,5 +778,47 @@ namespace Sodium.Tests
             l2.Unlisten();
             resultsAndCalled.Item3.Unlisten();
         }
+
+        [Test]
+        public void TestStreamLoop()
+        {
+            StreamSink<int> streamSink = new StreamSink<int>();
+            Stream<int> s = Transaction.Run(() =>
+            {
+                StreamLoop<int> sl = new StreamLoop<int>();
+                DiscreteCell<int> c = sl.Map(v => v + 2).Hold(0);
+                Stream<int> s2 = streamSink.Snapshot(c, (x, y) => x + y);
+                sl.Loop(s2);
+                return s2;
+            });
+            List<int> @out = new List<int>();
+            IListener l = s.Listen(@out.Add);
+            streamSink.Send(3);
+            streamSink.Send(4);
+            streamSink.Send(7);
+            streamSink.Send(8);
+            l.Unlisten();
+
+            CollectionAssert.AreEqual(new[] { 3, 9, 18, 28 }, @out);
+        }
+
+        [Test]
+        public void TestStreamLoopDefer()
+        {
+            StreamSink<int> streamSink = new StreamSink<int>();
+            Stream<int> stream = Transaction.Run(() =>
+            {
+                StreamLoop<int> streamLoop = new StreamLoop<int>();
+                Stream<int> streamLocal = Operational.Defer(streamSink.OrElse(streamLoop).Filter(v => v < 5).Map(v => v + 1));
+                streamLoop.Loop(streamLocal);
+                return streamLocal;
+            });
+            List<int> @out = new List<int>();
+            IListener l = stream.Listen(@out.Add);
+            streamSink.Send(2);
+            l.Unlisten();
+
+            CollectionAssert.AreEqual(new[] { 3, 4, 5 }, @out);
+        }
     }
 }
