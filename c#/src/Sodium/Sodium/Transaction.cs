@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.ExceptionServices;
 using System.Threading;
 using Priority_Queue;
 
@@ -104,11 +105,11 @@ namespace Sodium
         ///     The action should only be used to construct FRP logic and may not close over any other FRP logic.
         ///     This transaction will not block other transactions from running until it reaches the end of the transaction.
         /// </summary>
-        /// <param name="f">The action to execute.</param>
+        /// <param name="action">The action to execute.</param>
         /// <remarks>
-        ///     This method is most useful for creatung FRP logic which must be created within a Transaction (such as in a loop),
+        ///     This method is most useful for creating FRP logic which must be created within a Transaction (such as in a loop),
         ///     but which should not block other transactions from running.  A use case for this is if the construction of FRP logic takes
-        ///     a significant amount of time, is being done asynchronously, and may be cancelled by another stream event.
+        ///     a significant amount of time, is being done asynchronously, and may be canceled by another stream event.
         /// </remarks>
         public static void RunConstructVoid(Action action)
         {
@@ -128,9 +129,9 @@ namespace Sodium
         /// <param name="f">The function to execute.</param>
         /// <returns>The return value of <paramref name="f" />.</returns>
         /// <remarks>
-        ///     This method is most useful for creatung FRP logic which must be created within a Transaction (such as in a loop),
+        ///     This method is most useful for creating FRP logic which must be created within a Transaction (such as in a loop),
         ///     but which should not block other transactions from running.  A use case for this is if the construction of FRP logic takes
-        ///     a significant amount of time, is being done asynchronously, and may be cancelled by another stream event.
+        ///     a significant amount of time, is being done asynchronously, and may be canceled by another stream event.
         /// </remarks>
         public static T RunConstruct<T>(Func<T> f)
         {
@@ -139,6 +140,8 @@ namespace Sodium
 
         private static T Apply<T>(Transaction transaction, bool createLocal, Func<Transaction, T> code)
         {
+            T returnValue = default(T);
+            Exception exception = null;
             Transaction newTransaction = transaction;
             try
             {
@@ -148,9 +151,14 @@ namespace Sodium
                     SetCurrentTransaction(newTransaction, createLocal);
                 }
 
-                return code(newTransaction);
+                returnValue = code(newTransaction);
             }
-            finally
+            catch (Exception e)
+            {
+                exception = e;
+            }
+
+            try
             {
                 try
                 {
@@ -176,12 +184,28 @@ namespace Sodium
                         }
                     }
                 }
-                finally
+                catch (Exception e)
                 {
-                    if (transaction == null)
+                    if (exception == null)
                     {
-                        SetCurrentTransaction(null, createLocal);
+                        throw;
                     }
+
+                    throw new AggregateException(exception, e);
+                }
+
+                if (exception != null)
+                {
+                    ExceptionDispatchInfo.Capture(exception).Throw();
+                }
+
+                return returnValue;
+            }
+            finally
+            {
+                if (transaction == null)
+                {
+                    SetCurrentTransaction(null, createLocal);
                 }
             }
         }
