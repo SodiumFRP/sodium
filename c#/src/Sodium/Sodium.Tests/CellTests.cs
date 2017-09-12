@@ -291,6 +291,10 @@ namespace Sodium.Tests
                 s.Send(8);
                 l.Unlisten();
             }
+            catch (AggregateException e)
+            {
+                actual = e.InnerExceptions.FirstOrDefault(ex => ex.Message == "A dependency cycle was detected.");
+            }
             catch (Exception e)
             {
                 actual = e;

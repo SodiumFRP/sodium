@@ -57,6 +57,7 @@
     <Compile Include="CellTests.cs" />
     <Compile Include="CommonTests.cs" />
     <Compile Include="DenotationalSemanticsTests.cs" />
+    <Compile Include="LoopTests.cs" />
     <Compile Include="PerformanceTests.cs" />
     <Compile Include="StreamTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
