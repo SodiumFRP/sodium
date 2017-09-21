@@ -13,19 +13,19 @@ namespace Sodium.Tests
         public void RunConstruct()
         {
             List<int> @out = new List<int>();
-            ValueTuple<StreamSink<int>, IListener> t = Transaction.RunConstruct(() =>
+            (StreamSink<int> s, IListener l) = Transaction.RunConstruct(() =>
             {
                 StreamSink<int> sink = Stream.CreateSink<int>();
                 sink.Send(4);
-                Stream<int> s = sink.Map(v => v * 2);
-                IListener l = s.Listen(@out.Add);
-                return ValueTuple.Create(sink, l);
+                Stream<int> sLocal = sink.Map(v => v * 2);
+                IListener lLocal = sLocal.Listen(@out.Add);
+                return (sink, lLocal);
             });
-            t.Item1.Send(5);
-            t.Item1.Send(6);
-            t.Item1.Send(7);
-            t.Item2.Unlisten();
-            t.Item1.Send(8);
+            s.Send(5);
+            s.Send(6);
+            s.Send(7);
+            l.Unlisten();
+            s.Send(8);
 
             CollectionAssert.AreEqual(new[] { 8, 10, 12, 14 }, @out);
         }

@@ -16,16 +16,16 @@ namespace Sodium.Tests.Performance
             Console.ReadKey();
 
             ((Action)(() =>
-           {
-               List<DiscreteCell<bool>> cc = new List<DiscreteCell<bool>>();
-               for (int i = 0; i < 5000; i++)
-               {
-                   cc.Add(c.Map(v => !v));
-               }
+            {
+                List<DiscreteCell<bool>> cc = new List<DiscreteCell<bool>>();
+                for (int i = 0; i < 5000; i++)
+                {
+                    cc.Add(c.Map(v => !v));
+                }
 
-               Console.WriteLine("Press any key");
-               Console.ReadKey();
-           }))();
+                Console.WriteLine("Press any key");
+                Console.ReadKey();
+            }))();
 
             Console.WriteLine("Press any key");
             Console.ReadKey();
@@ -39,7 +39,7 @@ namespace Sodium.Tests.Performance
             //DiscreteCellSink<IReadOnlyList<SmallTestObject>> s = ((Func<DiscreteCellSink<IReadOnlyList<SmallTestObject>>>)(() =>
             //   new DiscreteCellSink<IReadOnlyList<SmallTestObject>>(new SmallTestObject[0])))();
             DiscreteCellSink<IReadOnlyList<SmallTestObject>> s = ((Func<DiscreteCellSink<IReadOnlyList<SmallTestObject>>>)(() =>
-               new DiscreteCellSink<IReadOnlyList<SmallTestObject>>(Enumerable.Range(0, 500).Select(_ => new SmallTestObject()).ToArray())))();
+                new DiscreteCellSink<IReadOnlyList<SmallTestObject>>(Enumerable.Range(0, 500).Select(_ => new SmallTestObject()).ToArray())))();
             DiscreteCell<IReadOnlyList<bool>> s2 = s.Map(oo => oo.Select(o => o.S).Lift()).SwitchC();
 
             ((Action)(() =>
@@ -83,21 +83,21 @@ namespace Sodium.Tests.Performance
             Console.WriteLine("Press any key");
             Console.ReadKey();
 
-            var t = Transaction.Run(() =>
+            var (toggleAllSelectedStream, objectsAndIsSelected, selectAllStream, objects) = Transaction.Run(() =>
             {
                 CellLoop<bool?> allSelectedCellLoop = Cell.CreateLoop<bool?>();
-                StreamSink<Unit> toggleAllSelectedStream = Stream.CreateSink<Unit>();
-                Stream<bool> selectAllStream = toggleAllSelectedStream.Snapshot(allSelectedCellLoop).Map(a => a != true);
+                StreamSink<Unit> toggleAllSelectedStreamLocal = Stream.CreateSink<Unit>();
+                Stream<bool> selectAllStreamLocal = toggleAllSelectedStreamLocal.Snapshot(allSelectedCellLoop).Map(a => a != true);
 
-                IReadOnlyList<TestObject> o2 = Enumerable.Range(0, 10000).Select(n => new TestObject(n, selectAllStream)).ToArray();
-                DiscreteCellSink<IReadOnlyList<TestObject>> objects =
+                IReadOnlyList<TestObject> o2 = Enumerable.Range(0, 10000).Select(n => new TestObject(n, selectAllStreamLocal)).ToArray();
+                DiscreteCellSink<IReadOnlyList<TestObject>> objectsLocal =
                     DiscreteCell.CreateSink((IReadOnlyList<TestObject>)new TestObject[0]);
 
-                var objectsAndIsSelected = objects.Map(oo => oo.Select(o => o.IsSelected.Map(s => new { Object = o, IsSelected = s })).Lift()).SwitchC();
+                var objectsAndIsSelectedLocal = objectsLocal.Map(oo => oo.Select(o => o.IsSelected.Map(s => new { Object = o, IsSelected = s })).Lift()).SwitchC();
 
                 bool defaultValue = o2.Count < 1;
                 DiscreteCell<bool?> allSelected =
-                    objectsAndIsSelected.Map(
+                    objectsAndIsSelectedLocal.Map(
                         oo =>
                             !oo.Any()
                                 ? defaultValue
@@ -106,11 +106,11 @@ namespace Sodium.Tests.Performance
                                     : (oo.All(o => !o.IsSelected) ? (bool?)false : null)));
                 allSelectedCellLoop.Loop(allSelected.Cell);
 
-                return ValueTuple.Create(toggleAllSelectedStream, objectsAndIsSelected, selectAllStream, objects);
+                return (toggleAllSelectedStreamLocal, objectsAndIsSelectedLocal, selectAllStreamLocal, objectsLocal);
             });
 
             // ReSharper disable once UnusedVariable
-            IListener l = Transaction.Run(() => t.Item2.Map(oo => oo.Count(o => o.IsSelected)).Updates.Listen(v => Console.WriteLine($"{v} selected")));
+            IListener l = Transaction.Run(() => objectsAndIsSelected.Map(oo => oo.Count(o => o.IsSelected)).Updates.Listen(v => Console.WriteLine($"{v} selected")));
 
             Console.WriteLine("Press any key");
             Console.ReadKey();
@@ -118,113 +118,113 @@ namespace Sodium.Tests.Performance
             Stopwatch sw = new Stopwatch();
             sw.Start();
 
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            SendMore(t.Item4, t.Item3);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            SendMore(objects, selectAllStream);
             Thread.Sleep(500);
-            SendMore(t.Item4, t.Item3);
+            SendMore(objects, selectAllStream);
             Thread.Sleep(500);
-            SendMore(t.Item4, t.Item3);
+            SendMore(objects, selectAllStream);
             Thread.Sleep(500);
-            SendMore(t.Item4, t.Item3);
+            SendMore(objects, selectAllStream);
             Thread.Sleep(500);
-            SendMore(t.Item4, t.Item3);
+            SendMore(objects, selectAllStream);
             Thread.Sleep(500);
-            SendMore(t.Item4, t.Item3);
+            SendMore(objects, selectAllStream);
             Thread.Sleep(500);
-            SendMore(t.Item4, t.Item3);
+            SendMore(objects, selectAllStream);
             Thread.Sleep(500);
-            SendMore(t.Item4, t.Item3);
+            SendMore(objects, selectAllStream);
             Thread.Sleep(500);
-            SendMore(t.Item4, t.Item3);
+            SendMore(objects, selectAllStream);
             Thread.Sleep(500);
-            SendMore(t.Item4, t.Item3);
+            SendMore(objects, selectAllStream);
             Thread.Sleep(500);
-            SendMore(t.Item4, t.Item3);
+            SendMore(objects, selectAllStream);
             Thread.Sleep(500);
-            SendMore(t.Item4, t.Item3);
+            SendMore(objects, selectAllStream);
             Thread.Sleep(500);
-            SendMore(t.Item4, t.Item3);
+            SendMore(objects, selectAllStream);
             Thread.Sleep(500);
-            SendMore(t.Item4, t.Item3);
+            SendMore(objects, selectAllStream);
             Thread.Sleep(500);
-            SendMore(t.Item4, t.Item3);
+            SendMore(objects, selectAllStream);
             Thread.Sleep(500);
-            SendMore(t.Item4, t.Item3);
+            SendMore(objects, selectAllStream);
             Thread.Sleep(500);
-            SendMore(t.Item4, t.Item3);
+            SendMore(objects, selectAllStream);
             Thread.Sleep(500);
-            SendMore(t.Item4, t.Item3);
+            SendMore(objects, selectAllStream);
             Thread.Sleep(500);
-            SendMore(t.Item4, t.Item3);
+            SendMore(objects, selectAllStream);
             Thread.Sleep(500);
-            SendMore(t.Item4, t.Item3);
+            SendMore(objects, selectAllStream);
             Thread.Sleep(500);
-            SendMore(t.Item4, t.Item3);
+            SendMore(objects, selectAllStream);
             Thread.Sleep(500);
-            SendMore(t.Item4, t.Item3);
+            SendMore(objects, selectAllStream);
             Thread.Sleep(500);
-            SendMore(t.Item4, t.Item3);
+            SendMore(objects, selectAllStream);
             Thread.Sleep(500);
-            SendMore(t.Item4, t.Item3);
+            SendMore(objects, selectAllStream);
             Thread.Sleep(500);
-            SendMore(t.Item4, t.Item3);
-            t.Item4.Cell.Sample()[2].IsSelectedStreamSink.Send(true);
+            SendMore(objects, selectAllStream);
+            objects.Cell.Sample()[2].IsSelectedStreamSink.Send(true);
             Transaction.RunVoid(() =>
             {
-                t.Item4.Cell.Sample()[3].IsSelectedStreamSink.Send(true);
-                t.Item4.Cell.Sample()[4].IsSelectedStreamSink.Send(true);
+                objects.Cell.Sample()[3].IsSelectedStreamSink.Send(true);
+                objects.Cell.Sample()[4].IsSelectedStreamSink.Send(true);
             });
             Transaction.RunVoid(() =>
             {
-                t.Item4.Send(Enumerable.Range(0, 2500).Select(n => new TestObject(n, t.Item3)).ToArray());
-                t.Item1.Send(Unit.Value);
+                objects.Send(Enumerable.Range(0, 2500).Select(n => new TestObject(n, selectAllStream)).ToArray());
+                toggleAllSelectedStream.Send(Unit.Value);
             });
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item1.Send(Unit.Value);
-            t.Item4.Send(new TestObject[0]);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            toggleAllSelectedStream.Send(Unit.Value);
+            objects.Send(new TestObject[0]);
 
             sw.Stop();
 

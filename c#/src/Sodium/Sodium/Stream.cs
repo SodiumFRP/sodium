@@ -283,9 +283,8 @@ namespace Sodium
 
         internal IWeakListener Listen(Node target, Transaction trans, Action<Transaction, T> action, bool suppressEarlierFirings)
         {
-            ValueTuple<bool, Node<T>.Target> t = this.Node.Link(trans, action, target);
-            Node<T>.Target nodeTarget = t.Item2;
-            if (t.Item1)
+            (bool changed, Node<T>.Target nodeTarget) = this.Node.Link(trans, action, target);
+            if (changed)
             {
                 trans.SetNeedsRegenerating();
             }
@@ -595,9 +594,8 @@ namespace Sodium
             Stream<T> @out = new Stream<T>(this.KeepListenersAlive);
             Node<T> left = new Node<T>();
             Node<T> right = @out.Node;
-            ValueTuple<bool, Node<T>.Target> r = left.Link(trans, (t, v) => { }, right);
-            Node<T>.Target nodeTarget = r.Item2;
-            if (r.Item1)
+            (bool changed, Node<T>.Target nodeTarget) = left.Link(trans, (t, v) => { }, right);
+            if (changed)
             {
                 trans.SetNeedsRegenerating();
             }
@@ -719,11 +717,11 @@ namespace Sodium
             {
                 if (lastA.Match(v => comparer.Equals(v, a), () => false))
                 {
-                    return ValueTuple.Create(Maybe.Nothing<T>(), lastA);
+                    return (ReturnValue: Maybe.Nothing<T>(), State: lastA);
                 }
 
                 IMaybe<T> ma = Maybe.Just(a);
-                return ValueTuple.Create(ma, ma);
+                return (ReturnValue: ma, State: ma);
             }).FilterMaybe();
         }
 
@@ -740,7 +738,7 @@ namespace Sodium
         ///     <see cref="Snapshot{TReturn}(Cell{TReturn})" />.  Apart from this, the function must be pure.
         /// </param>
         /// <returns>A stream resulting from the transformation of this stream by the Mealy machine.</returns>
-        public Stream<TReturn> Collect<TState, TReturn>(TState initialState, Func<T, TState, ValueTuple<TReturn, TState>> f) => this.CollectLazy(new Lazy<TState>(() => initialState), f);
+        public Stream<TReturn> Collect<TState, TReturn>(TState initialState, Func<T, TState, (TReturn ReturnValue, TState State)> f) => this.CollectLazy(new Lazy<TState>(() => initialState), f);
 
         /// <summary>
         ///     Transform a stream with a generalized state loop (a Mealy machine) using a lazily evaluated initial state.
@@ -755,15 +753,15 @@ namespace Sodium
         ///     <see cref="Snapshot{TReturn}(Cell{TReturn})" />.  Apart from this, the function must be pure.
         /// </param>
         /// <returns>A stream resulting from the transformation of this stream by the Mealy machine.</returns>
-        public Stream<TReturn> CollectLazy<TState, TReturn>(Lazy<TState> initialState, Func<T, TState, ValueTuple<TReturn, TState>> f)
+        public Stream<TReturn> CollectLazy<TState, TReturn>(Lazy<TState> initialState, Func<T, TState, (TReturn ReturnValue, TState State)> f)
         {
             return Transaction.Run(() =>
             {
                 StreamLoop<TState> es = new StreamLoop<TState>();
                 Cell<TState> s = es.HoldLazyInternal(initialState);
-                Stream<ValueTuple<TReturn, TState>> ebs = this.Snapshot(s, f);
-                Stream<TReturn> eb = ebs.Map(bs => bs.Item1);
-                Stream<TState> esOut = ebs.Map(bs => bs.Item2);
+                Stream<(TReturn ReturnValue, TState State)> ebs = this.Snapshot(s, f);
+                Stream<TReturn> eb = ebs.Map(bs => bs.ReturnValue);
+                Stream<TState> esOut = ebs.Map(bs => bs.State);
                 es.Loop(esOut);
                 return eb;
             });

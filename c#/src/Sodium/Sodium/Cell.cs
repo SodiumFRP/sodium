@@ -333,9 +333,8 @@ namespace Sodium
 
                 Node<TResult> outTarget = @out.Node;
                 Node<Unit> inTarget = new Node<Unit>();
-                ValueTuple<bool, Node<Unit>.Target> r = inTarget.Link(trans0, (t, v) => { }, outTarget);
-                Node<Unit>.Target nodeTarget = r.Item2;
-                if (r.Item1)
+                (bool changed, Node<Unit>.Target nodeTarget) = inTarget.Link(trans0, (t, v) => { }, outTarget);
+                if (changed)
                 {
                     trans0.SetNeedsRegenerating();
                 }

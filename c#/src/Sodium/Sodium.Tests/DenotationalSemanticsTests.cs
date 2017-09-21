@@ -18,9 +18,7 @@ namespace Sodium.Tests
         [Test]
         public void Test_MapS_TestCase()
         {
-            ValueTuple<Stream<int>, Dictionary<int, Action>> st = MkStream(new Dictionary<int, int> { { 0, 5 }, { 1, 10 }, { 2, 12 } });
-            Stream<int> s = st.Item1;
-            Dictionary<int, Action> sf = st.Item2;
+            (Stream<int> s, Dictionary<int, Action> sf) = MkStream(new Dictionary<int, int> { { 0, 5 }, { 1, 10 }, { 2, 12 } });
             List<int> @out = RunSimulation<int>(s.Map(x => x + 1).Listen, new[] { sf });
             CollectionAssert.AreEqual(new[] { 6, 11, 13 }, @out);
         }
@@ -28,12 +26,8 @@ namespace Sodium.Tests
         [Test]
         public void Test_Snapshot_TestCase()
         {
-            ValueTuple<Stream<char>, Dictionary<int, Action>> s1T = MkStream(new Dictionary<int, char> { { 0, 'a' }, { 3, 'b' }, { 5, 'c' } });
-            Stream<char> s1 = s1T.Item1;
-            Dictionary<int, Action> s1F = s1T.Item2;
-            ValueTuple<Stream<int>, Dictionary<int, Action>> s2T = MkStream(new Dictionary<int, int> { { 1, 4 }, { 5, 7 } });
-            Stream<int> s2 = s2T.Item1;
-            Dictionary<int, Action> s2F = s2T.Item2;
+            (Stream<char> s1, Dictionary<int, Action> s1F) = MkStream(new Dictionary<int, char> { { 0, 'a' }, { 3, 'b' }, { 5, 'c' } });
+            (Stream<int> s2, Dictionary<int, Action> s2F) = MkStream(new Dictionary<int, int> { { 1, 4 }, { 5, 7 } });
             DiscreteCell<int> c = s2.Hold(3);
             List<int> @out = RunSimulation<int>(s1.Snapshot(c.Cell).Listen, new[] { s1F, s2F });
             CollectionAssert.AreEqual(new[] { 3, 4, 4 }, @out);
@@ -42,12 +36,8 @@ namespace Sodium.Tests
         [Test]
         public void Test_Merge_TestCase()
         {
-            ValueTuple<Stream<int>, Dictionary<int, Action>> s1T = MkStream(new Dictionary<int, int> { { 0, 0 }, { 2, 2 } });
-            Stream<int> s1 = s1T.Item1;
-            Dictionary<int, Action> s1F = s1T.Item2;
-            ValueTuple<Stream<int>, Dictionary<int, Action>> s2T = MkStream(new Dictionary<int, int> { { 1, 10 }, { 2, 20 }, { 3, 30 } });
-            Stream<int> s2 = s2T.Item1;
-            Dictionary<int, Action> s2F = s2T.Item2;
+            (Stream<int> s1, Dictionary<int, Action> s1F) = MkStream(new Dictionary<int, int> { { 0, 0 }, { 2, 2 } });
+            (Stream<int> s2, Dictionary<int, Action> s2F) = MkStream(new Dictionary<int, int> { { 1, 10 }, { 2, 20 }, { 3, 30 } });
             List<int> @out = RunSimulation<int>(s1.Merge(s2, (x, y) => x + y).Listen, new[] { s1F, s2F });
             CollectionAssert.AreEqual(new[] { 0, 10, 22, 30 }, @out);
         }
@@ -55,9 +45,7 @@ namespace Sodium.Tests
         [Test]
         public void Test_Filter_TestCase()
         {
-            ValueTuple<Stream<int>, Dictionary<int, Action>> st = MkStream(new Dictionary<int, int> { { 0, 5 }, { 1, 6 }, { 2, 7 } });
-            Stream<int> s = st.Item1;
-            Dictionary<int, Action> sf = st.Item2;
+            (Stream<int> s, Dictionary<int, Action> sf) = MkStream(new Dictionary<int, int> { { 0, 5 }, { 1, 6 }, { 2, 7 } });
             List<int> @out = RunSimulation<int>(s.Filter(x => x % 2 != 0).Listen, new[] { sf });
             CollectionAssert.AreEqual(new[] { 5, 7 }, @out);
         }
@@ -68,22 +56,16 @@ namespace Sodium.Tests
             RunPermutations<char>(
                 createFiringsListAndListener =>
                 {
-                    ValueTuple<Stream<char>, Dictionary<int, Action>> s1T = MkStream(new Dictionary<int, char> { { 0, 'a' }, { 1, 'b' }, { 2, 'c' }, { 3, 'd' } });
-                    Stream<char> s1 = s1T.Item1;
-                    Dictionary<int, Action> s1F = s1T.Item2;
-                    ValueTuple<Stream<char>, Dictionary<int, Action>> s2T = MkStream(new Dictionary<int, char> { { 0, 'W' }, { 1, 'X' }, { 2, 'Y' }, { 3, 'Z' } });
-                    Stream<char> s2 = s2T.Item1;
-                    Dictionary<int, Action> s2F = s2T.Item2;
-                    ValueTuple<Stream<Stream<char>>, Dictionary<int, Action>> switcherT = MkStream(new Dictionary<int, Stream<char>> { { 1, s2 } });
-                    Stream<Stream<char>> switcher = switcherT.Item1;
-                    Dictionary<int, Action> switcherF = switcherT.Item2;
+                    (Stream<char> s1, Dictionary<int, Action> s1F) = MkStream(new Dictionary<int, char> { { 0, 'a' }, { 1, 'b' }, { 2, 'c' }, { 3, 'd' } });
+                    (Stream<char> s2, Dictionary<int, Action> s2F) = MkStream(new Dictionary<int, char> { { 0, 'W' }, { 1, 'X' }, { 2, 'Y' }, { 3, 'Z' } });
+                    (Stream<Stream<char>> switcher, Dictionary<int, Action> switcherF) = MkStream(new Dictionary<int, Stream<char>> { { 1, s2 } });
                     DiscreteCell<Stream<char>> c = switcher.Hold(s1);
 
-                    IReadOnlyList<ValueTuple<string, Dictionary<int, Action>>> firings = new[]
+                    IReadOnlyList<(string Name, Dictionary<int, Action> Firings)> firings = new[]
                     {
-                        ValueTuple.Create("s1", s1F),
-                        ValueTuple.Create("s2", s2F),
-                        ValueTuple.Create("switcher", switcherF)
+                        (Name: "s1", Firings: s1F),
+                        (Name: "s2", Firings: s2F),
+                        (Name: "switcher", Firings: switcherF)
                     };
 
                     return createFiringsListAndListener(firings, c.Cell.SwitchS().Listen);
@@ -94,9 +76,7 @@ namespace Sodium.Tests
         [Test]
         public void Test_Updates_TestCase()
         {
-            ValueTuple<Stream<char>, Dictionary<int, Action>> st = MkStream(new Dictionary<int, char> { { 1, 'b' }, { 3, 'c' } });
-            Stream<char> s = st.Item1;
-            Dictionary<int, Action> sf = st.Item2;
+            (Stream<char> s, Dictionary<int, Action> sf) = MkStream(new Dictionary<int, char> { { 1, 'b' }, { 3, 'c' } });
             DiscreteCell<char> c = s.Hold('a');
             List<char> @out = RunSimulation<char>(Operational.Updates(c.Cell).Listen, new[] { sf });
             CollectionAssert.AreEqual(new[] { 'b', 'c' }, @out);
@@ -105,9 +85,7 @@ namespace Sodium.Tests
         [Test]
         public void Test_Value_TestCase1()
         {
-            ValueTuple<Stream<char>, Dictionary<int, Action>> st = MkStream(new Dictionary<int, char> { { 1, 'b' }, { 3, 'c' } });
-            Stream<char> s = st.Item1;
-            Dictionary<int, Action> sf = st.Item2;
+            (Stream<char> s, Dictionary<int, Action> sf) = MkStream(new Dictionary<int, char> { { 1, 'b' }, { 3, 'c' } });
             DiscreteCell<char> c = s.Hold('a');
             List<char> @out = RunSimulation<char>(h => Transaction.Run(() => Operational.Value(c.Cell).Listen(h)), new[] { sf });
             CollectionAssert.AreEqual(new[] { 'a', 'b', 'c' }, @out);
@@ -116,9 +94,7 @@ namespace Sodium.Tests
         [Test]
         public void Test_Value_TestCase2()
         {
-            ValueTuple<Stream<char>, Dictionary<int, Action>> st = MkStream(new Dictionary<int, char> { { 0, 'b' }, { 1, 'c' }, { 3, 'd' } });
-            Stream<char> s = st.Item1;
-            Dictionary<int, Action> sf = st.Item2;
+            (Stream<char> s, Dictionary<int, Action> sf) = MkStream(new Dictionary<int, char> { { 0, 'b' }, { 1, 'c' }, { 3, 'd' } });
             DiscreteCell<char> c = s.Hold('a');
             List<char> @out = RunSimulation<char>(h => Transaction.Run(() => Operational.Value(c.Cell).Listen(h)), new[] { sf });
             CollectionAssert.AreEqual(new[] { 'b', 'c', 'd' }, @out);
@@ -127,9 +103,7 @@ namespace Sodium.Tests
         [Test]
         public void Test_ListenC_TestCase1()
         {
-            ValueTuple<Stream<char>, Dictionary<int, Action>> st = MkStream(new Dictionary<int, char> { { 1, 'b' }, { 3, 'c' } });
-            Stream<char> s = st.Item1;
-            Dictionary<int, Action> sf = st.Item2;
+            (Stream<char> s, Dictionary<int, Action> sf) = MkStream(new Dictionary<int, char> { { 1, 'b' }, { 3, 'c' } });
             DiscreteCell<char> c = s.Hold('a');
             List<char> @out = RunSimulation<char>(c.Listen, new[] { sf });
             CollectionAssert.AreEqual(new[] { 'a', 'b', 'c' }, @out);
@@ -138,9 +112,7 @@ namespace Sodium.Tests
         [Test]
         public void Test_ListenC_TestCase2()
         {
-            ValueTuple<Stream<char>, Dictionary<int, Action>> st = MkStream(new Dictionary<int, char> { { 0, 'b' }, { 1, 'c' }, { 3, 'd' } });
-            Stream<char> s = st.Item1;
-            Dictionary<int, Action> sf = st.Item2;
+            (Stream<char> s, Dictionary<int, Action> sf) = MkStream(new Dictionary<int, char> { { 0, 'b' }, { 1, 'c' }, { 3, 'd' } });
             DiscreteCell<char> c = s.Hold('a');
             List<char> @out = RunSimulation<char>(c.Listen, new[] { sf });
             CollectionAssert.AreEqual(new[] { 'b', 'c', 'd' }, @out);
@@ -149,15 +121,14 @@ namespace Sodium.Tests
         [Test]
         public void Test_Split_TestCase()
         {
-            ValueTuple<Stream<IReadOnlyList<char>>, ILookup<int, Action>> st = MkStream(new[]
-            {
-                ValueTuple.Create<int, IReadOnlyList<char>>(0, new[] {'a', 'b'}),
-                ValueTuple.Create<int, IReadOnlyList<char>>(1, new[] {'c'}),
-                ValueTuple.Create<int, IReadOnlyList<char>>(1, new[] {'d', 'e'})
-            },
+            (Stream<IReadOnlyList<char>> s, ILookup<int, Action> sf) = MkStream(
+                new(int Time, IReadOnlyList<char> Value)[]
+                {
+                    (Time: 0, Value: new[] { 'a', 'b' }),
+                    (Time: 1, Value: new[] { 'c' }),
+                    (Time: 1, Value: new[] { 'd', 'e' })
+                },
                 (x, y) => x.Concat(y).ToArray());
-            Stream<IReadOnlyList<char>> s = st.Item1;
-            ILookup<int, Action> sf = st.Item2;
             List<char> @out = RunSimulation<char>(Operational.Split<char, IReadOnlyList<char>>(s).Listen, new[] { sf });
             CollectionAssert.AreEqual(new[] { 'a', 'b', 'c', 'd', 'e' }, @out);
         }
@@ -181,9 +152,7 @@ namespace Sodium.Tests
         [Test]
         public void Test_Hold_TestCase()
         {
-            ValueTuple<Stream<char>, Dictionary<int, Action>> st = MkStream(new Dictionary<int, char> { { 1, 'b' }, { 3, 'c' } });
-            Stream<char> s = st.Item1;
-            Dictionary<int, Action> sf = st.Item2;
+            (Stream<char> s, Dictionary<int, Action> sf) = MkStream(new Dictionary<int, char> { { 1, 'b' }, { 3, 'c' } });
             DiscreteCell<char> c = s.Hold('a');
             List<char> @out = RunSimulation<char>(c.Listen, new[] { sf });
             CollectionAssert.AreEqual(new[] { 'a', 'b', 'c' }, @out);
@@ -192,9 +161,7 @@ namespace Sodium.Tests
         [Test]
         public void Test_MapC_TestCase()
         {
-            ValueTuple<Stream<int>, Dictionary<int, Action>> st = MkStream(new Dictionary<int, int> { { 2, 3 }, { 3, 5 } });
-            Stream<int> s = st.Item1;
-            Dictionary<int, Action> sf = st.Item2;
+            (Stream<int> s, Dictionary<int, Action> sf) = MkStream(new Dictionary<int, int> { { 2, 3 }, { 3, 5 } });
             DiscreteCell<int> c = s.Hold(0);
             List<int> @out = RunSimulation<int>(c.Map(x => x + 1).Listen, new[] { sf });
             CollectionAssert.AreEqual(new[] { 1, 4, 6 }, @out);
@@ -203,13 +170,9 @@ namespace Sodium.Tests
         [Test]
         public void Test_Apply_TestCase()
         {
-            ValueTuple<Stream<int>, Dictionary<int, Action>> s1T = MkStream(new Dictionary<int, int> { { 1, 200 }, { 2, 300 }, { 4, 400 } });
-            Stream<int> s1 = s1T.Item1;
-            Dictionary<int, Action> s1F = s1T.Item2;
+            (Stream<int> s1, Dictionary<int, Action> s1F) = MkStream(new Dictionary<int, int> { { 1, 200 }, { 2, 300 }, { 4, 400 } });
             DiscreteCell<int> ca = s1.Hold(100);
-            ValueTuple<Stream<Func<int, int>>, Dictionary<int, Action>> s2T = MkStream(new Dictionary<int, Func<int, int>> { { 1, x => x + 5 }, { 3, x => x + 6 } });
-            Stream<Func<int, int>> s2 = s2T.Item1;
-            Dictionary<int, Action> s2F = s2T.Item2;
+            (Stream<Func<int, int>> s2, Dictionary<int, Action> s2F) = MkStream(new Dictionary<int, Func<int, int>> { { 1, x => x + 5 }, { 3, x => x + 6 } });
             DiscreteCell<Func<int, int>> cf = s2.Hold(x => x + 0);
             List<int> @out = RunSimulation<int>(ca.Apply(cf).Listen, new[] { s1F, s2F });
             CollectionAssert.AreEqual(new[] { 100, 205, 305, 306, 406 }, @out);
@@ -219,29 +182,23 @@ namespace Sodium.Tests
         public void Test_SwitchC_TestCase1()
         {
             RunPermutations<char>(createFiringsListAndListener =>
-            {
-                ValueTuple<Stream<char>, Dictionary<int, Action>> s1T = MkStream(new Dictionary<int, char> { { 0, 'b' }, { 1, 'c' }, { 2, 'd' }, { 3, 'e' } });
-                Stream<char> s1 = s1T.Item1;
-                Dictionary<int, Action> s1F = s1T.Item2;
-                DiscreteCell<char> c1 = s1.Hold('a');
-                ValueTuple<Stream<char>, Dictionary<int, Action>> s2T = MkStream(new Dictionary<int, char> { { 0, 'W' }, { 1, 'X' }, { 2, 'Y' }, { 3, 'Z' } });
-                Stream<char> s2 = s2T.Item1;
-                Dictionary<int, Action> s2F = s2T.Item2;
-                DiscreteCell<char> c2 = s2.Hold('V');
-                ValueTuple<Stream<DiscreteCell<char>>, Dictionary<int, Action>> switcherT = MkStream(new Dictionary<int, DiscreteCell<char>> { { 1, c2 } });
-                Stream<DiscreteCell<char>> switcher = switcherT.Item1;
-                Dictionary<int, Action> switcherF = switcherT.Item2;
-                DiscreteCell<DiscreteCell<char>> c = switcher.Hold(c1);
-
-                IReadOnlyList<ValueTuple<string, Dictionary<int, Action>>> firings = new[]
                 {
-                    ValueTuple.Create("s1", s1F),
-                    ValueTuple.Create("s2", s2F),
-                    ValueTuple.Create("switcher", switcherF)
-                };
+                    (Stream<char> s1, Dictionary<int, Action> s1F) = MkStream(new Dictionary<int, char> { { 0, 'b' }, { 1, 'c' }, { 2, 'd' }, { 3, 'e' } });
+                    DiscreteCell<char> c1 = s1.Hold('a');
+                    (Stream<char> s2, Dictionary<int, Action> s2F) = MkStream(new Dictionary<int, char> { { 0, 'W' }, { 1, 'X' }, { 2, 'Y' }, { 3, 'Z' } });
+                    DiscreteCell<char> c2 = s2.Hold('V');
+                    (Stream<DiscreteCell<char>> switcher, Dictionary<int, Action> switcherF) = MkStream(new Dictionary<int, DiscreteCell<char>> { { 1, c2 } });
+                    DiscreteCell<DiscreteCell<char>> c = switcher.Hold(c1);
 
-                return createFiringsListAndListener(firings, c.SwitchC().Listen);
-            },
+                    IReadOnlyList<(string Name, Dictionary<int, Action> Firings)> firings = new[]
+                    {
+                        (Name: "s1", Firings: s1F),
+                        (Name: "s2", Firings: s2F),
+                        (Name: "switcher", Firings: switcherF)
+                    };
+
+                    return createFiringsListAndListener(firings, c.SwitchC().Listen);
+                },
                 @out => CollectionAssert.AreEqual(new[] { 'b', 'X', 'Y', 'Z' }, @out));
         }
 
@@ -249,29 +206,23 @@ namespace Sodium.Tests
         public void Test_SwitchC_TestCase2()
         {
             RunPermutations<char>(createFiringsListAndListener =>
-            {
-                ValueTuple<Stream<char>, Dictionary<int, Action>> s1T = MkStream(new Dictionary<int, char> { { 0, 'b' }, { 1, 'c' }, { 2, 'd' }, { 3, 'e' } });
-                Stream<char> s1 = s1T.Item1;
-                Dictionary<int, Action> s1F = s1T.Item2;
-                DiscreteCell<char> c1 = s1.Hold('a');
-                ValueTuple<Stream<char>, Dictionary<int, Action>> s2T = MkStream(new Dictionary<int, char> { { 1, 'X' }, { 2, 'Y' }, { 3, 'Z' } });
-                Stream<char> s2 = s2T.Item1;
-                Dictionary<int, Action> s2F = s2T.Item2;
-                DiscreteCell<char> c2 = s2.Hold('W');
-                ValueTuple<Stream<DiscreteCell<char>>, Dictionary<int, Action>> switcherT = MkStream(new Dictionary<int, DiscreteCell<char>> { { 1, c2 } });
-                Stream<DiscreteCell<char>> switcher = switcherT.Item1;
-                Dictionary<int, Action> switcherF = switcherT.Item2;
-                DiscreteCell<DiscreteCell<char>> c = switcher.Hold(c1);
-
-                IReadOnlyList<ValueTuple<string, Dictionary<int, Action>>> firings = new[]
                 {
-                    ValueTuple.Create("s1", s1F),
-                    ValueTuple.Create("s2", s2F),
-                    ValueTuple.Create("switcher", switcherF)
-                };
+                    (Stream<char> s1, Dictionary<int, Action> s1F) = MkStream(new Dictionary<int, char> { { 0, 'b' }, { 1, 'c' }, { 2, 'd' }, { 3, 'e' } });
+                    DiscreteCell<char> c1 = s1.Hold('a');
+                    (Stream<char> s2, Dictionary<int, Action> s2F) = MkStream(new Dictionary<int, char> { { 1, 'X' }, { 2, 'Y' }, { 3, 'Z' } });
+                    DiscreteCell<char> c2 = s2.Hold('W');
+                    (Stream<DiscreteCell<char>> switcher, Dictionary<int, Action> switcherF) = MkStream(new Dictionary<int, DiscreteCell<char>> { { 1, c2 } });
+                    DiscreteCell<DiscreteCell<char>> c = switcher.Hold(c1);
 
-                return createFiringsListAndListener(firings, c.SwitchC().Listen);
-            },
+                    IReadOnlyList<(string Name, Dictionary<int, Action> Firings)> firings = new[]
+                    {
+                        (Name: "s1", Firings: s1F),
+                        (Name: "s2", Firings: s2F),
+                        (Name: "switcher", Firings: switcherF)
+                    };
+
+                    return createFiringsListAndListener(firings, c.SwitchC().Listen);
+                },
                 @out => CollectionAssert.AreEqual(new[] { 'b', 'X', 'Y', 'Z' }, @out));
         }
 
@@ -279,29 +230,23 @@ namespace Sodium.Tests
         public void Test_SwitchC_TestCase3()
         {
             RunPermutations<char>(createFiringsListAndListener =>
-            {
-                ValueTuple<Stream<char>, Dictionary<int, Action>> s1T = MkStream(new Dictionary<int, char> { { 0, 'b' }, { 1, 'c' }, { 2, 'd' }, { 3, 'e' } });
-                Stream<char> s1 = s1T.Item1;
-                Dictionary<int, Action> s1F = s1T.Item2;
-                DiscreteCell<char> c1 = s1.Hold('a');
-                ValueTuple<Stream<char>, Dictionary<int, Action>> s2T = MkStream(new Dictionary<int, char> { { 2, 'Y' }, { 3, 'Z' } });
-                Stream<char> s2 = s2T.Item1;
-                Dictionary<int, Action> s2F = s2T.Item2;
-                DiscreteCell<char> c2 = s2.Hold('X');
-                ValueTuple<Stream<DiscreteCell<char>>, Dictionary<int, Action>> switcherT = MkStream(new Dictionary<int, DiscreteCell<char>> { { 1, c2 } });
-                Stream<DiscreteCell<char>> switcher = switcherT.Item1;
-                Dictionary<int, Action> switcherF = switcherT.Item2;
-                DiscreteCell<DiscreteCell<char>> c = switcher.Hold(c1);
-
-                IReadOnlyList<ValueTuple<string, Dictionary<int, Action>>> firings = new[]
                 {
-                    ValueTuple.Create("s1", s1F),
-                    ValueTuple.Create("s2", s2F),
-                    ValueTuple.Create("switcher", switcherF)
-                };
+                    (Stream<char> s1, Dictionary<int, Action> s1F) = MkStream(new Dictionary<int, char> { { 0, 'b' }, { 1, 'c' }, { 2, 'd' }, { 3, 'e' } });
+                    DiscreteCell<char> c1 = s1.Hold('a');
+                    (Stream<char> s2, Dictionary<int, Action> s2F) = MkStream(new Dictionary<int, char> { { 2, 'Y' }, { 3, 'Z' } });
+                    DiscreteCell<char> c2 = s2.Hold('X');
+                    (Stream<DiscreteCell<char>> switcher, Dictionary<int, Action> switcherF) = MkStream(new Dictionary<int, DiscreteCell<char>> { { 1, c2 } });
+                    DiscreteCell<DiscreteCell<char>> c = switcher.Hold(c1);
 
-                return createFiringsListAndListener(firings, c.SwitchC().Listen);
-            },
+                    IReadOnlyList<(string Name, Dictionary<int, Action> Firings)> firings = new[]
+                    {
+                        (Name: "s1", Firings: s1F),
+                        (Name: "s2", Firings: s2F),
+                        (Name: "switcher", Firings: switcherF)
+                    };
+
+                    return createFiringsListAndListener(firings, c.SwitchC().Listen);
+                },
                 @out => CollectionAssert.AreEqual(new[] { 'b', 'X', 'Y', 'Z' }, @out));
         }
 
@@ -309,34 +254,26 @@ namespace Sodium.Tests
         public void Test_SwitchC_TestCase4()
         {
             RunPermutations<char>(createFiringsListAndListener =>
-            {
-                ValueTuple<Stream<char>, Dictionary<int, Action>> s1T = MkStream(new Dictionary<int, char> { { 0, 'b' }, { 1, 'c' }, { 2, 'd' }, { 3, 'e' } });
-                Stream<char> s1 = s1T.Item1;
-                Dictionary<int, Action> s1F = s1T.Item2;
-                DiscreteCell<char> c1 = s1.Hold('a');
-                ValueTuple<Stream<char>, Dictionary<int, Action>> s2T = MkStream(new Dictionary<int, char> { { 0, 'W' }, { 1, 'X' }, { 2, 'Y' }, { 3, 'Z' } });
-                Stream<char> s2 = s2T.Item1;
-                Dictionary<int, Action> s2F = s2T.Item2;
-                DiscreteCell<char> c2 = s2.Hold('V');
-                ValueTuple<Stream<char>, Dictionary<int, Action>> s3T = MkStream(new Dictionary<int, char> { { 0, '2' }, { 1, '3' }, { 2, '4' }, { 3, '5' } });
-                Stream<char> s3 = s3T.Item1;
-                Dictionary<int, Action> s3F = s3T.Item2;
-                DiscreteCell<char> c3 = s3.Hold('1');
-                ValueTuple<Stream<DiscreteCell<char>>, Dictionary<int, Action>> switcherT = MkStream(new Dictionary<int, DiscreteCell<char>> { { 1, c2 }, { 3, c3 } });
-                Stream<DiscreteCell<char>> switcher = switcherT.Item1;
-                Dictionary<int, Action> switcherF = switcherT.Item2;
-                DiscreteCell<DiscreteCell<char>> c = switcher.Hold(c1);
-
-                IReadOnlyList<ValueTuple<string, Dictionary<int, Action>>> firings = new[]
                 {
-                    ValueTuple.Create("s1", s1F),
-                    ValueTuple.Create("s2", s2F),
-                    ValueTuple.Create("s3", s3F),
-                    ValueTuple.Create("switcher", switcherF)
-                };
+                    (Stream<char> s1, Dictionary<int, Action> s1F) = MkStream(new Dictionary<int, char> { { 0, 'b' }, { 1, 'c' }, { 2, 'd' }, { 3, 'e' } });
+                    DiscreteCell<char> c1 = s1.Hold('a');
+                    (Stream<char> s2, Dictionary<int, Action> s2F) = MkStream(new Dictionary<int, char> { { 0, 'W' }, { 1, 'X' }, { 2, 'Y' }, { 3, 'Z' } });
+                    DiscreteCell<char> c2 = s2.Hold('V');
+                    (Stream<char> s3, Dictionary<int, Action> s3F) = MkStream(new Dictionary<int, char> { { 0, '2' }, { 1, '3' }, { 2, '4' }, { 3, '5' } });
+                    DiscreteCell<char> c3 = s3.Hold('1');
+                    (Stream<DiscreteCell<char>> switcher, Dictionary<int, Action> switcherF) = MkStream(new Dictionary<int, DiscreteCell<char>> { { 1, c2 }, { 3, c3 } });
+                    DiscreteCell<DiscreteCell<char>> c = switcher.Hold(c1);
 
-                return createFiringsListAndListener(firings, c.SwitchC().Listen);
-            },
+                    IReadOnlyList<(string Name, Dictionary<int, Action> Firings)> firings = new[]
+                    {
+                        (Name: "s1", Firings: s1F),
+                        (Name: "s2", Firings: s2F),
+                        (Name: "s3", Firings: s3F),
+                        (Name: "switcher", Firings: switcherF)
+                    };
+
+                    return createFiringsListAndListener(firings, c.SwitchC().Listen);
+                },
                 @out => CollectionAssert.AreEqual(new[] { 'b', 'X', 'Y', '5' }, @out));
         }
 
@@ -364,7 +301,7 @@ namespace Sodium.Tests
             Assert.AreEqual('b', sample2.Value);
         }
 
-        private static ValueTuple<Stream<T>, Dictionary<int, Action>> MkStream<T>(Dictionary<int, T> firings)
+        private static (Stream<T> Stream, Dictionary<int, Action> Firings) MkStream<T>(Dictionary<int, T> firings)
         {
             StreamSink<T> s = Stream.CreateSink<T>();
             Dictionary<int, Action> f = firings.ToDictionary(firing => firing.Key, firing => (Action)(() => s.Send(firing.Value)));
@@ -373,19 +310,19 @@ namespace Sodium.Tests
                 throw new InvalidOperationException("All firings must occur at T >= 0.");
             }
             Stream<T> returnStream = s;
-            return ValueTuple.Create(returnStream, f);
+            return (Stream: returnStream, Firings: f);
         }
 
-        private static ValueTuple<Stream<T>, ILookup<int, Action>> MkStream<T>(IReadOnlyList<ValueTuple<int, T>> firings, Func<T, T, T> coalesce)
+        private static (Stream<T> Stream, ILookup<int, Action> Firings) MkStream<T>(IReadOnlyList<(int Time, T Value)> firings, Func<T, T, T> coalesce)
         {
-            StreamSink<T> s = Stream.CreateSink<T>(coalesce);
-            ILookup<int, Action> f = firings.ToLookup(firing => firing.Item1, firing => (Action)(() => s.Send(firing.Item2)));
+            StreamSink<T> s = Stream.CreateSink(coalesce);
+            ILookup<int, Action> f = firings.ToLookup(firing => firing.Time, firing => (Action)(() => s.Send(firing.Value)));
             if (f.Any(g => g.Key < 0))
             {
                 throw new InvalidOperationException("All firings must occur at T >= 0.");
             }
             Stream<T> returnStream = s;
-            return ValueTuple.Create(returnStream, f);
+            return (Stream: returnStream, Firings: f);
         }
 
         private static List<T> RunSimulation<T>(Func<Action<T>, IListener> listen, IReadOnlyList<Dictionary<int, Action>> firings)
@@ -400,7 +337,7 @@ namespace Sodium.Tests
             IListener l = null;
             try
             {
-                Action<int> run = t =>
+                void Run(int t)
                 {
                     if (firings != null)
                     {
@@ -409,21 +346,21 @@ namespace Sodium.Tests
                             a();
                         }
                     }
-                };
+                }
 
                 if (maxKey > -1)
                 {
                     l = Transaction.Run(() =>
                     {
                         IListener lLocal = listen(@out.Add);
-                        run(0);
+                        Run(0);
                         return lLocal;
                     });
 
                     for (int i = 1; i <= maxKey; i++)
                     {
                         int t = i;
-                        Transaction.RunVoid(() => { run(t); });
+                        Transaction.RunVoid(() => { Run(t); });
                     }
                 }
                 else
@@ -438,24 +375,24 @@ namespace Sodium.Tests
             return @out;
         }
 
-        private static void RunPermutations<T>(Func<Func<IReadOnlyList<ValueTuple<string, Dictionary<int, Action>>>, Func<Action<T>, IListener>, ValueTuple<IReadOnlyList<ValueTuple<string, Dictionary<int, Action>>>, Func<Action<T>, IListener>>>, ValueTuple<IReadOnlyList<ValueTuple<string, Dictionary<int, Action>>>, Func<Action<T>, IListener>>> createListAndListener, Action<IReadOnlyList<T>> assert)
+        private static void RunPermutations<T>(Func<Func<IReadOnlyList<(string Name, Dictionary<int, Action> Firings)>, Func<Action<T>, IListener>, (IReadOnlyList<(string Name, Dictionary<int, Action> Firings)> FiringsList, Func<Action<T>, IListener> Listen)>, (IReadOnlyList<(string Name, Dictionary<int, Action> Firings)> FiringsList, Func<Action<T>, IListener> Listen)> createListAndListener, Action<IReadOnlyList<T>> assert)
         {
-            IReadOnlyList<int> indexes = Enumerable.Range(0, createListAndListener(ValueTuple.Create).Item1.Count).ToArray();
-            foreach (ValueTuple<IReadOnlyList<ValueTuple<string, Dictionary<int, Action>>>, Func<Action<T>, IListener>> listAndListener in GetPermutations(indexes).Select(ii =>
-            {
-                ValueTuple<IReadOnlyList<ValueTuple<string, Dictionary<int, Action>>>, Func<Action<T>, IListener>> listAndListenerLocal = createListAndListener(ValueTuple.Create);
-                IReadOnlyList<ValueTuple<string, Dictionary<int, Action>>> l = listAndListenerLocal.Item1;
-                return ValueTuple.Create<IReadOnlyList<ValueTuple<string, Dictionary<int, Action>>>, Func<Action<T>, IListener>>(ii.Select(i => l[i]).ToArray(), listAndListenerLocal.Item2);
-            }))
+            IReadOnlyList<int> indexes = Enumerable.Range(0, createListAndListener((fl, l) => (FiringsList: fl, Listen: l)).FiringsList.Count).ToArray();
+            foreach ((IReadOnlyList<(string Name, Dictionary<int, Action> Firings)> firingsList, Func<Action<T>, IListener> listener) in
+                GetPermutations(indexes).Select(ii =>
+                {
+                    (IReadOnlyList<(string Name, Dictionary<int, Action> Firings)> firingsList, Func<Action<T>, IListener> listen) = createListAndListener((fl, l) => (FiringsList: fl, Listen: l));
+                    return (FiringsList: ii.Select(i => firingsList[i]).ToArray(), Listen: listen);
+                }))
             {
                 try
                 {
-                    List<T> @out = RunSimulation(listAndListener.Item2, listAndListener.Item1.Select(o => o.Item2).ToArray());
+                    List<T> @out = RunSimulation(listener, firingsList.Select(o => o.Firings).ToArray());
                     assert(@out);
                 }
                 catch
                 {
-                    Console.WriteLine("Test failed for ordering { " + string.Join(", ", listAndListener.Item1.Select(o => o.Item1)) + " }.");
+                    Console.WriteLine("Test failed for ordering { " + string.Join(", ", firingsList.Select(o => o.Name)) + " }.");
                     throw;
                 }
             }

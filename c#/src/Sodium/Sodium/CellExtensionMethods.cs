@@ -85,29 +85,32 @@ namespace Sodium
             {
                 Stream<T> @out = new Stream<T>(csa.KeepListenersAlive);
                 Node<T> node = new Node<T>();
-                ValueTuple<bool, Node<T>.Target> r = node.Link(trans1, (t, v) => { }, @out.Node);
-                Node<T>.Target nodeTarget = r.Item2;
-                if (r.Item1)
+                (bool changed, Node<T>.Target nodeTarget) = node.Link(trans1, (t, v) => { }, @out.Node);
+                if (changed)
                 {
                     trans1.SetNeedsRegenerating();
                 }
                 Guid listenerId;
-                Action<Transaction, ValueTuple<T, Guid>, Guid> sendIfNodeTargetMatches = (t, v, i) =>
+
+                void SendIfNodeTargetMatches(Transaction t, (T Value, Guid ListenerId) v, Guid i)
                 {
-                    if (v.Item2 == i)
+                    if (v.ListenerId == i)
                     {
-                        @out.Send(t, v.Item1);
+                        @out.Send(t, v.Value);
                     }
-                };
+                }
+
                 MutableListener currentListener = new MutableListener();
-                Action<Transaction, Stream<T>> h = (trans2, sa) =>
+
+                void Handler(Transaction trans2, Stream<T> sa)
                 {
                     currentListener.Unlisten();
 
                     listenerId = Guid.NewGuid();
-                    currentListener.SetListener(sa.Map(v => ValueTuple.Create(v, listenerId)).Listen(@out.Node, trans2, (t, v) => sendIfNodeTargetMatches(t, v, listenerId), false));
-                };
-                IListener l1 = csa.Value(trans1).Listen(node, trans1, h, false);
+                    currentListener.SetListener(sa.Map(v => (Value: v, ListenerId: listenerId)).Listen(@out.Node, trans2, (t, v) => SendIfNodeTargetMatches(t, v, listenerId), false));
+                }
+
+                IListener l1 = csa.Value(trans1).Listen(node, trans1, Handler, false);
                 return @out.UnsafeAttachListener(l1).UnsafeAttachListener(currentListener).UnsafeAttachListener(Listener.Create(node, nodeTarget));
             }, false);
         }
