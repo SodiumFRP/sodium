@@ -65,7 +65,7 @@ namespace Patterns
                 return sA.CollectLazy(init, (a, lastA) =>
                 {
                     IMaybe<T> ma = Maybe.Just(a);
-                    return ma.Equals(lastA) ? ValueTuple.Create(Maybe.Nothing<T>(), lastA) : ValueTuple.Create(ma, ma);
+                    return ma.Equals(lastA) ? (ReturnValue: Maybe.Nothing<T>(), State: lastA) : (ReturnValue: ma, State: ma);
                 }).FilterMaybe();
             }
 

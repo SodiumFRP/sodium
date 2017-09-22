@@ -10,16 +10,7 @@ namespace SWidgets
         {
             StreamLoop<int> sSetValue = new StreamLoop<int>();
             STextBox textField = new STextBox(sSetValue.Map(v => v.ToString()), initialValue.ToString()) { VerticalContentAlignment = VerticalAlignment.Center };
-            this.Value = textField.Text.Map(t =>
-            {
-                int result;
-                if (int.TryParse(t, out result))
-                {
-                    return result;
-                }
-
-                return 0;
-            });
+            this.Value = textField.Text.Map(t => int.TryParse(t, out int result) ? result : 0);
             SButton plus = new SButton { Content = "+", Width = 25 };
             SButton minus = new SButton { Content = "-", Width = 25 };
 
