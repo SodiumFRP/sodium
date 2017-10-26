@@ -129,8 +129,10 @@ namespace Sodium
             {
                 onFirst((T1)this.value);
             }
-
-            onSecond((T2)this.value);
+            else
+            {
+                onSecond((T2)this.value);
+            }
         }
 
         public T Switch<T>(Func<T1, T> onFirst, Func<T2, T> onSecond) =>
@@ -160,13 +162,14 @@ namespace Sodium
             {
                 onFirst((T1)this.value);
             }
-
-            if (this.valueType == 2)
+            else if (this.valueType == 2)
             {
                 onSecond((T2)this.value);
             }
-
-            onThird((T3)this.value);
+            else
+            {
+                onThird((T3)this.value);
+            }
         }
 
         public T Switch<T>(Func<T1, T> onFirst, Func<T2, T> onSecond, Func<T3, T> onThird) =>
@@ -201,18 +204,18 @@ namespace Sodium
             {
                 onFirst((T1)this.value);
             }
-
-            if (this.valueType == 2)
+            else if (this.valueType == 2)
             {
                 onSecond((T2)this.value);
             }
-
-            if (this.valueType == 3)
+            else if (this.valueType == 3)
             {
                 onThird((T3)this.value);
             }
-
-            onFourth((T4)this.value);
+            else
+            {
+                onFourth((T4)this.value);
+            }
         }
 
         public T Switch<T>(Func<T1, T> onFirst, Func<T2, T> onSecond, Func<T3, T> onThird, Func<T4, T> onFourth) =>
@@ -252,23 +255,22 @@ namespace Sodium
             {
                 onFirst((T1)this.value);
             }
-
-            if (this.valueType == 2)
+            else if (this.valueType == 2)
             {
                 onSecond((T2)this.value);
             }
-
-            if (this.valueType == 3)
+            else if (this.valueType == 3)
             {
                 onThird((T3)this.value);
             }
-
-            if (this.valueType == 4)
+            else if (this.valueType == 4)
             {
                 onFourth((T4)this.value);
             }
-
-            onFifth((T5)this.value);
+            else
+            {
+                onFifth((T5)this.value);
+            }
         }
 
         public T Switch<T>(Func<T1, T> onFirst, Func<T2, T> onSecond, Func<T3, T> onThird, Func<T4, T> onFourth, Func<T5, T> onFifth) =>
@@ -313,28 +315,26 @@ namespace Sodium
             {
                 onFirst((T1)this.value);
             }
-
-            if (this.valueType == 2)
+            else if (this.valueType == 2)
             {
                 onSecond((T2)this.value);
             }
-
-            if (this.valueType == 3)
+            else if (this.valueType == 3)
             {
                 onThird((T3)this.value);
             }
-
-            if (this.valueType == 4)
+            else if (this.valueType == 4)
             {
                 onFourth((T4)this.value);
             }
-
-            if (this.valueType == 5)
+            else if (this.valueType == 5)
             {
                 onFifth((T5)this.value);
             }
-
-            onSixth((T6)this.value);
+            else
+            {
+                onSixth((T6)this.value);
+            }
         }
 
         public T Switch<T>(Func<T1, T> onFirst, Func<T2, T> onSecond, Func<T3, T> onThird, Func<T4, T> onFourth, Func<T5, T> onFifth, Func<T6, T> onSixth) =>
@@ -384,33 +384,30 @@ namespace Sodium
             {
                 onFirst((T1)this.value);
             }
-
-            if (this.valueType == 2)
+            else if (this.valueType == 2)
             {
                 onSecond((T2)this.value);
             }
-
-            if (this.valueType == 3)
+            else if (this.valueType == 3)
             {
                 onThird((T3)this.value);
             }
-
-            if (this.valueType == 4)
+            else if (this.valueType == 4)
             {
                 onFourth((T4)this.value);
             }
-
-            if (this.valueType == 5)
+            else if (this.valueType == 5)
             {
                 onFifth((T5)this.value);
             }
-
-            if (this.valueType == 6)
+            else if (this.valueType == 6)
             {
                 onSixth((T6)this.value);
             }
-
-            onSeventh((T7)this.value);
+            else
+            {
+                onSeventh((T7)this.value);
+            }
         }
 
         public T Switch<T>(Func<T1, T> onFirst, Func<T2, T> onSecond, Func<T3, T> onThird, Func<T4, T> onFourth, Func<T5, T> onFifth, Func<T6, T> onSixth, Func<T7, T> onSeventh) =>
@@ -465,38 +462,34 @@ namespace Sodium
             {
                 onFirst((T1)this.value);
             }
-
-            if (this.valueType == 2)
+            else if (this.valueType == 2)
             {
                 onSecond((T2)this.value);
             }
-
-            if (this.valueType == 3)
+            else if (this.valueType == 3)
             {
                 onThird((T3)this.value);
             }
-
-            if (this.valueType == 4)
+            else if (this.valueType == 4)
             {
                 onFourth((T4)this.value);
             }
-
-            if (this.valueType == 5)
+            else if (this.valueType == 5)
             {
                 onFifth((T5)this.value);
             }
-
-            if (this.valueType == 6)
+            else if (this.valueType == 6)
             {
                 onSixth((T6)this.value);
             }
-
-            if (this.valueType == 7)
+            else if (this.valueType == 7)
             {
                 onSeventh((T7)this.value);
             }
-
-            onEighth((T8)this.value);
+            else
+            {
+                onEighth((T8)this.value);
+            }
         }
 
         public T Switch<T>(Func<T1, T> onFirst, Func<T2, T> onSecond, Func<T3, T> onThird, Func<T4, T> onFourth, Func<T5, T> onFifth, Func<T6, T> onSixth, Func<T7, T> onSeventh, Func<T8, T> onEighth) =>

@@ -57,6 +57,7 @@
     <Compile Include="CellTests.cs" />
     <Compile Include="CommonTests.cs" />
     <Compile Include="DenotationalSemanticsTests.cs" />
+    <Compile Include="EitherTests.cs" />
     <Compile Include="LoopTests.cs" />
     <Compile Include="PerformanceTests.cs" />
     <Compile Include="StreamTests.cs" />
