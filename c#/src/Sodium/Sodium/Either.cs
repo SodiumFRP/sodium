@@ -364,7 +364,7 @@ namespace Sodium
             new Either<T1, T2, T3, T4, T5, T6>(5, value.Value);
 
         public static implicit operator Either<T1, T2, T3, T4, T5, T6>(Either.EitherSixth<T6> value) =>
-            new Either<T1, T2, T3, T4, T5, T6>(5, value.Value);
+            new Either<T1, T2, T3, T4, T5, T6>(6, value.Value);
     }
 
     public struct Either<T1, T2, T3, T4, T5, T6, T7>
@@ -439,10 +439,10 @@ namespace Sodium
             new Either<T1, T2, T3, T4, T5, T6, T7>(5, value.Value);
 
         public static implicit operator Either<T1, T2, T3, T4, T5, T6, T7>(Either.EitherSixth<T6> value) =>
-            new Either<T1, T2, T3, T4, T5, T6, T7>(5, value.Value);
+            new Either<T1, T2, T3, T4, T5, T6, T7>(6, value.Value);
 
         public static implicit operator Either<T1, T2, T3, T4, T5, T6, T7>(Either.EitherSeventh<T7> value) =>
-            new Either<T1, T2, T3, T4, T5, T6, T7>(5, value.Value);
+            new Either<T1, T2, T3, T4, T5, T6, T7>(7, value.Value);
     }
 
     public struct Either<T1, T2, T3, T4, T5, T6, T7, T8>
@@ -523,12 +523,12 @@ namespace Sodium
             new Either<T1, T2, T3, T4, T5, T6, T7, T8>(5, value.Value);
 
         public static implicit operator Either<T1, T2, T3, T4, T5, T6, T7, T8>(Either.EitherSixth<T6> value) =>
-            new Either<T1, T2, T3, T4, T5, T6, T7, T8>(5, value.Value);
+            new Either<T1, T2, T3, T4, T5, T6, T7, T8>(6, value.Value);
 
         public static implicit operator Either<T1, T2, T3, T4, T5, T6, T7, T8>(Either.EitherSeventh<T7> value) =>
-            new Either<T1, T2, T3, T4, T5, T6, T7, T8>(5, value.Value);
+            new Either<T1, T2, T3, T4, T5, T6, T7, T8>(7, value.Value);
 
         public static implicit operator Either<T1, T2, T3, T4, T5, T6, T7, T8>(Either.EitherEighth<T8> value) =>
-            new Either<T1, T2, T3, T4, T5, T6, T7, T8>(5, value.Value);
+            new Either<T1, T2, T3, T4, T5, T6, T7, T8>(8, value.Value);
     }
 }
