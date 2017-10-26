@@ -65,6 +65,9 @@
     <Compile Include="IListenerWithWeakReference.cs" />
     <Compile Include="IStrongListener.cs" />
     <Compile Include="IWeakListener.cs" />
+    <Compile Include="Maybe.cs" />
+    <Compile Include="EitherExtensionMethods.cs" />
+    <Compile Include="MaybeExtensionMethods.cs" />
     <Compile Include="MaybeMonad.cs" />
     <Compile Include="MutableListener.cs" />
     <Compile Include="StreamListenerManager.cs" />
@@ -77,7 +80,7 @@
     <Compile Include="StreamLoop.cs" />
     <Compile Include="StreamSink.cs" />
     <Compile Include="IListener.cs" />
-    <Compile Include="Maybe.cs" />
+    <Compile Include="Either.cs" />
     <Compile Include="MutableMaybeValue.cs" />
     <Compile Include="Node.cs" />
     <Compile Include="Operational.cs" />
