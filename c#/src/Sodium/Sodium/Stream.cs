@@ -689,7 +689,7 @@ namespace Sodium
         /// <returns>A stream that only outputs events from the input stream when the specified cell's value is <code>true</code>.</returns>
         public Stream<T> Gate(Cell<bool> c)
         {
-            return this.Snapshot(c, (a, pred) => pred ? Maybe.Just(a) : Maybe.Nothing<T>()).FilterMaybe();
+            return this.Snapshot(c, (a, pred) => pred ? Maybe.Some(a) : Maybe.None).FilterMaybe();
         }
 
         /// <summary>
@@ -708,19 +708,19 @@ namespace Sodium
         /// <returns>A stream that only outputs events which have a different value than the previous event.</returns>
         public Stream<T> Calm(IEqualityComparer<T> comparer)
         {
-            return this.Calm(new Lazy<IMaybe<T>>(Maybe.Nothing<T>), comparer);
+            return this.Calm(new Lazy<Maybe<T>>(() => Maybe.None), comparer);
         }
 
-        internal Stream<T> Calm(Lazy<IMaybe<T>> init, IEqualityComparer<T> comparer)
+        internal Stream<T> Calm(Lazy<Maybe<T>> init, IEqualityComparer<T> comparer)
         {
             return this.CollectLazy(init, (a, lastA) =>
             {
                 if (lastA.Match(v => comparer.Equals(v, a), () => false))
                 {
-                    return (ReturnValue: Maybe.Nothing<T>(), State: lastA);
+                    return (ReturnValue: Maybe.None, State: lastA);
                 }
 
-                IMaybe<T> ma = Maybe.Just(a);
+                Maybe<T> ma = Maybe.Some(a);
                 return (ReturnValue: ma, State: ma);
             }).FilterMaybe();
         }
@@ -853,8 +853,7 @@ namespace Sodium
                         // Don't allow transactions to interfere with Sodium
                         // internals.
                         // Dereference the weak reference
-                        Action<Transaction, T> action;
-                        if (target.Action.TryGetTarget(out action))
+                        if (target.Action.TryGetTarget(out Action<Transaction, T> action))
                         {
                             // If it hasn't been garbage collected, call it.
                             if (target.IsActivated)
@@ -960,6 +959,7 @@ namespace Sodium
         private class KeepListenersAliveImplementation : IKeepListenersAlive
         {
             private readonly HashSet<IListener> listeners = new HashSet<IListener>();
+            // ReSharper disable once CollectionNeverQueried.Local
             private readonly List<IKeepListenersAlive> childKeepListenersAliveList = new List<IKeepListenersAlive>();
 
             public void KeepListenerAlive(IListener listener)

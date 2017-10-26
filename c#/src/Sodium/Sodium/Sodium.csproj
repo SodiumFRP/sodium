@@ -70,7 +70,6 @@
     <Compile Include="StreamListenerManager.cs" />
     <Compile Include="StreamExtensionMethods.cs" />
     <Compile Include="CellLoop.cs" />
-    <Compile Include="IMaybe.cs" />
     <Compile Include="LazyCell.cs" />
     <Compile Include="LazyExtensionMethods.cs" />
     <Compile Include="Listener.cs" />

@@ -204,16 +204,16 @@ namespace Sodium.Tests
         [Test]
         public void TestFilterMaybe()
         {
-            StreamSink<IMaybe<string>> s = Stream.CreateSink<IMaybe<string>>();
+            StreamSink<Maybe<string>> s = Stream.CreateSink<Maybe<string>>();
             List<string> @out = new List<string>();
             IListener l = s.FilterMaybe().Listen(@out.Add);
-            s.Send(Maybe.Just("tomato"));
-            s.Send(Maybe.Nothing<string>());
-            s.Send(Maybe.Just("peach"));
-            s.Send(Maybe.Just<string>(null));
-            s.Send(Maybe.Just("pear"));
+            s.Send(Maybe.Some("tomato"));
+            s.Send(Maybe.None);
+            s.Send(Maybe.Some("peach"));
+            s.Send(Maybe.None);
+            s.Send(Maybe.Some("pear"));
             l.Unlisten();
-            CollectionAssert.AreEqual(new[] { "tomato", "peach", null, "pear" }, @out);
+            CollectionAssert.AreEqual(new[] { "tomato", "peach", "pear" }, @out);
         }
 
         [Test]

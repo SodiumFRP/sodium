@@ -5,113 +5,77 @@ namespace Sodium
 {
     public static class Maybe
     {
-        public static IMaybe<T> Just<T>(T value)
+        public static Maybe<T> Some<T>(T value) => new Maybe<T>(value);
+        public static NoneType None = NoneType.Value;
+
+        public struct NoneType
         {
-            return new JustClass<T>(value);
+            internal static readonly NoneType Value = new NoneType();
         }
+    }
 
-        public static IMaybe<T> Nothing<T>()
+    public struct Maybe<T>
+    {
+        private readonly bool hasValue;
+        private readonly T value;
+
+        internal Maybe(T value)
         {
-            return NothingClass<T>.Value;
-        }
-
-        private sealed class JustClass<T> : IMaybe<T>
-        {
-            private readonly T value;
-
-            internal JustClass(T value)
+            if (value == null)
             {
-                this.value = value;
+                throw new ArgumentNullException(nameof(value), "Maybe.Some value cannot be null.");
             }
 
-            public override string ToString()
-            {
-                return "Just: " + this.value;
-            }
+            this.hasValue = true;
+            this.value = value;
+        }
 
-            void IMaybe<T>.Match(Action<T> hasValueAction, Action nothingAction)
+        public void Match(Action<T> hasValueAction, Action nothingAction)
+        {
+            if (this.hasValue)
             {
                 hasValueAction(this.value);
             }
-
-            TResult IMaybe<T>.Match<TResult>(Func<T, TResult> hasValueFunc, Func<TResult> nothingFunc)
+            else
             {
-                return hasValueFunc(this.value);
+                nothingAction();
+            }
+        }
+
+        public TResult Match<TResult>(Func<T, TResult> hasValueFunc, Func<TResult> nothingFunc) => this.hasValue ? hasValueFunc(this.value) : nothingFunc();
+
+        public static implicit operator Maybe<T>(Maybe.NoneType _) => new Maybe<T>();
+
+        public override string ToString() => this.hasValue ? $"Some: {this.value}" : "None";
+
+        private bool Equals(Maybe<T> other)
+        {
+            if (this.hasValue != other.hasValue)
+            {
+                return false;
             }
 
-            private bool Equals(JustClass<T> other)
+            if (this.hasValue)
             {
                 return EqualityComparer<T>.Default.Equals(this.value, other.value);
             }
 
-            public override bool Equals(object obj)
-            {
-                if (ReferenceEquals(null, obj))
-                {
-                    return false;
-                }
-
-                if (ReferenceEquals(this, obj))
-                {
-                    return true;
-                }
-
-                if (obj.GetType() != this.GetType())
-                {
-                    return false;
-                }
-
-                return this.Equals((JustClass<T>)obj);
-            }
-
-            public override int GetHashCode()
-            {
-                return EqualityComparer<T>.Default.GetHashCode(this.value);
-            }
+            return true;
         }
 
-        private sealed class NothingClass<T> : IMaybe<T>
+        public override bool Equals(object obj)
         {
-            public static readonly NothingClass<T> Value = new NothingClass<T>();
-
-            private NothingClass()
+            if (!(obj is Maybe<T>))
             {
+                return false;
             }
 
-            public override string ToString()
-            {
-                return "Nothing";
-            }
+            return this.Equals((Maybe<T>)obj);
+        }
 
-            void IMaybe<T>.Match(Action<T> hasValueAction, Action nothingAction)
-            {
-                nothingAction();
-            }
-
-            TResult IMaybe<T>.Match<TResult>(Func<T, TResult> hasValueFunc, Func<TResult> nothingFunc)
-            {
-                return nothingFunc();
-            }
-
-            public override bool Equals(object obj)
-            {
-                if (ReferenceEquals(null, obj))
-                {
-                    return false;
-                }
-
-                if (ReferenceEquals(this, obj))
-                {
-                    return true;
-                }
-
-                return obj.GetType() == this.GetType();
-            }
-
-            public override int GetHashCode()
-            {
-                return 1;
-            }
+        public override int GetHashCode()
+        {
+            return !this.hasValue ? 0 : EqualityComparer<T>.Default.GetHashCode(this.value);
         }
     }
 }

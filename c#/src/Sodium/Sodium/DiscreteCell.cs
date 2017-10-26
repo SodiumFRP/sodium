@@ -266,7 +266,7 @@ namespace Sodium
         public DiscreteCell<T> Calm(IEqualityComparer<T> comparer)
         {
             Lazy<T> initA = this.Cell.SampleLazy();
-            Lazy<IMaybe<T>> mInitA = initA.Map(Maybe.Just);
+            Lazy<Maybe<T>> mInitA = initA.Map(Maybe.Some);
             return Transaction.Apply(trans => this.Cell.Updates(trans).Calm(mInitA, comparer).HoldLazy(initA), false);
         }
     }

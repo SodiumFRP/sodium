@@ -70,15 +70,15 @@ namespace Sodium
         }
 
         /// <summary>
-        ///     Return a stream that only outputs events that have values, removing the <see cref="IMaybe{T}" /> wrapper, and
-        ///     discarding <see cref="Maybe.Nothing{T}()" /> values.
+        ///     Return a stream that only outputs events that have values, removing the <see cref="Maybe{T}" /> wrapper, and
+        ///     discarding <see cref="Maybe.None" /> values.
         /// </summary>
-        /// <param name="s">The stream of <see cref="IMaybe{T}" /> values to filter.</param>
+        /// <param name="s">The stream of <see cref="Maybe{T}" /> values to filter.</param>
         /// <returns>
-        ///     A stream that only outputs events that have values, removing the <see cref="IMaybe{T}" /> wrapper, and
-        ///     discarding <see cref="Maybe.Nothing{T}()" /> values.
+        ///     A stream that only outputs events that have values, removing the <see cref="Maybe{T}" /> wrapper, and
+        ///     discarding <see cref="Maybe.None" /> values.
         /// </returns>
-        public static Stream<T> FilterMaybe<T>(this Stream<IMaybe<T>> s)
+        public static Stream<T> FilterMaybe<T>(this Stream<Maybe<T>> s)
         {
             Stream<T> @out = new Stream<T>(s.KeepListenersAlive);
             IListener l = s.Listen(@out.Node, (trans2, a) => a.Match(v => @out.Send(trans2, v), () => { }));

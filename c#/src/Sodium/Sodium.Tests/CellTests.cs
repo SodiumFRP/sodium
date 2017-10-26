@@ -631,11 +631,11 @@ namespace Sodium.Tests
 
         private class Sc
         {
-            public readonly IMaybe<char> A;
-            public readonly IMaybe<char> B;
-            public readonly IMaybe<DiscreteCell<char>> Sw;
+            public readonly Maybe<char> A;
+            public readonly Maybe<char> B;
+            public readonly Maybe<DiscreteCell<char>> Sw;
 
-            public Sc(IMaybe<char> a, IMaybe<char> b, IMaybe<DiscreteCell<char>> sw)
+            public Sc(Maybe<char> a, Maybe<char> b, Maybe<DiscreteCell<char>> sw)
             {
                 this.A = a;
                 this.B = b;
@@ -655,16 +655,16 @@ namespace Sodium.Tests
             DiscreteCell<char> co = csw.SwitchC();
             List<char> @out = new List<char>();
             IListener l = co.Listen(@out.Add);
-            ssc.Send(new Sc(Maybe.Just('B'), Maybe.Just('b'), Maybe.Nothing<DiscreteCell<char>>()));
-            ssc.Send(new Sc(Maybe.Just('C'), Maybe.Just('c'), Maybe.Just(cb)));
-            ssc.Send(new Sc(Maybe.Just('D'), Maybe.Just('d'), Maybe.Nothing<DiscreteCell<char>>()));
-            ssc.Send(new Sc(Maybe.Just('E'), Maybe.Just('e'), Maybe.Just(ca)));
-            ssc.Send(new Sc(Maybe.Just('F'), Maybe.Just('f'), Maybe.Nothing<DiscreteCell<char>>()));
-            ssc.Send(new Sc(Maybe.Nothing<char>(), Maybe.Nothing<char>(), Maybe.Just(cb)));
-            ssc.Send(new Sc(Maybe.Nothing<char>(), Maybe.Nothing<char>(), Maybe.Just(ca)));
-            ssc.Send(new Sc(Maybe.Just('G'), Maybe.Just('g'), Maybe.Just(cb)));
-            ssc.Send(new Sc(Maybe.Just('H'), Maybe.Just('h'), Maybe.Just(ca)));
-            ssc.Send(new Sc(Maybe.Just('I'), Maybe.Just('i'), Maybe.Just(ca)));
+            ssc.Send(new Sc(Maybe.Some('B'), Maybe.Some('b'), Maybe.None));
+            ssc.Send(new Sc(Maybe.Some('C'), Maybe.Some('c'), Maybe.Some(cb)));
+            ssc.Send(new Sc(Maybe.Some('D'), Maybe.Some('d'), Maybe.None));
+            ssc.Send(new Sc(Maybe.Some('E'), Maybe.Some('e'), Maybe.Some(ca)));
+            ssc.Send(new Sc(Maybe.Some('F'), Maybe.Some('f'), Maybe.None));
+            ssc.Send(new Sc(Maybe.None, Maybe.None, Maybe.Some(cb)));
+            ssc.Send(new Sc(Maybe.None, Maybe.None, Maybe.Some(ca)));
+            ssc.Send(new Sc(Maybe.Some('G'), Maybe.Some('g'), Maybe.Some(cb)));
+            ssc.Send(new Sc(Maybe.Some('H'), Maybe.Some('h'), Maybe.Some(ca)));
+            ssc.Send(new Sc(Maybe.Some('I'), Maybe.Some('i'), Maybe.Some(ca)));
             l.Unlisten();
             CollectionAssert.AreEqual(new[] { 'A', 'B', 'c', 'd', 'E', 'F', 'f', 'F', 'g', 'H', 'I' }, @out);
         }
@@ -714,9 +714,9 @@ namespace Sodium.Tests
         {
             public readonly char A;
             public readonly char B;
-            public readonly IMaybe<Stream<char>> Sw;
+            public readonly Maybe<Stream<char>> Sw;
 
-            public Ss(char a, char b, IMaybe<Stream<char>> sw)
+            public Ss(char a, char b, Maybe<Stream<char>> sw)
             {
                 this.A = a;
                 this.B = b;
@@ -736,15 +736,15 @@ namespace Sodium.Tests
             Stream<char> so = csw.Cell.SwitchS();
             List<char> @out = new List<char>();
             IListener l = so.Listen(@out.Add);
-            sss.Send(new Ss('A', 'a', Maybe.Nothing<Stream<char>>()));
-            sss.Send(new Ss('B', 'b', Maybe.Nothing<Stream<char>>()));
-            sss.Send(new Ss('C', 'c', Maybe.Just(sb)));
-            sss.Send(new Ss('D', 'd', Maybe.Nothing<Stream<char>>()));
-            sss.Send(new Ss('E', 'e', Maybe.Just(sa)));
-            sss.Send(new Ss('F', 'f', Maybe.Nothing<Stream<char>>()));
-            sss.Send(new Ss('G', 'g', Maybe.Just(sb)));
-            sss.Send(new Ss('H', 'h', Maybe.Just(sa)));
-            sss.Send(new Ss('I', 'i', Maybe.Just(sa)));
+            sss.Send(new Ss('A', 'a', Maybe.None));
+            sss.Send(new Ss('B', 'b', Maybe.None));
+            sss.Send(new Ss('C', 'c', Maybe.Some(sb)));
+            sss.Send(new Ss('D', 'd', Maybe.None));
+            sss.Send(new Ss('E', 'e', Maybe.Some(sa)));
+            sss.Send(new Ss('F', 'f', Maybe.None));
+            sss.Send(new Ss('G', 'g', Maybe.Some(sb)));
+            sss.Send(new Ss('H', 'h', Maybe.Some(sa)));
+            sss.Send(new Ss('I', 'i', Maybe.Some(sa)));
             l.Unlisten();
             CollectionAssert.AreEqual(new[] { 'A', 'B', 'C', 'd', 'e', 'F', 'G', 'h', 'I' }, @out);
         }

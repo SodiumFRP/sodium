@@ -14,6 +14,6 @@ namespace Sodium.Time
         /// </summary>
         /// <param name="t">The time to fire at.</param>
         /// <returns>A stream which fires at the specified time.</returns>
-        Stream<T> At(DiscreteCell<IMaybe<T>> t);
+        Stream<T> At(DiscreteCell<Maybe<T>> t);
     }
 }

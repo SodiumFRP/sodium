@@ -2,13 +2,14 @@
 
 namespace Sodium
 {
-    public class MutableMaybeValue<T> : IMaybe<T>
+    public class MutableMaybeValue<T>
     {
-        private IMaybe<T> value = Maybe.Nothing<T>();
+        public Maybe<T> Value { get; private set; }
 
-        public void Set(T value) => this.value = Maybe.Just(value);
-        public void Reset() => this.value = Maybe.Nothing<T>();
-        public void Match(Action<T> hasValueAction, Action nothingAction) => this.value.Match(hasValueAction, nothingAction);
-        public TResult Match<TResult>(Func<T, TResult> hasValueFunc, Func<TResult> nothingFunc) => this.value.Match(hasValueFunc, nothingFunc);
+        public void Set(T value) => this.Value = Maybe.Some(value);
+        public void Reset() => this.Value = Maybe.None;
+
+        public void Match(Action<T> hasValueAction, Action nothingAction) => this.Value.Match(hasValueAction, nothingAction);
+        public TResult Match<TResult>(Func<T, TResult> hasValueFunc, Func<TResult> nothingFunc) => this.Value.Match(hasValueFunc, nothingFunc);
     }
 }

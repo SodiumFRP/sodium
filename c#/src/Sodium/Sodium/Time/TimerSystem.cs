@@ -70,15 +70,15 @@ namespace Sodium.Time
         /// </summary>
         /// <param name="t">The time to fire at.</param>
         /// <returns>A stream which fires at the specified time.</returns>
-        public Stream<T> At(DiscreteCell<IMaybe<T>> t)
+        public Stream<T> At(DiscreteCell<Maybe<T>> t)
         {
             StreamSink<T> alarm = new StreamSink<T>();
-            IMaybe<ITimer> currentTimer = Maybe.Nothing<ITimer>();
+            Maybe<ITimer> currentTimer = Maybe.None;
             IListener l = t.Listen(m =>
             {
                 currentTimer.Match(timer => timer.Cancel(), () => { });
                 currentTimer = m.Match(
-                    time => Maybe.Just(this.implementation.SetTimer(time, () =>
+                    time => Maybe.Some(this.implementation.SetTimer(time, () =>
                     {
                         lock (this.eventQueue)
                         {
@@ -88,7 +88,7 @@ namespace Sodium.Time
                         // events to run.
                         Transaction.RunVoid(() => { });
                     })),
-                    Maybe.Nothing<ITimer>);
+                    () => Maybe.None);
             });
             return alarm.AttachListener(l);
         }

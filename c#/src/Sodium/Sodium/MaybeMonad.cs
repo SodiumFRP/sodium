@@ -3,21 +3,21 @@ using System;
 namespace Sodium
 {
     /// <summary>
-    /// Provides methods implementing a monad for <see cref="IMaybe{T}"/>.
+    /// Provides methods implementing a monad for <see cref="Maybe{T}"/>.
     /// </summary>
     public static class MaybeMonad
     {
         #region Public Methods and Operators
 
         /// <summary>
-        /// The bind method for the <see cref="IMaybe{T}"/> monad, which transforms an <see cref="IMaybe{T}"/> into an <see cref="IMaybe{TResult}"/>.
+        /// The bind method for the <see cref="Maybe{T}"/> monad, which transforms an <see cref="Maybe{T}"/> into an <see cref="Maybe{TResult}"/>.
         /// </summary>
         /// <param name="value">
-        /// The <see cref="IMaybe{T}"/> value to transform.
+        /// The <see cref="Maybe{T}"/> value to transform.
         /// </param>
         /// <param name="transformation">
         /// The transformation function, which takes a value of type <typeparamref name="T"/> contained in the monad and transforms it
-        /// into a new monad of type <see cref="IMaybe{TResult}"/>.
+        /// into a new monad of type <see cref="Maybe{TResult}"/>.
         /// </param>
         /// <typeparam name="T">
         /// The type of the value contained in the monad to transform.
@@ -26,30 +26,23 @@ namespace Sodium
         /// The type of the value contained in the resulting monad.
         /// </typeparam>
         /// <returns>
-        /// The <see cref="IMaybe{TResult}"/> which results from transforming <paramref name="value"/> using <paramref name="transformation"/>.
+        /// The <see cref="Maybe{TResult}"/> which results from transforming <paramref name="value"/> using <paramref name="transformation"/>.
         /// </returns>
-        public static IMaybe<TResult> Bind<T, TResult>(this IMaybe<T> value, Func<T, IMaybe<TResult>> transformation)
+        public static Maybe<TResult> Bind<T, TResult>(this Maybe<T> value, Func<T, Maybe<TResult>> transformation)
         {
-            IMaybe<TResult> result = value.Match(v =>
-            {
-                IMaybe<TResult> intermediateResult = transformation(v);
-                if (intermediateResult == null)
+            Maybe<TResult> result = value.Match(
+                v =>
                 {
-                    throw new InvalidOperationException("The transformation function may not return null.");
-                }
-
-                return intermediateResult;
-            }, Maybe.Nothing<TResult>);
-            if (result == null)
-            {
-                throw new InvalidOperationException("Result may not be null.");
-            }
+                    Maybe<TResult> intermediateResult = transformation(v);
+                    return intermediateResult;
+                },
+                () => Maybe.None);
 
             return result;
         }
 
         /// <summary>
-        /// The return method for the <see cref="IMaybe{T}"/> monad, which encapsulates a value of type <typeparamref name="T"/> in an <see cref="IMaybe{T}"/> monad.
+        /// The return method for the <see cref="Maybe{T}"/> monad, which encapsulates a value of type <typeparamref name="T"/> in an <see cref="Maybe{T}"/> monad.
         /// </summary>
         /// <param name="value">
         /// The value to encapsulate.
@@ -58,22 +51,19 @@ namespace Sodium
         /// The type of the value.
         /// </typeparam>
         /// <returns>
-        /// The <see cref="IMaybe{T}"/> which encapsulates <paramref name="value"/>.
+        /// The <see cref="Maybe{T}"/> which encapsulates <paramref name="value"/>.
         /// </returns>
-        public static IMaybe<T> Return<T>(T value)
-        {
-            return Maybe.Just(value);
-        }
+        public static Maybe<T> Return<T>(T value) => Maybe.Some(value);
 
         /// <summary>
-        /// Implements the LINQ select many operation for the <see cref="IMaybe{T}"/> monad.
+        /// Implements the LINQ select many operation for the <see cref="Maybe{T}"/> monad.
         /// </summary>
         /// <param name="value">
-        /// The <see cref="IMaybe{T}"/> value to transform.
+        /// The <see cref="Maybe{T}"/> value to transform.
         /// </param>
         /// <param name="transformation">
         /// The transformation function, which takes a value of type <typeparamref name="T1"/> contained in the monad and transforms it
-        /// into a new monad of type <see cref="IMaybe{T2}"/>.
+        /// into a new monad of type <see cref="Maybe{T2}"/>.
         /// </param>
         /// <param name="collation">
         /// The collation function, which takes a value of type <typeparamref name="T1"/> and a value of type <typeparamref name="T2"/>
@@ -89,37 +79,29 @@ namespace Sodium
         /// The type of the value contained in the monad resulting from collation.
         /// </typeparam>
         /// <returns>
-        /// The <see cref="IMaybe{TResult}"/> which results from transforming <paramref name="value"/> using <paramref name="transformation"/>
+        /// The <see cref="Maybe{TResult}"/> which results from transforming <paramref name="value"/> using <paramref name="transformation"/>
         /// and then collating using <paramref name="collation"/>.
         /// </returns>
-        public static IMaybe<TResult> SelectMany<T1, T2, TResult>(this IMaybe<T1> value, Func<T1, IMaybe<T2>> transformation, Func<T1, T2, TResult> collation)
+        public static Maybe<TResult> SelectMany<T1, T2, TResult>(this Maybe<T1> value, Func<T1, Maybe<T2>> transformation, Func<T1, T2, TResult> collation)
         {
             return value.Bind(firstValue =>
             {
-                IMaybe<T2> result = transformation(firstValue);
-                if (result == null)
-                {
-                    throw new InvalidOperationException("The transformation function may not return null.");
-                }
-
-                return result.Bind(secondValue => Maybe.Just(collation(firstValue, secondValue)));
+                Maybe<T2> result = transformation(firstValue);
+                return result.Bind(secondValue => Maybe.Some(collation(firstValue, secondValue)));
             });
         }
 
         /// <summary>
-        ///     Map an <see cref="IMaybe{T}"/> value using a mapping function if a value exists, or propogate the nothing value if it does not.
+        ///     Map an <see cref="Maybe{T}"/> value using a mapping function if a value exists, or propogate the nothing value if it does not.
         /// </summary>
-        /// <param name="a">The <see cref="IMaybe{T}"/> value to transform.</param>
-        /// <param name="f">The function to transform the <see cref="IMaybe{T}"/> input value <paramref name="a"/>.</param>
+        /// <param name="a">The <see cref="Maybe{T}"/> value to transform.</param>
+        /// <param name="f">The function to transform the <see cref="Maybe{T}"/> input value <paramref name="a"/>.</param>
         /// <typeparam name="T1">The type of the maybe input value.</typeparam>
         /// <typeparam name="TResult">The type of the maybe result value.</typeparam>
         /// <returns>
-        ///     The <see cref="IMaybe{TResult}"/> which results from transforming <paramref name="a"/> using <paramref name="f"/>.
+        ///     The <see cref="Maybe{TResult}"/> which results from transforming <paramref name="a"/> using <paramref name="f"/>.
         /// </returns>
-        public static IMaybe<TResult> Map<T1, TResult>(this IMaybe<T1> a, Func<T1, TResult> f)
-        {
-            return a.Bind(v => Maybe.Just(f(v)));
-        }
+        public static Maybe<TResult> Map<T1, TResult>(this Maybe<T1> a, Func<T1, TResult> f) => a.Bind(v => Maybe.Some(f(v)));
 
         #endregion
     }
