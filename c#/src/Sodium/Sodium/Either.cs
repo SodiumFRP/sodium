@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Diagnostics.Contracts;
 
 namespace Sodium
 {
@@ -125,6 +126,8 @@ namespace Sodium
             this.value2 = value2;
         }
 
+        // ReSharper disable once PureAttributeOnVoidMethod
+        [Pure]
         public void Match(Action<T1> onFirst, Action<T2> onSecond)
         {
             if (this.valueType == 1)
@@ -137,6 +140,7 @@ namespace Sodium
             }
         }
 
+        [Pure]
         public T Match<T>(Func<T1, T> onFirst, Func<T2, T> onSecond) =>
             this.valueType == 1 ? onFirst(this.value1) : onSecond(this.value2);
 
@@ -164,6 +168,8 @@ namespace Sodium
             this.value3 = value3;
         }
 
+        // ReSharper disable once PureAttributeOnVoidMethod
+        [Pure]
         public void Match(Action<T1> onFirst, Action<T2> onSecond, Action<T3> onThird)
         {
             if (this.valueType == 1)
@@ -180,6 +186,7 @@ namespace Sodium
             }
         }
 
+        [Pure]
         public T Match<T>(Func<T1, T> onFirst, Func<T2, T> onSecond, Func<T3, T> onThird) =>
             this.valueType == 1
                 ? onFirst(this.value1)
@@ -214,6 +221,8 @@ namespace Sodium
             this.value4 = value4;
         }
 
+        // ReSharper disable once PureAttributeOnVoidMethod
+        [Pure]
         public void Match(Action<T1> onFirst, Action<T2> onSecond, Action<T3> onThird, Action<T4> onFourth)
         {
             if (this.valueType == 1)
@@ -234,6 +243,7 @@ namespace Sodium
             }
         }
 
+        [Pure]
         public T Match<T>(Func<T1, T> onFirst, Func<T2, T> onSecond, Func<T3, T> onThird, Func<T4, T> onFourth) =>
             this.valueType == 1
                 ? onFirst(this.value1)
@@ -275,6 +285,8 @@ namespace Sodium
             this.value5 = value5;
         }
 
+        // ReSharper disable once PureAttributeOnVoidMethod
+        [Pure]
         public void Match(Action<T1> onFirst, Action<T2> onSecond, Action<T3> onThird, Action<T4> onFourth, Action<T5> onFifth)
         {
             if (this.valueType == 1)
@@ -299,6 +311,7 @@ namespace Sodium
             }
         }
 
+        [Pure]
         public T Match<T>(Func<T1, T> onFirst, Func<T2, T> onSecond, Func<T3, T> onThird, Func<T4, T> onFourth, Func<T5, T> onFifth) =>
             this.valueType == 1
                 ? onFirst(this.value1)
@@ -347,6 +360,8 @@ namespace Sodium
             this.value6 = value6;
         }
 
+        // ReSharper disable once PureAttributeOnVoidMethod
+        [Pure]
         public void Match(Action<T1> onFirst, Action<T2> onSecond, Action<T3> onThird, Action<T4> onFourth, Action<T5> onFifth, Action<T6> onSixth)
         {
             if (this.valueType == 1)
@@ -375,6 +390,7 @@ namespace Sodium
             }
         }
 
+        [Pure]
         public T Match<T>(Func<T1, T> onFirst, Func<T2, T> onSecond, Func<T3, T> onThird, Func<T4, T> onFourth, Func<T5, T> onFifth, Func<T6, T> onSixth) =>
             this.valueType == 1
                 ? onFirst(this.value1)
@@ -430,6 +446,8 @@ namespace Sodium
             this.value7 = value7;
         }
 
+        // ReSharper disable once PureAttributeOnVoidMethod
+        [Pure]
         public void Match(Action<T1> onFirst, Action<T2> onSecond, Action<T3> onThird, Action<T4> onFourth, Action<T5> onFifth, Action<T6> onSixth, Action<T7> onSeventh)
         {
             if (this.valueType == 1)
@@ -462,6 +480,7 @@ namespace Sodium
             }
         }
 
+        [Pure]
         public T Match<T>(Func<T1, T> onFirst, Func<T2, T> onSecond, Func<T3, T> onThird, Func<T4, T> onFourth, Func<T5, T> onFifth, Func<T6, T> onSixth, Func<T7, T> onSeventh) =>
             this.valueType == 1
                 ? onFirst(this.value1)
@@ -524,6 +543,8 @@ namespace Sodium
             this.value8 = value8;
         }
 
+        // ReSharper disable once PureAttributeOnVoidMethod
+        [Pure]
         public void Match(Action<T1> onFirst, Action<T2> onSecond, Action<T3> onThird, Action<T4> onFourth, Action<T5> onFifth, Action<T6> onSixth, Action<T7> onSeventh, Action<T8> onEighth)
         {
             if (this.valueType == 1)
@@ -560,6 +581,7 @@ namespace Sodium
             }
         }
 
+        [Pure]
         public T Match<T>(Func<T1, T> onFirst, Func<T2, T> onSecond, Func<T3, T> onThird, Func<T4, T> onFourth, Func<T5, T> onFifth, Func<T6, T> onSixth, Func<T7, T> onSeventh, Func<T8, T> onEighth) =>
             this.valueType == 1
                 ? onFirst(this.value1)

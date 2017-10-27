@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.Contracts;
 
 namespace Sodium
 {
@@ -30,6 +31,8 @@ namespace Sodium
             this.value = value;
         }
 
+        // ReSharper disable once PureAttributeOnVoidMethod
+        [Pure]
         public void Match(Action<T> hasValueAction, Action nothingAction)
         {
             if (this.hasValue)
@@ -42,6 +45,7 @@ namespace Sodium
             }
         }
 
+        [Pure]
         public TResult Match<TResult>(Func<T, TResult> hasValueFunc, Func<TResult> nothingFunc) => this.hasValue ? hasValueFunc(this.value) : nothingFunc();
 
         public static implicit operator Maybe<T>(Maybe.NoneType _) => new Maybe<T>();
