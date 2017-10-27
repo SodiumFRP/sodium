@@ -59,6 +59,7 @@
     <Compile Include="DenotationalSemanticsTests.cs" />
     <Compile Include="EitherTests.cs" />
     <Compile Include="LoopTests.cs" />
+    <Compile Include="MaybeTests.cs" />
     <Compile Include="PerformanceTests.cs" />
     <Compile Include="StreamTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

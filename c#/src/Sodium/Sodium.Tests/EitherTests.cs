@@ -1,4 +1,5 @@
-﻿using NUnit.Framework;
+﻿using System;
+using NUnit.Framework;
 
 namespace Sodium.Tests
 {
@@ -18,12 +19,12 @@ namespace Sodium.Tests
             Assert.AreEqual(2, TestIt2Action(v2));
         }
 
-        private static int TestIt2(Either<Test1, Test2> e) => e.Switch(v1 => 1, v2 => 2);
+        private static int TestIt2(Either<Test1, Test2> e) => e.Match(v1 => 1, v2 => 2);
 
         private static int TestIt2Action(Either<Test1, Test2> e)
         {
             int n = 0;
-            e.Switch(v1 => { n = 1; }, v2 => { n = 2; });
+            e.Match(v1 => { n = 1; }, v2 => { n = 2; });
             return n;
         }
 
@@ -43,12 +44,12 @@ namespace Sodium.Tests
             Assert.AreEqual(3, TestIt3Action(v3));
         }
 
-        private static int TestIt3(Either<Test1, Test2, Test3> e) => e.Switch(v1 => 1, v2 => 2, v3 => 3);
+        private static int TestIt3(Either<Test1, Test2, Test3> e) => e.Match(v1 => 1, v2 => 2, v3 => 3);
 
         private static int TestIt3Action(Either<Test1, Test2, Test3> e)
         {
             int n = 0;
-            e.Switch(v1 => { n = 1; }, v2 => { n = 2; }, v3 => { n = 3; });
+            e.Match(v1 => { n = 1; }, v2 => { n = 2; }, v3 => { n = 3; });
             return n;
         }
 
@@ -71,12 +72,12 @@ namespace Sodium.Tests
             Assert.AreEqual(4, TestIt4Action(v4));
         }
 
-        private static int TestIt4(Either<Test1, Test2, Test3, Test4> e) => e.Switch(v1 => 1, v2 => 2, v3 => 3, v4 => 4);
+        private static int TestIt4(Either<Test1, Test2, Test3, Test4> e) => e.Match(v1 => 1, v2 => 2, v3 => 3, v4 => 4);
 
         private static int TestIt4Action(Either<Test1, Test2, Test3, Test4> e)
         {
             int n = 0;
-            e.Switch(v1 => { n = 1; }, v2 => { n = 2; }, v3 => { n = 3; }, v4 => { n = 4; });
+            e.Match(v1 => { n = 1; }, v2 => { n = 2; }, v3 => { n = 3; }, v4 => { n = 4; });
             return n;
         }
 
@@ -102,12 +103,12 @@ namespace Sodium.Tests
             Assert.AreEqual(5, TestIt5Action(v5));
         }
 
-        private static int TestIt5(Either<Test1, Test2, Test3, Test4, Test5> e) => e.Switch(v1 => 1, v2 => 2, v3 => 3, v4 => 4, v5 => 5);
+        private static int TestIt5(Either<Test1, Test2, Test3, Test4, Test5> e) => e.Match(v1 => 1, v2 => 2, v3 => 3, v4 => 4, v5 => 5);
 
         private static int TestIt5Action(Either<Test1, Test2, Test3, Test4, Test5> e)
         {
             int n = 0;
-            e.Switch(v1 => { n = 1; }, v2 => { n = 2; }, v3 => { n = 3; }, v4 => { n = 4; }, v5 => { n = 5; });
+            e.Match(v1 => { n = 1; }, v2 => { n = 2; }, v3 => { n = 3; }, v4 => { n = 4; }, v5 => { n = 5; });
             return n;
         }
 
@@ -136,12 +137,12 @@ namespace Sodium.Tests
             Assert.AreEqual(6, TestIt6Action(v6));
         }
 
-        private static int TestIt6(Either<Test1, Test2, Test3, Test4, Test5, Test6> e) => e.Switch(v1 => 1, v2 => 2, v3 => 3, v4 => 4, v5 => 5, v6 => 6);
+        private static int TestIt6(Either<Test1, Test2, Test3, Test4, Test5, Test6> e) => e.Match(v1 => 1, v2 => 2, v3 => 3, v4 => 4, v5 => 5, v6 => 6);
 
         private static int TestIt6Action(Either<Test1, Test2, Test3, Test4, Test5, Test6> e)
         {
             int n = 0;
-            e.Switch(v1 => { n = 1; }, v2 => { n = 2; }, v3 => { n = 3; }, v4 => { n = 4; }, v5 => { n = 5; }, v6 => { n = 6; });
+            e.Match(v1 => { n = 1; }, v2 => { n = 2; }, v3 => { n = 3; }, v4 => { n = 4; }, v5 => { n = 5; }, v6 => { n = 6; });
             return n;
         }
 
@@ -173,12 +174,12 @@ namespace Sodium.Tests
             Assert.AreEqual(7, TestIt7Action(v7));
         }
 
-        private static int TestIt7(Either<Test1, Test2, Test3, Test4, Test5, Test6, Test7> e) => e.Switch(v1 => 1, v2 => 2, v3 => 3, v4 => 4, v5 => 5, v6 => 6, v7 => 7);
+        private static int TestIt7(Either<Test1, Test2, Test3, Test4, Test5, Test6, Test7> e) => e.Match(v1 => 1, v2 => 2, v3 => 3, v4 => 4, v5 => 5, v6 => 6, v7 => 7);
 
         private static int TestIt7Action(Either<Test1, Test2, Test3, Test4, Test5, Test6, Test7> e)
         {
             int n = 0;
-            e.Switch(v1 => { n = 1; }, v2 => { n = 2; }, v3 => { n = 3; }, v4 => { n = 4; }, v5 => { n = 5; }, v6 => { n = 6; }, v7 => { n = 7; });
+            e.Match(v1 => { n = 1; }, v2 => { n = 2; }, v3 => { n = 3; }, v4 => { n = 4; }, v5 => { n = 5; }, v6 => { n = 6; }, v7 => { n = 7; });
             return n;
         }
 
@@ -213,13 +214,40 @@ namespace Sodium.Tests
             Assert.AreEqual(8, TestIt8Action(v8));
         }
 
-        private static int TestIt8(Either<Test1, Test2, Test3, Test4, Test5, Test6, Test7, Test8> e) => e.Switch(v1 => 1, v2 => 2, v3 => 3, v4 => 4, v5 => 5, v6 => 6, v7 => 7, v8 => 8);
+        private static int TestIt8(Either<Test1, Test2, Test3, Test4, Test5, Test6, Test7, Test8> e) => e.Match(v1 => 1, v2 => 2, v3 => 3, v4 => 4, v5 => 5, v6 => 6, v7 => 7, v8 => 8);
 
         private static int TestIt8Action(Either<Test1, Test2, Test3, Test4, Test5, Test6, Test7, Test8> e)
         {
             int n = 0;
-            e.Switch(v1 => { n = 1; }, v2 => { n = 2; }, v3 => { n = 3; }, v4 => { n = 4; }, v5 => { n = 5; }, v6 => { n = 6; }, v7 => { n = 7; }, v8 => { n = 8; });
+            e.Match(v1 => { n = 1; }, v2 => { n = 2; }, v3 => { n = 3; }, v4 => { n = 4; }, v5 => { n = 5; }, v6 => { n = 6; }, v7 => { n = 7; }, v8 => { n = 8; });
             return n;
+        }
+
+        [Test]
+        public void EqualityTest()
+        {
+            Either<int, double, DateTime, string, char, float, long, byte> e1 = Either.Seventh(2L);
+            Either<int, double, DateTime, string, char, float, long, byte> e2 = Either.Seventh(2L);
+
+            Assert.AreEqual(e1, e2);
+        }
+
+        [Test]
+        public void NonEqualityTest1()
+        {
+            Either<int, double, DateTime, string, char, float, long, byte> e1 = Either.Seventh(2L);
+            Either<int, double, DateTime, string, char, float, long, byte> e2 = Either.First(2);
+
+            Assert.AreNotEqual(e1, e2);
+        }
+
+        [Test]
+        public void NonEqualityTest2()
+        {
+            Either<int, double, DateTime, string, char, float, long, byte> e1 = Either.Seventh(2L);
+            Either<int, double, DateTime, string, char, float, long, byte> e2 = Either.Seventh(3L);
+
+            Assert.AreNotEqual(e1, e2);
         }
 
         private class Test1

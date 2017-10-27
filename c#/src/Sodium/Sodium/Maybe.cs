@@ -46,36 +46,6 @@ namespace Sodium
 
         public static implicit operator Maybe<T>(Maybe.NoneType _) => new Maybe<T>();
 
-        public override string ToString() => this.hasValue ? $"Some: {this.value}" : "None";
-
-        private bool Equals(Maybe<T> other)
-        {
-            if (this.hasValue != other.hasValue)
-            {
-                return false;
-            }
-
-            if (this.hasValue)
-            {
-                return EqualityComparer<T>.Default.Equals(this.value, other.value);
-            }
-
-            return true;
-        }
-
-        public override bool Equals(object obj)
-        {
-            if (!(obj is Maybe<T>))
-            {
-                return false;
-            }
-
-            return this.Equals((Maybe<T>)obj);
-        }
-
-        public override int GetHashCode()
-        {
-            return !this.hasValue ? 0 : EqualityComparer<T>.Default.GetHashCode(this.value);
-        }
+        public override string ToString() => this.Match(v => $"Some: {v}", () => "None");
     }
 }

@@ -125,7 +125,7 @@ namespace Sodium
             this.value2 = value2;
         }
 
-        public void Switch(Action<T1> onFirst, Action<T2> onSecond)
+        public void Match(Action<T1> onFirst, Action<T2> onSecond)
         {
             if (this.valueType == 1)
             {
@@ -137,7 +137,7 @@ namespace Sodium
             }
         }
 
-        public T Switch<T>(Func<T1, T> onFirst, Func<T2, T> onSecond) =>
+        public T Match<T>(Func<T1, T> onFirst, Func<T2, T> onSecond) =>
             this.valueType == 1 ? onFirst(this.value1) : onSecond(this.value2);
 
         public static implicit operator Either<T1, T2>(Either.EitherFirst<T1> value) =>
@@ -145,6 +145,8 @@ namespace Sodium
 
         public static implicit operator Either<T1, T2>(Either.EitherSecond<T2> value) =>
             new Either<T1, T2>(2, default(T1), value.Value);
+
+        public override string ToString() => this.Match(v1 => $"First: {v1}", v2 => $"Second: {v2}");
     }
 
     public struct Either<T1, T2, T3>
@@ -162,7 +164,7 @@ namespace Sodium
             this.value3 = value3;
         }
 
-        public void Switch(Action<T1> onFirst, Action<T2> onSecond, Action<T3> onThird)
+        public void Match(Action<T1> onFirst, Action<T2> onSecond, Action<T3> onThird)
         {
             if (this.valueType == 1)
             {
@@ -178,7 +180,7 @@ namespace Sodium
             }
         }
 
-        public T Switch<T>(Func<T1, T> onFirst, Func<T2, T> onSecond, Func<T3, T> onThird) =>
+        public T Match<T>(Func<T1, T> onFirst, Func<T2, T> onSecond, Func<T3, T> onThird) =>
             this.valueType == 1
                 ? onFirst(this.value1)
                 : (this.valueType == 2 ? onSecond(this.value2) : onThird(this.value3));
@@ -191,6 +193,8 @@ namespace Sodium
 
         public static implicit operator Either<T1, T2, T3>(Either.EitherThird<T3> value) =>
             new Either<T1, T2, T3>(3, default(T1), default(T2), value.Value);
+
+        public override string ToString() => this.Match(v1 => $"First: {v1}", v2 => $"Second: {v2}", v3 => $"Third: {v3}");
     }
 
     public struct Either<T1, T2, T3, T4>
@@ -210,7 +214,7 @@ namespace Sodium
             this.value4 = value4;
         }
 
-        public void Switch(Action<T1> onFirst, Action<T2> onSecond, Action<T3> onThird, Action<T4> onFourth)
+        public void Match(Action<T1> onFirst, Action<T2> onSecond, Action<T3> onThird, Action<T4> onFourth)
         {
             if (this.valueType == 1)
             {
@@ -230,7 +234,7 @@ namespace Sodium
             }
         }
 
-        public T Switch<T>(Func<T1, T> onFirst, Func<T2, T> onSecond, Func<T3, T> onThird, Func<T4, T> onFourth) =>
+        public T Match<T>(Func<T1, T> onFirst, Func<T2, T> onSecond, Func<T3, T> onThird, Func<T4, T> onFourth) =>
             this.valueType == 1
                 ? onFirst(this.value1)
                 : (this.valueType == 2
@@ -248,6 +252,8 @@ namespace Sodium
 
         public static implicit operator Either<T1, T2, T3, T4>(Either.EitherFourth<T4> value) =>
             new Either<T1, T2, T3, T4>(4, default(T1), default(T2), default(T3), value.Value);
+
+        public override string ToString() => this.Match(v1 => $"First: {v1}", v2 => $"Second: {v2}", v3 => $"Third: {v3}", v4 => $"Fourth: {v4}");
     }
 
     public struct Either<T1, T2, T3, T4, T5>
@@ -269,7 +275,7 @@ namespace Sodium
             this.value5 = value5;
         }
 
-        public void Switch(Action<T1> onFirst, Action<T2> onSecond, Action<T3> onThird, Action<T4> onFourth, Action<T5> onFifth)
+        public void Match(Action<T1> onFirst, Action<T2> onSecond, Action<T3> onThird, Action<T4> onFourth, Action<T5> onFifth)
         {
             if (this.valueType == 1)
             {
@@ -293,7 +299,7 @@ namespace Sodium
             }
         }
 
-        public T Switch<T>(Func<T1, T> onFirst, Func<T2, T> onSecond, Func<T3, T> onThird, Func<T4, T> onFourth, Func<T5, T> onFifth) =>
+        public T Match<T>(Func<T1, T> onFirst, Func<T2, T> onSecond, Func<T3, T> onThird, Func<T4, T> onFourth, Func<T5, T> onFifth) =>
             this.valueType == 1
                 ? onFirst(this.value1)
                 : (this.valueType == 2
@@ -316,6 +322,8 @@ namespace Sodium
 
         public static implicit operator Either<T1, T2, T3, T4, T5>(Either.EitherFifth<T5> value) =>
             new Either<T1, T2, T3, T4, T5>(5, default(T1), default(T2), default(T3), default(T4), value.Value);
+
+        public override string ToString() => this.Match(v1 => $"First: {v1}", v2 => $"Second: {v2}", v3 => $"Third: {v3}", v4 => $"Fourth: {v4}", v5 => $"Fifth: {v5}");
     }
 
     public struct Either<T1, T2, T3, T4, T5, T6>
@@ -339,7 +347,7 @@ namespace Sodium
             this.value6 = value6;
         }
 
-        public void Switch(Action<T1> onFirst, Action<T2> onSecond, Action<T3> onThird, Action<T4> onFourth, Action<T5> onFifth, Action<T6> onSixth)
+        public void Match(Action<T1> onFirst, Action<T2> onSecond, Action<T3> onThird, Action<T4> onFourth, Action<T5> onFifth, Action<T6> onSixth)
         {
             if (this.valueType == 1)
             {
@@ -367,7 +375,7 @@ namespace Sodium
             }
         }
 
-        public T Switch<T>(Func<T1, T> onFirst, Func<T2, T> onSecond, Func<T3, T> onThird, Func<T4, T> onFourth, Func<T5, T> onFifth, Func<T6, T> onSixth) =>
+        public T Match<T>(Func<T1, T> onFirst, Func<T2, T> onSecond, Func<T3, T> onThird, Func<T4, T> onFourth, Func<T5, T> onFifth, Func<T6, T> onSixth) =>
             this.valueType == 1
                 ? onFirst(this.value1)
                 : (this.valueType == 2
@@ -395,6 +403,8 @@ namespace Sodium
 
         public static implicit operator Either<T1, T2, T3, T4, T5, T6>(Either.EitherSixth<T6> value) =>
             new Either<T1, T2, T3, T4, T5, T6>(6, default(T1), default(T2), default(T3), default(T4), default(T5), value.Value);
+
+        public override string ToString() => this.Match(v1 => $"First: {v1}", v2 => $"Second: {v2}", v3 => $"Third: {v3}", v4 => $"Fourth: {v4}", v5 => $"Fifth: {v5}", v6 => $"Sixth: {v6}");
     }
 
     public struct Either<T1, T2, T3, T4, T5, T6, T7>
@@ -420,7 +430,7 @@ namespace Sodium
             this.value7 = value7;
         }
 
-        public void Switch(Action<T1> onFirst, Action<T2> onSecond, Action<T3> onThird, Action<T4> onFourth, Action<T5> onFifth, Action<T6> onSixth, Action<T7> onSeventh)
+        public void Match(Action<T1> onFirst, Action<T2> onSecond, Action<T3> onThird, Action<T4> onFourth, Action<T5> onFifth, Action<T6> onSixth, Action<T7> onSeventh)
         {
             if (this.valueType == 1)
             {
@@ -452,7 +462,7 @@ namespace Sodium
             }
         }
 
-        public T Switch<T>(Func<T1, T> onFirst, Func<T2, T> onSecond, Func<T3, T> onThird, Func<T4, T> onFourth, Func<T5, T> onFifth, Func<T6, T> onSixth, Func<T7, T> onSeventh) =>
+        public T Match<T>(Func<T1, T> onFirst, Func<T2, T> onSecond, Func<T3, T> onThird, Func<T4, T> onFourth, Func<T5, T> onFifth, Func<T6, T> onSixth, Func<T7, T> onSeventh) =>
             this.valueType == 1
                 ? onFirst(this.value1)
                 : (this.valueType == 2
@@ -485,6 +495,8 @@ namespace Sodium
 
         public static implicit operator Either<T1, T2, T3, T4, T5, T6, T7>(Either.EitherSeventh<T7> value) =>
             new Either<T1, T2, T3, T4, T5, T6, T7>(7, default(T1), default(T2), default(T3), default(T4), default(T5), default(T6), value.Value);
+
+        public override string ToString() => this.Match(v1 => $"First: {v1}", v2 => $"Second: {v2}", v3 => $"Third: {v3}", v4 => $"Fourth: {v4}", v5 => $"Fifth: {v5}", v6 => $"Sixth: {v6}", v7 => $"Seventh: {v7}");
     }
 
     public struct Either<T1, T2, T3, T4, T5, T6, T7, T8>
@@ -512,7 +524,7 @@ namespace Sodium
             this.value8 = value8;
         }
 
-        public void Switch(Action<T1> onFirst, Action<T2> onSecond, Action<T3> onThird, Action<T4> onFourth, Action<T5> onFifth, Action<T6> onSixth, Action<T7> onSeventh, Action<T8> onEighth)
+        public void Match(Action<T1> onFirst, Action<T2> onSecond, Action<T3> onThird, Action<T4> onFourth, Action<T5> onFifth, Action<T6> onSixth, Action<T7> onSeventh, Action<T8> onEighth)
         {
             if (this.valueType == 1)
             {
@@ -548,7 +560,7 @@ namespace Sodium
             }
         }
 
-        public T Switch<T>(Func<T1, T> onFirst, Func<T2, T> onSecond, Func<T3, T> onThird, Func<T4, T> onFourth, Func<T5, T> onFifth, Func<T6, T> onSixth, Func<T7, T> onSeventh, Func<T8, T> onEighth) =>
+        public T Match<T>(Func<T1, T> onFirst, Func<T2, T> onSecond, Func<T3, T> onThird, Func<T4, T> onFourth, Func<T5, T> onFifth, Func<T6, T> onSixth, Func<T7, T> onSeventh, Func<T8, T> onEighth) =>
             this.valueType == 1
                 ? onFirst(this.value1)
                 : (this.valueType == 2
@@ -586,5 +598,7 @@ namespace Sodium
 
         public static implicit operator Either<T1, T2, T3, T4, T5, T6, T7, T8>(Either.EitherEighth<T8> value) =>
             new Either<T1, T2, T3, T4, T5, T6, T7, T8>(8, default(T1), default(T2), default(T3), default(T4), default(T5), default(T6), default(T7), value.Value);
+
+        public override string ToString() => this.Match(v1 => $"First: {v1}", v2 => $"Second: {v2}", v3 => $"Third: {v3}", v4 => $"Fourth: {v4}", v5 => $"Fifth: {v5}", v6 => $"Sixth: {v6}", v7 => $"Seventh: {v7}", v8 => $"Eighth: {v8}");
     }
 }
