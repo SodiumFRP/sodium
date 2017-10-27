@@ -240,7 +240,11 @@ namespace Sodium.Tests
             Assert.AreEqual(expected.Length, @out.Count);
             for (int i = 0; i < 16; i++)
             {
-                CollectionAssert.AreEqual(@out[i], expected[i]);
+                Assert.AreEqual(expected[i].Length, @out[i].Count);
+                for (int j = 0; j < expected[i].Length; j++)
+                {
+                    Assert.AreEqual(@out[i][j], expected[i][j]);
+                }
             }
         }
 
