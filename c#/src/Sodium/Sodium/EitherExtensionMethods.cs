@@ -318,5 +318,54 @@ namespace Sodium
 
         public static bool IsEighth<T1, T2, T3, T4, T5, T6, T7, T8>(this Either<T1, T2, T3, T4, T5, T6, T7, T8> a) =>
             a.Match(_ => false, _ => false, _ => false, _ => false, _ => false, _ => false, _ => false, _ => true);
+
+            where T1 : T
+            where T2 : T =>
+            a.Match<T>(v1 => v1, v2 => v2);
+
+            where T1 : T
+            where T2 : T
+            where T3 : T =>
+            a.Match<T>(v1 => v1, v2 => v2, v3 => v3);
+
+            where T1 : T
+            where T2 : T
+            where T3 : T
+            where T4 : T =>
+            a.Match<T>(v1 => v1, v2 => v2, v3 => v3, v4 => v4);
+
+            where T1 : T
+            where T2 : T
+            where T3 : T
+            where T4 : T
+            where T5 : T =>
+            a.Match<T>(v1 => v1, v2 => v2, v3 => v3, v4 => v4, v5 => v5);
+
+            where T1 : T
+            where T2 : T
+            where T3 : T
+            where T4 : T
+            where T5 : T
+            where T6 : T =>
+            a.Match<T>(v1 => v1, v2 => v2, v3 => v3, v4 => v4, v5 => v5, v6 => v6);
+
+            where T1 : T
+            where T2 : T
+            where T3 : T
+            where T4 : T
+            where T5 : T
+            where T6 : T
+            where T7 : T =>
+            a.Match<T>(v1 => v1, v2 => v2, v3 => v3, v4 => v4, v5 => v5, v6 => v6, v7 => v7);
+
+            where T1 : T
+            where T2 : T
+            where T3 : T
+            where T4 : T
+            where T5 : T
+            where T6 : T
+            where T7 : T
+            where T8 : T =>
+            a.Match<T>(v1 => v1, v2 => v2, v3 => v3, v4 => v4, v5 => v5, v6 => v6, v7 => v7, v8 => v8);
     }
 }

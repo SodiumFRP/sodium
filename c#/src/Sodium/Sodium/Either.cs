@@ -113,7 +113,7 @@ namespace Sodium
         public static Either<T1, T2, T3, T4, T5, T6, T7, T8> Eighth<T1, T2, T3, T4, T5, T6, T7, T8>(T8 value) => Eighth(value);
     }
 
-    public struct Either<T1, T2>
+    public struct Either<T1, T2> : IEither
     {
         private readonly int valueType;
         private readonly T1 value1;
@@ -125,6 +125,8 @@ namespace Sodium
             this.value1 = value1;
             this.value2 = value2;
         }
+
+        public object GetValueAsObject() => this.Match(v1 => (object) v1, v2 => v2);
 
         // ReSharper disable once PureAttributeOnVoidMethod
         [Pure]
@@ -153,7 +155,7 @@ namespace Sodium
         public override string ToString() => this.Match(v1 => $"First: {v1}", v2 => $"Second: {v2}");
     }
 
-    public struct Either<T1, T2, T3>
+    public struct Either<T1, T2, T3> : IEither
     {
         private readonly int valueType;
         private readonly T1 value1;
@@ -167,6 +169,8 @@ namespace Sodium
             this.value2 = value2;
             this.value3 = value3;
         }
+
+        public object GetValueAsObject() => this.Match(v1 => (object) v1, v2 => v2, v3 => v3);
 
         // ReSharper disable once PureAttributeOnVoidMethod
         [Pure]
@@ -204,7 +208,7 @@ namespace Sodium
         public override string ToString() => this.Match(v1 => $"First: {v1}", v2 => $"Second: {v2}", v3 => $"Third: {v3}");
     }
 
-    public struct Either<T1, T2, T3, T4>
+    public struct Either<T1, T2, T3, T4> : IEither
     {
         private readonly int valueType;
         private readonly T1 value1;
@@ -220,6 +224,8 @@ namespace Sodium
             this.value3 = value3;
             this.value4 = value4;
         }
+
+        public object GetValueAsObject() => this.Match(v1 => (object) v1, v2 => v2, v3 => v3, v4 => v4);
 
         // ReSharper disable once PureAttributeOnVoidMethod
         [Pure]
@@ -266,7 +272,7 @@ namespace Sodium
         public override string ToString() => this.Match(v1 => $"First: {v1}", v2 => $"Second: {v2}", v3 => $"Third: {v3}", v4 => $"Fourth: {v4}");
     }
 
-    public struct Either<T1, T2, T3, T4, T5>
+    public struct Either<T1, T2, T3, T4, T5> : IEither
     {
         private readonly int valueType;
         private readonly T1 value1;
@@ -284,6 +290,8 @@ namespace Sodium
             this.value4 = value4;
             this.value5 = value5;
         }
+
+        public object GetValueAsObject() => this.Match(v1 => (object) v1, v2 => v2, v3 => v3, v4 => v4, v5 => v5);
 
         // ReSharper disable once PureAttributeOnVoidMethod
         [Pure]
@@ -339,7 +347,7 @@ namespace Sodium
         public override string ToString() => this.Match(v1 => $"First: {v1}", v2 => $"Second: {v2}", v3 => $"Third: {v3}", v4 => $"Fourth: {v4}", v5 => $"Fifth: {v5}");
     }
 
-    public struct Either<T1, T2, T3, T4, T5, T6>
+    public struct Either<T1, T2, T3, T4, T5, T6> : IEither
     {
         private readonly int valueType;
         private readonly T1 value1;
@@ -359,6 +367,8 @@ namespace Sodium
             this.value5 = value5;
             this.value6 = value6;
         }
+
+        public object GetValueAsObject() => this.Match(v1 => (object) v1, v2 => v2, v3 => v3, v4 => v4, v5 => v5, v6 => v6);
 
         // ReSharper disable once PureAttributeOnVoidMethod
         [Pure]
@@ -423,7 +433,7 @@ namespace Sodium
         public override string ToString() => this.Match(v1 => $"First: {v1}", v2 => $"Second: {v2}", v3 => $"Third: {v3}", v4 => $"Fourth: {v4}", v5 => $"Fifth: {v5}", v6 => $"Sixth: {v6}");
     }
 
-    public struct Either<T1, T2, T3, T4, T5, T6, T7>
+    public struct Either<T1, T2, T3, T4, T5, T6, T7> : IEither
     {
         private readonly int valueType;
         private readonly T1 value1;
@@ -445,6 +455,8 @@ namespace Sodium
             this.value6 = value6;
             this.value7 = value7;
         }
+
+        public object GetValueAsObject() => this.Match(v1 => (object) v1, v2 => v2, v3 => v3, v4 => v4, v5 => v5, v6 => v6, v7 => v7);
 
         // ReSharper disable once PureAttributeOnVoidMethod
         [Pure]
@@ -518,7 +530,7 @@ namespace Sodium
         public override string ToString() => this.Match(v1 => $"First: {v1}", v2 => $"Second: {v2}", v3 => $"Third: {v3}", v4 => $"Fourth: {v4}", v5 => $"Fifth: {v5}", v6 => $"Sixth: {v6}", v7 => $"Seventh: {v7}");
     }
 
-    public struct Either<T1, T2, T3, T4, T5, T6, T7, T8>
+    public struct Either<T1, T2, T3, T4, T5, T6, T7, T8> : IEither
     {
         private readonly int valueType;
         private readonly T1 value1;
@@ -542,6 +554,8 @@ namespace Sodium
             this.value7 = value7;
             this.value8 = value8;
         }
+
+        public object GetValueAsObject() => this.Match(v1 => (object) v1, v2 => v2, v3 => v3, v4 => v4, v5 => v5, v6 => v6, v7 => v7, v8 => v8);
 
         // ReSharper disable once PureAttributeOnVoidMethod
         [Pure]
