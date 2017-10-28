@@ -319,21 +319,25 @@ namespace Sodium
         public static bool IsEighth<T1, T2, T3, T4, T5, T6, T7, T8>(this Either<T1, T2, T3, T4, T5, T6, T7, T8> a) =>
             a.Match(_ => false, _ => false, _ => false, _ => false, _ => false, _ => false, _ => false, _ => true);
 
+        public static T GetValueAs<T, T1, T2>(this Either<T1, T2> a)
             where T1 : T
             where T2 : T =>
             a.Match<T>(v1 => v1, v2 => v2);
 
+        public static T GetValueAs<T, T1, T2, T3>(this Either<T1, T2, T3> a)
             where T1 : T
             where T2 : T
             where T3 : T =>
             a.Match<T>(v1 => v1, v2 => v2, v3 => v3);
 
+        public static T GetValueAs<T, T1, T2, T3, T4>(this Either<T1, T2, T3, T4> a)
             where T1 : T
             where T2 : T
             where T3 : T
             where T4 : T =>
             a.Match<T>(v1 => v1, v2 => v2, v3 => v3, v4 => v4);
 
+        public static T GetValueAs<T, T1, T2, T3, T4, T5>(this Either<T1, T2, T3, T4, T5> a)
             where T1 : T
             where T2 : T
             where T3 : T
@@ -341,6 +345,7 @@ namespace Sodium
             where T5 : T =>
             a.Match<T>(v1 => v1, v2 => v2, v3 => v3, v4 => v4, v5 => v5);
 
+        public static T GetValueAs<T, T1, T2, T3, T4, T5, T6>(this Either<T1, T2, T3, T4, T5, T6> a)
             where T1 : T
             where T2 : T
             where T3 : T
@@ -349,6 +354,7 @@ namespace Sodium
             where T6 : T =>
             a.Match<T>(v1 => v1, v2 => v2, v3 => v3, v4 => v4, v5 => v5, v6 => v6);
 
+        public static T GetValueAs<T, T1, T2, T3, T4, T5, T6, T7>(this Either<T1, T2, T3, T4, T5, T6, T7> a)
             where T1 : T
             where T2 : T
             where T3 : T
@@ -358,6 +364,7 @@ namespace Sodium
             where T7 : T =>
             a.Match<T>(v1 => v1, v2 => v2, v3 => v3, v4 => v4, v5 => v5, v6 => v6, v7 => v7);
 
+        public static T GetValueAs<T, T1, T2, T3, T4, T5, T6, T7, T8>(this Either<T1, T2, T3, T4, T5, T6, T7, T8> a)
             where T1 : T
             where T2 : T
             where T3 : T
