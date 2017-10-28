@@ -21,6 +21,8 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>
+    </DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -49,6 +51,7 @@
   <ItemGroup>
     <Compile Include="Cell.cs" />
     <Compile Include="CellExtensionMethods.cs" />
+    <Compile Include="JetBrainsAnnotations.cs" />
     <Compile Include="CompositeStrongListener.cs" />
     <Compile Include="CompositeWeakListener.cs" />
     <Compile Include="DiscreteCell.cs" />
