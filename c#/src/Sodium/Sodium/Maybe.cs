@@ -5,12 +5,11 @@ namespace Sodium
 {
     public static class Maybe
     {
-        public static Maybe<T> Some<T>(T value) => new Maybe<T>(value);
-        public static NoneType None = NoneType.Value;
+        public static Maybe<T> Some<T>(T value) => Maybe<T>.Some(value);
+        public static readonly NoneType None = new NoneType();
 
         public struct NoneType
         {
-            internal static readonly NoneType Value = new NoneType();
         }
     }
 
@@ -19,7 +18,7 @@ namespace Sodium
         private readonly bool hasValue;
         private readonly T value;
 
-        internal Maybe(T value)
+        private Maybe(T value)
         {
             if (value == null)
             {
@@ -29,6 +28,9 @@ namespace Sodium
             this.hasValue = true;
             this.value = value;
         }
+
+        public static Maybe<T> Some(T value) => new Maybe<T>(value);
+        public static readonly Maybe<T> None = new Maybe<T>();
 
         // ReSharper disable once PureAttributeOnVoidMethod
         [Pure]
@@ -47,8 +49,8 @@ namespace Sodium
         [Pure]
         public TResult Match<TResult>(Func<T, TResult> hasValueFunc, Func<TResult> nothingFunc) => this.hasValue ? hasValueFunc(this.value) : nothingFunc();
 
-        public static implicit operator Maybe<T>(Maybe.NoneType _) => new Maybe<T>();
+        public static implicit operator Maybe<T>(Maybe.NoneType _) => None;
 
-        public override string ToString() => this.Match(v => $"Some: {v}", () => "None");
+        public override string ToString() => this.Match(v => $"{{Some: {v}}}", () => "{None}");
     }
 }
