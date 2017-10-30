@@ -32,22 +32,8 @@ namespace Sodium
         public static Maybe<T> Some(T value) => new Maybe<T>(value);
         public static readonly Maybe<T> None = new Maybe<T>();
 
-        // ReSharper disable once PureAttributeOnVoidMethod
         [Pure]
-        public void Match(Action<T> hasValueAction, Action nothingAction)
-        {
-            if (this.hasValue)
-            {
-                hasValueAction(this.value);
-            }
-            else
-            {
-                nothingAction();
-            }
-        }
-
-        [Pure]
-        public TResult Match<TResult>(Func<T, TResult> hasValueFunc, Func<TResult> nothingFunc) => this.hasValue ? hasValueFunc(this.value) : nothingFunc();
+        public TResult Match<TResult>(Func<T, TResult> onSome, Func<TResult> onNone) => this.hasValue ? onSome(this.value) : onNone();
 
         public static implicit operator Maybe<T>(Maybe.NoneType _) => None;
 

@@ -1,11 +1,18 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading.Tasks;
 
 namespace Sodium
 {
     public static class MaybeExtensionMethods
     {
+        // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+        public static void MatchVoid<T>(this Maybe<T> o, Action<T> onSome, Action onNone) => o.Match(onSome.ToFunc(), onNone.ToFunc());
+
+        public static Task<TResult> MatchAsync<T, TResult>(this Maybe<T> o, Func<T, Task<TResult>> onSome, Func<Task<TResult>> onNone) => o.Match(onSome, onNone);
+        public static Task MatchAsyncVoid<T>(this Maybe<T> o, Func<T, Task> onSome, Func<Task> onNone) => o.MatchAsync(onSome.ToAsyncFunc(), onNone.ToAsyncFunc());
+
         /// <summary>
         ///     Map an <see cref="Maybe{T}" /> value using a mapping function if a value exists, or propogate the nothing value if
         ///     it does not.
