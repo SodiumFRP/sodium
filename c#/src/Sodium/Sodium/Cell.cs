@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace Sodium
 {
@@ -70,7 +69,7 @@ namespace Sodium
     public class Cell<T>
     {
         private readonly Stream<T> stream;
-        private readonly MutableMaybeValue<T> valueUpdate = new MutableMaybeValue<T>();
+        private Maybe<T> valueUpdate;
         // ReSharper disable once NotAccessedField.Local - Used to keep object from being garbage collected
         private readonly IListener streamListener;
 
@@ -95,18 +94,17 @@ namespace Sodium
             this.streamListener = Transaction.Apply(trans1 =>
                 this.stream.Listen(Node<T>.Null, trans1, (trans2, a) =>
                 {
-                    this.valueUpdate.Match(
-                        v => { },
+                    this.valueUpdate.MatchNone(
                         () =>
                         {
                             trans2.Last(() =>
                             {
-                                this.valueUpdate.Match(v => this.ValueProperty = v, () => { });
-                                this.valueUpdate.Reset();
+                                this.valueUpdate.MatchSome(v => this.ValueProperty = v);
+                                this.valueUpdate = Maybe.None;
                             });
                         });
 
-                    this.valueUpdate.Set(a);
+                    this.valueUpdate = Maybe.Some(a);
                 }, false), false);
         }
 
@@ -114,7 +112,7 @@ namespace Sodium
 
         protected T ValueProperty
         {
-            get { return this.valueProperty; }
+            get => this.valueProperty;
             set
             {
                 this.valueProperty = value;
@@ -143,8 +141,8 @@ namespace Sodium
         ///         <see cref="Stream{T}.Merge(Stream{T}, Func{T, T, T})" />
         ///     </para>
         ///     <para>
-        ///         It should generally be avoided in favor of <see cref="Listen(Action{T})" />
-        ///         so updates aren't missed, but in many circumstances it makes sense.
+        ///         It should generally be avoided in favor of <see cref="DiscreteCell{T}.Listen(Action{T})" />
+        ///         for discrete cells so updates aren't missed, but in many circumstances it makes sense.
         ///     </para>
         ///     <para>
         ///         It can be best to use this method inside an explicit transaction (using

@@ -8,10 +8,18 @@ namespace Sodium
     public static class MaybeExtensionMethods
     {
         // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
-        public static void MatchVoid<T>(this Maybe<T> o, Action<T> onSome, Action onNone) => o.Match(onSome.ToFunc(), onNone.ToFunc());
+        public static void MatchVoid<T>(this Maybe<T> a, Action<T> onSome, Action onNone) => a.Match(onSome.ToFunc(), onNone.ToFunc());
 
-        public static Task<TResult> MatchAsync<T, TResult>(this Maybe<T> o, Func<T, Task<TResult>> onSome, Func<Task<TResult>> onNone) => o.Match(onSome, onNone);
-        public static Task MatchAsyncVoid<T>(this Maybe<T> o, Func<T, Task> onSome, Func<Task> onNone) => o.MatchAsync(onSome.ToAsyncFunc(), onNone.ToAsyncFunc());
+        // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+        public static void MatchSome<T>(this Maybe<T> a, Action<T> onSome) => a.MatchVoid(onSome, () => { });
+
+        // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+        public static void MatchNone<T>(this Maybe<T> a, Action onNone) => a.MatchVoid(_ => { }, onNone);
+
+        public static Task<TResult> MatchAsync<T, TResult>(this Maybe<T> a, Func<T, Task<TResult>> onSome, Func<Task<TResult>> onNone) => a.Match(onSome, onNone);
+        public static Task MatchAsyncVoid<T>(this Maybe<T> a, Func<T, Task> onSome, Func<Task> onNone) => a.MatchAsync(onSome.ToAsyncFunc(), onNone.ToAsyncFunc());
+        public static Task MatchSomeAsync<T>(this Maybe<T> a, Func<T, Task> onSome) => a.MatchAsyncVoid(onSome, () => Task.FromResult(false));
+        public static Task MatchNoneAsync<T>(this Maybe<T> a, Func<Task> onNone) => a.MatchAsyncVoid(_ => Task.FromResult(false), onNone);
 
         /// <summary>
         ///     Map an <see cref="Maybe{T}" /> value using a mapping function if a value exists, or propogate the nothing value if

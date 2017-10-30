@@ -76,7 +76,7 @@ namespace Sodium.Time
             Maybe<ITimer> currentTimer = Maybe.None;
             IListener l = t.Listen(m =>
             {
-                currentTimer.Match(timer => timer.Cancel(), () => { });
+                currentTimer.MatchSome(timer => timer.Cancel());
                 currentTimer = m.Match(
                     time => Maybe.Some(this.implementation.SetTimer(time, () =>
                     {

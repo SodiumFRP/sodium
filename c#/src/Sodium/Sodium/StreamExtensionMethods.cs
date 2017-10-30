@@ -81,7 +81,7 @@ namespace Sodium
         public static Stream<T> FilterMaybe<T>(this Stream<Maybe<T>> s)
         {
             Stream<T> @out = new Stream<T>(s.KeepListenersAlive);
-            IListener l = s.Listen(@out.Node, (trans2, a) => a.Match(v => @out.Send(trans2, v), () => { }));
+            IListener l = s.Listen(@out.Node, (trans2, a) => a.MatchSome(v => @out.Send(trans2, v)));
             return @out.UnsafeAttachListener(l);
         }
     }

@@ -84,7 +84,6 @@
     <Compile Include="StreamSink.cs" />
     <Compile Include="IListener.cs" />
     <Compile Include="Either.cs" />
-    <Compile Include="MutableMaybeValue.cs" />
     <Compile Include="Node.cs" />
     <Compile Include="Operational.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
