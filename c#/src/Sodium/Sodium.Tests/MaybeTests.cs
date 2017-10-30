@@ -1,15 +1,20 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
-using NUnit.Framework;
+﻿using NUnit.Framework;
 
 namespace Sodium.Tests
 {
     [TestFixture]
     public class MaybeTests
     {
+        [Test]
+        public void DefaultValueTest()
+        {
+            Maybe<int> m = new Maybe<int>();
+
+            int? n = m.Match(v => (int?)v, () => null);
+
+            Assert.IsFalse(n.HasValue);
+        }
+
         [Test]
         public void TestSome()
         {
