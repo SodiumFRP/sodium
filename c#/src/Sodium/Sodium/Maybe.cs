@@ -13,7 +13,7 @@ namespace Sodium
         }
     }
 
-    public struct Maybe<T>
+    public struct Maybe<T> : IMaybe
     {
         private readonly bool hasValue;
         private readonly T value;
@@ -31,6 +31,8 @@ namespace Sodium
 
         public static Maybe<T> Some(T value) => new Maybe<T>(value);
         public static readonly Maybe<T> None = new Maybe<T>();
+
+        T1 IMaybe.Match<T1>(Func<object, T1> onSome, Func<T1> onNone) => this.Match(v => onSome(v), onNone);
 
         [Pure]
         public TResult Match<TResult>(Func<T, TResult> onSome, Func<TResult> onNone) => this.hasValue ? onSome(this.value) : onNone();

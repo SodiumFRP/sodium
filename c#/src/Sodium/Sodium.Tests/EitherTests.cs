@@ -11,7 +11,7 @@ namespace Sodium.Tests
         {
             Either<Test1, Test2> e = new Either<Test1, Test2>();
 
-            object o = e.GetValueAsObject();
+            object o = e.Upcast<IEither>().GetValueAsObject();
 
             Assert.AreEqual(1, TestIt2(e));
             Assert.IsNull(o);
@@ -22,7 +22,7 @@ namespace Sodium.Tests
         {
             Either<Test1, Test2, Test3> e = new Either<Test1, Test2, Test3>();
 
-            object o = e.GetValueAsObject();
+            object o = e.Upcast<IEither>().GetValueAsObject();
 
             Assert.AreEqual(1, TestIt3(e));
             Assert.IsNull(o);
@@ -33,7 +33,7 @@ namespace Sodium.Tests
         {
             Either<Test1, Test2, Test3, Test4> e = new Either<Test1, Test2, Test3, Test4>();
 
-            object o = e.GetValueAsObject();
+            object o = e.Upcast<IEither>().GetValueAsObject();
 
             Assert.AreEqual(1, TestIt4(e));
             Assert.IsNull(o);
@@ -44,7 +44,7 @@ namespace Sodium.Tests
         {
             Either<Test1, Test2, Test3, Test4, Test5> e = new Either<Test1, Test2, Test3, Test4, Test5>();
 
-            object o = e.GetValueAsObject();
+            object o = e.Upcast<IEither>().GetValueAsObject();
 
             Assert.AreEqual(1, TestIt5(e));
             Assert.IsNull(o);
@@ -55,7 +55,7 @@ namespace Sodium.Tests
         {
             Either<Test1, Test2, Test3, Test4, Test5, Test6> e = new Either<Test1, Test2, Test3, Test4, Test5, Test6>();
 
-            object o = e.GetValueAsObject();
+            object o = e.Upcast<IEither>().GetValueAsObject();
 
             Assert.AreEqual(1, TestIt6(e));
             Assert.IsNull(o);
@@ -66,7 +66,7 @@ namespace Sodium.Tests
         {
             Either<Test1, Test2, Test3, Test4, Test5, Test6, Test7> e = new Either<Test1, Test2, Test3, Test4, Test5, Test6, Test7>();
 
-            object o = e.GetValueAsObject();
+            object o = e.Upcast<IEither>().GetValueAsObject();
 
             Assert.AreEqual(1, TestIt7(e));
             Assert.IsNull(o);
@@ -77,7 +77,7 @@ namespace Sodium.Tests
         {
             Either<Test1, Test2, Test3, Test4, Test5, Test6, Test7, Test8> e = new Either<Test1, Test2, Test3, Test4, Test5, Test6, Test7, Test8>();
 
-            object o = e.GetValueAsObject();
+            object o = e.Upcast<IEither>().GetValueAsObject();
 
             Assert.AreEqual(1, TestIt8(e));
             Assert.IsNull(o);

@@ -43,5 +43,19 @@ namespace Sodium
             .Select(m => m.Match(v => (Value: v, HasValue: true), () => (Value: default(T), HasValue: false)))
             .Where(p => p.HasValue)
             .Select(p => p.Value);
+        
+        // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+        public static void MatchVoid(this IMaybe a, Action<object> onSome, Action onNone) => a.Match(onSome.ToFunc(), onNone.ToFunc());
+
+        // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+        public static void MatchSome(this IMaybe a, Action<object> onSome) => a.MatchVoid(onSome, () => { });
+
+        // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+        public static void MatchNone(this IMaybe a, Action onNone) => a.MatchVoid(_ => { }, onNone);
+
+        public static Task<TResult> MatchAsync<TResult>(this IMaybe a, Func<object, Task<TResult>> onSome, Func<Task<TResult>> onNone) => a.Match(onSome, onNone);
+        public static Task MatchAsyncVoid(this IMaybe a, Func<object, Task> onSome, Func<Task> onNone) => a.MatchAsync(onSome.ToAsyncFunc(), onNone.ToAsyncFunc());
+        public static Task MatchSomeAsync(this IMaybe a, Func<object, Task> onSome) => a.MatchAsyncVoid(onSome, () => Task.FromResult(false));
+        public static Task MatchNoneAsync(this IMaybe a, Func<Task> onNone) => a.MatchAsyncVoid(_ => Task.FromResult(false), onNone);
     }
 }

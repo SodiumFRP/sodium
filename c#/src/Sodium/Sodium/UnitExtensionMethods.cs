@@ -6,6 +6,7 @@ namespace Sodium
     public static class UnitExtensionMethods
     {
         public static Unit Ignore<T>(this T o) => Unit.Value;
+        public static T Upcast<T>(this T o) => o;
 
         public static Func<Unit> ToFunc(this Action action) =>
             () =>
