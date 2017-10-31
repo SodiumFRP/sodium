@@ -18,19 +18,10 @@ namespace Sodium
             this.unlisten = unlisten;
         }
 
-        internal static IListener Create<T>(Node<T> node, Node<T>.Target target)
-        {
-            return new Listener(() => node.Unlink(target));
-        }
+        internal static IListener Create<T>(Node<T> node, Node<T>.Target target) => new Listener(() => node.Unlink(target));
+        internal static IListener Create(Action unlisten) => new Listener(unlisten);
 
-        public void Unlisten()
-        {
-            this.unlisten();
-        }
-
-        public IListenerWithWeakReference GetListenerWithWeakReference()
-        {
-            return this;
-        }
+        public void Unlisten() => this.unlisten();
+        public IListenerWithWeakReference GetListenerWithWeakReference() => this;
     }
 }

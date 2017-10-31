@@ -51,6 +51,7 @@
   <ItemGroup>
     <Compile Include="Cell.cs" />
     <Compile Include="CellExtensionMethods.cs" />
+    <Compile Include="Cleanup.cs" />
     <Compile Include="IMaybe.cs" />
     <Compile Include="UnitExtensionMethods.cs" />
     <Compile Include="IEither.cs" />
