@@ -70,7 +70,6 @@
     <Compile Include="IStrongListener.cs" />
     <Compile Include="IWeakListener.cs" />
     <Compile Include="Maybe.cs" />
-    <Compile Include="EitherExtensionMethods.cs" />
     <Compile Include="MaybeExtensionMethods.cs" />
     <Compile Include="MaybeMonad.cs" />
     <Compile Include="MutableListener.cs" />

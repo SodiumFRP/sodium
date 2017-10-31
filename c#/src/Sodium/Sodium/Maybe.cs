@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Threading.Tasks;
 using JetBrains.Annotations;
 
 namespace Sodium
@@ -28,14 +29,68 @@ namespace Sodium
             this.hasValue = true;
             this.value = value;
         }
+        
+        #region Type Constructors
 
         public static Maybe<T> Some(T value) => new Maybe<T>(value);
         public static readonly Maybe<T> None = new Maybe<T>();
+        
+        #endregion
+        
+        #region Base Functionality
 
         T1 IMaybe.Match<T1>(Func<object, T1> onSome, Func<T1> onNone) => this.Match(v => onSome(v), onNone);
 
         [Pure]
         public TResult Match<TResult>(Func<T, TResult> onSome, Func<TResult> onNone) => this.hasValue ? onSome(this.value) : onNone();
+        
+        #endregion
+        
+        #region Helper Methods
+        
+        // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+        public void MatchVoid(Action<T> onSome, Action onNone) => this.Match(onSome.ToFunc(), onNone.ToFunc());
+
+        // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+        public void MatchSome(Action<T> onSome) => this.MatchVoid(onSome, () => { });
+
+        // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+        public void MatchNone(Action onNone) => this.MatchVoid(_ => { }, onNone);
+
+        public Task<TResult> MatchAsync<TResult>(Func<T, Task<TResult>> onSome, Func<Task<TResult>> onNone) => this.Match(onSome, onNone);
+        public Task MatchAsyncVoid(Func<T, Task> onSome, Func<Task> onNone) => this.MatchAsync(onSome.ToAsyncFunc(), onNone.ToAsyncFunc());
+        public Task MatchSomeAsync(Func<T, Task> onSome) => this.MatchAsyncVoid(onSome, () => Task.FromResult(false));
+        public Task MatchNoneAsync(Func<Task> onNone) => this.MatchAsyncVoid(_ => Task.FromResult(false), onNone);
+
+        /// <summary>
+        ///     Map the <see cref="Maybe{T}" /> value using a mapping function if a value exists, or propogate the None value if
+        ///     it does not.
+        /// </summary>
+        /// <param name="f">The function to transform this <see cref="Maybe{T}" />.</param>
+        /// <typeparam name="T">The type of the maybe input value.</typeparam>
+        /// <typeparam name="TResult">The type of the maybe result value.</typeparam>
+        /// <returns>
+        ///     The <see cref="Maybe{TResult}" /> which results from transforming this <see cref="Maybe{T}"/> using <paramref name="f" />.
+        /// </returns>
+        public Maybe<TResult> Map<TResult>(Func<T, TResult> f) => this.Bind(v => Maybe.Some(f(v)));
+
+        public bool HasValue() => this.Match(v => true, () => false);
+        
+        // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+        void IMaybe.MatchVoid(Action<object> onSome, Action onNone) => this.Upcast<IMaybe>().Match(onSome.ToFunc(), onNone.ToFunc());
+
+        // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+        void IMaybe.MatchSome(Action<object> onSome) => this.Upcast<IMaybe>().MatchVoid(onSome, () => { });
+
+        // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+        void IMaybe.MatchNone(Action onNone) => this.Upcast<IMaybe>().MatchVoid(_ => { }, onNone);
+
+        Task<TResult> IMaybe.MatchAsync<TResult>(Func<object, Task<TResult>> onSome, Func<Task<TResult>> onNone) => this.Upcast<IMaybe>().Match(onSome, onNone);
+        Task IMaybe.MatchAsyncVoid(Func<object, Task> onSome, Func<Task> onNone) => this.Upcast<IMaybe>().MatchAsync(onSome.ToAsyncFunc(), onNone.ToAsyncFunc());
+        Task IMaybe.MatchSomeAsync(Func<object, Task> onSome) => this.Upcast<IMaybe>().MatchAsyncVoid(onSome, () => Task.FromResult(false));
+        Task IMaybe.MatchNoneAsync(Func<Task> onNone) => this.Upcast<IMaybe>().MatchAsyncVoid(_ => Task.FromResult(false), onNone);
+        
+        #endregion
 
         public static implicit operator Maybe<T>(Maybe.NoneType _) => None;
 
