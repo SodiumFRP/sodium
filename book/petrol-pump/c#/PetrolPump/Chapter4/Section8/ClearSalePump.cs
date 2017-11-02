@@ -24,9 +24,9 @@ namespace PetrolPump.Chapter4.Section8
             return new Outputs()
                 .SetDelivery(np.FuelFlowing.Map(
                     m =>
-                        m.Equals(Maybe.Just(Fuel.One)) ? Delivery.Fast1 :
-                            m.Equals(Maybe.Just(Fuel.Two)) ? Delivery.Fast2 :
-                                m.Equals(Maybe.Just(Fuel.Three)) ? Delivery.Fast3 :
+                        m.Equals(Maybe.Some(Fuel.One)) ? Delivery.Fast1 :
+                            m.Equals(Maybe.Some(Fuel.Two)) ? Delivery.Fast2 :
+                                m.Equals(Maybe.Some(Fuel.Three)) ? Delivery.Fast3 :
                                     Delivery.Off))
                 .SetSaleCostLcd(fi.DollarsDelivered.Map(Formatters.FormatSaleCost))
                 .SetSaleQuantityLcd(fi.LitersDelivered.Map(Formatters.FormatSaleQuantity))

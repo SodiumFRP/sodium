@@ -9,10 +9,8 @@ namespace PetrolPump.Chapter4.Section4
             return sNozzle.Filter(u => u == UpDown.Up).Map(u => nozzleFuel);
         }
 
-        private static Stream<End> WhenSetDown(Stream<UpDown> sNozzle, Fuel nozzleFuel, DiscreteCell<IMaybe<Fuel>> fillActive)
-        {
-            return sNozzle.Snapshot(fillActive, (u, f) => u == UpDown.Down && f.Equals(Maybe.Just(nozzleFuel)) ? Maybe.Just(End.Value) : Maybe.Nothing<End>()).FilterMaybe();
-        }
+        private static Stream<End> WhenSetDown(Stream<UpDown> sNozzle, Fuel nozzleFuel, DiscreteCell<Maybe<Fuel>> fillActive) =>
+            sNozzle.Snapshot(fillActive, (u, f) => u == UpDown.Down && f.Equals(Maybe.Some(nozzleFuel)) ? Maybe.Some(End.Value) : Maybe.None).FilterMaybe();
 
         public LifeCycle(Stream<UpDown> sNozzle1, Stream<UpDown> sNozzle2, Stream<UpDown> sNozzle3)
         {
@@ -20,19 +18,19 @@ namespace PetrolPump.Chapter4.Section4
                 WhenLifted(sNozzle1, Fuel.One).OrElse(
                     WhenLifted(sNozzle2, Fuel.Two).OrElse(
                         WhenLifted(sNozzle3, Fuel.Three)));
-            DiscreteCellLoop<IMaybe<Fuel>> fillActive = new DiscreteCellLoop<IMaybe<Fuel>>();
+            DiscreteCellLoop<Maybe<Fuel>> fillActive = new DiscreteCellLoop<Maybe<Fuel>>();
             this.FillActive = fillActive;
-            this.SStart = sLiftNozzle.Snapshot(fillActive, (newFuel, fillActiveLocal) => fillActiveLocal.Match(_ => Maybe.Nothing<Fuel>(), () => Maybe.Just(newFuel))).FilterMaybe();
+            this.SStart = sLiftNozzle.Snapshot(fillActive, (newFuel, fillActiveLocal) => fillActiveLocal.Match(_ => Maybe.None, () => Maybe.Some(newFuel))).FilterMaybe();
             this.SEnd = WhenSetDown(sNozzle1, Fuel.One, fillActive).OrElse(
                 WhenSetDown(sNozzle2, Fuel.Two, fillActive).OrElse(
                     WhenSetDown(sNozzle3, Fuel.Three, fillActive)));
             fillActive.Loop(
-                this.SEnd.Map(e => Maybe.Nothing<Fuel>())
-                    .OrElse(this.SStart.Map(Maybe.Just))
-                    .Hold(Maybe.Nothing<Fuel>()));
+                this.SEnd.Map(e => Maybe<Fuel>.None)
+                    .OrElse(this.SStart.Map(Maybe.Some))
+                    .Hold(Maybe.None));
         }
 
-        public DiscreteCell<IMaybe<Fuel>> FillActive { get; }
+        public DiscreteCell<Maybe<Fuel>> FillActive { get; }
         public Stream<Fuel> SStart { get; }
         public Stream<End> SEnd { get; }
     }

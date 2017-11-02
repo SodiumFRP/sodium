@@ -8,10 +8,7 @@ namespace Fridgets
     {
         public class Output
         {
-            public Output(
-                DiscreteCell<DrawableDelegate> drawable,
-                DiscreteCell<Size> desiredSize,
-                Stream<long> sChangeFocus)
+            public Output(DiscreteCell<DrawableDelegate> drawable, DiscreteCell<Size> desiredSize, Stream<long> sChangeFocus)
             {
                 this.Drawable = drawable;
                 this.DesiredSize = desiredSize;
@@ -23,21 +20,14 @@ namespace Fridgets
             public Stream<long> SChangeFocus { get; }
         }
 
-        private readonly Func<
-            DiscreteCell<IMaybe<Size>>, Stream<MouseEvent>,
-            Stream<KeyEvent>, DiscreteCell<long>, Supply, Output> reify;
+        private readonly Func<DiscreteCell<Maybe<Size>>, Stream<MouseEvent>, Stream<KeyEvent>, DiscreteCell<long>, Supply, Output> reify;
 
-        protected Fridget(Func<
-            DiscreteCell<IMaybe<Size>>, Stream<MouseEvent>,
-            Stream<KeyEvent>, DiscreteCell<long>, Supply, Output> reify)
+        protected Fridget(Func<DiscreteCell<Maybe<Size>>, Stream<MouseEvent>, Stream<KeyEvent>, DiscreteCell<long>, Supply, Output> reify)
         {
             this.reify = reify;
         }
 
-        public Output Reify(
-            DiscreteCell<IMaybe<Size>> size,
-            Stream<MouseEvent> sMouse, Stream<KeyEvent> sKey,
-            DiscreteCell<long> focus, Supply idSupply)
+        public Output Reify(DiscreteCell<Maybe<Size>> size, Stream<MouseEvent> sMouse, Stream<KeyEvent> sKey, DiscreteCell<long> focus, Supply idSupply)
         {
             return this.reify(size, sMouse, sKey, focus, idSupply);
         }

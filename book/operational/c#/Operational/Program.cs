@@ -4,7 +4,7 @@ using Sodium;
 
 namespace Operational
 {
-    internal class Program
+    internal static class Program
     {
         private static void Main()
         {
@@ -30,8 +30,7 @@ namespace Operational
                 Console.WriteLine();
                 Console.Write("Select an example to run: ");
                 ConsoleKeyInfo c = Console.ReadKey();
-                IExample example;
-                if (actions.TryGetValue(c.KeyChar, out example))
+                if (actions.TryGetValue(c.KeyChar, out IExample example))
                 {
                     Console.WriteLine();
                     Console.WriteLine();

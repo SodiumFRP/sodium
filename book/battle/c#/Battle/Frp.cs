@@ -16,18 +16,16 @@ namespace Battle
         {
             this.listener = Transaction.Run(() =>
             {
-                DiscreteCell<IMaybe<DragInfo>> dragInfo =
-                    this.sMouseDown.Map(me => Maybe.Just(new DragInfo(me, Canvas.GetLeft(me.Element.Polygon).ZeroIfNaN(), Canvas.GetTop(me.Element.Polygon).ZeroIfNaN())))
-                        .OrElse(this.sMouseUp.Map(_ => Maybe.Nothing<DragInfo>())).Hold(Maybe.Nothing<DragInfo>());
+                DiscreteCell<Maybe<DragInfo>> dragInfo =
+                    this.sMouseDown.Map(me => Maybe.Some(new DragInfo(me, Canvas.GetLeft(me.Element.Polygon).ZeroIfNaN(), Canvas.GetTop(me.Element.Polygon).ZeroIfNaN())))
+                        .OrElse(this.sMouseUp.Map(_ => Maybe<DragInfo>.None)).Hold(Maybe.None);
                 Stream<MouseEvt> mouseMoveWhileDragging = dragInfo.Map(md => md.Match(d => this.sMouseMove, Stream.Never<MouseEvt>)).SwitchS();
                 IListener listener1 = dragInfo.Values.FilterMaybe().Listen(d => addMessage("FRP dragging " + d.Me.Element.Name));
-                IListener listener2 = mouseMoveWhileDragging.Snapshot(dragInfo, (me, md) => md.Match(
-                    d => Maybe.Just(new Reposition(d, me)),
-                    Maybe.Nothing<Reposition>)).FilterMaybe().Listen(p =>
-                    {
-                        Canvas.SetLeft(p.Polygon, p.Left);
-                        Canvas.SetTop(p.Polygon, p.Top);
-                    });
+                IListener listener2 = mouseMoveWhileDragging.Snapshot(dragInfo, (me, md) => md.Match(d => Maybe.Some(new Reposition(d, me)), () => Maybe.None)).FilterMaybe().Listen(p =>
+                {
+                    Canvas.SetLeft(p.Polygon, p.Left);
+                    Canvas.SetTop(p.Polygon, p.Top);
+                });
                 return new CompositeListener(new[] { listener1, listener2 });
             });
         }

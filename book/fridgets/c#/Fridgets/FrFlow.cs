@@ -16,7 +16,7 @@ namespace Fridgets
                 Stream<long> sChangeFocus = Stream.Never<long>();
                 foreach (Fridget fridget in fridgets)
                 {
-                    DiscreteCellLoop<IMaybe<Size>> childSz = new DiscreteCellLoop<IMaybe<Size>>();
+                    DiscreteCellLoop<Maybe<Size>> childSz = new DiscreteCellLoop<Maybe<Size>>();
                     Output fo = new FrTranslate(fridget,
                         dir == Orientation.Horizontal
                             ? desiredSize.Map(dsz => new Point(dsz.Width, 0))
@@ -26,17 +26,12 @@ namespace Fridgets
                     idSupply = idSupply.Child2();
                     childSz.Loop(
                         size.Lift(fo.DesiredSize, (mSize, foDsz) =>
-                            mSize.Match(s => Maybe.Just(dir == Orientation.Horizontal
+                            mSize.Map(s => dir == Orientation.Horizontal
                                 ? new Size(foDsz.Width, s.Height)
-                                : new Size(s.Width, foDsz.Height)),
-                                Maybe.Nothing<Size>)));
-                    Func<Size, Size, Size> liftDesiredSizeHorizontal = (dsz, foDsz) => new Size(
-                        dsz.Width + foDsz.Width,
-                        dsz.Height > foDsz.Height ? dsz.Height : foDsz.Height);
-                    Func<Size, Size, Size> liftDesiredSizeVertical = (dsz, foDsz) => new Size(
-                        dsz.Width > foDsz.Width ? dsz.Width : foDsz.Width,
-                        dsz.Height + foDsz.Height);
-                    desiredSize = desiredSize.Lift(fo.DesiredSize, dir == Orientation.Horizontal ? liftDesiredSizeHorizontal : liftDesiredSizeVertical);
+                                : new Size(s.Width, foDsz.Height))));
+                    Size LiftDesiredSizeHorizontal(Size dsz, Size foDsz) => new Size(dsz.Width + foDsz.Width, dsz.Height > foDsz.Height ? dsz.Height : foDsz.Height);
+                    Size LiftDesiredSizeVertical(Size dsz, Size foDsz) => new Size(dsz.Width > foDsz.Width ? dsz.Width : foDsz.Width, dsz.Height + foDsz.Height);
+                    desiredSize = desiredSize.Lift(fo.DesiredSize, dir == Orientation.Horizontal ? LiftDesiredSizeHorizontal : (Func<Size, Size, Size>)LiftDesiredSizeVertical);
                     drawable = drawable.Lift(fo.Drawable, (drA, drB) => drA.Append(drB));
                     sChangeFocus = sChangeFocus.OrElse(fo.SChangeFocus);
                 }

@@ -363,7 +363,8 @@ namespace PetrolPump
 
                 SoundPlayer fastRumblePlayer = new SoundPlayer(GetResourceStream(@"sounds\fast.wav"));
                 Action stopFast = () => { };
-                Action playFast = () =>
+
+                void PlayFast()
                 {
                     ManualResetEvent mre = new ManualResetEvent(false);
                     new Thread(() =>
@@ -371,14 +372,18 @@ namespace PetrolPump
                         fastRumblePlayer.PlayLooping();
                         mre.WaitOne();
                         fastRumblePlayer.Stop();
-                    })
-                    { IsBackground = true }.Start();
-                    stopFast = () => mre.Set();
-                };
+                    }) { IsBackground = true }.Start();
+                    stopFast = () =>
+                    {
+                        mre.Set();
+                        stopFast = () => { };
+                    };
+                }
 
                 SoundPlayer slowRumblePlayer = new SoundPlayer(GetResourceStream(@"sounds\slow.wav"));
                 Action stopSlow = () => { };
-                Action playSlow = () =>
+
+                void PlaySlow()
                 {
                     ManualResetEvent mre = new ManualResetEvent(false);
                     new Thread(() =>
@@ -386,10 +391,13 @@ namespace PetrolPump
                         slowRumblePlayer.PlayLooping();
                         mre.WaitOne();
                         slowRumblePlayer.Stop();
-                    })
-                    { IsBackground = true }.Start();
-                    stopSlow = () => mre.Set();
-                };
+                    }) { IsBackground = true }.Start();
+                    stopSlow = () =>
+                    {
+                        mre.Set();
+                        stopSlow = () => { };
+                    };
+                }
 
                 this.listeners.Add(delivery.Changes().Listen(d =>
                 {
@@ -397,7 +405,7 @@ namespace PetrolPump
                     {
                         if (d == Delivery.Fast1 || d == Delivery.Fast2 || d == Delivery.Fast3)
                         {
-                            playFast();
+                            PlayFast();
                         }
                         else
                         {
@@ -406,7 +414,7 @@ namespace PetrolPump
 
                         if (d == Delivery.Slow1 || d == Delivery.Slow2 || d == Delivery.Slow3)
                         {
-                            playSlow();
+                            PlaySlow();
                         }
                         else
                         {

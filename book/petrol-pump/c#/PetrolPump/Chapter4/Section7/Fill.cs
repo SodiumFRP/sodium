@@ -24,11 +24,11 @@ namespace PetrolPump.Chapter4.Section7
             DiscreteCell<double> price3)
         {
             Stream<double> sPrice1 = sStart.Snapshot(price1,
-                (f, p) => f == Fuel.One ? Maybe.Just(p) : Maybe.Nothing<double>()).FilterMaybe();
+                (f, p) => f == Fuel.One ? Maybe.Some(p) : Maybe.None).FilterMaybe();
             Stream<double> sPrice2 = sStart.Snapshot(price2,
-                (f, p) => f == Fuel.Two ? Maybe.Just(p) : Maybe.Nothing<double>()).FilterMaybe();
+                (f, p) => f == Fuel.Two ? Maybe.Some(p) : Maybe.None).FilterMaybe();
             Stream<double> sPrice3 = sStart.Snapshot(price3,
-                (f, p) => f == Fuel.Three ? Maybe.Just(p) : Maybe.Nothing<double>()).FilterMaybe();
+                (f, p) => f == Fuel.Three ? Maybe.Some(p) : Maybe.None).FilterMaybe();
 
             return sPrice1.OrElse(sPrice2.OrElse(sPrice3)).Hold(0.0);
         }

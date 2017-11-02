@@ -4,14 +4,14 @@ using Sodium;
 
 namespace Patterns
 {
-    internal class Program
+    internal static class Program
     {
         private static void Main()
         {
             Dictionary<char, IExample> actions = new Dictionary<char, IExample>
             {
-                {'a', new CalmExample()},
-                {'b', new Pause()}
+                { 'a', new CalmExample() },
+                { 'b', new Pause() }
             };
 
             foreach (KeyValuePair<char, IExample> p in actions)
@@ -24,8 +24,7 @@ namespace Patterns
                 Console.WriteLine();
                 Console.Write("Select an example to run: ");
                 ConsoleKeyInfo c = Console.ReadKey();
-                IExample example;
-                if (actions.TryGetValue(c.KeyChar, out example))
+                if (actions.TryGetValue(c.KeyChar, out IExample example))
                 {
                     Console.WriteLine();
                     Console.WriteLine();
@@ -60,24 +59,24 @@ namespace Patterns
                 l.Unlisten();
             }
 
-            private static Stream<T> Calm<T>(Stream<T> sA, Lazy<IMaybe<T>> init)
+            private static Stream<T> Calm<T>(Stream<T> sA, Lazy<Maybe<T>> init)
             {
                 return sA.CollectLazy(init, (a, lastA) =>
                 {
-                    IMaybe<T> ma = Maybe.Just(a);
-                    return ma.Equals(lastA) ? (ReturnValue: Maybe.Nothing<T>(), State: lastA) : (ReturnValue: ma, State: ma);
+                    Maybe<T> ma = Maybe.Some(a);
+                    return ma.Equals(lastA) ? (ReturnValue: Maybe.None, State: lastA) : (ReturnValue: ma, State: ma);
                 }).FilterMaybe();
             }
 
             private static Stream<T> Calm<T>(Stream<T> sA)
             {
-                return Calm(sA, new Lazy<IMaybe<T>>(Maybe.Nothing<T>));
+                return Calm(sA, new Lazy<Maybe<T>>(() => Maybe.None));
             }
 
             private static DiscreteCell<T> Calm<T>(DiscreteCell<T> a)
             {
                 Lazy<T> initA = a.Cell.SampleLazy();
-                Lazy<IMaybe<T>> mInitA = initA.Map(Maybe.Just);
+                Lazy<Maybe<T>> mInitA = initA.Map(Maybe.Some);
                 return Calm(a.Updates, mInitA).HoldLazy(initA);
             }
         }
@@ -107,7 +106,7 @@ namespace Patterns
 
             private static DiscreteCell<double> PausableClock(Stream<Unit> sPause, Stream<Unit> sResume, DiscreteCell<double> clock)
             {
-                DiscreteCell<IMaybe<double>> pauseTime = sPause.Snapshot(clock, (_, t) => Maybe.Just(t)).OrElse(sResume.Map(_ => Maybe.Nothing<double>())).Hold(Maybe.Nothing<double>());
+                DiscreteCell<Maybe<double>> pauseTime = sPause.Snapshot(clock, (_, t) => Maybe.Some(t)).OrElse(sResume.Map(_ => Maybe<double>.None)).Hold(Maybe.None);
                 DiscreteCell<double> lostTime = sResume.Accum(0.0, (_, total) =>
                 {
                     double tPause = pauseTime.Cell.Sample().Match(v => v, () => 0);

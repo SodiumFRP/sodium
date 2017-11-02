@@ -9,27 +9,22 @@ namespace Shared
     public class Animate : UIElement
     {
         private readonly Task<Renderer> renderer;
-        private readonly CellSink<bool> isStarted = new CellSink<bool>(false);
+        private readonly DiscreteCellSink<bool> isStarted = new DiscreteCellSink<bool>(false);
 
         public Animate(AnimationDelegate animation, Size size)
         {
             TaskCompletionSource<Renderer> tcs = new TaskCompletionSource<Renderer>();
             this.renderer = tcs.Task;
-            EventHandler createTimerSystem = null;
-            createTimerSystem = (sender, args) =>
+
+            void CreateTimerSystem(object sender, EventArgs args)
             {
-                CompositionTargetSecondsTimerSystem timerSystem = CompositionTargetSecondsTimerSystem.Create(((RenderingEventArgs)args).RenderingTime.TotalSeconds, e => this.Dispatcher.Invoke(() => { throw e; }));
+                CompositionTargetSecondsTimerSystem timerSystem = CompositionTargetSecondsTimerSystem.Create(((RenderingEventArgs)args).RenderingTime.TotalSeconds, e => this.Dispatcher.Invoke(() => throw e));
                 Point extents = new Point(size.Width / 2, size.Height / 2);
-                tcs.SetResult(
-                    new Renderer(
-                        timerSystem,
-                        Transaction.Run(() => Shapes.Translate(animation(timerSystem, extents), Cell.Constant(extents))),
-                        size,
-                        this,
-                        this.isStarted));
-                CompositionTarget.Rendering -= createTimerSystem;
-            };
-            CompositionTarget.Rendering += createTimerSystem;
+                tcs.SetResult(new Renderer(timerSystem, Transaction.Run(() => Shapes.Translate(animation(timerSystem, extents), Cell.Constant(extents))), size, this, this.isStarted));
+                CompositionTarget.Rendering -= CreateTimerSystem;
+            }
+
+            CompositionTarget.Rendering += CreateTimerSystem;
         }
 
         protected override void OnRender(DrawingContext drawingContext)
@@ -52,12 +47,12 @@ namespace Shared
             private readonly Cell<DrawableDelegate> drawable;
             private readonly Size size;
 
-            public Renderer(CompositionTargetSecondsTimerSystem timerSystem, Cell<DrawableDelegate> drawable, Size size, Animate animation, Cell<bool> isStarted)
+            public Renderer(CompositionTargetSecondsTimerSystem timerSystem, Cell<DrawableDelegate> drawable, Size size, Animate animation, DiscreteCell<bool> isStarted)
             {
                 this.drawable = drawable;
                 this.size = size;
 
-                Transaction.Run(() => Operational.Value(isStarted).Filter(s => s).ListenOnce(_ => timerSystem.AddAnimation(animation)));
+                Transaction.RunVoid(() => isStarted.Values.Filter(s => s).ListenOnce(_ => timerSystem.AddAnimation(animation)));
             }
 
             public void Render(DrawingContext drawingContext)

@@ -7,9 +7,9 @@ namespace Shift2
     public class Classic : IParadigm
     {
         private readonly Action<string> addMessage;
-        private readonly MutableMaybeValue<DragInfo> dragInfo = new MutableMaybeValue<DragInfo>();
+        private Maybe<DragInfo> dragInfo;
 
-        private IMaybe<MouseEvt> lastMe = Maybe.Nothing<MouseEvt>();
+        private Maybe<MouseEvt> lastMe;
         private bool axisLock;
 
         public Classic(Action<string> addMessage)
@@ -19,21 +19,21 @@ namespace Shift2
 
         public void HandleMouseDown(MouseEvtWithElement me)
         {
-            this.lastMe = Maybe.Just(me);
+            this.lastMe = Maybe.Some(me.Upcast<MouseEvt>());
 
             this.addMessage("classic dragging " + me.Element.Name);
-            this.dragInfo.Set(new DragInfo(me, Canvas.GetLeft(me.Element.Polygon).ZeroIfNaN(), Canvas.GetTop(me.Element.Polygon).ZeroIfNaN()));
+            this.dragInfo = Maybe.Some(new DragInfo(me, Canvas.GetLeft(me.Element.Polygon).ZeroIfNaN(), Canvas.GetTop(me.Element.Polygon).ZeroIfNaN()));
         }
 
         public void HandleMouseMove(MouseEvt me)
         {
-            this.lastMe = Maybe.Just(me);
+            this.lastMe = Maybe.Some(me);
             this.Reposition();
         }
 
         public void HandleMouseUp(MouseEvt me)
         {
-            this.dragInfo.Reset();
+            this.dragInfo = Maybe.None;
         }
 
         public void HandleShift(bool isDown)
@@ -44,19 +44,17 @@ namespace Shift2
 
         private void Reposition()
         {
-            this.dragInfo.Match(
+            this.dragInfo.MatchSome(
                 d =>
                 {
-                    this.lastMe.Match(
+                    this.lastMe.MatchSome(
                         me =>
                         {
                             Reposition r = new Reposition(d, me, this.axisLock);
                             Canvas.SetLeft(r.Polygon, r.Left);
                             Canvas.SetTop(r.Polygon, r.Top);
-                        },
-                        () => { });
-                },
-                () => { });
+                        });
+                });
         }
 
         public void Dispose()
