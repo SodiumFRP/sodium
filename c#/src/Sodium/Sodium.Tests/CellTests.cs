@@ -23,6 +23,19 @@ namespace Sodium.Tests
         }
 
         [Test]
+        public void TestSendNull()
+        {
+            DiscreteCellSink<string> c = new DiscreteCellSink<string>(string.Empty);
+            List<string> @out = new List<string>();
+            IListener l = c.Listen(@out.Add);
+            c.Send("0");
+            c.Send(null);
+            c.Send("1");
+            l.Unlisten();
+            CollectionAssert.AreEqual(new[] { string.Empty, "0", null, "1" }, @out);
+        }
+
+        [Test]
         public void TestHoldUpdates()
         {
             StreamSink<int> s = Stream.CreateSink<int>();

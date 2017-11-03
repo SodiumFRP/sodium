@@ -21,11 +21,6 @@ namespace Sodium
 
         private Maybe(T value)
         {
-            if (value == null)
-            {
-                throw new ArgumentNullException(nameof(value), "Maybe.Some value cannot be null.");
-            }
-
             this.hasValue = true;
             this.value = value;
         }
