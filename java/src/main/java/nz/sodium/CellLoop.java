@@ -19,7 +19,7 @@ public final class CellLoop<A> extends LazyCell<A> {
         final CellLoop<A> me = this;
         Transaction.apply(new Lambda1<Transaction, Unit>() {
         	public Unit apply(final Transaction trans) {
-                ((StreamLoop<A>)me.str).loop(a_out.updates(trans));
+                ((StreamLoop<A>)me.str).loop(a_out.updates());
                 me.lazyInitValue = a_out.sampleLazy(trans);
                 return Unit.UNIT;
             }
