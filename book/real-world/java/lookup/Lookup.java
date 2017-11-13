@@ -14,9 +14,9 @@ import java.util.Optional;
 class IsBusy<A,B> {
     public IsBusy(Lambda1<Stream<A>, Stream<B>> action, Stream<A> sIn) {
         sOut = action.apply(sIn);
-        busy = sIn.map(i -> true)
-                  .orElse(sOut.map(i -> false))
-                  .hold(false);
+        busy = sOut.map(i -> false)
+                   .orElse(sIn.map(i -> true))
+                   .hold(false);
     }
     public Stream<B> sOut;
     public Cell<Boolean> busy;
