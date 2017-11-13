@@ -101,7 +101,7 @@ public class Lookup {
             IsBusy<String, Optional<String>> ib =
                                      new IsBusy<>(lookup, sWord);
             Stream<String> sDefinition = ib.sOut
-                .map(o -> o.isPresent() ? o.get() : "ERROR!");
+                .map(o -> o.orElse("ERROR!"));
             Cell<String> definition = sDefinition.hold("");
             Cell<String> output = definition.lift(ib.busy, (def, bsy) ->
                 bsy ? "Looking up..." : def);
