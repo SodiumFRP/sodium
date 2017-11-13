@@ -18,8 +18,8 @@ class IsBusy<A,B> {
                    .orElse(sIn.map(i -> true))
                    .hold(false);
     }
-    public Stream<B> sOut;
-    public Cell<Boolean> busy;
+    public final Stream<B> sOut;
+    public final Cell<Boolean> busy;
 }
 
 public class Lookup {
