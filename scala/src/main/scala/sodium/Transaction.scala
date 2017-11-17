@@ -39,10 +39,10 @@ final class Transaction {
 
   def close(): Unit = {
 
-    /**
-      * If the priority queue has entries in it when we modify any of the nodes'
-      * ranks, then we need to re-generate it to make sure it's up-to-date.
-      */
+    /*
+     * If the priority queue has entries in it when we modify any of the nodes'
+     * ranks, then we need to re-generate it to make sure it's up-to-date.
+     */
     def checkRegen(): Unit = {
       if (toRegen) {
         toRegen = false
