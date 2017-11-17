@@ -1,9 +1,9 @@
 package sodium
 
 object MemoryTest5 {
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     new Thread() {
-      override def run() {
+      override def run(): Unit = {
         try {
           while (true) {
             println("memory " + Runtime.getRuntime().totalMemory())
@@ -17,9 +17,11 @@ object MemoryTest5 {
 
     val eChange = new StreamSink[Int]()
     val out = eChange.hold(0)
-    val l = out.value().listen(tt => {
-      //System.out.println(tt)
-    })
+    val l = out
+      .value()
+      .listen(tt => {
+        //System.out.println(tt)
+      })
     var i = 0
     while (i < 1000000000) {
       eChange.send(i)

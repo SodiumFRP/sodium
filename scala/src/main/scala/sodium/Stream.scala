@@ -19,7 +19,7 @@ class Stream[A] {
     */
   final def listen(action: A => Unit): Listener =
     listen_(Node.NullNode, new TransactionHandler[A]() {
-      def run(trans2: Transaction, a: A) {
+      def run(trans2: Transaction, a: A): Unit = {
         action(a)
       }
     })
@@ -58,7 +58,7 @@ class Stream[A] {
       override def sampleNow() = ev.sampleNow().map(f(_))
     }
     val l = listen_(out.node, new TransactionHandler[A]() {
-      override def run(trans: Transaction, a: A) {
+      override def run(trans: Transaction, a: A): Unit = {
         out.send(trans, f(a))
       }
     })
@@ -94,7 +94,7 @@ class Stream[A] {
       override def sampleNow() = ev.sampleNow().map(a => f.apply(a, b.sampleNoTrans()))
     }
     val l = listen_(out.node, new TransactionHandler[A]() {
-      def run(trans: Transaction, a: A) {
+      def run(trans: Transaction, a: A): Unit = {
         out.send(trans, f(a, b.sampleNoTrans()))
       }
     })
@@ -120,9 +120,9 @@ class Stream[A] {
     val l = listen_(
       out.node,
       new TransactionHandler[A]() {
-        def run(trans: Transaction, a: A) {
+        def run(trans: Transaction, a: A): Unit = {
           trans.post(new Runnable() {
-            def run() {
+            def run(): Unit = {
               val trans = new Transaction()
               try {
                 out.send(trans, a)
@@ -166,7 +166,7 @@ class Stream[A] {
       trans,
       new TransactionHandler[A]() {
         private var acc: Option[A] = None
-        override def run(trans1: Transaction, a: A) {
+        override def run(trans1: Transaction, a: A): Unit = {
           acc match {
             case Some(b) =>
               acc = Some(f(b, a))
@@ -210,7 +210,7 @@ class Stream[A] {
       override def sampleNow() = ev.sampleNow().filter(f)
     }
     val l = listen_(out.node, new TransactionHandler[A]() {
-      def run(trans: Transaction, a: A) {
+      def run(trans: Transaction, a: A): Unit = {
         if (f(a)) out.send(trans, a)
       }
     })
@@ -276,7 +276,7 @@ class Stream[A] {
       }
     }
     la = Some(ev.listen_(out.node, new TransactionHandler[A]() {
-      def run(trans: Transaction, a: A) {
+      def run(trans: Transaction, a: A): Unit = {
         out.send(trans, a)
         if (la.isDefined) {
           la.foreach(_.unlisten())
@@ -292,7 +292,7 @@ class Stream[A] {
     this
   }
 
-  protected override def finalize() {
+  protected override def finalize(): Unit = {
     finalizers.foreach(_.unlisten)
   }
 }
@@ -305,14 +305,14 @@ object Stream {
       * It's essential that we keep the listener alive while the caller holds
       * the Listener, so that the finalizer doesn't get triggered.
       */
-    override def unlisten() {
+    override def unlisten(): Unit = {
       Transaction.listenersLock.synchronized {
         event.listeners -= action
         event.node.unlinkTo(target)
       }
     }
 
-    override protected def finalize() {
+    override protected def finalize(): Unit = {
       unlisten()
     }
   }
@@ -331,12 +331,12 @@ object Stream {
       override def sampleNow() = ea.sampleNow() ++ eb.sampleNow()
     }
     val l1 = ea.listen_(out.node, new TransactionHandler[A]() {
-      def run(trans: Transaction, a: A) {
+      def run(trans: Transaction, a: A): Unit = {
         out.send(trans, a)
       }
     })
     val l2 = eb.listen_(out.node, new TransactionHandler[A]() {
-      def run(trans1: Transaction, a: A) {
+      def run(trans1: Transaction, a: A): Unit = {
         trans1.prioritized(out.node, trans2 => out.send(trans2, a))
       }
     })
@@ -351,7 +351,7 @@ object Stream {
       override def sampleNow() = ev.sampleNow().flatten
     }
     val l = ev.listen_(out.node, new TransactionHandler[Option[A]]() {
-      def run(trans: Transaction, oa: Option[A]) {
+      def run(trans: Transaction, oa: Option[A]): Unit = {
         oa.foreach(out.send(trans, _))
       }
     })

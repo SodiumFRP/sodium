@@ -15,10 +15,10 @@ class Cell[A](protected var currentValue: Option[A], protected val event: Stream
         Node.NullNode,
         trans1,
         new TransactionHandler[A]() {
-          def run(trans2: Transaction, a: A) {
+          def run(trans2: Transaction, a: A): Unit = {
             if (Cell.this.valueUpdate.isEmpty) {
               trans2.last(new Runnable() {
-                def run() {
+                def run(): Unit = {
                   Cell.this.currentValue = Cell.this.valueUpdate
                   Cell.this.lazyInitValue = None
                   Cell.this.valueUpdate = None
@@ -78,7 +78,7 @@ class Cell[A](protected var currentValue: Option[A], protected val event: Stream
       override def sampleNow() = IndexedSeq(sampleNoTrans())
     }
     val l: Listener = event.listen(out.node, trans1, new TransactionHandler[A]() {
-      def run(trans2: Transaction, a: A) { out.send(trans2, a) }
+      def run(trans2: Transaction, a: A): Unit = { out.send(trans2, a) }
     }, false)
     // Needed in case of an initial value and an update in the same transaction.
     out.addCleanup(l).lastFiringOnly(trans1)
@@ -129,7 +129,7 @@ class Cell[A](protected var currentValue: Option[A], protected val event: Stream
       bbs.map(x => x._1)
     })
 
-  protected override def finalize() {
+  protected override def finalize(): Unit = {
     cleanup.foreach(_.unlisten())
   }
 }
@@ -162,7 +162,7 @@ object Cell {
     val out = new StreamSink[B]()
 
     var fired = false
-    def h(trans: Transaction) {
+    def h(trans: Transaction): Unit = {
       if (!fired) {
         fired = true
         trans.prioritized(out.node, { trans2 =>
@@ -175,14 +175,14 @@ object Cell {
     val l1 = bf
       .updates()
       .listen_(out.node, new TransactionHandler[A => B]() {
-        def run(trans: Transaction, f: A => B) {
+        def run(trans: Transaction, f: A => B): Unit = {
           h(trans)
         }
       })
     val l2 = ba
       .updates()
       .listen_(out.node, new TransactionHandler[A]() {
-        def run(trans: Transaction, a: A) {
+        def run(trans: Transaction, a: A): Unit = {
           h(trans)
         }
       })
@@ -197,7 +197,7 @@ object Cell {
     val out = new StreamSink[A]()
     val h = new TransactionHandler[Cell[A]]() {
       private var currentListener: Option[Listener] = None
-      override def run(trans: Transaction, ba: Cell[A]) {
+      override def run(trans: Transaction, ba: Cell[A]): Unit = {
         // Note: If any switch takes place during a transaction, then the
         // value().listen will always cause a sample to be fetched from the
         // one we just switched to. The caller will be fetching our output
@@ -208,13 +208,13 @@ object Cell {
         currentListener = Some(
           ba.value(trans)
             .listen(out.node, trans, new TransactionHandler[A]() {
-              def run(trans3: Transaction, a: A) {
+              def run(trans3: Transaction, a: A): Unit = {
                 out.send(trans3, a)
               }
             }, false))
       }
 
-      override def finalize() {
+      override def finalize(): Unit = {
         currentListener.foreach(_.unlisten())
       }
     }
@@ -229,23 +229,23 @@ object Cell {
     def switchS[A](trans1: Transaction, bea: Cell[Stream[A]]): Stream[A] = {
       val out = new StreamSink[A]()
       val h2 = new TransactionHandler[A]() {
-        def run(trans2: Transaction, a: A) {
+        def run(trans2: Transaction, a: A): Unit = {
           out.send(trans2, a)
         }
       }
       val h1 = new TransactionHandler[Stream[A]]() {
         private var currentListener = bea.sampleNoTrans().listen(out.node, trans1, h2, false)
 
-        override def run(trans2: Transaction, ea: Stream[A]) {
+        override def run(trans2: Transaction, ea: Stream[A]): Unit = {
           trans2.last(new Runnable() {
-            def run() {
+            def run(): Unit = {
               currentListener.unlisten()
               currentListener = ea.listen(out.node, trans2, h2, true)
             }
           })
         }
 
-        override def finalize() {
+        override def finalize(): Unit = {
           currentListener.unlisten()
         }
       }

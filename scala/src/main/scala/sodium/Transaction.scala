@@ -17,7 +17,7 @@ final class Transaction {
   private val lastQ = ListBuffer[Runnable]()
   private val postQ = ListBuffer[Runnable]()
 
-  def prioritized(rank: Node, action: Transaction => Unit) {
+  def prioritized(rank: Node, action: Transaction => Unit): Unit = {
     val e = new Entry(rank, action)
     prioritizedQ.enqueue(e)
     entries += e
@@ -26,24 +26,24 @@ final class Transaction {
   /**
     * Add an action to run after all prioritized() actions.
     */
-  def last(action: Runnable) {
+  def last(action: Runnable): Unit = {
     lastQ += action
   }
 
   /**
     * Add an action to run after all last() actions.
     */
-  def post(action: Runnable) {
+  def post(action: Runnable): Unit = {
     postQ += action
   }
 
-  def close() {
+  def close(): Unit = {
 
     /**
       * If the priority queue has entries in it when we modify any of the nodes'
       * ranks, then we need to re-generate it to make sure it's up-to-date.
       */
-    def checkRegen() {
+    def checkRegen(): Unit = {
       if (toRegen) {
         toRegen = false
         prioritizedQ.clear()
@@ -100,7 +100,7 @@ object Transaction {
     }
   }
 
-  def run(f: Transaction => Unit) {
+  def run(f: Transaction => Unit): Unit = {
     apply(t => f(t))
   }
 

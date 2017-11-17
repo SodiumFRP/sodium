@@ -1,9 +1,9 @@
 package sodium
 
 object MemoryTest4 {
-  def main(args: Array[String]) {
+  def main(args: Array[String]): Unit = {
     new Thread() {
-      override def run() {
+      override def run(): Unit = {
         try {
           while (true) {
             println("memory " + Runtime.getRuntime().totalMemory())

@@ -13,12 +13,12 @@ class StreamLoop[A] extends StreamWithSend[A] {
     else
       ea_out.get.sampleNow()
 
-  def loop(initStream: Stream[A]) {
+  def loop(initStream: Stream[A]): Unit = {
     if (ea_out.isDefined)
       throw new RuntimeException("StreamLoop looped more than once")
     ea_out = Some(initStream)
     addCleanup(initStream.listen_(this.node, new TransactionHandler[A]() {
-      override def run(trans: Transaction, a: A) {
+      override def run(trans: Transaction, a: A): Unit = {
         StreamLoop.this.send(trans, a)
       }
     }))
