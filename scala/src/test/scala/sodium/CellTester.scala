@@ -331,7 +331,7 @@ class CellTester {
     List(2, 3, 1).foreach(ea.send(_))
     l.unlisten()
     assertEquals(List(0, 2, 5, 6), out)
-    assertEquals(6, sum_out.sample())
+    assertEquals(6.toLong, sum_out.sample().toLong)
   }
 
   @Test
