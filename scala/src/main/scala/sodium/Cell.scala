@@ -226,7 +226,7 @@ object Cell {
     * Unwrap an event inside a behavior to give a time-varying event implementation.
     */
   def switchS[A](bea: Cell[Stream[A]]): Stream[A] = {
-    def switchS[A](trans1: Transaction, bea: Cell[Stream[A]]): Stream[A] = {
+    def switchS(trans1: Transaction, bea: Cell[Stream[A]]): Stream[A] = {
       val out = new StreamSink[A]()
       val h2 = new TransactionHandler[A]() {
         def run(trans2: Transaction, a: A): Unit = {
