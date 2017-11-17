@@ -24,4 +24,3 @@ class StreamLoop[A] extends StreamWithSend[A] {
     }))
   }
 }
-

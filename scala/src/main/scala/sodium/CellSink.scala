@@ -5,7 +5,7 @@ final class CellSink[A](initValue: A) extends Cell[A](Some(initValue), new Strea
   def send(a: A) {
     event match {
       case s: StreamSink[A] => s.send(a)
-      case _ =>
+      case _                =>
     }
   }
 }

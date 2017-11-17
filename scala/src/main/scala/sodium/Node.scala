@@ -8,8 +8,8 @@ class Node(private var rank: Long) extends Comparable[Node] {
   private val listeners = HashSet[Node]()
 
   /**
-   * @return true if any changes were made.
-   */
+    * @return true if any changes were made.
+    */
   def linkTo(target: Node): Boolean =
     if (target == NullNode) {
       false

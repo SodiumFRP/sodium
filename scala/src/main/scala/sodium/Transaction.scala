@@ -24,15 +24,15 @@ final class Transaction {
   }
 
   /**
-   * Add an action to run after all prioritized() actions.
-   */
+    * Add an action to run after all prioritized() actions.
+    */
   def last(action: Runnable) {
     lastQ += action
   }
 
   /**
-   * Add an action to run after all last() actions.
-   */
+    * Add an action to run after all last() actions.
+    */
   def post(action: Runnable) {
     postQ += action
   }
@@ -40,14 +40,14 @@ final class Transaction {
   def close() {
 
     /**
-     * If the priority queue has entries in it when we modify any of the nodes'
-     * ranks, then we need to re-generate it to make sure it's up-to-date.
-     */
+      * If the priority queue has entries in it when we modify any of the nodes'
+      * ranks, then we need to re-generate it to make sure it's up-to-date.
+      */
     def checkRegen() {
       if (toRegen) {
         toRegen = false
         prioritizedQ.clear()
-        prioritizedQ.enqueue(entries.toSeq:_ *)
+        prioritizedQ.enqueue(entries.toSeq: _*)
       }
     }
 
@@ -75,13 +75,13 @@ object Transaction {
   var currentTransaction: Option[Transaction] = None
 
   /**
-   * Run the specified code inside a single transaction, with the contained
-   * code returning a value of the parameter type A.
-   *
-   * In most cases this is not needed, because all APIs will create their own
-   * transaction automatically. It is useful where you want to run multiple
-   * reactive operations atomically.
-   */
+    * Run the specified code inside a single transaction, with the contained
+    * code returning a value of the parameter type A.
+    *
+    * In most cases this is not needed, because all APIs will create their own
+    * transaction automatically. It is useful where you want to run multiple
+    * reactive operations atomically.
+    */
   def apply[B](f: Transaction => B): B = {
     transactionLock.synchronized {
       // If we are already inside a transaction (which must be on the same
@@ -105,13 +105,13 @@ object Transaction {
   }
 
   /**
-   * Return the current transaction.
-   */
+    * Return the current transaction.
+    */
   def getCurrentTransaction(): Option[Transaction] =
     transactionLock.synchronized {
       currentTransaction
     }
-  
+
   private object Entry {
     private val nextSeq = new AtomicLong(0)
   }
@@ -119,13 +119,11 @@ object Transaction {
   private case class Entry(val rank: Node, val action: Transaction => Unit) {
     val seq = Entry.nextSeq.getAndIncrement()
   }
-  
+
   private object EntryOrdering extends Ordering[Entry] {
-    def compare(x: Entry, y: Entry): Int = { 
+    def compare(x: Entry, y: Entry): Int = {
       val answer = y.rank.compareTo(x.rank)
       if (answer == 0) y.seq.compareTo(x.seq) else answer
     }
   }
 }
-
-

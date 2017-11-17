@@ -5,9 +5,9 @@ abstract class Listener {
   def unlisten()
 
   /**
-   * Combine listeners into one where a single unlisten() invocation will unlisten
-   * both the inputs.
-   */
+    * Combine listeners into one where a single unlisten() invocation will unlisten
+    * both the inputs.
+    */
   final def append(two: Listener): Listener = {
     val one = this
     new Listener() {
@@ -18,4 +18,3 @@ abstract class Listener {
     }
   }
 }
-
