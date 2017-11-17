@@ -22,5 +22,6 @@ class StreamLoop[A] extends StreamWithSend[A] {
         StreamLoop.this.send(trans, a)
       }
     }))
+    ()
   }
 }

@@ -22,6 +22,7 @@ class Node(private var rank: Long) extends Comparable[Node] {
   def unlinkTo(target: Node): Unit = {
     if (target != NullNode)
       listeners.remove(target)
+    ()
   }
 
   private def ensureBiggerThan(limit: Long, visited: Set[Node]): Boolean =
