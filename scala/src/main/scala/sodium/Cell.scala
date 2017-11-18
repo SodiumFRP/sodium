@@ -176,8 +176,8 @@ object Cell {
         fired = true
         trans.prioritized(out.node, { trans2 =>
           out.send(trans2, bf.newValue().apply(ba.newValue()))
-          fired = false
         })
+        trans.last(() => { fired = false })
       }
     }
 
