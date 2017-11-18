@@ -132,6 +132,15 @@ class Cell[A](protected var currentValue: Option[A], protected val event: Stream
   protected override def finalize(): Unit = {
     cleanup.foreach(_.unlisten())
   }
+
+  /**
+    * Listen for firings of this event. The returned Listener has an unlisten()
+    * method to cause the listener to be removed. This is the observer pattern.
+    */
+  def listen(action: A => Unit): Listener = {
+    return value.listen(action)
+  }
+
 }
 
 object Cell {
@@ -255,4 +264,5 @@ object Cell {
 
     Transaction(trans => switchS(trans, bea))
   }
+
 }

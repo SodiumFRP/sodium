@@ -6,7 +6,7 @@ object MemoryTest1 {
       override def run(): Unit = {
         try {
           while (true) {
-            println("memory " + Runtime.getRuntime().totalMemory())
+            println(s"memory ${Runtime.getRuntime().totalMemory()}")
             Thread.sleep(5000)
           }
         } catch {
@@ -23,11 +23,9 @@ object MemoryTest1 {
     val oout =
       changeTens.map(tens => t.map(tt => (tens, tt))).hold(t.map(tt => (0, tt)))
     val out = Cell.switchC(oout)
-    val l = out
-      .value()
-      .listen(tu => {
-        //println(tu._1 + "," + tu._2)
-      })
+    val l = out.listen(tu => {
+      //println(s"${tu._1},${tu._2}")
+    })
     var i = 0
     while (i < 1000000000) {
       et.send(i)

@@ -44,7 +44,7 @@ class CellTester {
   def testValues(): Unit = {
     val b = new CellSink(9)
     val out = new ListBuffer[Int]()
-    val l = b.value().listen(out.+=(_))
+    val l = b.listen(out.+=(_))
     List(2, 7).foreach(b.send(_))
     l.unlisten()
     assertEquals(List(9, 2, 7), out)
@@ -54,7 +54,7 @@ class CellTester {
   def testConstantBehavior(): Unit = {
     val b = new Cell(12)
     val out = new ListBuffer[Int]()
-    val l = b.value().listen(out.+=(_))
+    val l = b.listen(out.+=(_))
     l.unlisten()
     assertEquals(List(12), out)
   }
@@ -195,7 +195,7 @@ class CellTester {
   def testMapB(): Unit = {
     val b = new CellSink(6)
     val out = new ListBuffer[String]()
-    val l = b.map(x => x.toString()).value().listen(out.+=(_))
+    val l = b.map(x => x.toString()).listen(out.+=(_))
     b.send(8)
     l.unlisten()
     assertEquals(List("6", "8"), out)
@@ -206,7 +206,7 @@ class CellTester {
     val out = new ListBuffer[String]()
     val bm = b.map(x => x.toString())
     b.send(2)
-    val l = bm.value().listen(out.+=(_))
+    val l = bm.listen(out.+=(_))
     b.send(8)
     l.unlisten()
     assertEquals(List("2", "8"), out)
@@ -224,7 +224,7 @@ class CellTester {
     val bf = new CellSink[Long => String](b => "1 " + b)
     val ba = new CellSink(5L)
     val out = new ListBuffer[String]()
-    val l = Cell(bf, ba).value().listen(x => out.+=(x))
+    val l = Cell(bf, ba).listen(x => out.+=(x))
     bf.send(b => "12 " + b)
     ba.send(6L)
     l.unlisten()
@@ -236,7 +236,7 @@ class CellTester {
     val a = new CellSink(1)
     val b = new CellSink(5L)
     val out = new ListBuffer[String]()
-    val l = Cell.lift[Int, Long, String]((x, y) => x + " " + y, a, b).value().listen(out.+=(_))
+    val l = Cell.lift[Int, Long, String]((x, y) => x + " " + y, a, b).listen(out.+=(_))
     a.send(12)
     b.send(6L)
     l.unlisten()
@@ -249,7 +249,7 @@ class CellTester {
     val a3 = a.map(x => x * 3)
     val a5 = a.map(x => x * 5)
     val out = new ListBuffer[String]()
-    val l = Cell.lift[Int, Int, String]((x, y) => x + " " + y, a3, a5).value().listen(out.+=(_))
+    val l = Cell.lift[Int, Int, String]((x, y) => x + " " + y, a3, a5).listen(out.+=(_))
     a.send(2)
     l.unlisten()
     assertEquals(List("3 5", "6 10"), out)
@@ -276,7 +276,7 @@ class CellTester {
     val bsw = esb.map(s => s.sw).filterNotNull().hold(ba)
     val bo = Cell.switchC(bsw)
     val out = new ListBuffer[Character]()
-    val l = bo.value().listen(out.+=(_))
+    val l = bo.listen(out.+=(_))
     List(
       new SB('B', 'b', null),
       new SB('C', 'c', bb),
@@ -327,7 +327,7 @@ class CellTester {
       sum_out_
     })
     val out = new ListBuffer[Int]()
-    val l = sum_out.value().listen(out.+=(_))
+    val l = sum_out.listen(out.+=(_))
     List(2, 3, 1).foreach(ea.send(_))
     l.unlisten()
     assertEquals(List(0, 2, 5, 6), out)
@@ -339,7 +339,7 @@ class CellTester {
     val ea = new StreamSink[Int]()
     val out = new ListBuffer[Int]()
     val sum = ea.hold(100).collect[Int, Int](0, (a, s) => (a + s, a + s))
-    val l = sum.value().listen(out.+=(_))
+    val l = sum.listen(out.+=(_))
     List(5, 7, 1, 2, 3).foreach(ea.send(_))
     l.unlisten()
     assertEquals(List(100, 105, 112, 113, 115, 118), out)
@@ -350,7 +350,7 @@ class CellTester {
     val ea = new StreamSink[Int]()
     val out = new ListBuffer[Int]()
     val sum = ea.accum[Int](100, (a, s) => a + s)
-    val l = sum.value().listen(out.+=(_))
+    val l = sum.listen(out.+=(_))
     List(5, 7, 1, 2, 3).foreach(ea.send(_))
     l.unlisten()
     assertEquals(List(100, 105, 112, 113, 115, 118), out)
@@ -397,7 +397,7 @@ class CellTester {
       a.loop(new Cell[String]("tea"))
       c_
     })
-    val l = c.value().listen(out.+=(_))
+    val l = c.listen(out.+=(_))
     b.send("caddy")
     l.unlisten()
     assertEquals(List("tea kettle", "tea caddy"), out)
