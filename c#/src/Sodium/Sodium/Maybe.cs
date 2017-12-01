@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Threading.Tasks;
 using JetBrains.Annotations;
 
@@ -88,10 +89,12 @@ namespace Sodium
         #endregion
 
         public static implicit operator Maybe<T>(Maybe.NoneType _) => None;
-        
-        public static bool operator ==(Maybe<T> x, Maybe<T> y) => x.Equals(y);
-        public static bool operator !=(Maybe<T> x, Maybe<T> y) => !x.Equals(y);
 
+        public static bool operator ==(Maybe<T> x, Maybe<T> y) => x.hasValue == y.hasValue && EqualityComparer<T>.Default.Equals(x.value, y.value);
+        public static bool operator !=(Maybe<T> x, Maybe<T> y) => !(x == y);
+        public override bool Equals(Object obj) => obj is Maybe<T> m && this == m;
+        public override int GetHashCode() => (this.hasValue.GetHashCode() * 397) ^ EqualityComparer<T>.Default.GetHashCode(this.value);
+        
         public override string ToString() => this.Match(v => $"{{Some: {v}}}", () => "{None}");
     }
 }
