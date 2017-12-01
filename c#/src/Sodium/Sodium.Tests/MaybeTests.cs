@@ -6,13 +6,19 @@ namespace Sodium.Tests
     public class MaybeTests
     {
         [Test]
-        public void DefaultValueTest()
+        public void DefaultConstructorTest()
         {
             Maybe<int> m = new Maybe<int>();
+            
+            Assert.IsFalse(m.HasValue());
+        }
 
-            int? n = m.Match(v => (int?)v, () => null);
-
-            Assert.IsFalse(n.HasValue);
+        [Test]
+        public void DefaultValueTest()
+        {
+            Maybe<int> m = default(Maybe<int>);
+            
+            Assert.IsFalse(m.HasValue());
         }
 
         [Test]
@@ -30,9 +36,9 @@ namespace Sodium.Tests
         {
             Maybe<int> m = Maybe.None;
 
-            int n = m.Match(v => v, () => 0);
+            int n = m.Match(v => 0, () => 1);
 
-            Assert.AreEqual(0, n);
+            Assert.AreEqual(1, n);
         }
 
         [Test]
@@ -40,6 +46,15 @@ namespace Sodium.Tests
         {
             Maybe<int> m1 = Maybe.Some(2);
             Maybe<int> m2 = Maybe.Some(2);
+
+            Assert.AreEqual(m1, m2);
+        }
+
+        [Test]
+        public void EqualityTestNone()
+        {
+            Maybe<int> m1 = Maybe.None;
+            Maybe<int> m2 = Maybe.None;
 
             Assert.AreEqual(m1, m2);
         }
