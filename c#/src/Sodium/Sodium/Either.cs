@@ -214,6 +214,9 @@ namespace Sodium
 
         public static implicit operator Either<T1, T2>(Either.EitherFirst<T1> value) => First(value == null ? default(T1) : value.Value);
         public static implicit operator Either<T1, T2>(Either.EitherSecond<T2> value) => Second(value == null ? default(T2) : value.Value);
+        
+        public static bool operator ==(Either<T1, T2> x, Either<T1, T2> y) => x.Equals(y);
+        public static bool operator !=(Either<T1, T2> x, Either<T1, T2> y) => !x.Equals(y);
 
         public override string ToString() => this.Match(v1 => $"First: {v1}", v2 => $"Second: {v2}");
     }
@@ -308,6 +311,9 @@ namespace Sodium
         public static implicit operator Either<T1, T2, T3>(Either.EitherFirst<T1> value) => First(value == null ? default(T1) : value.Value);
         public static implicit operator Either<T1, T2, T3>(Either.EitherSecond<T2> value) => Second(value == null ? default(T2) : value.Value);
         public static implicit operator Either<T1, T2, T3>(Either.EitherThird<T3> value) => Third(value == null ? default(T3) : value.Value);
+        
+        public static bool operator ==(Either<T1, T2, T3> x, Either<T1, T2, T3> y) => x.Equals(y);
+        public static bool operator !=(Either<T1, T2, T3> x, Either<T1, T2, T3> y) => !x.Equals(y);
 
         public override string ToString() => this.Match(v1 => $"First: {v1}", v2 => $"Second: {v2}", v3 => $"Third: {v3}");
     }
@@ -419,6 +425,9 @@ namespace Sodium
         public static implicit operator Either<T1, T2, T3, T4>(Either.EitherSecond<T2> value) => Second(value == null ? default(T2) : value.Value);
         public static implicit operator Either<T1, T2, T3, T4>(Either.EitherThird<T3> value) => Third(value == null ? default(T3) : value.Value);
         public static implicit operator Either<T1, T2, T3, T4>(Either.EitherFourth<T4> value) => Fourth(value == null ? default(T4) : value.Value);
+        
+        public static bool operator ==(Either<T1, T2, T3, T4> x, Either<T1, T2, T3, T4> y) => x.Equals(y);
+        public static bool operator !=(Either<T1, T2, T3, T4> x, Either<T1, T2, T3, T4> y) => !x.Equals(y);
 
         public override string ToString() => this.Match(v1 => $"First: {v1}", v2 => $"Second: {v2}", v3 => $"Third: {v3}", v4 => $"Fourth: {v4}");
     }
@@ -545,6 +554,9 @@ namespace Sodium
         public static implicit operator Either<T1, T2, T3, T4, T5>(Either.EitherThird<T3> value) => Third(value == null ? default(T3) : value.Value);
         public static implicit operator Either<T1, T2, T3, T4, T5>(Either.EitherFourth<T4> value) => Fourth(value == null ? default(T4) : value.Value);
         public static implicit operator Either<T1, T2, T3, T4, T5>(Either.EitherFifth<T5> value) => Fifth(value == null ? default(T5) : value.Value);
+        
+        public static bool operator ==(Either<T1, T2, T3, T4, T5> x, Either<T1, T2, T3, T4, T5> y) => x.Equals(y);
+        public static bool operator !=(Either<T1, T2, T3, T4, T5> x, Either<T1, T2, T3, T4, T5> y) => !x.Equals(y);
 
         public override string ToString() => this.Match(v1 => $"First: {v1}", v2 => $"Second: {v2}", v3 => $"Third: {v3}", v4 => $"Fourth: {v4}", v5 => $"Fifth: {v5}");
     }
@@ -686,6 +698,9 @@ namespace Sodium
         public static implicit operator Either<T1, T2, T3, T4, T5, T6>(Either.EitherFourth<T4> value) => Fourth(value == null ? default(T4) : value.Value);
         public static implicit operator Either<T1, T2, T3, T4, T5, T6>(Either.EitherFifth<T5> value) => Fifth(value == null ? default(T5) : value.Value);
         public static implicit operator Either<T1, T2, T3, T4, T5, T6>(Either.EitherSixth<T6> value) => Sixth(value == null ? default(T6) : value.Value);
+        
+        public static bool operator ==(Either<T1, T2, T3, T4, T5, T6> x, Either<T1, T2, T3, T4, T5, T6> y) => x.Equals(y);
+        public static bool operator !=(Either<T1, T2, T3, T4, T5, T6> x, Either<T1, T2, T3, T4, T5, T6> y) => !x.Equals(y);
 
         public override string ToString() => this.Match(v1 => $"First: {v1}", v2 => $"Second: {v2}", v3 => $"Third: {v3}", v4 => $"Fourth: {v4}", v5 => $"Fifth: {v5}", v6 => $"Sixth: {v6}");
     }
@@ -842,6 +857,9 @@ namespace Sodium
         public static implicit operator Either<T1, T2, T3, T4, T5, T6, T7>(Either.EitherFifth<T5> value) => Fifth(value == null ? default(T5) : value.Value);
         public static implicit operator Either<T1, T2, T3, T4, T5, T6, T7>(Either.EitherSixth<T6> value) => Sixth(value == null ? default(T6) : value.Value);
         public static implicit operator Either<T1, T2, T3, T4, T5, T6, T7>(Either.EitherSeventh<T7> value) => Seventh(value == null ? default(T7) : value.Value);
+        
+        public static bool operator ==(Either<T1, T2, T3, T4, T5, T6, T7> x, Either<T1, T2, T3, T4, T5, T6, T7> y) => x.Equals(y);
+        public static bool operator !=(Either<T1, T2, T3, T4, T5, T6, T7> x, Either<T1, T2, T3, T4, T5, T6, T7> y) => !x.Equals(y);
 
         public override string ToString() => this.Match(v1 => $"First: {v1}", v2 => $"Second: {v2}", v3 => $"Third: {v3}", v4 => $"Fourth: {v4}", v5 => $"Fifth: {v5}", v6 => $"Sixth: {v6}", v7 => $"Seventh: {v7}");
     }
@@ -1013,6 +1031,9 @@ namespace Sodium
         public static implicit operator Either<T1, T2, T3, T4, T5, T6, T7, T8>(Either.EitherSixth<T6> value) => Sixth(value == null ? default(T6) : value.Value);
         public static implicit operator Either<T1, T2, T3, T4, T5, T6, T7, T8>(Either.EitherSeventh<T7> value) => Seventh(value == null ? default(T7) : value.Value);
         public static implicit operator Either<T1, T2, T3, T4, T5, T6, T7, T8>(Either.EitherEighth<T8> value) => Eighth(value == null ? default(T8) : value.Value);
+        
+        public static bool operator ==(Either<T1, T2, T3, T4, T5, T6, T7, T8> x, Either<T1, T2, T3, T4, T5, T6, T7, T8> y) => x.Equals(y);
+        public static bool operator !=(Either<T1, T2, T3, T4, T5, T6, T7, T8> x, Either<T1, T2, T3, T4, T5, T6, T7, T8> y) => !x.Equals(y);
 
         public override string ToString() => this.Match(v1 => $"First: {v1}", v2 => $"Second: {v2}", v3 => $"Third: {v3}", v4 => $"Fourth: {v4}", v5 => $"Fifth: {v5}", v6 => $"Sixth: {v6}", v7 => $"Seventh: {v7}", v8 => $"Eighth: {v8}");
     }
