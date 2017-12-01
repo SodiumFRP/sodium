@@ -9,7 +9,7 @@ namespace Sodium.Tests
         public void DefaultConstructorTest()
         {
             Maybe<int> m = new Maybe<int>();
-            
+
             Assert.IsFalse(m.HasValue());
         }
 
@@ -17,7 +17,7 @@ namespace Sodium.Tests
         public void DefaultValueTest()
         {
             Maybe<int> m = default(Maybe<int>);
-            
+
             Assert.IsFalse(m.HasValue());
         }
 
@@ -75,6 +75,42 @@ namespace Sodium.Tests
             Maybe<int> m2 = Maybe.Some(3);
 
             Assert.AreNotEqual(m1, m2);
+        }
+
+        [Test]
+        public void EqualityOperatorTest()
+        {
+            Maybe<int> m1 = Maybe.Some(2);
+            Maybe<int> m2 = Maybe.Some(2);
+
+            Assert.IsTrue(m1 == m2);
+        }
+
+        [Test]
+        public void EqualityOperatorTestNone()
+        {
+            Maybe<int> m1 = Maybe.None;
+            Maybe<int> m2 = Maybe.None;
+
+            Assert.IsTrue(m1 == m2);
+        }
+
+        [Test]
+        public void NonEqualityOperatorTest1()
+        {
+            Maybe<int> m1 = Maybe.Some(2);
+            Maybe<int> m2 = Maybe.None;
+
+            Assert.IsTrue(m1 != m2);
+        }
+
+        [Test]
+        public void NonEqualityOperatorTest2()
+        {
+            Maybe<int> m1 = Maybe.Some(2);
+            Maybe<int> m2 = Maybe.Some(3);
+
+            Assert.IsTrue(m1 != m2);
         }
     }
 }

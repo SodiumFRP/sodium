@@ -88,6 +88,9 @@ namespace Sodium
         #endregion
 
         public static implicit operator Maybe<T>(Maybe.NoneType _) => None;
+        
+        public static bool operator ==(Maybe<T> x, Maybe<T> y) => x.Equals(y);
+        public static bool operator !=(Maybe<T> x, Maybe<T> y) => !x.Equals(y);
 
         public override string ToString() => this.Match(v => $"{{Some: {v}}}", () => "{None}");
     }
