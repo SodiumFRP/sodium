@@ -11,4 +11,3 @@ class LazyCell[A](lazyInitValueFunction: () => A, event: Stream[A]) extends Cell
     }
 
 }
-
