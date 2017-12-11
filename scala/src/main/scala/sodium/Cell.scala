@@ -1,7 +1,5 @@
 package sodium
 
-import scala.IndexedSeq
-
 class Cell[A](protected var currentValue: Option[A], protected val event: Stream[A]) {
   import Cell._
 
@@ -9,7 +7,7 @@ class Cell[A](protected var currentValue: Option[A], protected val event: Stream
   private var cleanup: Option[Listener] = None
   protected var lazyInitValue: Option[() => A] = None // Used by LazyCell
 
-  Transaction.run({ trans1 =>
+  Transaction({ trans1 =>
     cleanup = Some(
       event.listen(
         Node.NullNode,
@@ -74,14 +72,11 @@ class Cell[A](protected var currentValue: Option[A], protected val event: Stream
   final def value(): Stream[A] = Transaction(trans => value(trans))
 
   final def value(trans1: Transaction): Stream[A] = {
-    val out = new StreamSink[A]() {
-      override def sampleNow() = IndexedSeq(sampleNoTrans())
-    }
-    val l: Listener = event.listen(out.node, trans1, new TransactionHandler[A]() {
-      def run(trans2: Transaction, a: A): Unit = { out.send(trans2, a) }
-    }, false)
-    // Needed in case of an initial value and an update in the same transaction.
-    out.addCleanup(l).lastFiringOnly(trans1)
+    val sSpark = new StreamSink[Unit]()
+    trans1.prioritized(sSpark.node, trans2 => sSpark.send(trans2, ()))
+
+    val sInitial = sSpark.snapshot[A](this)
+    sInitial.merge(updates()).lastFiringOnly(trans1)
   }
 
   /**
@@ -138,7 +133,7 @@ class Cell[A](protected var currentValue: Option[A], protected val event: Stream
     * method to cause the listener to be removed. This is the observer pattern.
     */
   def listen(action: A => Unit): Listener = {
-    return value.listen(action)
+    Transaction(trans => value.listen(action))
   }
 
 }
@@ -168,67 +163,105 @@ object Cell {
     * primitive for all function lifting.
     */
   def apply[A, B](bf: Cell[A => B], ba: Cell[A]): Cell[B] = {
-    val out = new StreamSink[B]()
 
-    var fired = false
-    def h(trans: Transaction): Unit = {
-      if (!fired) {
-        fired = true
-        trans.prioritized(out.node, { trans2 =>
-          out.send(trans2, bf.newValue().apply(ba.newValue()))
-        })
-        trans.last(() => { fired = false })
+    Transaction(trans0 => {
+
+      val out = new StreamSink[B]
+      class ApplyHandler(val trans0: Transaction) {
+        resetFired(trans0) // We suppress firing during the first transaction
+
+        var fired = true
+        var a: A = _
+        var f: A => B = _
+
+        def run(trans1: Transaction): Unit = {
+          if (fired) ()
+          else {
+            fired = true
+            trans1.prioritized(out.node, { trans2 =>
+              out.send(trans2, f(a))
+            })
+          }
+
+          resetFired(trans1)
+        }
+
+        def resetFired(trans1: Transaction): Unit = {
+          trans1.last(() => {
+            fired = false
+          })
+        }
       }
-    }
+      val out_target = out.node
+      val in_target = new Node(0)
+      in_target.linkTo(null, out_target)
+      val h: ApplyHandler = new ApplyHandler(trans0)
+      val l1 = bf
+        .value()
+        .listen_(in_target, new TransactionHandler[A => B]() {
+          def run(trans1: Transaction, f: A => B): Unit = {
+            h.f = f
+            h.run(trans1)
+          }
+        })
 
-    val l1 = bf
-      .updates()
-      .listen_(out.node, new TransactionHandler[A => B]() {
-        def run(trans: Transaction, f: A => B): Unit = {
-          h(trans)
-        }
-      })
-    val l2 = ba
-      .updates()
-      .listen_(out.node, new TransactionHandler[A]() {
-        def run(trans: Transaction, a: A): Unit = {
-          h(trans)
-        }
-      })
-    out.addCleanup(l1).addCleanup(l2).holdLazy(() => bf.sampleNoTrans().apply(ba.sampleNoTrans()))
+      val l2 = ba
+        .value()
+        .listen_(in_target, new TransactionHandler[A]() {
+          def run(trans1: Transaction, a: A): Unit = {
+            h.a = a
+            h.run(trans1)
+          }
+        })
+      out
+        .addCleanup(l1)
+        .addCleanup(l2)
+        .addCleanup(new Listener() {
+          def unlisten(): Unit = {
+            in_target.unlinkTo(out_target)
+          }
+        })
+        .holdLazy(() => bf.sampleNoTrans().apply(ba.sampleNoTrans()))
+
+    })
+
   }
 
   /**
     * Unwrap a behavior inside another behavior to give a time-varying behavior implementation.
     */
   def switchC[A](bba: Cell[Cell[A]]): Cell[A] = {
-    def za = () => bba.sampleNoTrans().sampleNoTrans
-    val out = new StreamSink[A]()
-    val h = new TransactionHandler[Cell[A]]() {
-      private var currentListener: Option[Listener] = None
-      override def run(trans: Transaction, ba: Cell[A]): Unit = {
-        // Note: If any switch takes place during a transaction, then the
-        // value().listen will always cause a sample to be fetched from the
-        // one we just switched to. The caller will be fetching our output
-        // using value().listen, and value() throws away all firings except
-        // for the last one. Therefore, anything from the old input behaviour
-        // that might have happened during this transaction will be suppressed.
-        currentListener.foreach(_.unlisten())
-        currentListener = Some(
-          ba.value(trans)
-            .listen(out.node, trans, new TransactionHandler[A]() {
-              def run(trans3: Transaction, a: A): Unit = {
-                out.send(trans3, a)
-              }
-            }, false))
-      }
+    Transaction(trans0 => {
+      def za = () => bba.sampleNoTrans().sampleNoTrans
 
-      override def finalize(): Unit = {
-        currentListener.foreach(_.unlisten())
+      val out = new StreamSink[A]()
+      val h = new TransactionHandler[Cell[A]]() {
+        private var currentListener: Option[Listener] = None
+
+        override def run(trans: Transaction, ba: Cell[A]): Unit = {
+          // Note: If any switch takes place during a transaction, then the
+          // value().listen will always cause a sample to be fetched from the
+          // one we just switched to. The caller will be fetching our output
+          // using value().listen, and value() throws away all firings except
+          // for the last one. Therefore, anything from the old input behaviour
+          // that might have happened during this transaction will be suppressed.
+          currentListener.foreach(_.unlisten())
+          currentListener = Some(
+            ba.value(trans)
+              .listen(out.node, trans, new TransactionHandler[A]() {
+                def run(trans3: Transaction, a: A): Unit = {
+                  out.send(trans3, a)
+                }
+              }, false))
+        }
+
+        override def finalize(): Unit = {
+          currentListener.foreach(_.unlisten())
+        }
       }
-    }
-    val l = bba.value().listen_(out.node, h)
-    out.addCleanup(l).holdLazy(za)
+      val l = bba.value().listen_(out.node, h)
+      out.addCleanup(l).holdLazy(za)
+    })
   }
 
   /**

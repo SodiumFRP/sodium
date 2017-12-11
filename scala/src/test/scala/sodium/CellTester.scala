@@ -60,10 +60,10 @@ class CellTester {
   }
 
   @Test
-  def testValuesThenMap(): Unit = {
+  def testValueThenMap(): Unit = {
     val b = new CellSink(9)
     val out = new ListBuffer[Int]()
-    val l = b.value().map(x => x + 100).listen(out.+=(_))
+    val l = Transaction(_ => b.value().map(x => x + 100).listen(out.+=(_)))
     List(2, 7).foreach(b.send(_))
     l.unlisten()
     assertEquals(List(109, 102, 107), out)
@@ -73,7 +73,7 @@ class CellTester {
   def testValuesTwiceThenMap(): Unit = {
     val b = new CellSink(9)
     val out = new ListBuffer[Int]()
-    val l = doubleUp(b.value()).map(x => x + 100).listen(out.+=(_))
+    val l = Transaction(_ => doubleUp(b.value()).map(x => x + 100).listen(out.+=(_)))
     List(2, 7).foreach(b.send(_))
     l.unlisten()
     assertEquals(List(109, 109, 102, 102, 107, 107), out)
@@ -83,7 +83,7 @@ class CellTester {
   def testValuesThenCoalesce(): Unit = {
     val b = new CellSink(9)
     val out = new ListBuffer[Int]()
-    val l = b.value().coalesce((fst, snd) => snd).listen(out.+=(_))
+    val l = Transaction(_ => b.value().coalesce((fst, snd) => snd).listen(out.+=(_)))
     List(2, 7).foreach(b.send(_))
     l.unlisten()
     assertEquals(List(9, 2, 7), out)
@@ -93,7 +93,7 @@ class CellTester {
   def testValuesTwiceThenCoalesce(): Unit = {
     val b = new CellSink(9)
     val out = new ListBuffer[Int]()
-    val l = doubleUp(b.value()).coalesce((fst, snd) => fst + snd).listen(out.+=(_))
+    val l = Transaction(_ => doubleUp(b.value()).coalesce((fst, snd) => fst + snd).listen(out.+=(_)))
     List(2, 7).foreach(b.send(_))
     l.unlisten()
     assertEquals(List(18, 4, 14), out)
@@ -104,7 +104,7 @@ class CellTester {
     val bi = new CellSink(9)
     val bc = new CellSink('a')
     val out = new ListBuffer[Character]()
-    val l = bi.value().snapshot(bc).listen(out.+=(_))
+    val l = Transaction(_ => bi.value().snapshot(bc).listen(out.+=(_)))
     bc.send('b')
     bi.send(2)
     bc.send('c')
@@ -118,7 +118,7 @@ class CellTester {
     val bi = new CellSink(9)
     val bc = new CellSink('a')
     val out = new ListBuffer[Character]()
-    val l = doubleUp(bi.value()).snapshot(bc).listen(out.+=(_))
+    val l = Transaction(_ => doubleUp(bi.value()).snapshot(bc).listen(out.+=(_)))
     bc.send('b')
     bi.send(2)
     bc.send('c')
@@ -132,7 +132,7 @@ class CellTester {
     val bi = new CellSink(9)
     val bj = new CellSink(2)
     val out = new ListBuffer[Int]()
-    val l = bi.value().merge(bj.value(), (x, y) => x + y).listen(out.+=(_))
+    val l = Transaction(_ => bi.value().merge(bj.value(), (x, y) => x + y).listen(out.+=(_)))
     bi.send(1)
     bj.send(4)
     l.unlisten()
@@ -143,7 +143,7 @@ class CellTester {
   def testValuesThenFilter(): Unit = {
     val b = new CellSink(9)
     val out = new ListBuffer[Int]()
-    val l = b.value().filter(a => true).listen(out.+=(_))
+    val l = Transaction(_ => b.value().filter(a => true).listen(out.+=(_)))
     List(2, 7).foreach(b.send(_))
     l.unlisten()
     assertEquals(List(9, 2, 7), out)
@@ -153,7 +153,7 @@ class CellTester {
   def testValuesTwiceThenFilter(): Unit = {
     val b = new CellSink(9)
     val out = new ListBuffer[Int]()
-    val l = doubleUp(b.value()).filter(a => true).listen(out.+=(_))
+    val l = Transaction(_ => doubleUp(b.value()).filter(a => true).listen(out.+=(_)))
     List(2, 7).foreach(b.send(_))
     l.unlisten()
     assertEquals(List(9, 9, 2, 2, 7, 7), out)
@@ -163,7 +163,7 @@ class CellTester {
   def testValuesThenOnce(): Unit = {
     val b = new CellSink(9)
     val out = new ListBuffer[Int]()
-    val l = b.value().once().listen(out.+=(_))
+    val l = Transaction(_ => b.value().once().listen(out.+=(_)))
     List(2, 7).foreach(b.send(_))
     l.unlisten()
     assertEquals(List(9), out)
@@ -173,7 +173,7 @@ class CellTester {
   def testValuesTwiceThenOnce(): Unit = {
     val b = new CellSink(9)
     val out = new ListBuffer[Int]()
-    val l = doubleUp(b.value()).once().listen(out.+=(_))
+    val l = Transaction(_ => doubleUp(b.value()).once().listen(out.+=(_)))
     List(2, 7).foreach(b.send(_))
     l.unlisten()
     assertEquals(List(9), out)
@@ -188,7 +188,7 @@ class CellTester {
     val l = value.listen(out.+=(_))
     b.send(2)
     l.unlisten()
-    assertEquals(List(8, 2), out)
+    assertEquals(List(2), out)
   }
 
   @Test
@@ -215,7 +215,7 @@ class CellTester {
   @Test
   def testTransaction(): Unit = {
     var calledBack = false
-    Transaction.run(trans => trans.prioritized(Node.NullNode, trans2 => calledBack = true))
+    Transaction(trans => trans.prioritized(Node.NullNode, trans2 => calledBack = true))
     assertEquals(true, calledBack)
   }
 
@@ -359,14 +359,14 @@ class CellTester {
   @Test
   def testLoopValueSnapshot(): Unit = {
     val out = new ListBuffer[String]()
-    val eSnap = Transaction(_ => {
+    val l: Listener = Transaction(_ => {
       val a = new Cell("lettuce")
       val b = new CellLoop[String]()
-      val eSnap_ = a.value().snapshot[String, String](b, (aa, bb) => aa + " " + bb)
+      val eSnap = a.value().snapshot[String, String](b, (aa, bb) => aa + " " + bb)
       b.loop(new Cell[String]("cheese"))
-      eSnap_
+      eSnap.listen(out.+=(_))
     })
-    val l = eSnap.listen(out.+=(_))
+
     l.unlisten()
     assertEquals(List("lettuce cheese"), out)
   }

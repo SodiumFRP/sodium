@@ -1,17 +1,13 @@
 package sodium
 
-import scala.IndexedSeq
 import scala.collection.mutable.ListBuffer
 
 class Stream[A] {
   import Stream._
 
-  protected val listeners = ListBuffer[TransactionHandler[A]]()
   protected val finalizers = ListBuffer[Listener]()
   val node = new Node(0L)
-  protected val firings = ListBuffer[A]()
-
-  def sampleNow(): IndexedSeq[A] = IndexedSeq()
+  protected var firings = ListBuffer[A]()
 
   /**
     * Listen for firings of this event. The returned Listener has an unlisten()
@@ -32,17 +28,18 @@ class Stream[A] {
              action: TransactionHandler[A],
              suppressEarlierFirings: Boolean): Listener = {
     Transaction.listenersLock.synchronized {
-      if (node.linkTo(target))
+      if (node.linkTo(action.asInstanceOf[TransactionHandler[Unit]], target))
         trans.toRegen = true
-      listeners += action
     }
+    val firings = this.firings.clone() //TODO check if deep clone is needed
     trans.prioritized(
       target, { trans2 =>
-        sampleNow().foreach(action.run(trans, _))
         if (!suppressEarlierFirings) {
           // Anything sent already in this transaction must be sent now so that
           // there's no order dependency between send and listen.
-          firings.foreach(action.run(trans, _))
+          firings.foreach { a =>
+            action.run(trans, a)
+          }
         }
       }
     )
@@ -53,10 +50,7 @@ class Stream[A] {
     * Transform the event's value according to the supplied function.
     */
   final def map[B](f: A => B): Stream[B] = {
-    val ev = this
-    val out = new StreamSink[B]() {
-      override def sampleNow() = ev.sampleNow().map(f(_))
-    }
+    val out = new StreamSink[B]
     val l = listen_(out.node, new TransactionHandler[A]() {
       override def run(trans: Transaction, a: A): Unit = {
         out.send(trans, f(a))
@@ -89,10 +83,7 @@ class Stream[A] {
     * before any state changes of the current transaction are applied through 'hold's.
     */
   final def snapshot[B, C](b: Cell[B], f: (A, B) => C): Stream[C] = {
-    val ev = this
-    val out = new StreamSink[C]() {
-      override def sampleNow() = ev.sampleNow().map(a => f.apply(a, b.sampleNoTrans()))
-    }
+    val out = new StreamSink[C]()
     val l = listen_(out.node, new TransactionHandler[A]() {
       def run(trans: Transaction, a: A): Unit = {
         out.send(trans, f(a, b.sampleNoTrans()))
@@ -150,17 +141,7 @@ class Stream[A] {
     Transaction(trans => coalesce(trans, f))
 
   final def coalesce(trans: Transaction, f: (A, A) => A): Stream[A] = {
-    val ev = this
-    val out = new StreamSink[A]() {
-      override def sampleNow() = {
-        val oi = ev.sampleNow()
-        if (oi.isEmpty) {
-          IndexedSeq()
-        } else {
-          IndexedSeq(oi.reduce(f(_, _)))
-        }
-      }
-    }
+    val out = new StreamSink[A]()
     val l = listen(
       out.node,
       trans,
@@ -205,10 +186,7 @@ class Stream[A] {
     * Only keep event occurrences for which the predicate returns true.
     */
   def filter(f: A => Boolean): Stream[A] = {
-    val ev = this
-    val out = new StreamSink[A]() {
-      override def sampleNow() = ev.sampleNow().filter(f)
-    }
+    val out = new StreamSink[A]()
     val l = listen_(out.node, new TransactionHandler[A]() {
       def run(trans: Transaction, a: A): Unit = {
         if (f(a)) out.send(trans, a)
@@ -265,25 +243,20 @@ class Stream[A] {
     // the listener.
     val ev = this
     var la: Option[Listener] = None
-    val out = new StreamSink[A]() {
-      override def sampleNow() = {
-        val oi = ev.sampleNow()
-        if (oi.size > 0) {
-          la.foreach(_.unlisten())
-          la = None
+    val out = new StreamSink[A]()
+    la = Some(
+      ev.listen_(
+        out.node,
+        new TransactionHandler[A]() {
+          def run(trans: Transaction, a: A): Unit = {
+            if (la.isDefined) {
+              out.send(trans, a)
+              la.foreach(_.unlisten())
+              la = None
+            }
+          }
         }
-        if (oi.size > 0) IndexedSeq(oi.head) else IndexedSeq()
-      }
-    }
-    la = Some(ev.listen_(out.node, new TransactionHandler[A]() {
-      def run(trans: Transaction, a: A): Unit = {
-        out.send(trans, a)
-        if (la.isDefined) {
-          la.foreach(_.unlisten())
-          la = None
-        }
-      }
-    }))
+      ))
     out.addCleanup(la.get)
   }
 
@@ -307,7 +280,6 @@ object Stream {
       */
     override def unlisten(): Unit = {
       Transaction.listenersLock.synchronized {
-        event.listeners -= action
         event.node.unlinkTo(target)
       }
     }
@@ -327,29 +299,33 @@ object Stream {
     * be undefined.
     */
   private def merge[A](ea: Stream[A], eb: Stream[A]): Stream[A] = {
-    val out = new StreamSink[A]() {
-      override def sampleNow() = ea.sampleNow() ++ eb.sampleNow()
-    }
-    val l1 = ea.listen_(out.node, new TransactionHandler[A]() {
+    val out = new StreamSink[A]()
+    val left = new Node(0)
+    val right = out.node
+    left.linkTo(null, right)
+    val h = new TransactionHandler[A]() {
       def run(trans: Transaction, a: A): Unit = {
         out.send(trans, a)
       }
-    })
-    val l2 = eb.listen_(out.node, new TransactionHandler[A]() {
-      def run(trans1: Transaction, a: A): Unit = {
-        trans1.prioritized(out.node, trans2 => out.send(trans2, a))
-      }
-    })
-    out.addCleanup(l1).addCleanup(l2)
+    }
+    val l1 = ea.listen_(left, h)
+    val l2 = eb.listen_(right, h)
+    out
+      .addCleanup(l1)
+      .addCleanup(l2)
+      .addCleanup(new Listener() {
+        def unlisten(): Unit = {
+          left.unlinkTo(right)
+        }
+      })
+
   }
 
   /**
     * Filter the empty values out, and strip the Option wrapper from the present ones.
     */
   final def filterOption[A](ev: Stream[Option[A]]): Stream[A] = {
-    val out = new StreamSink[A]() {
-      override def sampleNow() = ev.sampleNow().flatten
-    }
+    val out = new StreamSink[A]()
     val l = ev.listen_(out.node, new TransactionHandler[Option[A]]() {
       def run(trans: Transaction, oa: Option[A]): Unit = {
         oa.foreach(out.send(trans, _))

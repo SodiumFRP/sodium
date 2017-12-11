@@ -100,9 +100,10 @@ object Transaction {
     }
   }
 
-  def run(f: Transaction => Unit): Unit = {
-    apply(t => f(t))
-  }
+  //not needed in Scala
+  //def run(f: Transaction => Unit): Unit = {
+  //  apply(t => f(t))
+  //}
 
   /**
     * Return the current transaction.

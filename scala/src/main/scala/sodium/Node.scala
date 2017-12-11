@@ -1,27 +1,23 @@
 package sodium
 
-import scala.collection.mutable.HashSet
+import scala.collection.mutable.ListBuffer
 
 class Node(private var rank: Long) extends Comparable[Node] {
   import Node._
 
-  private val listeners = HashSet[Node]()
+  val listeners = ListBuffer[Target]()
 
   /**
     * @return true if any changes were made.
     */
-  def linkTo(target: Node): Boolean =
-    if (target == NullNode) {
-      false
-    } else {
-      val changed = target.ensureBiggerThan(rank, Set())
-      listeners.add(target)
-      changed
-    }
+  def linkTo(action: TransactionHandler[Unit], target: Node): Boolean = {
+    val changed = target.ensureBiggerThan(rank, Set())
+    listeners += Target(action, target)
+    changed
+  }
 
   def unlinkTo(target: Node): Unit = {
-    if (target != NullNode)
-      listeners.remove(target)
+    listeners.collectFirst { case t if t.node == target => listeners -= t }
     ()
   }
 
@@ -31,7 +27,7 @@ class Node(private var rank: Long) extends Comparable[Node] {
     } else {
       val accVisited = Set(this) ++ visited
       rank = limit + 1
-      listeners.foreach(_.ensureBiggerThan(rank, accVisited))
+      listeners.foreach(_.node.ensureBiggerThan(rank, accVisited))
       true
     }
 
@@ -40,4 +36,7 @@ class Node(private var rank: Long) extends Comparable[Node] {
 
 object Node {
   val NullNode = new Node(Long.MaxValue)
+
+  case class Target(var action: TransactionHandler[Unit], var node: Node)
+
 }
