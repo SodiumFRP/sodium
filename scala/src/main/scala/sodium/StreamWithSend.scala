@@ -21,13 +21,17 @@ class StreamWithSend[A] extends Stream[A] {
     for (target <- node.listeners) {
       trans.prioritized(
         target.node,
-        trans2 =>
+        trans2 => {
+          Transaction.inCallback += 1
           try // Don't allow transactions to interfere with Sodium
           // internals.
           target.action.asInstanceOf[TransactionHandler[A]].run(trans, a)
           catch {
             case t: Throwable =>
               t.printStackTrace()
+          } finally {
+            Transaction.inCallback -= 1
+          }
         }
       )
     }

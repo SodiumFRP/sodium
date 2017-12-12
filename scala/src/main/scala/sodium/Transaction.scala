@@ -73,6 +73,7 @@ object Transaction {
   val listenersLock = new Object()
 
   var currentTransaction: Option[Transaction] = None
+  var inCallback: Int = 0
 
   /**
     * Run the specified code inside a single transaction, with the contained

@@ -38,7 +38,14 @@ class Stream[A] {
           // Anything sent already in this transaction must be sent now so that
           // there's no order dependency between send and listen.
           firings.foreach { a =>
-            action.run(trans, a)
+            Transaction.inCallback += 1
+            try { // Don't allow transactions to interfere with Sodium internals.
+              action.run(trans, a)
+            } catch {
+              case t: Throwable => t.printStackTrace()
+            } finally {
+              Transaction.inCallback -= 1
+            }
           }
         }
       }
