@@ -6,7 +6,7 @@ class Stream[A] {
   import Stream._
 
   protected val finalizers = ListBuffer[Listener]()
-  val node = new Node(0L)
+  final val node = new Node(0L)
   protected var firings = ListBuffer[A]()
 
   /**

@@ -12,9 +12,9 @@ final class Transaction {
   // True if we need to re-generate the priority queue.
   private[sodium] var toRegen = false
 
-  private val prioritizedQ = new PriorityQueue[Entry]()(EntryOrdering)
-  private val entries = new HashSet[Entry]()
-  private val lastQ = ListBuffer[Runnable]()
+  private final val prioritizedQ = new PriorityQueue[Entry]()(EntryOrdering)
+  private final val entries = new HashSet[Entry]()
+  private final val lastQ = ListBuffer[Runnable]()
   private val postQ = ListBuffer[Runnable]()
 
   def prioritized(rank: Node, action: Transaction => Unit): Unit = {
@@ -67,10 +67,10 @@ final class Transaction {
 object Transaction {
 
   // Coarse-grained lock that's held during the whole transaction.
-  val transactionLock = new Object()
+  final val transactionLock = new Object()
 
   // Fine-grained lock that protects listeners and nodes.
-  val listenersLock = new Object()
+  final val listenersLock = new Object()
 
   var currentTransaction: Option[Transaction] = None
   var inCallback: Int = 0
@@ -118,7 +118,7 @@ object Transaction {
     private val nextSeq = new AtomicLong(0)
   }
 
-  private case class Entry(val rank: Node, val action: Transaction => Unit) {
+  private case class Entry(final val rank: Node, final val action: Transaction => Unit) {
     val seq = Entry.nextSeq.getAndIncrement()
   }
 

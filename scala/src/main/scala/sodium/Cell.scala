@@ -1,6 +1,6 @@
 package sodium
 
-class Cell[A](protected var currentValue: Option[A], protected val event: Stream[A]) {
+class Cell[A](protected var currentValue: Option[A], final protected val event: Stream[A]) {
   import Cell._
 
   private var valueUpdate: Option[A] = None
@@ -41,7 +41,7 @@ class Cell[A](protected var currentValue: Option[A], protected val event: Stream
   /**
     * @return The value including any updates that have happened in this transaction.
     */
-  def newValue(): A = valueUpdate.getOrElse(sampleNoTrans)
+  final def newValue(): A = valueUpdate.getOrElse(sampleNoTrans)
 
   /**
     * Sample the behavior's current value.
@@ -54,7 +54,7 @@ class Cell[A](protected var currentValue: Option[A], protected val event: Stream
     * b.updates().listen(..) will capture the current value and any updates without risk
     * of missing any in between.
     */
-  def sample(): A = Transaction(_ => sampleNoTrans())
+  final def sample(): A = Transaction(_ => sampleNoTrans())
 
   def sampleNoTrans(): A = currentValue.get
 
@@ -132,7 +132,7 @@ class Cell[A](protected var currentValue: Option[A], protected val event: Stream
     * Listen for firings of this event. The returned Listener has an unlisten()
     * method to cause the listener to be removed. This is the observer pattern.
     */
-  def listen(action: A => Unit): Listener = {
+  final def listen(action: A => Unit): Listener = {
     Transaction(trans => value.listen(action))
   }
 
@@ -167,7 +167,7 @@ object Cell {
     Transaction(trans0 => {
 
       val out = new StreamSink[B]
-      class ApplyHandler(val trans0: Transaction) {
+      final class ApplyHandler(val trans0: Transaction) {
         resetFired(trans0) // We suppress firing during the first transaction
 
         var fired = true

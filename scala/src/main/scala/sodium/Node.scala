@@ -37,6 +37,6 @@ class Node(private var rank: Long) extends Comparable[Node] {
 object Node {
   val NullNode = new Node(Long.MaxValue)
 
-  case class Target(var action: TransactionHandler[Unit], var node: Node)
+  case class Target(final var action: TransactionHandler[Unit], final var node: Node)
 
 }
