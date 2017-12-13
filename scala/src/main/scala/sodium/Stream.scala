@@ -32,9 +32,9 @@ class Stream[A] {
         trans.toRegen = true
     }
     val firings = this.firings.clone() //TODO check if deep clone is needed
-    trans.prioritized(
-      target, { trans2 =>
-        if (!suppressEarlierFirings) {
+    if (!suppressEarlierFirings && !firings.isEmpty) {
+      trans.prioritized(
+        target, { trans2 =>
           // Anything sent already in this transaction must be sent now so that
           // there's no order dependency between send and listen.
           firings.foreach { a =>
@@ -48,8 +48,8 @@ class Stream[A] {
             }
           }
         }
-      }
-    )
+      )
+    }
     new ListenerImplementation[A](this, action, target)
   }
 
@@ -315,9 +315,6 @@ object Stream {
       }
     }
 
-    override protected def finalize(): Unit = {
-      unlisten()
-    }
   }
 
   /**
