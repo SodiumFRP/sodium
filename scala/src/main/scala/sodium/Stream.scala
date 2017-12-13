@@ -111,9 +111,9 @@ class Stream[A] {
   def merge(eb: Stream[A]): Stream[A] = Stream.merge[A](this, eb)
 
   /**
-    * Push each event occurrence onto a new transaction.
+    * Push each event occurrence onto a new transaction. Same as split() but works on a single value.
     */
-  final def delay(): Stream[A] = {
+  final def defer(): Stream[A] = {
     val out = new StreamSink[A]()
     val l = listen_(
       out.node,
@@ -133,6 +133,30 @@ class Stream[A] {
       }
     )
     out.addCleanup(l)
+  }
+
+  /**
+    * Push each event occurrence in the list onto a new transaction.
+    */
+  def split[C <: Traversable[A]](s: Stream[C]): Stream[A] = {
+    val out = new StreamSink[A]
+    val l1 = s.listen_(
+      out.node,
+      new TransactionHandler[C]() {
+        override def run(trans: Transaction, as: C): Unit = {
+          trans.post(new Runnable() {
+            override def run(): Unit = {
+              for (a <- as) {
+                val trans = new Transaction()
+                try out.send(trans, a)
+                finally trans.close()
+              }
+            }
+          })
+        }
+      }
+    )
+    out.addCleanup(l1)
   }
 
   /**

@@ -193,13 +193,29 @@ class StreamTester {
   }
 
   @Test
-  def testDelay(): Unit = {
+  def testDefer(): Unit = {
     val e = new StreamSink[Char]()
     val b = e.hold(' ')
     val out = new MutableList[Char]()
-    val l = e.delay().snapshot(b).listen(out.+=(_))
+    val l = e.defer().snapshot(b).listen(out.+=(_))
     List('C', 'B', 'A').foreach(e.send(_))
     l.unlisten()
     assertEquals(List('C', 'B', 'A'), out)
   }
+
+  //Tests temporarily add to Scala version only
+  @Test
+  def testSplit(): Unit = {
+
+    val ea = new StreamSink[Int]()
+    val as = new StreamSink[List[Int]]()
+    val out = new MutableList[Int]()
+    val sum = ea.split(as).accum[Int](0, (a, b) => a + b)
+    val l = sum.updates().listen(out.+=(_))
+    as.send(List(100, 15, 60))
+    as.send(List(1, 5))
+    l.unlisten()
+    assertEquals(List(100, 115, 175, 176, 181), out)
+  }
+
 }
