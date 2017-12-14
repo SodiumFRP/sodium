@@ -1,5 +1,7 @@
 package sodium
 
+import sodium.Node.Target
+
 import scala.collection.mutable.ListBuffer
 
 class Stream[A] {
@@ -27,10 +29,12 @@ class Stream[A] {
              trans: Transaction,
              action: TransactionHandler[A],
              suppressEarlierFirings: Boolean): Listener = {
+    val node_target_ = new Array[Target](1)
     Transaction.listenersLock.synchronized {
-      if (node.linkTo(action.asInstanceOf[TransactionHandler[Unit]], target))
+      if (node.linkTo(action.asInstanceOf[TransactionHandler[Unit]], target, node_target_))
         trans.toRegen = true
     }
+    val node_target = node_target_(0)
     val firings = this.firings.clone() //TODO check if deep clone is needed
     if (!suppressEarlierFirings && !firings.isEmpty) {
       trans.prioritized(
@@ -50,7 +54,7 @@ class Stream[A] {
         }
       )
     }
-    new ListenerImplementation[A](this, action, target)
+    new ListenerImplementation[A](this, action, node_target)
   }
 
   /**
@@ -302,7 +306,7 @@ class Stream[A] {
 }
 
 object Stream {
-  final class ListenerImplementation[A](val event: Stream[A], val action: TransactionHandler[A], val target: Node)
+  final class ListenerImplementation[A](val event: Stream[A], val action: TransactionHandler[A], val target: Target)
       extends Listener {
 
     /**
@@ -330,7 +334,9 @@ object Stream {
     val out = new StreamSink[A]()
     val left = new Node(0)
     val right = out.node
-    left.linkTo(null, right)
+    val node_target_ = new Array[Target](1)
+    left.linkTo(null, right, node_target_)
+    val node_target = node_target_(0)
     val h = new TransactionHandler[A]() {
       def run(trans: Transaction, a: A): Unit = {
         out.send(trans, a)
@@ -343,7 +349,7 @@ object Stream {
       .addCleanup(l2)
       .addCleanup(new Listener() {
         def unlisten(): Unit = {
-          left.unlinkTo(right)
+          left.unlinkTo(node_target)
         }
       })
 

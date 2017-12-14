@@ -1,5 +1,7 @@
 package sodium
 
+import sodium.Node.Target
+
 class Cell[A](protected var currentValue: Option[A], final protected val event: Stream[A]) {
   import Cell._
 
@@ -162,8 +164,7 @@ object Cell {
     * Apply a value inside a behavior to a function inside a behavior. This is the
     * primitive for all function lifting.
     */
-  def apply[A, B](bf: Cell[A => B], ba: Cell[A]): Cell[B] = {
-
+  def apply[A, B](bf: Cell[A => B], ba: Cell[A]): Cell[B] =
     Transaction(trans0 => {
 
       val out = new StreamSink[B]
@@ -194,7 +195,9 @@ object Cell {
       }
       val out_target = out.node
       val in_target = new Node(0)
-      in_target.linkTo(null, out_target)
+      val node_target_ = new Array[Target](1)
+      in_target.linkTo(null, out_target, node_target_)
+      val node_target: Node.Target = node_target_(0)
       val h: ApplyHandler = new ApplyHandler(trans0)
       val l1 = bf
         .value()
@@ -218,14 +221,12 @@ object Cell {
         .addCleanup(l2)
         .addCleanup(new Listener() {
           def unlisten(): Unit = {
-            in_target.unlinkTo(out_target)
+            in_target.unlinkTo(node_target)
           }
         })
         .holdLazy(() => bf.sampleNoTrans().apply(ba.sampleNoTrans()))
 
     })
-
-  }
 
   /**
     * Unwrap a behavior inside another behavior to give a time-varying behavior implementation.

@@ -10,15 +10,16 @@ class Node(private var rank: Long) extends Comparable[Node] {
   /**
     * @return true if any changes were made.
     */
-  def linkTo(action: TransactionHandler[Unit], target: Node): Boolean = {
+  def linkTo(action: TransactionHandler[Unit], target: Node, outTarget: Array[Target]): Boolean = {
     val changed = target.ensureBiggerThan(rank, Set())
-    listeners += Target(action, target)
+    val t = Target(action, target)
+    listeners += t
+    outTarget(0) = t
     changed
   }
 
-  def unlinkTo(target: Node): Unit = {
-    listeners.collectFirst { case t if t.node == target => listeners -= t }
-    ()
+  def unlinkTo(target: Target): Unit = {
+    listeners -= target
   }
 
   private def ensureBiggerThan(limit: Long, visited: Set[Node]): Boolean =
