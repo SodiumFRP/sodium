@@ -4,12 +4,12 @@ import sodium.Node.Target
 
 import scala.collection.mutable.ListBuffer
 
-class Stream[A] private (val node: Node, protected val finalizers: ListBuffer[Listener]) {
+class Stream[A] private (val node: Node,
+                         protected val finalizers: ListBuffer[Listener],
+                         protected val firings: ListBuffer[A]) {
   import Stream._
 
-  def this() = this(new Node(0L), ListBuffer[Listener]())
-
-  protected var firings = ListBuffer[A]()
+  def this() = this(new Node(0L), ListBuffer[Listener](), ListBuffer[A]())
 
   /**
     * Listen for firings of this event. The returned Listener has an unlisten()
@@ -303,7 +303,7 @@ class Stream[A] private (val node: Node, protected val finalizers: ListBuffer[Li
   def addCleanup(cleanup: Listener): Stream[A] = {
     val fsNew: ListBuffer[Listener] = finalizers
     fsNew += cleanup
-    new Stream[A](node, fsNew)
+    new Stream[A](node, fsNew, firings)
   }
 
   protected override def finalize(): Unit = {
