@@ -217,9 +217,9 @@ object Cell {
           }
         })
       out
-        .addCleanup(l1)
-        .addCleanup(l2)
-        .addCleanup(new Listener() {
+        .unsafeAddCleanup(l1)
+        .unsafeAddCleanup(l2)
+        .unsafeAddCleanup(new Listener() {
           def unlisten(): Unit = {
             in_target.unlinkTo(node_target)
           }
@@ -261,7 +261,7 @@ object Cell {
         }
       }
       val l = bba.value().listen_(out.node, h)
-      out.addCleanup(l).holdLazy(za)
+      out.unsafeAddCleanup(l).holdLazy(za)
     })
   }
 
@@ -293,7 +293,7 @@ object Cell {
         }
       }
       val l1 = bea.updates().listen(out.node, trans1, h1, false)
-      out.addCleanup(l1)
+      out.unsafeAddCleanup(l1)
     }
 
     Transaction(trans => switchS(trans, bea))

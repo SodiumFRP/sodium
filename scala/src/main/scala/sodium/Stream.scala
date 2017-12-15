@@ -4,11 +4,11 @@ import sodium.Node.Target
 
 import scala.collection.mutable.ListBuffer
 
-class Stream[A] {
+class Stream[A] private (val node: Node, protected val finalizers: ListBuffer[Listener]) {
   import Stream._
 
-  protected val finalizers = ListBuffer[Listener]()
-  final val node = new Node(0L)
+  def this() = this(new Node(0L), ListBuffer[Listener]())
+
   protected var firings = ListBuffer[A]()
 
   /**
@@ -67,7 +67,7 @@ class Stream[A] {
         out.send(trans, f(a))
       }
     })
-    out.addCleanup(l)
+    out.unsafeAddCleanup(l)
   }
 
   /**
@@ -100,7 +100,7 @@ class Stream[A] {
         out.send(trans, f(a, b.sampleNoTrans()))
       }
     })
-    out.addCleanup(l)
+    out.unsafeAddCleanup(l)
   }
 
   /**
@@ -136,7 +136,7 @@ class Stream[A] {
         }
       }
     )
-    out.addCleanup(l)
+    out.unsafeAddCleanup(l)
   }
 
   /**
@@ -160,7 +160,7 @@ class Stream[A] {
         }
       }
     )
-    out.addCleanup(l1)
+    out.unsafeAddCleanup(l1)
   }
 
   /**
@@ -197,7 +197,7 @@ class Stream[A] {
       },
       false
     )
-    out.addCleanup(l)
+    out.unsafeAddCleanup(l)
   }
 
   /**
@@ -227,7 +227,7 @@ class Stream[A] {
         if (f(a)) out.send(trans, a)
       }
     })
-    out.addCleanup(l)
+    out.unsafeAddCleanup(l)
   }
 
   /**
@@ -292,12 +292,18 @@ class Stream[A] {
           }
         }
       ))
-    out.addCleanup(la.get)
+    out.unsafeAddCleanup(la.get)
+  }
+
+  def unsafeAddCleanup(cleanup: Listener): Stream[A] = {
+    finalizers += cleanup
+    this
   }
 
   def addCleanup(cleanup: Listener): Stream[A] = {
-    finalizers += cleanup
-    this
+    val fsNew: ListBuffer[Listener] = finalizers
+    fsNew += cleanup
+    new Stream[A](node, fsNew)
   }
 
   protected override def finalize(): Unit = {
@@ -306,6 +312,7 @@ class Stream[A] {
 }
 
 object Stream {
+
   final class ListenerImplementation[A](val event: Stream[A], val action: TransactionHandler[A], val target: Target)
       extends Listener {
 
@@ -345,9 +352,9 @@ object Stream {
     val l1 = ea.listen_(left, h)
     val l2 = eb.listen_(right, h)
     out
-      .addCleanup(l1)
-      .addCleanup(l2)
-      .addCleanup(new Listener() {
+      .unsafeAddCleanup(l1)
+      .unsafeAddCleanup(l2)
+      .unsafeAddCleanup(new Listener() {
         def unlisten(): Unit = {
           left.unlinkTo(node_target)
         }
@@ -365,7 +372,7 @@ object Stream {
         oa.foreach(out.send(trans, _))
       }
     })
-    out.addCleanup(l)
+    out.unsafeAddCleanup(l)
   }
 
 }
