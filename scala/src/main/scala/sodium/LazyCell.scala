@@ -1,13 +1,14 @@
 package sodium
 
-class LazyCell[A](lazyInitValueFunction: () => A, event: Stream[A]) extends Cell[A](None, event) {
+class LazyCell[A](event: Stream[A], _lazyInitValue: Option[Lazy[A]]) extends Cell[A](event, None) {
 
-  override def sampleNoTrans(): A =
-    currentValue match {
-      case None =>
-        currentValue = Some(lazyInitValueFunction())
-        currentValue.get
-      case _ => currentValue.get
+  this.lazyInitValue = _lazyInitValue
+
+  override /*protected*/ def sampleNoTrans(): A = {
+    if (currentValue.isEmpty && lazyInitValue.isDefined) {
+      currentValue = Some(lazyInitValue.get.f.apply())
+      lazyInitValue = None
     }
-
+    currentValue.get
+  }
 }

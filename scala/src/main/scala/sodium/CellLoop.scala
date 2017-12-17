@@ -1,6 +1,6 @@
 package sodium
 
-final class CellLoop[A] extends Cell[A](None, new StreamLoop[A]()) {
+final class CellLoop[A] extends Cell[A](new StreamLoop[A](), None) {
 
   def loop(a_out: Cell[A]): Unit = {
     event match {

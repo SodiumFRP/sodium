@@ -2,12 +2,11 @@ package sodium
 
 import sodium.Node.Target
 
-class Cell[A](protected var currentValue: Option[A], final protected val event: Stream[A]) {
-  import Cell._
+class Cell[A](final protected val event: Stream[A], protected var currentValue: Option[A]) {
 
   private var valueUpdate: Option[A] = None
   private var cleanup: Option[Listener] = None
-  protected var lazyInitValue: Option[() => A] = None // Used by LazyCell
+  var lazyInitValue: Option[Lazy[A]] = None // Used by LazyCell
 
   Transaction({ trans1 =>
     cleanup = Some(
@@ -32,12 +31,15 @@ class Cell[A](protected var currentValue: Option[A], final protected val event: 
       ))
   })
 
-  def this(initValue: A, event: Stream[A]) {
-    this(Some(initValue), event)
+  /**
+    * A cell with a constant value.
+    */
+  def this(initValue: A) {
+    this(new Stream[A](), Some(initValue))
   }
 
-  def this(initValue: A) {
-    this(Some(initValue), new Stream[A]())
+  def this(event: Stream[A], initValue: A) {
+    this(event, Some(initValue))
   }
 
   /**
@@ -46,7 +48,7 @@ class Cell[A](protected var currentValue: Option[A], final protected val event: 
   final def newValue(): A = valueUpdate.getOrElse(sampleNoTrans)
 
   /**
-    * Sample the behavior's current value.
+    * Sample the cell's current value.
     *
     * This should generally be avoided in favour of value().listen(..) so you don't
     * miss any updates, but in many circumstances it makes sense.
@@ -58,18 +60,43 @@ class Cell[A](protected var currentValue: Option[A], final protected val event: 
     */
   final def sample(): A = Transaction(_ => sampleNoTrans())
 
+  /**
+    * A variant of sample() that works for CellLoops when they haven't been looped yet.
+    * @see [[Stream#holdLazy]]
+    */
+  def sampleLazy(): Lazy[A] = {
+    val me = this
+    Transaction(trans => {
+      val s = new Cell.LazySample[A](me)
+      trans.last(() => {
+        def foo() = {
+          s.value = me.valueUpdate.getOrElse(me.sampleNoTrans)
+          s.hasValue = true
+          s.cell = null
+        }
+
+        foo()
+      })
+      new Lazy[A](
+        () =>
+          if (s.hasValue) s.value
+          else s.cell.sample)
+    })
+  }
+
+  /*protected*/
   def sampleNoTrans(): A = currentValue.get
 
   /**
-    * An event that gives the updates for the behavior. If this behavior was created
+    * An event that gives the updates for the cell. If this cell was created
     * with a hold, then updates() gives you an event equivalent to the one that was held.
     */
   final def updates(): Stream[A] = event
 
   /**
     * An event that is guaranteed to fire once when you listen to it, giving
-    * the current value of the behavior, and thereafter behaves like updates(),
-    * firing for each update to the behavior's value.
+    * the current value of the cell, and thereafter behaves like updates(),
+    * firing for each update to the cell's value.
     */
   final def value(): Stream[A] = Transaction(trans => value(trans))
 
@@ -82,44 +109,28 @@ class Cell[A](protected var currentValue: Option[A], final protected val event: 
   }
 
   /**
-    * Transform the behavior's value according to the supplied function.
+    * Transform the cell's value according to the supplied function.
     */
   final def map[B](f: A => B): Cell[B] =
-    updates().map(f).holdLazy(() => f(sampleNoTrans()))
+    updates().map(f).holdLazy(sampleLazy().map(f))
 
   /**
-    * Lift a binary function into behaviors.
-    */
-  final def lift[B, C](f: (A, B) => C, b: Cell[B]): Cell[C] = {
-    def ffa(aa: A)(bb: B) = f(aa, bb)
-    apply(map(ffa), b)
-  }
-
-  /**
-    * Lift a ternary function into behaviors.
-    */
-  final def lift[B, C, D](f: (A, B, C) => D, b: Cell[B], c: Cell[C]): Cell[D] = {
-    def ffa(aa: A)(bb: B)(cc: C) = f(aa, bb, cc)
-    apply(apply(map(ffa), b), c)
-  }
-
-  /**
-    * Lift a quaternary function into behaviors.
-    */
-  final def lift[B, C, D, E](f: (A, B, C, D) => E, b: Cell[B], c: Cell[C], d: Cell[D]): Cell[E] = {
-    def ffa(aa: A)(bb: B)(cc: C)(dd: D) = f(aa, bb, cc, dd)
-    apply(apply(apply(map(ffa), b), c), d)
-  }
-
-  /**
-    * Transform a behavior with a generalized state loop (a mealy machine). The function
+    * Transform a cell with a generalized state loop (a mealy machine). The function
     * is passed the input and the old state and returns the new state and output value.
     */
-  final def collect[B, S](initState: S, f: (A, S) => (B, S)): Cell[B] =
+  final def collect[B, S](initState: S, f: (A, S) => (B, S)): Cell[B] = collect(new Lazy[S](initState), f)
+
+  /**
+    * Transform a cell with a generalized state loop (a mealy machine). The function
+    * is passed the input and the old state and returns the new state and output value.
+    * Variant that takes a lazy initial state.
+    */
+  final def collect[B, S](initState: Lazy[S], f: (A, S) => (B, S)): Cell[B] =
     Transaction[Cell[B]](_ => {
       val ea = updates().coalesce((fst, snd) => snd)
       val ebs = new StreamLoop[(B, S)]()
-      val bbs = ebs.holdLazy(() => f(sampleNoTrans(), initState))
+      val zbs = Lazy.lift(f, sampleLazy(), initState)
+      val bbs = ebs.holdLazy(zbs)
       val bs = bbs.map(x => x._2)
       val ebs_out = ea.snapshot(bs, f)
       ebs.loop(ebs_out)
@@ -142,26 +153,55 @@ class Cell[A](protected var currentValue: Option[A], final protected val event: 
 
 object Cell {
 
+  private class LazySample[A] private[sodium] (var cell: Cell[A]) {
+    private[sodium] var hasValue = false
+    private[sodium] var value: A = _
+  }
+
   /**
     * Lift a binary function into behaviors.
     */
-  final def lift[A, B, C](f: (A, B) => C, a: Cell[A], b: Cell[B]): Cell[C] =
-    a.lift(f, b)
+  //final def lift[A, B, C](f: (A, B) => C, a: Cell[A], b: Cell[B]): Cell[C] =
+  //  a.lift(f, b)
 
   /**
     * Lift a ternary function into behaviors.
     */
-  final def lift[A, B, C, D](f: (A, B, C) => D, a: Cell[A], b: Cell[B], c: Cell[C]): Cell[D] =
-    a.lift(f, b, c)
+  //final def lift[A, B, C, D](f: (A, B, C) => D, a: Cell[A], b: Cell[B], c: Cell[C]): Cell[D] =
+  //  a.lift(f, b, c)
 
   /**
     * Lift a quaternary function into behaviors.
     */
-  final def lift[A, B, C, D, E](f: (A, B, C, D) => E, a: Cell[A], b: Cell[B], c: Cell[C], d: Cell[D]): Cell[E] =
-    a.lift(f, b, c, d)
+  //final def lift[A, B, C, D, E](f: (A, B, C, D) => E, a: Cell[A], b: Cell[B], c: Cell[C], d: Cell[D]): Cell[E] =
+  //  a.lift(f, b, c, d)
 
   /**
-    * Apply a value inside a behavior to a function inside a behavior. This is the
+    * Lift a binary function into cells.
+    */
+  final def lift[A, B, C](f: (A, B) => C, a: Cell[A], b: Cell[B]): Cell[C] = {
+    def ffa(aa: A)(bb: B) = f(aa, bb)
+    apply(a.map(ffa), b)
+  }
+
+  /**
+    * Lift a ternary function into cells.
+    */
+  final def lift[A, B, C, D](f: (A, B, C) => D, a: Cell[A], b: Cell[B], c: Cell[C]): Cell[D] = {
+    def ffa(aa: A)(bb: B)(cc: C) = f(aa, bb, cc)
+    apply(apply(a.map(ffa), b), c)
+  }
+
+  /**
+    * Lift a quaternary function into cells.
+    */
+  final def lift[A, B, C, D, E](f: (A, B, C, D) => E, a: Cell[A], b: Cell[B], c: Cell[C], d: Cell[D]): Cell[E] = {
+    def ffa(aa: A)(bb: B)(cc: C)(dd: D) = f(aa, bb, cc, dd)
+    apply(apply(apply(a.map(ffa), b), c), d)
+  }
+
+  /**
+    * Apply a value inside a cell to a function inside a cell. This is the
     * primitive for all function lifting.
     */
   def apply[A, B](bf: Cell[A => B], ba: Cell[A]): Cell[B] =
@@ -224,16 +264,16 @@ object Cell {
             in_target.unlinkTo(node_target)
           }
         })
-        .holdLazy(() => bf.sampleNoTrans().apply(ba.sampleNoTrans()))
+        .holdLazy(new Lazy(() => bf.sampleNoTrans().apply(ba.sampleNoTrans())))
 
     })
 
   /**
-    * Unwrap a behavior inside another behavior to give a time-varying behavior implementation.
+    * Unwrap a cell inside another behavior to give a time-varying cell implementation.
     */
   def switchC[A](bba: Cell[Cell[A]]): Cell[A] = {
     Transaction(trans0 => {
-      def za = () => bba.sampleNoTrans().sampleNoTrans
+      val za = bba.sampleLazy.map((ba: Cell[A]) => ba.sample)
 
       val out = new StreamSink[A]()
       val h = new TransactionHandler[Cell[A]]() {
@@ -266,7 +306,7 @@ object Cell {
   }
 
   /**
-    * Unwrap an event inside a behavior to give a time-varying event implementation.
+    * Unwrap an event inside a cell to give a time-varying event implementation.
     */
   def switchS[A](bea: Cell[Stream[A]]): Stream[A] = {
     def switchS(trans1: Transaction, bea: Cell[Stream[A]]): Stream[A] = {

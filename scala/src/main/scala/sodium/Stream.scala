@@ -78,10 +78,10 @@ class Stream[A] private (val node: Node,
     * the transaction.
     */
   final def hold(initValue: A): Cell[A] =
-    Transaction(trans => new Cell[A](initValue, lastFiringOnly(trans)))
+    Transaction(trans => new Cell[A](lastFiringOnly(trans), initValue))
 
-  final def holdLazy(initValue: () => A): Cell[A] =
-    Transaction(trans => new LazyCell[A](initValue, lastFiringOnly(trans)))
+  final def holdLazy(initValue: Lazy[A]): Cell[A] =
+    Transaction(trans => new LazyCell[A](lastFiringOnly(trans), Some(initValue)))
 
   /**
     * Variant of snapshot that throws away the event's value and captures the behavior's.
@@ -247,10 +247,16 @@ class Stream[A] private (val node: Node,
     * Transform an event with a generalized state loop (a mealy machine). The function
     * is passed the input and the old state and returns the new state and output value.
     */
-  final def collect[B, S](initState: S, f: (A, S) => (B, S)): Stream[B] =
+  final def collect[B, S](initState: S, f: (A, S) => (B, S)): Stream[B] = collectLazy(new Lazy[S](initState), f)
+
+  /**
+    * Transform an event with a generalized state loop (a mealy machine). The function
+    * is passed the input and the old state and returns the new state and output value.
+    */
+  final def collectLazy[B, S](initState: Lazy[S], f: (A, S) => (B, S)): Stream[B] =
     Transaction(_ => {
       val es = new StreamLoop[S]()
-      val s = es.hold(initState)
+      val s = es.holdLazy(initState)
       val ebs = snapshot(s, f)
       val eb = ebs.map(bs => bs._1)
       val es_out = ebs.map(bs => bs._2)
@@ -261,13 +267,19 @@ class Stream[A] private (val node: Node,
   /**
     * Accumulate on input event, outputting the new state each time.
     */
-  final def accum[S](initState: S, f: (A, S) => S): Cell[S] =
+  final def accum[S](initState: S, f: (A, S) => S): Cell[S] = accumLazy(new Lazy[S](initState), f)
+
+  /**
+    * Accumulate on input event, outputting the new state each time.
+    * Variant that takes a lazy initial state.
+    */
+  final def accumLazy[S](initState: Lazy[S], f: (A, S) => S): Cell[S] =
     Transaction(_ => {
       val es = new StreamLoop[S]()
-      val s = es.hold(initState)
+      val s = es.holdLazy(initState)
       val es_out = snapshot(s, f)
       es.loop(es_out)
-      es_out.hold(initState)
+      es_out.holdLazy(initState)
     })
 
   /**

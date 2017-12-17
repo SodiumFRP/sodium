@@ -83,7 +83,7 @@ object Transaction {
     * transaction automatically. It is useful where you want to run multiple
     * reactive operations atomically.
     */
-  def apply[B](f: Transaction => B): B = {
+  def apply[A](code: Transaction => A): A = {
     transactionLock.synchronized {
       // If we are already inside a transaction (which must be on the same
       // thread otherwise we wouldn't have acquired transactionLock), then
@@ -92,7 +92,7 @@ object Transaction {
       try {
         if (currentTransaction == None)
           currentTransaction = Some(new Transaction())
-        f(currentTransaction.get)
+        code(currentTransaction.get)
       } finally {
         if (transWas == None)
           currentTransaction.foreach(_.close())

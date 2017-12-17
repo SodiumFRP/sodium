@@ -338,7 +338,7 @@ class CellTester {
   def testCollect(): Unit = {
     val ea = new StreamSink[Int]()
     val out = new ListBuffer[Int]()
-    val sum = ea.hold(100).collect[Int, Int](0, (a, s) => (a + s, a + s))
+    val sum = ea.hold(100).collect[Int, Int](0, (a: Int, s: Int) => (a + s, a + s))
     val l = sum.listen(out.+=(_))
     List(5, 7, 1, 2, 3).foreach(ea.send(_))
     l.unlisten()
