@@ -2,6 +2,8 @@ libraryDependencies += "com.novocode" % "junit-interface" % "0.11" % "test->defa
 
 scalafmtOnCompile in ThisBuild := true
 
+scalacOptions in (Compile, doc) := Seq("-diagrams", "-implicits", "-implicits-show-all")
+
 lazy val root = (project in file(".")).settings(
   name := "sodium",
   organization := "nz.sodium",
