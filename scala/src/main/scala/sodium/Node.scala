@@ -1,6 +1,7 @@
 package sodium
 
 import scala.collection.mutable.ListBuffer
+import scala.ref.WeakReference
 
 class Node(private var rank: Long) extends Comparable[Node] {
   import Node._
@@ -38,6 +39,10 @@ class Node(private var rank: Long) extends Comparable[Node] {
 object Node {
   val NullNode = new Node(Long.MaxValue)
 
-  case class Target(final var action: TransactionHandler[Unit], final var node: Node)
+  case class Target(final var action: WeakReference[TransactionHandler[Unit]], final var node: Node)
+
+  object Target {
+    def apply(action: TransactionHandler[Unit], node: Node) = new Target(new WeakReference(action), node)
+  }
 
 }

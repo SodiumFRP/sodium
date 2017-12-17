@@ -2,7 +2,7 @@ package sodium
 
 import sodium.Node.Target
 
-class Cell[A](final protected val event: Stream[A], protected var currentValue: Option[A]) {
+class Cell[A](final protected val str: Stream[A], protected var currentValue: Option[A]) {
 
   private var valueUpdate: Option[A] = None
   private var cleanup: Option[Listener] = None
@@ -10,7 +10,7 @@ class Cell[A](final protected val event: Stream[A], protected var currentValue: 
 
   Transaction({ trans1 =>
     cleanup = Some(
-      event.listen(
+      str.listen(
         Node.NullNode,
         trans1,
         new TransactionHandler[A]() {
@@ -88,13 +88,13 @@ class Cell[A](final protected val event: Stream[A], protected var currentValue: 
   def sampleNoTrans(): A = currentValue.get
 
   /**
-    * An event that gives the updates for the cell. If this cell was created
-    * with a hold, then updates() gives you an event equivalent to the one that was held.
+    * A stream that gives the updates for the cell. If this cell was created
+    * with a hold, then updates() gives you a stream equivalent to the one that was held.
     */
-  final def updates(): Stream[A] = event
+  final def updates(): Stream[A] = str
 
   /**
-    * An event that is guaranteed to fire once when you listen to it, giving
+    * A stream that is guaranteed to fire once when you listen to it, giving
     * the current value of the cell, and thereafter behaves like updates(),
     * firing for each update to the cell's value.
     */
@@ -142,7 +142,7 @@ class Cell[A](final protected val event: Stream[A], protected var currentValue: 
   }
 
   /**
-    * Listen for firings of this event. The returned Listener has an unlisten()
+    * Listen for firings of this stream. The returned Listener has an unlisten()
     * method to cause the listener to be removed. This is the observer pattern.
     */
   final def listen(action: A => Unit): Listener = {
@@ -157,24 +157,6 @@ object Cell {
     private[sodium] var hasValue = false
     private[sodium] var value: A = _
   }
-
-  /**
-    * Lift a binary function into behaviors.
-    */
-  //final def lift[A, B, C](f: (A, B) => C, a: Cell[A], b: Cell[B]): Cell[C] =
-  //  a.lift(f, b)
-
-  /**
-    * Lift a ternary function into behaviors.
-    */
-  //final def lift[A, B, C, D](f: (A, B, C) => D, a: Cell[A], b: Cell[B], c: Cell[C]): Cell[D] =
-  //  a.lift(f, b, c)
-
-  /**
-    * Lift a quaternary function into behaviors.
-    */
-  //final def lift[A, B, C, D, E](f: (A, B, C, D) => E, a: Cell[A], b: Cell[B], c: Cell[C], d: Cell[D]): Cell[E] =
-  //  a.lift(f, b, c, d)
 
   /**
     * Lift a binary function into cells.
@@ -269,7 +251,7 @@ object Cell {
     })
 
   /**
-    * Unwrap a cell inside another behavior to give a time-varying cell implementation.
+    * Unwrap a stream inside another behavior to give a time-varying stream implementation.
     */
   def switchC[A](bba: Cell[Cell[A]]): Cell[A] = {
     Transaction(trans0 => {

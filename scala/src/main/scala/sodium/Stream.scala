@@ -325,16 +325,25 @@ class Stream[A] private (val node: Node,
 
 object Stream {
 
-  final class ListenerImplementation[A](val event: Stream[A], val action: TransactionHandler[A], val target: Target)
+  final class ListenerImplementation[A](var event: Stream[A], var action: TransactionHandler[A], var target: Target)
       extends Listener {
 
     /**
       * It's essential that we keep the listener alive while the caller holds
       * the Listener, so that the finalizer doesn't get triggered.
       */
+    /**
+      * It's also essential that we keep the action alive, since the node uses
+      * a weak reference.
+      */
     override def unlisten(): Unit = {
       Transaction.listenersLock.synchronized {
-        event.node.unlinkTo(target)
+        if (this.event != null) {
+          event.node.unlinkTo(target)
+          event = null
+          action = null
+          target = null
+        }
       }
     }
 

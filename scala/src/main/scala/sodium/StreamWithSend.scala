@@ -23,10 +23,16 @@ class StreamWithSend[A] extends Stream[A] {
         target.node,
         trans2 => {
           Transaction.inCallback += 1
-          try // Don't allow transactions to interfere with Sodium
-          // internals.
-          target.action.asInstanceOf[TransactionHandler[A]].run(trans, a)
-          catch {
+          try {
+            // Don't allow transactions to interfere with Sodium internals.
+            // Dereference the weak reference
+            val uta = target.action.get
+            if (uta.isDefined) // If it hasn't been gc'ed..., call it
+              uta.get match {
+                case t: TransactionHandler[_] => t.asInstanceOf[TransactionHandler[A]].run(trans, a)
+                case _                        =>
+              }
+          } catch {
             case t: Throwable =>
               t.printStackTrace()
           } finally {
@@ -37,6 +43,3 @@ class StreamWithSend[A] extends Stream[A] {
     }
   }
 }
-//}
-
-//}
