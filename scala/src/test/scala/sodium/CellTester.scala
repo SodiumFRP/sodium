@@ -257,6 +257,24 @@ class CellTester {
   }
 
   @Test
+  def testLiftFromSimultaneous(): Unit = {
+    val t: ((CellSink[Int], CellSink[Int])) = Transaction(trans => {
+      val b1 = new CellSink(3)
+      val b2 = new CellSink(5)
+      b2.send(7)
+      (b1, b2)
+    })
+    val b1 = t._1
+    val b2 = t._2
+    val out = new ListBuffer[Int]()
+    val l = Cell
+      .lift((x: Int, y: Int) => x + y, b1, b2)
+      .listen((x: Int) => out.+=(x))
+    l.unlisten()
+    assertEquals(List(10), out)
+  }
+
+  @Test
   def testHoldIsDelayed(): Unit = {
     val e = new StreamSink[Int]()
     val h = e.hold(0)
