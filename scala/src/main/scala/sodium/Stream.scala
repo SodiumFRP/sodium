@@ -81,7 +81,10 @@ class Stream[A] private (val node: Node,
     Transaction(trans => new Cell[A](lastFiringOnly(trans), initValue))
 
   final def holdLazy(initValue: Lazy[A]): Cell[A] =
-    Transaction(trans => new LazyCell[A](lastFiringOnly(trans), Some(initValue)))
+    Transaction(trans => holdLazy(trans, initValue))
+
+  final def holdLazy(trans: Transaction, initValue: Lazy[A]): Cell[A] =
+    new LazyCell[A](lastFiringOnly(trans), Some(initValue))
 
   /**
     * Variant of snapshot that throws away the event's value and captures the behavior's.

@@ -64,55 +64,43 @@ class Cell[A](final protected val str: Stream[A], protected var currentValue: Op
     * A variant of sample() that works for CellLoops when they haven't been looped yet.
     * @see [[Stream#holdLazy]]
     */
-  def sampleLazy(): Lazy[A] = {
+  final def sampleLazy(): Lazy[A] = {
     val me = this
-    Transaction(trans => {
-      val s = new Cell.LazySample[A](me)
-      trans.last(() => {
-        def foo() = {
-          s.value = me.valueUpdate.getOrElse(me.sampleNoTrans)
-          s.hasValue = true
-          s.cell = null
-        }
+    Transaction(trans => me.sampleLazy(trans))
+  }
 
-        foo()
-      })
-      new Lazy[A](
-        () =>
-          if (s.hasValue) s.value
-          else s.cell.sample)
+  final def sampleLazy(trans: Transaction): Lazy[A] = {
+    val me = this
+    val s = new Cell.LazySample[A](me)
+    trans.last(() => {
+      s.value = me.valueUpdate.getOrElse(me.sampleNoTrans)
+      s.hasValue = true
+      s.cell = null
     })
+    new Lazy[A](
+      () =>
+        if (s.hasValue) s.value
+        else s.cell.sample)
   }
 
   /*protected*/
   def sampleNoTrans(): A = currentValue.get
 
-  /**
-    * A stream that gives the updates for the cell. If this cell was created
-    * with a hold, then updates() gives you a stream equivalent to the one that was held.
-    */
-  final def updates(): Stream[A] = str
-
-  /**
-    * A stream that is guaranteed to fire once when you listen to it, giving
-    * the current value of the cell, and thereafter behaves like updates(),
-    * firing for each update to the cell's value.
-    */
-  final def value(): Stream[A] = Transaction(trans => value(trans))
+  final def updates(trans: Transaction): Stream[A] = str.lastFiringOnly(trans)
 
   final def value(trans1: Transaction): Stream[A] = {
     val sSpark = new StreamSink[Unit]()
     trans1.prioritized(sSpark.node, trans2 => sSpark.send(trans2, ()))
 
     val sInitial = sSpark.snapshot[A](this)
-    sInitial.merge(updates().lastFiringOnly(trans1))
+    sInitial.merge(updates(trans1))
   }
 
   /**
     * Transform the cell's value according to the supplied function.
     */
   final def map[B](f: A => B): Cell[B] =
-    updates().map(f).holdLazy(sampleLazy().map(f))
+    Transaction(trans => updates(trans).map(f).holdLazy(trans, sampleLazy(trans).map(f)))
 
   /**
     * Transform a cell with a generalized state loop (a mealy machine). The function
@@ -126,8 +114,8 @@ class Cell[A](final protected val str: Stream[A], protected var currentValue: Op
     * Variant that takes a lazy initial state.
     */
   final def collect[B, S](initState: Lazy[S], f: (A, S) => (B, S)): Cell[B] =
-    Transaction[Cell[B]](_ => {
-      val ea = updates().coalesce((fst, snd) => snd)
+    Transaction[Cell[B]](trans0 => {
+      val ea = updates(trans0).coalesce((fst, snd) => snd)
       val ebs = new StreamLoop[(B, S)]()
       val zbs = Lazy.lift(f, sampleLazy(), initState)
       val bbs = ebs.holdLazy(zbs)
@@ -146,7 +134,7 @@ class Cell[A](final protected val str: Stream[A], protected var currentValue: Op
     * method to cause the listener to be removed. This is the observer pattern.
     */
   final def listen(action: A => Unit): Listener = {
-    Transaction(trans => value.listen(action))
+    Transaction(trans => value(trans).listen(action))
   }
 
 }
@@ -240,7 +228,7 @@ object Cell {
       val node_target: Node.Target = node_target_(0)
       val h: ApplyHandler = new ApplyHandler(trans0)
       val l1 = bf
-        .value()
+        .value(trans0)
         .listen_(in_target, new TransactionHandler[A => B]() {
           def run(trans1: Transaction, f: A => B): Unit = {
             h.f = f
@@ -250,7 +238,7 @@ object Cell {
         })
 
       val l2 = ba
-        .value()
+        .value(trans0)
         .listen_(in_target, new TransactionHandler[A]() {
           def run(trans1: Transaction, a: A): Unit = {
             h.a = a
@@ -302,7 +290,7 @@ object Cell {
           currentListener.foreach(_.unlisten())
         }
       }
-      val l = bba.value().listen_(out.node, h)
+      val l = bba.value(trans0).listen_(out.node, h)
       out.unsafeAddCleanup(l).holdLazy(za)
     })
   }
@@ -334,7 +322,7 @@ object Cell {
           currentListener.unlisten()
         }
       }
-      val l1 = bea.updates().listen(out.node, trans1, h1, false)
+      val l1 = bea.updates(trans1).listen(out.node, trans1, h1, false)
       out.unsafeAddCleanup(l1)
     }
 
