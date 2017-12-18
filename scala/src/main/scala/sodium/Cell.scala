@@ -183,6 +183,33 @@ object Cell {
   }
 
   /**
+    * Lift a 5-argument function into cells.
+    */
+  final def lift[A, B, C, D, E, F](f: (A, B, C, D, E) => F,
+                                   a: Cell[A],
+                                   b: Cell[B],
+                                   c: Cell[C],
+                                   d: Cell[D],
+                                   e: Cell[E]): Cell[F] = {
+    def ffa(aa: A)(bb: B)(cc: C)(dd: D)(ee: E) = f(aa, bb, cc, dd, ee)
+    apply(apply(apply(apply(a.map(ffa), b), c), d), e)
+  }
+
+  /**
+    * Lift a 6-argument function into cells.
+    */
+  final def lift[A, B, C, D, E, F, G](fn: (A, B, C, D, E, F) => G,
+                                      a: Cell[A],
+                                      b: Cell[B],
+                                      c: Cell[C],
+                                      d: Cell[D],
+                                      e: Cell[E],
+                                      f: Cell[F]): Cell[G] = {
+    def ffa(aa: A)(bb: B)(cc: C)(dd: D)(ee: E)(ff: F) = fn(aa, bb, cc, dd, ee, ff)
+    apply(apply(apply(apply(apply(a.map(ffa), b), c), d), e), f)
+  }
+
+  /**
     * Apply a value inside a cell to a function inside a cell. This is the
     * primitive for all function lifting.
     */
