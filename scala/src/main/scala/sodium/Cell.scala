@@ -218,9 +218,7 @@ object Cell {
 
       val out = new StreamSink[B]
       final class ApplyHandler(val trans0: Transaction) {
-        resetFired(trans0) // We suppress firing during the first transaction
-
-        var fired = true
+        var fired = false
         var a: A = _
         var f: A => B = _
 
@@ -230,16 +228,9 @@ object Cell {
             fired = true
             trans1.prioritized(out.node, { trans2 =>
               out.send(trans2, f(a))
+              fired = false
             })
           }
-
-          resetFired(trans1)
-        }
-
-        def resetFired(trans1: Transaction): Unit = {
-          trans1.last(() => {
-            fired = false
-          })
         }
       }
       val out_target = out.node
@@ -253,7 +244,8 @@ object Cell {
         .listen_(in_target, new TransactionHandler[A => B]() {
           def run(trans1: Transaction, f: A => B): Unit = {
             h.f = f
-            h.run(trans1)
+            if (h.a != null)
+              h.run(trans1)
           }
         })
 
@@ -262,7 +254,8 @@ object Cell {
         .listen_(in_target, new TransactionHandler[A]() {
           def run(trans1: Transaction, a: A): Unit = {
             h.a = a
-            h.run(trans1)
+            if (h.a != null)
+              h.run(trans1)
           }
         })
       out
