@@ -203,24 +203,18 @@ object Cell {
     */
   def apply[A, B](bf: Cell[A => B], ba: Cell[A]): Cell[B] =
     Transaction(trans0 => {
-
       val out = new StreamSink[B]
+
       final class ApplyHandler(val trans0: Transaction) {
-        var fired = false
         var a: A = _
         var f: A => B = _
-
         def run(trans1: Transaction): Unit = {
-          if (fired) ()
-          else {
-            fired = true
-            trans1.prioritized(out.node, { trans2 =>
-              out.send(trans2, f(a))
-              fired = false
-            })
-          }
+          trans1.prioritized(out.node, { trans2 =>
+            out.send(trans2, f(a))
+          })
         }
       }
+
       val out_target = out.node
       val in_target = new Node(0)
       val node_target_ = new Array[Target](1)
