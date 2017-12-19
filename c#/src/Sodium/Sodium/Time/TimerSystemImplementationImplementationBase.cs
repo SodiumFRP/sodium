@@ -6,7 +6,8 @@ using System.Threading.Tasks;
 
 namespace Sodium.Time
 {
-    public abstract class TimerSystemImplementationImplementationBase<T> : ITimerSystemImplementation<T> where T : IComparable
+    public abstract class TimerSystemImplementationImplementationBase<T> : ITimerSystemImplementation<T>
+        where T : IComparable
     {
         private readonly object lockObject = new object();
         private readonly SortedSet<SimpleTimer> timers = new SortedSet<SimpleTimer>();
@@ -56,43 +57,44 @@ namespace Sodium.Time
 
         public void Start(Action<Exception> handleException)
         {
-            Task.Run(async () =>
-            {
-                while (true)
+            Task.Run(
+                async () =>
                 {
-                    try
+                    while (true)
                     {
-                        TimeSpan waitTime = this.TimeUntilNext(this.Now);
-                        if (waitTime > TimeSpan.Zero)
+                        try
                         {
-                            try
+                            TimeSpan waitTime = this.TimeUntilNext(this.Now);
+                            if (waitTime > TimeSpan.Zero)
                             {
-                                lock (this.cancellationTokenSourceLock)
+                                try
                                 {
-                                    this.cancellationTokenSource = new CancellationTokenSource();
-                                }
+                                    lock (this.cancellationTokenSourceLock)
+                                    {
+                                        this.cancellationTokenSource = new CancellationTokenSource();
+                                    }
 
-                                await Task.Delay(waitTime, this.cancellationTokenSource.Token);
-                            }
-                            catch (OperationCanceledException)
-                            {
-                            }
-                            finally
-                            {
-                                lock (this.cancellationTokenSourceLock)
+                                    await Task.Delay(waitTime, this.cancellationTokenSource.Token);
+                                }
+                                catch (OperationCanceledException)
                                 {
-                                    this.cancellationTokenSource = null;
+                                }
+                                finally
+                                {
+                                    lock (this.cancellationTokenSourceLock)
+                                    {
+                                        this.cancellationTokenSource = null;
+                                    }
                                 }
                             }
                         }
+                        catch (Exception e)
+                        {
+                            handleException(e);
+                        }
                     }
-                    catch (Exception e)
-                    {
-                        handleException(e);
-                    }
-                }
-                // ReSharper disable once FunctionNeverReturns - This is a timer loop.  It should run until the application ends.
-            });
+                    // ReSharper disable once FunctionNeverReturns - This is a timer loop.  It should run until the application ends.
+                });
         }
 
         public ITimer SetTimer(T time, Action callback)

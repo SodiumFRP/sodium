@@ -11,14 +11,12 @@ namespace Sodium
         }
     }
 
-    public class CompositeListener<T> : IListener, IListenerWithWeakReference where T : IListener
+    public class CompositeListener<T> : IListener, IListenerWithWeakReference
+        where T : IListener
     {
         private readonly IReadOnlyList<T> listeners;
 
-        public CompositeListener(IReadOnlyList<T> listeners)
-        {
-            this.listeners = listeners;
-        }
+        public CompositeListener(IReadOnlyList<T> listeners) => this.listeners = listeners;
 
         public void Unlisten()
         {
@@ -37,10 +35,8 @@ namespace Sodium
         {
             private readonly IReadOnlyList<IListenerWithWeakReference> weakListeners;
 
-            public CompositeWeakListener(IReadOnlyList<IListenerWithWeakReference> weakListeners)
-            {
+            public CompositeWeakListener(IReadOnlyList<IListenerWithWeakReference> weakListeners) =>
                 this.weakListeners = weakListeners;
-            }
 
             public void Unlisten()
             {

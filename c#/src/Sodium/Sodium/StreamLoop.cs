@@ -15,7 +15,8 @@ namespace Sodium
         {
             if (!Transaction.HasCurrentTransaction())
             {
-                throw new InvalidOperationException("StreamLoop and CellLoop must be used within an explicit transaction");
+                throw new InvalidOperationException(
+                    "StreamLoop and CellLoop must be used within an explicit transaction");
             }
         }
 
@@ -50,11 +51,12 @@ namespace Sodium
                 this.isAssigned = true;
             }
 
-            Transaction.RunVoid(() =>
-            {
-                this.UnsafeAttachListener(stream.Listen(this.Node, this.Send));
-                stream.KeepListenersAlive.Use(this.KeepListenersAlive);
-            });
+            Transaction.RunVoid(
+                () =>
+                {
+                    this.UnsafeAttachListener(stream.Listen(this.Node, this.Send));
+                    stream.KeepListenersAlive.Use(this.KeepListenersAlive);
+                });
         }
 
         /// <summary>

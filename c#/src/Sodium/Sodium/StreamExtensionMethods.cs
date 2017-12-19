@@ -15,10 +15,7 @@ namespace Sodium
         ///     A stream that is the result of merging the collection of streams and dropping the stream's value specified
         ///     earlier in the collection in the simultaneous case.
         /// </returns>
-        public static Stream<T> OrElse<T>(this IEnumerable<Stream<T>> s)
-        {
-            return s.Merge((left, right) => left);
-        }
+        public static Stream<T> OrElse<T>(this IEnumerable<Stream<T>> s) => s.Merge((left, right) => left);
 
         /// <summary>
         ///     Merge a collection of streams of the same type into one, so that events on any input appear on the returned stream.
@@ -46,7 +43,12 @@ namespace Sodium
             return Transaction.Apply(trans => Merge(trans, v, 0, v.Count, f), false);
         }
 
-        private static Stream<T> Merge<T>(Transaction trans, IReadOnlyList<Stream<T>> e, int start, int end, Func<T, T, T> f)
+        private static Stream<T> Merge<T>(
+            Transaction trans,
+            IReadOnlyList<Stream<T>> e,
+            int start,
+            int end,
+            Func<T, T, T> f)
         {
             int n = end - start;
 

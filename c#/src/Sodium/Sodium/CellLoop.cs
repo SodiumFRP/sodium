@@ -16,10 +16,7 @@ namespace Sodium
         }
 
         private CellLoop(StreamLoop<T> streamLoop)
-            : base(streamLoop, null)
-        {
-            this.streamLoop = streamLoop;
-        }
+            : base(streamLoop, null) => this.streamLoop = streamLoop;
 
         /// <summary>
         ///     Resolve the loop to specify what the <see cref="CellLoop{T}" /> was a forward reference to.  This method
@@ -31,12 +28,14 @@ namespace Sodium
         /// <param name="c">The cell that was forward referenced.</param>
         public void Loop(Cell<T> c)
         {
-            Transaction.Apply(trans =>
-            {
-                this.streamLoop.Loop(c.Updates(trans));
-                this.LazyInitialValue = c.SampleLazy(trans);
-                return Unit.Value;
-            }, false);
+            Transaction.Apply(
+                trans =>
+                {
+                    this.streamLoop.Loop(c.Updates(trans));
+                    this.LazyInitialValue = c.SampleLazy(trans);
+                    return Unit.Value;
+                },
+                false);
         }
 
         /// <summary>

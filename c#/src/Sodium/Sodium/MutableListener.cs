@@ -16,10 +16,7 @@ namespace Sodium
             this.listener?.Unlisten();
         }
 
-        public IListenerWithWeakReference GetListenerWithWeakReference()
-        {
-            return this.weakMutableListener;
-        }
+        public IListenerWithWeakReference GetListenerWithWeakReference() => this.weakMutableListener;
 
         private class WeakMutableListener : IListenerWithWeakReference
         {

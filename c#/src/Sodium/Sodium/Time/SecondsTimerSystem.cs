@@ -16,12 +16,11 @@ namespace Sodium.Time
         {
             private readonly DateTime startTime;
 
-            public Implementation()
-            {
-                this.startTime = DateTime.Now;
-            }
+            public Implementation() => this.startTime = DateTime.Now;
 
-            protected override TimeSpan SubtractTimes(double first, double second) => TimeSpan.FromSeconds(first - second);
+            protected override TimeSpan SubtractTimes(double first, double second) =>
+                TimeSpan.FromSeconds(first - second);
+
             public override double Now => (DateTime.Now - this.startTime).TotalSeconds;
         }
     }

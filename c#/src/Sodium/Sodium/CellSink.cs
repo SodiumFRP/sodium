@@ -23,10 +23,7 @@ namespace Sodium
         }
 
         private CellSink(StreamSink<T> streamSink, T initialValue)
-            : base(streamSink, initialValue)
-        {
-            this.streamSink = streamSink;
-        }
+            : base(streamSink, initialValue) => this.streamSink = streamSink;
 
         /// <summary>
         ///     Send a value, modifying the value of the cell.  This method may not be called from inside handlers registered with

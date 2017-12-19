@@ -2,7 +2,8 @@ using System;
 
 namespace Sodium.Time
 {
-    public interface ITimerSystem<T> where T : IComparable<T>
+    public interface ITimerSystem<T>
+        where T : IComparable<T>
     {
         /// <summary>
         ///     Gets a cell giving the current clock time.

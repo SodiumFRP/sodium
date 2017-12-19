@@ -61,7 +61,11 @@ namespace Sodium
         ///     A lazy value which will produce the value of the lazy input values <paramref name="a" />,
         ///     <paramref name="b" />, and <paramref name="c" /> transformed by the function <paramref name="f" />.
         /// </returns>
-        public static Lazy<TResult> Lift<T1, T2, T3, TResult>(this Lazy<T1> a, Lazy<T2> b, Lazy<T3> c, Func<T1, T2, T3, TResult> f)
+        public static Lazy<TResult> Lift<T1, T2, T3, TResult>(
+            this Lazy<T1> a,
+            Lazy<T2> b,
+            Lazy<T3> c,
+            Func<T1, T2, T3, TResult> f)
         {
             return new Lazy<TResult>(() => f(a.Value, b.Value, c.Value));
         }
@@ -85,7 +89,12 @@ namespace Sodium
         ///     <paramref name="b" />, <paramref name="c" />, and <paramref name="d" /> transformed by the function
         ///     <paramref name="f" />.
         /// </returns>
-        public static Lazy<TResult> Lift<T1, T2, T3, T4, TResult>(this Lazy<T1> a, Lazy<T2> b, Lazy<T3> c, Lazy<T4> d, Func<T1, T2, T3, T4, TResult> f)
+        public static Lazy<TResult> Lift<T1, T2, T3, T4, TResult>(
+            this Lazy<T1> a,
+            Lazy<T2> b,
+            Lazy<T3> c,
+            Lazy<T4> d,
+            Func<T1, T2, T3, T4, TResult> f)
         {
             return new Lazy<TResult>(() => f(a.Value, b.Value, c.Value, d.Value));
         }

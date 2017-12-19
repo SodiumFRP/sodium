@@ -9,7 +9,8 @@ namespace Sodium
     ///     Provides methods to clean up after objects which have gone out of scope.
     /// </summary>
     /// <remarks>
-    ///     This class checks for any streams which have been garbage collected and cleans them up by running <see cref="IListener.Unlisten"/> on each of their attached listeners.
+    ///     This class checks for any streams which have been garbage collected and cleans them up by running
+    ///     <see cref="IListener.Unlisten" /> on each of their attached listeners.
     ///     By default, this class automatically cleans up every 30 seconds.
     /// </remarks>
     internal static class StreamListenerManager
@@ -22,40 +23,10 @@ namespace Sodium
 
         static StreamListenerManager()
         {
-            Thread cleanupThread = new Thread(() =>
-            {
-                foreach (Guid streamId in StreamIdsToRemove.GetConsumingEnumerable())
+            Thread cleanupThread = new Thread(
+                () =>
                 {
-                    StreamListeners streamListeners;
-                    bool found;
-                    lock (StreamsByIdLock)
-                    {
-                        found = streamsById.TryGetValue(streamId, out streamListeners);
-                    }
-
-                    if (found)
-                    {
-                        streamListeners.Unlisten();
-                    }
-                    else
-                    {
-                        StreamIdsToRemoveLastChance.Enqueue(streamId);
-                    }
-                }
-            })
-            {
-                Name = "Sodium Cleanup Thread",
-                IsBackground = true
-            };
-            cleanupThread.Start();
-
-            Thread lastChanceCleanupThread = new Thread(() =>
-            {
-                while (true)
-                {
-                    Thread.Sleep(30000);
-
-                    while (StreamIdsToRemoveLastChance.TryDequeue(out Guid streamId))
+                    foreach (Guid streamId in StreamIdsToRemove.GetConsumingEnumerable())
                     {
                         StreamListeners streamListeners;
                         bool found;
@@ -68,9 +39,41 @@ namespace Sodium
                         {
                             streamListeners.Unlisten();
                         }
+                        else
+                        {
+                            StreamIdsToRemoveLastChance.Enqueue(streamId);
+                        }
                     }
-                }
-            })
+                })
+            {
+                Name = "Sodium Cleanup Thread",
+                IsBackground = true
+            };
+            cleanupThread.Start();
+
+            Thread lastChanceCleanupThread = new Thread(
+                () =>
+                {
+                    while (true)
+                    {
+                        Thread.Sleep(30000);
+
+                        while (StreamIdsToRemoveLastChance.TryDequeue(out Guid streamId))
+                        {
+                            StreamListeners streamListeners;
+                            bool found;
+                            lock (StreamsByIdLock)
+                            {
+                                found = streamsById.TryGetValue(streamId, out streamListeners);
+                            }
+
+                            if (found)
+                            {
+                                streamListeners.Unlisten();
+                            }
+                        }
+                    }
+                })
             {
                 Name = "Sodium Last Chance Cleanup Thread",
                 IsBackground = true
