@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
-using System.Threading;
+using System.Threading.Tasks;
+using Sodium.Utils;
 
 namespace Sodium
 {
@@ -18,13 +19,47 @@ namespace Sodium
         private static Dictionary<Guid, StreamListeners> streamsById = new Dictionary<Guid, StreamListeners>();
         private static long streamsByIdCapacity;
         private static readonly object StreamsByIdLock = new object();
-        private static readonly BlockingCollection<Guid> StreamIdsToRemove = new BlockingCollection<Guid>();
+        private static readonly AsyncBlockingCollection<Guid> StreamIdsToRemove = new AsyncBlockingCollection<Guid>();
         private static readonly ConcurrentQueue<Guid> StreamIdsToRemoveLastChance = new ConcurrentQueue<Guid>();
 
         static StreamListenerManager()
         {
-            Thread cleanupThread = new Thread(
-                () =>
+            Task.Factory.StartNew(SodiumCleanupTask, TaskCreationOptions.LongRunning | TaskCreationOptions.DenyChildAttach);
+            Task.Factory.StartNew(SodiumLastChanceCleanupTask, TaskCreationOptions.LongRunning | TaskCreationOptions.DenyChildAttach);
+        }
+
+        private static async Task SodiumCleanupTask()
+        {
+            foreach (Task<Guid> taskStreamId in StreamIdsToRemove.GetConsumingEnumerable())
+            {
+                Guid streamId = await taskStreamId;
+
+                StreamListeners streamListeners;
+                bool found;
+                lock (StreamsByIdLock)
+                {
+                    found = StreamsById.TryGetValue(streamId, out streamListeners);
+                }
+
+                if (found)
+                {
+                    streamListeners.Unlisten();
+                }
+                else
+                {
+                    StreamIdsToRemoveLastChance.Enqueue(streamId);
+                }
+            }
+        }
+
+        private static async Task SodiumLastChanceCleanupTask()
+        {
+            while (true)
+            {
+                await Task.Delay(30000);
+
+                Guid streamId;
+                while (StreamIdsToRemoveLastChance.TryDequeue(out streamId))
                 {
                     foreach (Guid streamId in StreamIdsToRemove.GetConsumingEnumerable())
                     {
@@ -35,50 +70,12 @@ namespace Sodium
                             found = streamsById.TryGetValue(streamId, out streamListeners);
                         }
 
-                        if (found)
-                        {
-                            streamListeners.Unlisten();
-                        }
-                        else
-                        {
-                            StreamIdsToRemoveLastChance.Enqueue(streamId);
-                        }
-                    }
-                })
-            {
-                Name = "Sodium Cleanup Thread",
-                IsBackground = true
-            };
-            cleanupThread.Start();
-
-            Thread lastChanceCleanupThread = new Thread(
-                () =>
-                {
-                    while (true)
+                    if (found)
                     {
-                        Thread.Sleep(30000);
-
-                        while (StreamIdsToRemoveLastChance.TryDequeue(out Guid streamId))
-                        {
-                            StreamListeners streamListeners;
-                            bool found;
-                            lock (StreamsByIdLock)
-                            {
-                                found = streamsById.TryGetValue(streamId, out streamListeners);
-                            }
-
-                            if (found)
-                            {
-                                streamListeners.Unlisten();
-                            }
-                        }
+                        streamListeners.Unlisten();
                     }
-                })
-            {
-                Name = "Sodium Last Chance Cleanup Thread",
-                IsBackground = true
-            };
-            lastChanceCleanupThread.Start();
+                }
+            }
         }
 
         public static void Remove(Guid streamId)
