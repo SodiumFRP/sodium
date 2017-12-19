@@ -19,13 +19,15 @@ namespace Sodium
                 Lazy<T> za = cca.SampleLazy().Map(ca => ca.Sample());
                 Stream<T> @out = new Stream<T>(cca.KeepListenersAlive);
                 MutableListener currentListener = new MutableListener();
-                Action<Transaction, Cell<T>> h = (trans2, ca) =>
+
+                void H(Transaction trans2, Cell<T> ca)
                 {
                     currentListener.Unlisten();
 
                     currentListener.SetListener(ca.Value(trans2).Listen(@out.Node, trans2, @out.Send, false));
-                };
-                IListener l1 = cca.Value(trans1).Listen(@out.Node, trans1, h, false);
+                }
+
+                IListener l1 = cca.Value(trans1).Listen(@out.Node, trans1, H, false);
                 return @out.UnsafeAttachListener(l1).UnsafeAttachListener(currentListener).HoldLazyInternal(za);
             }, false);
         }
@@ -51,23 +53,27 @@ namespace Sodium
             {
                 Stream<T> @out = new Stream<T>(csa.KeepListenersAlive);
                 MutableListener currentListener = new MutableListener();
-                Action<Transaction, Stream<T>> hInitial = (trans2, sa) =>
+
+                void HInitial(Transaction trans2, Stream<T> sa)
                 {
                     currentListener.Unlisten();
 
                     currentListener.SetListener(sa.Listen(@out.Node, trans2, @out.Send, false));
-                };
-                Action<Transaction, Stream<T>> h = (trans2, sa) =>
-                {
-                    trans2.Last(() =>
-                    {
-                        currentListener.Unlisten();
+                }
 
-                        currentListener.SetListener(sa.Listen(@out.Node, trans2, @out.Send, true));
-                    });
-                };
-                trans1.Prioritized(new Node<T>(), trans2 => hInitial(trans2, csa.SampleNoTransaction()));
-                IListener l1 = csa.Updates(trans1).Listen(new Node<T>(), trans1, h, false);
+                void H(Transaction trans2, Stream<T> sa)
+                {
+                    trans2.Last(
+                        () =>
+                        {
+                            currentListener.Unlisten();
+
+                            currentListener.SetListener(sa.Listen(@out.Node, trans2, @out.Send, true));
+                        });
+                }
+
+                trans1.Prioritized(new Node<T>(), trans2 => HInitial(trans2, csa.SampleNoTransaction()));
+                IListener l1 = csa.Updates(trans1).Listen(new Node<T>(), trans1, H, false);
                 return @out.UnsafeAttachListener(l1).UnsafeAttachListener(currentListener);
             }, false);
         }

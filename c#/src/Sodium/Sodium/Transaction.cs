@@ -362,8 +362,7 @@ namespace Sodium
         {
             // If an entry exists already, combine the old one with the new one.
             Action<Transaction> @new;
-            Action<Transaction> existing;
-            if (this.postQueue.TryGetValue(index, out existing))
+            if (this.postQueue.TryGetValue(index, out Action<Transaction> existing))
             {
                 @new = trans =>
                 {
@@ -498,17 +497,13 @@ namespace Sodium
 
         private class Entry
         {
-            private static long nextSeq;
-
             public readonly Node Node;
             public readonly Action<Transaction> Action;
-            private readonly long seq;
 
             public Entry(Node node, Action<Transaction> action)
             {
                 this.Node = node;
                 this.Action = action;
-                this.seq = nextSeq++;
             }
         }
     }

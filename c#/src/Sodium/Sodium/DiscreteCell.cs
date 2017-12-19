@@ -78,13 +78,9 @@ namespace Sodium
             {
                 lock (this.updatesLock)
                 {
-                    if (this.updates == null)
-                    {
-                        this.updates =
-                            Transaction.Apply(trans => this.Cell.Updates(trans).Coalesce(trans, (left, right) => right), false);
-                    }
-
-                    return this.updates;
+                    return this.updates ?? (this.updates = Transaction.Apply(
+                               trans => this.Cell.Updates(trans).Coalesce(trans, (left, right) => right),
+                               false));
                 }
             }
         }

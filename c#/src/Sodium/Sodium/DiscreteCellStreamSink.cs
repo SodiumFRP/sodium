@@ -9,7 +9,7 @@ namespace Sodium
     public class DiscreteCellStreamSink<T> : StreamSink<T>
     {
         /// <summary>
-        ///     Construct a DiscreteCellStreamSink that uses the last value if <see cref="Send" /> is called more than once per transaction.
+        ///     Construct a DiscreteCellStreamSink that uses the last value if <see cref="StreamSink{T}.Send" /> is called more than once per transaction.
         /// </summary>
         public DiscreteCellStreamSink()
             : base((left, right) => right)
@@ -19,9 +19,9 @@ namespace Sodium
         /// <summary>
         ///     Construct a DiscreteCellStreamSink that uses
         ///     <param name="coalesce" />
-        ///     to combine values if <see cref="Send" /> is called more than once per transaction.
+        ///     to combine values if <see cref="StreamSink{T}.Send" /> is called more than once per transaction.
         /// </summary>
-        /// <param name="coalesce">Function to combine values when <see cref="Send" /> is called more than once per transaction.</param>
+        /// <param name="coalesce">Function to combine values when <see cref="StreamSink{T}.Send" /> is called more than once per transaction.</param>
         public DiscreteCellStreamSink(Func<T, T, T> coalesce)
             : base(coalesce)
         {

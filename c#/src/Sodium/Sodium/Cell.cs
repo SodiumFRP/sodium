@@ -230,8 +230,8 @@ namespace Sodium
         /// <returns>A cell containing values resulting from the binary function applied to the input cells' values.</returns>
         public Cell<TResult> Lift<T2, TResult>(Cell<T2> b2, Func<T, T2, TResult> f)
         {
-            Func<T, Func<T2, TResult>> ffa = a => b => f(a, b);
-            return b2.Apply(this.Map(ffa));
+            Func<T2, TResult> Ffa(T a) => b => f(a, b);
+            return b2.Apply(this.Map(Ffa));
         }
 
         /// <summary>
@@ -247,8 +247,8 @@ namespace Sodium
         /// <returns>A cell containing values resulting from the ternary function applied to the input cells' values.</returns>
         public Cell<TResult> Lift<T2, T3, TResult>(Cell<T2> b2, Cell<T3> b3, Func<T, T2, T3, TResult> f)
         {
-            Func<T, Func<T2, Func<T3, TResult>>> ffa = a => b => c => f(a, b, c);
-            return b3.Apply(b2.Apply(this.Map(ffa)));
+            Func<T2, Func<T3, TResult>> Ffa(T a) => b => c => f(a, b, c);
+            return b3.Apply(b2.Apply(this.Map(Ffa)));
         }
 
         /// <summary>
@@ -266,8 +266,8 @@ namespace Sodium
         /// <returns>A cell containing values resulting from the quaternary function applied to the input cells' values.</returns>
         public Cell<TResult> Lift<T2, T3, T4, TResult>(Cell<T2> b2, Cell<T3> b3, Cell<T4> b4, Func<T, T2, T3, T4, TResult> f)
         {
-            Func<T, Func<T2, Func<T3, Func<T4, TResult>>>> ffa = a => b => c => d => f(a, b, c, d);
-            return b4.Apply(b3.Apply(b2.Apply(this.Map(ffa))));
+            Func<T2, Func<T3, Func<T4, TResult>>> Ffa(T a) => b => c => d => f(a, b, c, d);
+            return b4.Apply(b3.Apply(b2.Apply(this.Map(Ffa))));
         }
 
         /// <summary>
@@ -287,8 +287,8 @@ namespace Sodium
         /// <returns>A cell containing values resulting from the 5-argument function applied to the input cells' values.</returns>
         public Cell<TResult> Lift<T2, T3, T4, T5, TResult>(Cell<T2> b2, Cell<T3> b3, Cell<T4> b4, Cell<T5> b5, Func<T, T2, T3, T4, T5, TResult> f)
         {
-            Func<T, Func<T2, Func<T3, Func<T4, Func<T5, TResult>>>>> ffa = a => b => c => d => e => f(a, b, c, d, e);
-            return b5.Apply(b4.Apply(b3.Apply(b2.Apply(this.Map(ffa)))));
+            Func<T2, Func<T3, Func<T4, Func<T5, TResult>>>> Ffa(T a) => b => c => d => e => f(a, b, c, d, e);
+            return b5.Apply(b4.Apply(b3.Apply(b2.Apply(this.Map(Ffa)))));
         }
 
         /// <summary>
@@ -310,8 +310,8 @@ namespace Sodium
         /// <returns>A cell containing values resulting from the 6-argument function applied to the input cells' values.</returns>
         public Cell<TResult> Lift<T2, T3, T4, T5, T6, TResult>(Cell<T2> b2, Cell<T3> b3, Cell<T4> b4, Cell<T5> b5, Cell<T6> b6, Func<T, T2, T3, T4, T5, T6, TResult> f)
         {
-            Func<T, Func<T2, Func<T3, Func<T4, Func<T5, Func<T6, TResult>>>>>> ffa = a => b => c => d => e => ff => f(a, b, c, d, e, ff);
-            return b6.Apply(b5.Apply(b4.Apply(b3.Apply(b2.Apply(this.Map(ffa))))));
+            Func<T2, Func<T3, Func<T4, Func<T5, Func<T6, TResult>>>>> Ffa(T a) => b => c => d => e => ff => f(a, b, c, d, e, ff);
+            return b6.Apply(b5.Apply(b4.Apply(b3.Apply(b2.Apply(this.Map(Ffa))))));
         }
 
         /// <summary>
@@ -341,13 +341,14 @@ namespace Sodium
                 T a = default(T);
                 bool isASet = false;
                 // ReSharper disable once PossibleNullReferenceException
-                Action<Transaction> h = trans1 => trans1.Prioritized(@out.Node, trans2 => @out.Send(trans2, f(a)));
+                void H(Transaction trans1) => trans1.Prioritized(@out.Node, trans2 => @out.Send(trans2, f(a)));
+
                 IListener l1 = bf.Value(trans0).Listen(inTarget, trans0, (trans1, ff) =>
                 {
                     f = ff;
                     if (isASet)
                     {
-                        h(trans1);
+                        H(trans1);
                     }
                 }, false);
                 IListener l2 = this.Value(trans0).Listen(inTarget, trans0, (trans1, aa) =>
@@ -356,7 +357,7 @@ namespace Sodium
                     isASet = true;
                     if (f != null)
                     {
-                        h(trans1);
+                        H(trans1);
                     }
                 }, false);
                 return @out.LastFiringOnly(trans0).UnsafeAttachListener(l1).UnsafeAttachListener(l2).UnsafeAttachListener(
