@@ -38,7 +38,7 @@ namespace Sodium
                 bool found;
                 lock (StreamsByIdLock)
                 {
-                    found = StreamsById.TryGetValue(streamId, out streamListeners);
+                    found = streamsById.TryGetValue(streamId, out streamListeners);
                 }
 
                 if (found)
@@ -61,14 +61,12 @@ namespace Sodium
                 Guid streamId;
                 while (StreamIdsToRemoveLastChance.TryDequeue(out streamId))
                 {
-                    foreach (Guid streamId in StreamIdsToRemove.GetConsumingEnumerable())
+                    StreamListeners streamListeners;
+                    bool found;
+                    lock (StreamsByIdLock)
                     {
-                        StreamListeners streamListeners;
-                        bool found;
-                        lock (StreamsByIdLock)
-                        {
-                            found = streamsById.TryGetValue(streamId, out streamListeners);
-                        }
+                        found = streamsById.TryGetValue(streamId, out streamListeners);
+                    }
 
                     if (found)
                     {
