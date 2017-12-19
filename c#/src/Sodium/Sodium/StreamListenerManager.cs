@@ -24,8 +24,12 @@ namespace Sodium
 
         static StreamListenerManager()
         {
-            Task.Factory.StartNew(SodiumCleanupTask, TaskCreationOptions.LongRunning | TaskCreationOptions.DenyChildAttach);
-            Task.Factory.StartNew(SodiumLastChanceCleanupTask, TaskCreationOptions.LongRunning | TaskCreationOptions.DenyChildAttach);
+            Task.Factory.StartNew(
+                SodiumCleanupTask,
+                TaskCreationOptions.LongRunning | TaskCreationOptions.DenyChildAttach);
+            Task.Factory.StartNew(
+                SodiumLastChanceCleanupTask,
+                TaskCreationOptions.LongRunning | TaskCreationOptions.DenyChildAttach);
         }
 
         private static async Task SodiumCleanupTask()
@@ -58,8 +62,7 @@ namespace Sodium
             {
                 await Task.Delay(30000);
 
-                Guid streamId;
-                while (StreamIdsToRemoveLastChance.TryDequeue(out streamId))
+                while (StreamIdsToRemoveLastChance.TryDequeue(out Guid streamId))
                 {
                     StreamListeners streamListeners;
                     bool found;
@@ -74,6 +77,7 @@ namespace Sodium
                     }
                 }
             }
+            // ReSharper disable once FunctionNeverReturns
         }
 
         public static void Remove(Guid streamId)

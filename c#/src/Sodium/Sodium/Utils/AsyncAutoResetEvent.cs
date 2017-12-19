@@ -13,12 +13,16 @@ namespace Sodium.Utils
         public void Set()
         {
             TaskCompletionSource<bool> toRelease = null;
-            lock (waits)
+            lock (this.waits)
             {
-                if (waits.Count > 0)
-                    toRelease = waits.Dequeue();
-                else if (!signaled)
-                    signaled = true;
+                if (this.waits.Count > 0)
+                {
+                    toRelease = this.waits.Dequeue();
+                }
+                else if (!this.signaled)
+                {
+                    this.signaled = true;
+                }
             }
 
             toRelease?.SetResult(true);
@@ -26,19 +30,16 @@ namespace Sodium.Utils
 
         public Task WaitAsync()
         {
-            lock (waits)
+            lock (this.waits)
             {
-                if (signaled)
+                if (this.signaled)
                 {
-                    signaled = false;
+                    this.signaled = false;
                     return Completed;
                 }
-                else
-                {
-                    var tcs = new TaskCompletionSource<bool>();
-                    waits.Enqueue(tcs);
-                    return tcs.Task;
-                }
+                TaskCompletionSource<bool> tcs = new TaskCompletionSource<bool>();
+                this.waits.Enqueue(tcs);
+                return tcs.Task;
             }
         }
     }

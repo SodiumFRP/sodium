@@ -13,32 +13,33 @@ namespace Sodium.Utils
         {
             while (true)
             {
-                yield return
-                    autoResetEvent.WaitAsync().ContinueWith(t => TakeItem());
+                yield return this.autoResetEvent.WaitAsync().ContinueWith(t => this.TakeItem());
 
                 //it is not really important to lock before getting Count
                 //the iterator will catch up any items missed here
-                while (collection.Count != 0)
+                // ReSharper disable once InconsistentlySynchronizedField
+                while (this.collection.Count != 0)
                 {
-                    yield return Task.FromResult(TakeItem());
+                    yield return Task.FromResult(this.TakeItem());
                 }
             }
+            // ReSharper disable once IteratorNeverReturns
         }
 
         public void Add(TValue value)
         {
-            lock (syncLock)
+            lock (this.syncLock)
             {
-                collection.Enqueue(value);
+                this.collection.Enqueue(value);
             }
-            autoResetEvent.Set();
+            this.autoResetEvent.Set();
         }
 
         private TValue TakeItem()
         {
-            lock (syncLock)
+            lock (this.syncLock)
             {
-                return collection.Dequeue();
+                return this.collection.Dequeue();
             }
         }
     }
