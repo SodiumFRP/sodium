@@ -19,7 +19,9 @@ namespace Sodium
         ///     The rule with this primitive is that you should only use it in functions
         ///     that do not allow the caller to detect the cell updates.
         /// </remarks>
-        public static Stream<T> Updates<T>(Cell<T> c) => Transaction.Apply(trans => c.Updates(trans).Coalesce(trans, (left, right) => right), false);
+        public static Stream<T> Updates<T>(Cell<T> c) => Transaction.Apply(
+            trans => c.Updates(trans).Coalesce(trans, (left, right) => right),
+            false);
 
         /// <summary>
         ///     A stream that is guaranteed to fire once upon listening, giving the current
@@ -61,18 +63,21 @@ namespace Sodium
         /// <typeparam name="TCollection">The collection type of the stream to split.</typeparam>
         /// <param name="s">The stream to split.</param>
         /// <returns>A stream firing the split event firings.</returns>
-        public static Stream<T> Split<T, TCollection>(Stream<TCollection> s) where TCollection : IEnumerable<T>
+        public static Stream<T> Split<T, TCollection>(Stream<TCollection> s)
+            where TCollection : IEnumerable<T>
         {
             Stream<T> @out = new Stream<T>(s.KeepListenersAlive);
-            IListener l1 = s.Listen(new Node<T>(), (trans, aa) =>
-            {
-                int childIx = 0;
-                foreach (T a in aa)
+            IListener l1 = s.Listen(
+                new Node<T>(),
+                (trans, aa) =>
                 {
-                    trans.Post(childIx, trans1 => @out.Send(trans1, a));
-                    childIx++;
-                }
-            });
+                    int childIx = 0;
+                    foreach (T a in aa)
+                    {
+                        trans.Post(childIx, trans1 => @out.Send(trans1, a));
+                        childIx++;
+                    }
+                });
             return @out.UnsafeAttachListener(l1);
         }
     }

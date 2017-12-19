@@ -19,8 +19,8 @@ namespace Fridgets
             this.MouseDown += (sender, args) => sMouse.Send(new MouseEvent(args, () => args.GetPosition(this)));
             this.MouseUp += (sender, args) => sMouse.Send(new MouseEvent(args, () => args.GetPosition(this)));
             this.MouseMove += (sender, args) => sMouse.Send(new MouseEvent(args, () => args.GetPosition(this)));
-            DiscreteCellSink<IMaybe<Size>> size = new DiscreteCellSink<IMaybe<Size>>(Maybe.Nothing<Size>());
-            this.SizeChanged += (sender, args) => size.Send(Maybe.Just(args.NewSize));
+            DiscreteCellSink<Maybe<Size>> size = new DiscreteCellSink<Maybe<Size>>(Maybe.None);
+            this.SizeChanged += (sender, args) => size.Send(Maybe.Some(args.NewSize));
             window.KeyDown += (sender, args) =>
             {
                 Key key = args.Key == Key.System ? args.SystemKey : args.Key;

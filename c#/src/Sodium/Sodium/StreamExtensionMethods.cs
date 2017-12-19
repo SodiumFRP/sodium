@@ -15,10 +15,7 @@ namespace Sodium
         ///     A stream that is the result of merging the collection of streams and dropping the stream's value specified
         ///     earlier in the collection in the simultaneous case.
         /// </returns>
-        public static Stream<T> OrElse<T>(this IEnumerable<Stream<T>> s)
-        {
-            return s.Merge((left, right) => left);
-        }
+        public static Stream<T> OrElse<T>(this IEnumerable<Stream<T>> s) => s.Merge((left, right) => left);
 
         /// <summary>
         ///     Merge a collection of streams of the same type into one, so that events on any input appear on the returned stream.
@@ -46,7 +43,12 @@ namespace Sodium
             return Transaction.Apply(trans => Merge(trans, v, 0, v.Count, f), false);
         }
 
-        private static Stream<T> Merge<T>(Transaction trans, IReadOnlyList<Stream<T>> e, int start, int end, Func<T, T, T> f)
+        private static Stream<T> Merge<T>(
+            Transaction trans,
+            IReadOnlyList<Stream<T>> e,
+            int start,
+            int end,
+            Func<T, T, T> f)
         {
             int n = end - start;
 
@@ -70,18 +72,18 @@ namespace Sodium
         }
 
         /// <summary>
-        ///     Return a stream that only outputs events that have values, removing the <see cref="IMaybe{T}" /> wrapper, and
-        ///     discarding <see cref="Maybe.Nothing{T}()" /> values.
+        ///     Return a stream that only outputs events that have values, removing the <see cref="Maybe{T}" /> wrapper, and
+        ///     discarding <see cref="Maybe.None" /> values.
         /// </summary>
-        /// <param name="s">The stream of <see cref="IMaybe{T}" /> values to filter.</param>
+        /// <param name="s">The stream of <see cref="Maybe{T}" /> values to filter.</param>
         /// <returns>
-        ///     A stream that only outputs events that have values, removing the <see cref="IMaybe{T}" /> wrapper, and
-        ///     discarding <see cref="Maybe.Nothing{T}()" /> values.
+        ///     A stream that only outputs events that have values, removing the <see cref="Maybe{T}" /> wrapper, and
+        ///     discarding <see cref="Maybe.None" /> values.
         /// </returns>
-        public static Stream<T> FilterMaybe<T>(this Stream<IMaybe<T>> s)
+        public static Stream<T> FilterMaybe<T>(this Stream<Maybe<T>> s)
         {
             Stream<T> @out = new Stream<T>(s.KeepListenersAlive);
-            IListener l = s.Listen(@out.Node, (trans2, a) => a.Match(v => @out.Send(trans2, v), () => { }));
+            IListener l = s.Listen(@out.Node, (trans2, a) => a.MatchSome(v => @out.Send(trans2, v)));
             return @out.UnsafeAttachListener(l);
         }
     }

@@ -382,7 +382,7 @@ public class Stream<A> {
      */
     public static <A> Stream<A> orElse(Iterable<Stream<A>> ss) {
         return Stream.<A>merge(ss, new Lambda2<A,A,A>() {
-            public A apply(A left, A right) { return right; }
+            public A apply(A left, A right) { return left; }
         });
     }
 

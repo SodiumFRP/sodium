@@ -3,7 +3,8 @@ using System;
 namespace Sodium
 {
     /// <summary>
-    ///     A forward reference for a <see cref="DiscreteCell{T}" /> equivalent to the <see cref="DiscreteCell{T}" /> that is referenced.
+    ///     A forward reference for a <see cref="DiscreteCell{T}" /> equivalent to the <see cref="DiscreteCell{T}" /> that is
+    ///     referenced.
     /// </summary>
     /// <typeparam name="T">The type of values in the discrete cell loop.</typeparam>
     public class DiscreteCellLoop<T> : DiscreteCell<T>

@@ -17,10 +17,7 @@ namespace Sodium
         {
         }
 
-        protected Node(long rank)
-        {
-            this.Rank = rank;
-        }
+        protected Node(long rank) => this.Rank = rank;
 
         protected static bool EnsureBiggerThan(Node node, long limit)
         {
@@ -41,7 +38,7 @@ namespace Sodium
             return true;
         }
 
-        // ReSharper disable once UnusedParameter.Local
+        // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
         private static void EnsureBiggerThanRecursive(Node originalNode, Node node, long limit)
         {
             if (ReferenceEquals(originalNode, node))
@@ -95,13 +92,14 @@ namespace Sodium
         /// <summary>
         ///     Link an action and a target node to this node.
         /// </summary>
+        /// <param name="trans">The current transaction.</param>
         /// <param name="action">The action to link to this node.</param>
         /// <param name="target">The target node to link to this node.</param>
         /// <returns>
         ///     A tuple containing whether or not changes were made to the node rank
         ///     and the <see cref="Target" /> object created for this link.
         /// </returns>
-        internal ValueTuple<bool, Target> Link(Transaction trans, Action<Transaction, T> action, Node target)
+        internal (bool Changed, Target Target) Link(Transaction trans, Action<Transaction, T> action, Node target)
         {
             bool changed;
             Target t = new Target(action, target, !trans.IsConstructing || trans.ReachedClose);
@@ -118,7 +116,7 @@ namespace Sodium
             {
                 changed = EnsureBiggerThan(target, this.Rank);
             }
-            return ValueTuple.Create(changed, t);
+            return (Changed: changed, Target: t);
         }
 
         internal void Unlink(Target target)
@@ -131,10 +129,7 @@ namespace Sodium
             public readonly WeakReference<Action<Transaction, T>> Action;
 
             public Target(Action<Transaction, T> action, Node node, bool isActivated)
-                : base(node, isActivated)
-            {
-                this.Action = new WeakReference<Action<Transaction, T>>(action);
-            }
+                : base(node, isActivated) => this.Action = new WeakReference<Action<Transaction, T>>(action);
         }
 
         internal IReadOnlyList<Target> GetListenersCopy()

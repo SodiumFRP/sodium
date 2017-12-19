@@ -36,9 +36,9 @@ namespace Timers
         private static Stream<DateTime> Periodic(ITimerSystem<DateTime> sys, TimeSpan period)
         {
             Cell<DateTime> time = sys.Time;
-            DiscreteCellLoop<IMaybe<DateTime>> oAlarm = new DiscreteCellLoop<IMaybe<DateTime>>();
+            DiscreteCellLoop<Maybe<DateTime>> oAlarm = new DiscreteCellLoop<Maybe<DateTime>>();
             Stream<DateTime> sAlarm = sys.At(oAlarm);
-            oAlarm.Loop(sAlarm.Map(t => Maybe.Just(t + period)).Hold(Maybe.Just(time.Sample() + period)));
+            oAlarm.Loop(sAlarm.Map(t => Maybe.Some(t + period)).Hold(Maybe.Some(time.Sample() + period)));
             return sAlarm;
         }
 

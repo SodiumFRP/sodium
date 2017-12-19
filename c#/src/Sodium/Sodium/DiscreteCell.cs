@@ -14,7 +14,8 @@ namespace Sodium
         /// <typeparam name="T">The type of the value of the cell.</typeparam>
         /// <param name="value">The value of the cell.</param>
         /// <returns>A discrete cell with a constant value.</returns>
-        public static DiscreteCell<T> Constant<T>(T value) => new DiscreteCell<T>(Stream.Never<T>().HoldInternal(value));
+        public static DiscreteCell<T> Constant<T>(T value) =>
+            new DiscreteCell<T>(Stream.Never<T>().HoldInternal(value));
 
         /// <summary>
         ///     Creates a discrete cell with a lazy constant value.
@@ -22,7 +23,8 @@ namespace Sodium
         /// <typeparam name="T">The type of the value of the cell.</typeparam>
         /// <param name="value">The lazy value of the cell.</param>
         /// <returns>A discrete cell with a lazy constant value.</returns>
-        public static DiscreteCell<T> ConstantLazy<T>(Lazy<T> value) => new DiscreteCell<T>(Stream.Never<T>().HoldLazyInternal(value));
+        public static DiscreteCell<T> ConstantLazy<T>(Lazy<T> value) =>
+            new DiscreteCell<T>(Stream.Never<T>().HoldLazyInternal(value));
 
         /// <summary>
         ///     Creates a discrete cell loop.
@@ -32,14 +34,17 @@ namespace Sodium
         public static DiscreteCellLoop<T> CreateLoop<T>() => new DiscreteCellLoop<T>();
 
         /// <summary>
-        ///     Construct a writable discrete cell that uses the last value if <see cref="DiscreteCellSink{T}.Send" /> is called more than once per transaction.
+        ///     Construct a writable discrete cell that uses the last value if <see cref="DiscreteCellSink{T}.Send" /> is called
+        ///     more than once per transaction.
         /// </summary>
         /// <param name="initialValue">The initial value of the discrete cell.</param>
         public static DiscreteCellSink<T> CreateSink<T>(T initialValue) => new DiscreteCellSink<T>(initialValue);
 
         /// <summary>
-        ///     Construct a writable discrete cell stream sink that uses the last value if <see cref="DiscreteCellSink{T}.Send" /> is called more than once per transaction.
-        ///     This stream sink is meant to be turned into a <see cref="DiscreteCell{T}"/> through the use of <see cref="DiscreteCellStreamSink{T}.Hold(T)"/>.
+        ///     Construct a writable discrete cell stream sink that uses the last value if <see cref="DiscreteCellSink{T}.Send" />
+        ///     is called more than once per transaction.
+        ///     This stream sink is meant to be turned into a <see cref="DiscreteCell{T}" /> through the use of
+        ///     <see cref="DiscreteCellStreamSink{T}.Hold(T)" />.
         /// </summary>
         /// <typeparam name="T">The type of values in the discrete cell stream sink.</typeparam>
         public static DiscreteCellStreamSink<T> CreateStreamSink<T>() => new DiscreteCellStreamSink<T>();
@@ -48,11 +53,16 @@ namespace Sodium
         ///     Construct a writable discrete cell stream sink that uses
         ///     <param name="coalesce" />
         ///     to combine values if <see cref="DiscreteCellStreamSink{T}.Send(T)" /> is called more than once per transaction.
-        ///     This stream sink is meant to be turned into a <see cref="DiscreteCell{T}"/> through the use of <see cref="DiscreteCellStreamSink{T}.Hold(T)"/>.
+        ///     This stream sink is meant to be turned into a <see cref="DiscreteCell{T}" /> through the use of
+        ///     <see cref="DiscreteCellStreamSink{T}.Hold(T)" />.
         /// </summary>
-        /// <param name="coalesce">Function to combine values when <see cref="DiscreteCellStreamSink{T}.Send(T)" /> is called more than once per transaction.</param>
+        /// <param name="coalesce">
+        ///     Function to combine values when <see cref="DiscreteCellStreamSink{T}.Send(T)" /> is called more
+        ///     than once per transaction.
+        /// </param>
         /// <typeparam name="T">The type of values in the discrete cell stream sink.</typeparam>
-        public static DiscreteCellStreamSink<T> CreateStreamSink<T>(Func<T, T, T> coalesce) => new DiscreteCellStreamSink<T>(coalesce);
+        public static DiscreteCellStreamSink<T> CreateStreamSink<T>(Func<T, T, T> coalesce) =>
+            new DiscreteCellStreamSink<T>(coalesce);
     }
 
     /// <summary>
@@ -64,10 +74,7 @@ namespace Sodium
         private readonly object updatesLock = new object();
         private Stream<T> updates;
 
-        internal DiscreteCell(Cell<T> cell)
-        {
-            this.Cell = cell;
-        }
+        internal DiscreteCell(Cell<T> cell) => this.Cell = cell;
 
         /// <summary>
         ///     The stream of discrete updates to this cell.
@@ -78,19 +85,16 @@ namespace Sodium
             {
                 lock (this.updatesLock)
                 {
-                    if (this.updates == null)
-                    {
-                        this.updates =
-                            Transaction.Apply(trans => this.Cell.Updates(trans).Coalesce(trans, (left, right) => right), false);
-                    }
-
-                    return this.updates;
+                    return this.updates ?? (this.updates = Transaction.Apply(
+                               trans => this.Cell.Updates(trans).Coalesce(trans, (left, right) => right),
+                               false));
                 }
             }
         }
 
         /// <summary>
-        ///     The stream of values of this cell.  This stream is identical to <see cref="Updates"/> except that it also fires during the transaction in which it was obtained.
+        ///     The stream of values of this cell.  This stream is identical to <see cref="Updates" /> except that it also fires
+        ///     during the transaction in which it was obtained.
         ///     To observe the first value, this property must be accessed and used within the same explicit transaction.
         /// </summary>
         public virtual Stream<T> Values
@@ -122,7 +126,9 @@ namespace Sodium
         ///         disposed or garbage collected.
         ///     </para>
         /// </remarks>
-        public IStrongListener Listen(Action<T> handler) => Transaction.Apply(trans => this.Cell.Value(trans).Listen(handler), false);
+        public IStrongListener Listen(Action<T> handler) => Transaction.Apply(
+            trans => this.Cell.Value(trans).Listen(handler),
+            false);
 
         /// <summary>
         ///     Listen for updates to the value of this cell.  The returned <see cref="IListener" /> may be
@@ -143,7 +149,9 @@ namespace Sodium
         ///         disposed or garbage collected or the listener itself is garbage collected.
         ///     </para>
         /// </remarks>
-        public IWeakListener ListenWeak(Action<T> handler) => Transaction.Apply(trans => this.Cell.Value(trans).ListenWeak(handler), false);
+        public IWeakListener ListenWeak(Action<T> handler) => Transaction.Apply(
+            trans => this.Cell.Value(trans).ListenWeak(handler),
+            false);
 
         /// <summary>
         ///     Transform the cell values according to the supplied function, so the returned
@@ -180,7 +188,10 @@ namespace Sodium
         /// <param name="b2">The second cell.</param>
         /// <param name="b3">The third cell.</param>
         /// <returns>A discrete cell containing values resulting from the ternary function applied to the input cells' values.</returns>
-        public DiscreteCell<TResult> Lift<T2, T3, TResult>(DiscreteCell<T2> b2, DiscreteCell<T3> b3, Func<T, T2, T3, TResult> f) =>
+        public DiscreteCell<TResult> Lift<T2, T3, TResult>(
+            DiscreteCell<T2> b2,
+            DiscreteCell<T3> b3,
+            Func<T, T2, T3, TResult> f) =>
             new DiscreteCell<TResult>(this.Cell.Lift(b2.Cell, b3.Cell, f));
 
         /// <summary>
@@ -196,7 +207,11 @@ namespace Sodium
         /// <param name="b3">The third cell.</param>
         /// <param name="b4">The fourth cell.</param>
         /// <returns>A discrete cell containing values resulting from the quaternary function applied to the input cells' values.</returns>
-        public DiscreteCell<TResult> Lift<T2, T3, T4, TResult>(DiscreteCell<T2> b2, DiscreteCell<T3> b3, DiscreteCell<T4> b4, Func<T, T2, T3, T4, TResult> f) =>
+        public DiscreteCell<TResult> Lift<T2, T3, T4, TResult>(
+            DiscreteCell<T2> b2,
+            DiscreteCell<T3> b3,
+            DiscreteCell<T4> b4,
+            Func<T, T2, T3, T4, TResult> f) =>
             new DiscreteCell<TResult>(this.Cell.Lift(b2.Cell, b3.Cell, b4.Cell, f));
 
         /// <summary>
@@ -214,7 +229,12 @@ namespace Sodium
         /// <param name="b4">The fourth cell.</param>
         /// <param name="b5">The fifth cell.</param>
         /// <returns>A discrete cell containing values resulting from the 5-argument function applied to the input cells' values.</returns>
-        public DiscreteCell<TResult> Lift<T2, T3, T4, T5, TResult>(DiscreteCell<T2> b2, DiscreteCell<T3> b3, DiscreteCell<T4> b4, DiscreteCell<T5> b5, Func<T, T2, T3, T4, T5, TResult> f) =>
+        public DiscreteCell<TResult> Lift<T2, T3, T4, T5, TResult>(
+            DiscreteCell<T2> b2,
+            DiscreteCell<T3> b3,
+            DiscreteCell<T4> b4,
+            DiscreteCell<T5> b5,
+            Func<T, T2, T3, T4, T5, TResult> f) =>
             new DiscreteCell<TResult>(this.Cell.Lift(b2.Cell, b3.Cell, b4.Cell, b5.Cell, f));
 
         /// <summary>
@@ -234,7 +254,13 @@ namespace Sodium
         /// <param name="b5">The fifth cell.</param>
         /// <param name="b6">The sixth cell.</param>
         /// <returns>A discrete cell containing values resulting from the 6-argument function applied to the input cells' values.</returns>
-        public DiscreteCell<TResult> Lift<T2, T3, T4, T5, T6, TResult>(DiscreteCell<T2> b2, DiscreteCell<T3> b3, DiscreteCell<T4> b4, DiscreteCell<T5> b5, DiscreteCell<T6> b6, Func<T, T2, T3, T4, T5, T6, TResult> f) =>
+        public DiscreteCell<TResult> Lift<T2, T3, T4, T5, T6, TResult>(
+            DiscreteCell<T2> b2,
+            DiscreteCell<T3> b3,
+            DiscreteCell<T4> b4,
+            DiscreteCell<T5> b5,
+            DiscreteCell<T6> b6,
+            Func<T, T2, T3, T4, T5, T6, TResult> f) =>
             new DiscreteCell<TResult>(this.Cell.Lift(b2.Cell, b3.Cell, b4.Cell, b5.Cell, b6.Cell, f));
 
         /// <summary>
@@ -253,10 +279,7 @@ namespace Sodium
         ///     Return a discrete cell whose stream only receives events which have a different value than the previous event.
         /// </summary>
         /// <returns>A discrete cell whose stream only receives events which have a different value than the previous event.</returns>
-        public DiscreteCell<T> Calm()
-        {
-            return this.Calm(EqualityComparer<T>.Default);
-        }
+        public DiscreteCell<T> Calm() => this.Calm(EqualityComparer<T>.Default);
 
         /// <summary>
         ///     Return a discrete cell whose stream only receives events which have a different value than the previous event.
@@ -266,7 +289,7 @@ namespace Sodium
         public DiscreteCell<T> Calm(IEqualityComparer<T> comparer)
         {
             Lazy<T> initA = this.Cell.SampleLazy();
-            Lazy<IMaybe<T>> mInitA = initA.Map(Maybe.Just);
+            Lazy<Maybe<T>> mInitA = initA.Map(Maybe.Some);
             return Transaction.Apply(trans => this.Cell.Updates(trans).Calm(mInitA, comparer).HoldLazy(initA), false);
         }
     }

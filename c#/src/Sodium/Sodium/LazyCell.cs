@@ -7,10 +7,7 @@ namespace Sodium
         internal Lazy<T> LazyInitialValue;
 
         internal LazyCell(Stream<T> stream, Lazy<T> lazyInitialValue)
-            : base(stream, default(T))
-        {
-            this.LazyInitialValue = lazyInitialValue;
-        }
+            : base(stream, default(T)) => this.LazyInitialValue = lazyInitialValue;
 
         protected override void NotUsingInitialValue()
         {

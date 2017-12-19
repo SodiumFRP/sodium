@@ -34,19 +34,10 @@
             return true;
         }
 
-        public override int GetHashCode()
-        {
-            return 1;
-        }
+        public override int GetHashCode() => 1;
 
-        public static bool operator ==(Unit x, Unit y)
-        {
-            return ReferenceEquals(x, null) == ReferenceEquals(y, null);
-        }
+        public static bool operator ==(Unit x, Unit y) => ReferenceEquals(x, null) == ReferenceEquals(y, null);
 
-        public static bool operator !=(Unit x, Unit y)
-        {
-            return ReferenceEquals(x, null) != ReferenceEquals(y, null);
-        }
+        public static bool operator !=(Unit x, Unit y) => ReferenceEquals(x, null) != ReferenceEquals(y, null);
     }
 }

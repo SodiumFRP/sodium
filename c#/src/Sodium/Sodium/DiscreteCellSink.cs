@@ -3,7 +3,8 @@ using System;
 namespace Sodium
 {
     /// <summary>
-    ///     A discrete cell that allows values to be pushed into it, acting as an interface between the world of I/O and the world of
+    ///     A discrete cell that allows values to be pushed into it, acting as an interface between the world of I/O and the
+    ///     world of
     ///     FRP.  Code that exports instances of <see cref="DiscreteCellSink{T}" /> for read-only use should downcast to
     ///     <see cref="DiscreteCell{T}" />.
     /// </summary>
@@ -21,10 +22,7 @@ namespace Sodium
         }
 
         private DiscreteCellSink(DiscreteCellStreamSink<T> streamSink, Cell<T> cell)
-            : base(cell)
-        {
-            this.StreamSink = streamSink;
-        }
+            : base(cell) => this.StreamSink = streamSink;
 
         /// <summary>
         ///     The underlying stream sink providing discrete updates to this cell and through which new values are sent.

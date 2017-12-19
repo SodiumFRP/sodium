@@ -16,40 +16,32 @@ namespace Sodium
         /// </summary>
         /// <typeparam name="T">The type of the values that would be fired by the stream if it did fire values.</typeparam>
         /// <returns>A stream that never fires.</returns>
-        public static Stream<T> Never<T>()
-        {
-            return new Stream<T>();
-        }
+        public static Stream<T> Never<T>() => new Stream<T>();
 
         /// <summary>
-        ///     Creates a StreamSink that throws an exception if <see cref="Stream{T}.Send" /> is called more than once per transaction.
+        ///     Creates a StreamSink that throws an exception if <see cref="Stream{T}.Send" /> is called more than once per
+        ///     transaction.
         /// </summary>
         /// <typeparam name="T">The type of values fired by the stream sink.</typeparam>
-        public static StreamSink<T> CreateSink<T>()
-        {
-            return new StreamSink<T>();
-        }
+        public static StreamSink<T> CreateSink<T>() => new StreamSink<T>();
 
         /// <summary>
         ///     Construct a StreamSink that uses
         ///     <param name="coalesce" />
         ///     to combine values if <see cref="Stream{T}.Send" /> is called more than once per transaction.
         /// </summary>
-        /// <param name="coalesce">Function to combine values when <see cref="Stream{T}.Send" /> is called more than once per transaction.</param>
+        /// <param name="coalesce">
+        ///     Function to combine values when <see cref="Stream{T}.Send" /> is called more than once per
+        ///     transaction.
+        /// </param>
         /// <typeparam name="T">The type of values fired by the stream sink.</typeparam>
-        public static StreamSink<T> CreateSink<T>(Func<T, T, T> coalesce)
-        {
-            return new StreamSink<T>(coalesce);
-        }
+        public static StreamSink<T> CreateSink<T>(Func<T, T, T> coalesce) => new StreamSink<T>(coalesce);
 
         /// <summary>
         ///     Creates a <see cref="StreamLoop{T}" />.  This must be called and looped from within the same transaction.
         /// </summary>
         /// <typeparam name="T">The type of values in the stream loop.</typeparam>
-        public static StreamLoop<T> CreateLoop<T>()
-        {
-            return new StreamLoop<T>();
-        }
+        public static StreamLoop<T> CreateLoop<T>() => new StreamLoop<T>();
     }
 
     /// <summary>
@@ -60,8 +52,10 @@ namespace Sodium
     {
         private readonly Guid streamId;
         internal readonly Node<T> Node;
+
         // ReSharper disable once CollectionNeverQueried.Local
         private readonly List<IListener> attachedListeners;
+
         private readonly StreamListenerManager.StreamListeners trackedListeners;
         private readonly List<T> firings;
         internal readonly IKeepListenersAlive KeepListenersAlive;
@@ -162,7 +156,10 @@ namespace Sodium
         ///     Attach a listener to this stream so it doesn't get garbage collected until this stream is garbage collected.
         /// </summary>
         /// <param name="listener">The listener to garbage collect along with this stream.</param>
-        /// <returns>A new stream equivalent to this stream which will garbage collect <paramref name="listener" /> when it is garbage collected.</returns>
+        /// <returns>
+        ///     A new stream equivalent to this stream which will garbage collect <paramref name="listener" /> when it is
+        ///     garbage collected.
+        /// </returns>
         public Stream<T> AttachListener(IListener listener)
         {
             return Transaction.Run(() => this.UnsafeAttachListener(listener));
@@ -177,13 +174,14 @@ namespace Sodium
         public IListener ListenOnce(Action<T> handler)
         {
             IListener listener = null;
-            listener = this.Listen(a =>
-            {
-                // ReSharper disable once AccessToModifiedClosure
-                listener?.Unlisten();
+            listener = this.Listen(
+                a =>
+                {
+                    // ReSharper disable once AccessToModifiedClosure
+                    listener?.Unlisten();
 
-                handler(a);
-            });
+                    handler(a);
+                });
             return listener;
         }
 
@@ -192,10 +190,7 @@ namespace Sodium
         /// </summary>
         /// <typeparam name="T">The type of values fired by the stream.</typeparam>
         /// <returns>A task which completes when a value is fired by this stream.</returns>
-        public TaskWithListener<T> ListenOnceAsync()
-        {
-            return this.ListenOnceAsync(CancellationToken.None);
-        }
+        public TaskWithListener<T> ListenOnceAsync() => this.ListenOnceAsync(CancellationToken.None);
 
         /// <summary>
         ///     Handle the first event on this stream and then automatically unregister.
@@ -214,10 +209,8 @@ namespace Sodium
         /// <typeparam name="T">The type of values fired by the stream.</typeparam>
         /// <param name="modifyTask">A function to modify the task produced by this method.</param>
         /// <returns>A task which completes when a value is fired by this stream.</returns>
-        public TaskWithListener ListenOnceAsync(Func<Task<T>, Task> modifyTask)
-        {
-            return this.ListenOnceAsync(modifyTask, CancellationToken.None);
-        }
+        public TaskWithListener ListenOnceAsync(Func<Task<T>, Task> modifyTask) =>
+            this.ListenOnceAsync(modifyTask, CancellationToken.None);
 
         /// <summary>
         ///     Handle the first event on this stream and then automatically unregister.
@@ -238,10 +231,8 @@ namespace Sodium
         /// <typeparam name="TResult">The type of the result of the task.</typeparam>
         /// <param name="modifyTask">A function to modify the task produced by this method.</param>
         /// <returns>A task which completes when a value is fired by this stream.</returns>
-        public TaskWithListener<TResult> ListenOnceAsync<TResult>(Func<Task<T>, Task<TResult>> modifyTask)
-        {
-            return this.ListenOnceAsync(modifyTask, CancellationToken.None);
-        }
+        public TaskWithListener<TResult> ListenOnceAsync<TResult>(Func<Task<T>, Task<TResult>> modifyTask) =>
+            this.ListenOnceAsync(modifyTask, CancellationToken.None);
 
         /// <summary>
         ///     Handle the first event on this stream and then automatically unregister.
@@ -251,41 +242,52 @@ namespace Sodium
         /// <param name="modifyTask">A function to modify the task produced by this method.</param>
         /// <param name="token">The cancellation token.</param>
         /// <returns>A task which completes when a value is fired by this stream.</returns>
-        public TaskWithListener<TResult> ListenOnceAsync<TResult>(Func<Task<T>, Task<TResult>> modifyTask, CancellationToken token)
+        public TaskWithListener<TResult> ListenOnceAsync<TResult>(
+            Func<Task<T>, Task<TResult>> modifyTask,
+            CancellationToken token)
         {
             return this.ListenOnceAsyncInternal((t, l) => new TaskWithListener<TResult>(modifyTask(t), l), token);
         }
 
-        private TResult ListenOnceAsyncInternal<TResult>(Func<Task<T>, IListener, TResult> generateResult, CancellationToken token)
+        private TResult ListenOnceAsyncInternal<TResult>(
+            Func<Task<T>, IListener, TResult> generateResult,
+            CancellationToken token)
         {
             TaskCompletionSource<T> tcs = new TaskCompletionSource<T>();
 
             IListener listener = null;
-            listener = this.Listen(a =>
-            {
-                // ReSharper disable once AccessToModifiedClosure
-                listener?.Unlisten();
+            listener = this.Listen(
+                a =>
+                {
+                    // ReSharper disable once AccessToModifiedClosure
+                    listener?.Unlisten();
 
-                tcs.TrySetResult(a);
-            });
+                    tcs.TrySetResult(a);
+                });
 
-            token.Register(() =>
-            {
-                listener?.Unlisten();
+            token.Register(
+                () =>
+                {
+                    listener?.Unlisten();
 
-                tcs.TrySetCanceled();
-            });
+                    tcs.TrySetCanceled();
+                });
 
             return generateResult(tcs.Task, listener);
         }
 
-        internal IWeakListener Listen(Node target, Action<Transaction, T> action) => Transaction.Apply(trans1 => this.Listen(target, trans1, action, false), false);
+        internal IWeakListener Listen(Node target, Action<Transaction, T> action) => Transaction.Apply(
+            trans1 => this.Listen(target, trans1, action, false),
+            false);
 
-        internal IWeakListener Listen(Node target, Transaction trans, Action<Transaction, T> action, bool suppressEarlierFirings)
+        internal IWeakListener Listen(
+            Node target,
+            Transaction trans,
+            Action<Transaction, T> action,
+            bool suppressEarlierFirings)
         {
-            ValueTuple<bool, Node<T>.Target> t = this.Node.Link(trans, action, target);
-            Node<T>.Target nodeTarget = t.Item2;
-            if (t.Item1)
+            (bool changed, Node<T>.Target nodeTarget) = this.Node.Link(trans, action, target);
+            if (changed)
             {
                 trans.SetNeedsRegenerating();
             }
@@ -293,25 +295,27 @@ namespace Sodium
             List<T> firings = this.firings.ToList();
             if (!suppressEarlierFirings && firings.Count > 0)
             {
-                trans.Prioritized(target, trans2 =>
-                {
-                    // Anything sent already in this transaction must be sent now so that
-                    // there's no order dependency between send and listen.
-                    foreach (T a in firings)
+                trans.Prioritized(
+                    target,
+                    trans2 =>
                     {
-                        Transaction.InCallback++;
-                        try
+                        // Anything sent already in this transaction must be sent now so that
+                        // there's no order dependency between send and listen.
+                        foreach (T a in firings)
                         {
-                            // Don't allow transactions to interfere with Sodium
-                            // internals.
-                            action(trans2, a);
+                            Transaction.InCallback++;
+                            try
+                            {
+                                // Don't allow transactions to interfere with Sodium
+                                // internals.
+                                action(trans2, a);
+                            }
+                            finally
+                            {
+                                Transaction.InCallback--;
+                            }
                         }
-                        finally
-                        {
-                            Transaction.InCallback--;
-                        }
-                    }
-                });
+                    });
             }
             return new ListenerImplementation(this, action, nodeTarget);
         }
@@ -370,7 +374,8 @@ namespace Sodium
         /// </summary>
         /// <param name="initialValue">The lazily initialized initial value of the cell.</param>
         /// <returns>A cell with the specified lazily initialized initial value, that is updated by this stream's values.</returns>
-        public DiscreteCell<T> HoldLazy(Lazy<T> initialValue) => new DiscreteCell<T>(this.HoldLazyInternal(initialValue));
+        public DiscreteCell<T> HoldLazy(Lazy<T> initialValue) =>
+            new DiscreteCell<T>(this.HoldLazyInternal(initialValue));
 
         internal Cell<T> HoldLazyInternal(Lazy<T> initialValue) => new LazyCell<T>(this, initialValue);
 
@@ -380,10 +385,7 @@ namespace Sodium
         /// <typeparam name="TResult">The return type.</typeparam>
         /// <param name="c">The cell to combine with.</param>
         /// <returns>A stream whose events are the values of the cell at the time of the stream event firing.</returns>
-        public Stream<TResult> Snapshot<TResult>(DiscreteCell<TResult> c)
-        {
-            return this.Snapshot(c.Cell);
-        }
+        public Stream<TResult> Snapshot<TResult>(DiscreteCell<TResult> c) => this.Snapshot(c.Cell);
 
         /// <summary>
         ///     Return a stream whose events are the values of the cell at the time of the stream event firing.
@@ -408,10 +410,8 @@ namespace Sodium
         ///     A stream whose events are the result of the combination using the specified function of the input stream's
         ///     value and the value of the cell at the time of the stream event firing.
         /// </returns>
-        public Stream<TResult> Snapshot<T1, TResult>(DiscreteCell<T1> c, Func<T, T1, TResult> f)
-        {
-            return this.Snapshot(c.Cell, f);
-        }
+        public Stream<TResult> Snapshot<T1, TResult>(DiscreteCell<T1> c, Func<T, T1, TResult> f) =>
+            this.Snapshot(c.Cell, f);
 
         /// <summary>
         ///     Return a stream whose events are the result of the combination using the specified
@@ -446,10 +446,10 @@ namespace Sodium
         ///     A stream whose events are the result of the combination using the specified function of the input stream's
         ///     value and the value of the cells at the time of the stream event firing.
         /// </returns>
-        public Stream<TResult> Snapshot<T1, T2, TResult>(DiscreteCell<T1> c1, DiscreteCell<T2> c2, Func<T, T1, T2, TResult> f)
-        {
-            return this.Snapshot(c1.Cell, c2.Cell, f);
-        }
+        public Stream<TResult> Snapshot<T1, T2, TResult>(
+            DiscreteCell<T1> c1,
+            DiscreteCell<T2> c2,
+            Func<T, T1, T2, TResult> f) => this.Snapshot(c1.Cell, c2.Cell, f);
 
         /// <summary>
         ///     Return a stream whose events are the result of the combination using the specified
@@ -468,7 +468,9 @@ namespace Sodium
         public Stream<TResult> Snapshot<T1, T2, TResult>(Cell<T1> c1, Cell<T2> c2, Func<T, T1, T2, TResult> f)
         {
             Stream<TResult> @out = new Stream<TResult>(this.KeepListenersAlive);
-            IListener l = this.Listen(@out.Node, (trans2, a) => @out.Send(trans2, f(a, c1.SampleNoTransaction(), c2.SampleNoTransaction())));
+            IListener l = this.Listen(
+                @out.Node,
+                (trans2, a) => @out.Send(trans2, f(a, c1.SampleNoTransaction(), c2.SampleNoTransaction())));
             return @out.UnsafeAttachListener(l);
         }
 
@@ -488,10 +490,11 @@ namespace Sodium
         ///     A stream whose events are the result of the combination using the specified function of the input stream's
         ///     value and the value of the cells at the time of the stream event firing.
         /// </returns>
-        public Stream<TResult> Snapshot<T1, T2, T3, TResult>(DiscreteCell<T1> c1, DiscreteCell<T2> c2, DiscreteCell<T3> c3, Func<T, T1, T2, T3, TResult> f)
-        {
-            return this.Snapshot(c1.Cell, c2.Cell, c3.Cell, f);
-        }
+        public Stream<TResult> Snapshot<T1, T2, T3, TResult>(
+            DiscreteCell<T1> c1,
+            DiscreteCell<T2> c2,
+            DiscreteCell<T3> c3,
+            Func<T, T1, T2, T3, TResult> f) => this.Snapshot(c1.Cell, c2.Cell, c3.Cell, f);
 
         /// <summary>
         ///     Return a stream whose events are the result of the combination using the specified
@@ -509,10 +512,18 @@ namespace Sodium
         ///     A stream whose events are the result of the combination using the specified function of the input stream's
         ///     value and the value of the cells at the time of the stream event firing.
         /// </returns>
-        public Stream<TResult> Snapshot<T1, T2, T3, TResult>(Cell<T1> c1, Cell<T2> c2, Cell<T3> c3, Func<T, T1, T2, T3, TResult> f)
+        public Stream<TResult> Snapshot<T1, T2, T3, TResult>(
+            Cell<T1> c1,
+            Cell<T2> c2,
+            Cell<T3> c3,
+            Func<T, T1, T2, T3, TResult> f)
         {
             Stream<TResult> @out = new Stream<TResult>(this.KeepListenersAlive);
-            IListener l = this.Listen(@out.Node, (trans2, a) => @out.Send(trans2, f(a, c1.SampleNoTransaction(), c2.SampleNoTransaction(), c3.SampleNoTransaction())));
+            IListener l = this.Listen(
+                @out.Node,
+                (trans2, a) => @out.Send(
+                    trans2,
+                    f(a, c1.SampleNoTransaction(), c2.SampleNoTransaction(), c3.SampleNoTransaction())));
             return @out.UnsafeAttachListener(l);
         }
 
@@ -534,10 +545,12 @@ namespace Sodium
         ///     A stream whose events are the result of the combination using the specified function of the input stream's
         ///     value and the value of the cells at the time of the stream event firing.
         /// </returns>
-        public Stream<TResult> Snapshot<T1, T2, T3, T4, TResult>(DiscreteCell<T1> c1, DiscreteCell<T2> c2, DiscreteCell<T3> c3, DiscreteCell<T4> c4, Func<T, T1, T2, T3, T4, TResult> f)
-        {
-            return this.Snapshot(c1.Cell, c2.Cell, c3.Cell, c4.Cell, f);
-        }
+        public Stream<TResult> Snapshot<T1, T2, T3, T4, TResult>(
+            DiscreteCell<T1> c1,
+            DiscreteCell<T2> c2,
+            DiscreteCell<T3> c3,
+            DiscreteCell<T4> c4,
+            Func<T, T1, T2, T3, T4, TResult> f) => this.Snapshot(c1.Cell, c2.Cell, c3.Cell, c4.Cell, f);
 
         /// <summary>
         ///     Return a stream whose events are the result of the combination using the specified
@@ -557,10 +570,24 @@ namespace Sodium
         ///     A stream whose events are the result of the combination using the specified function of the input stream's
         ///     value and the value of the cells at the time of the stream event firing.
         /// </returns>
-        public Stream<TResult> Snapshot<T1, T2, T3, T4, TResult>(Cell<T1> c1, Cell<T2> c2, Cell<T3> c3, Cell<T4> c4, Func<T, T1, T2, T3, T4, TResult> f)
+        public Stream<TResult> Snapshot<T1, T2, T3, T4, TResult>(
+            Cell<T1> c1,
+            Cell<T2> c2,
+            Cell<T3> c3,
+            Cell<T4> c4,
+            Func<T, T1, T2, T3, T4, TResult> f)
         {
             Stream<TResult> @out = new Stream<TResult>(this.KeepListenersAlive);
-            IListener l = this.Listen(@out.Node, (trans2, a) => @out.Send(trans2, f(a, c1.SampleNoTransaction(), c2.SampleNoTransaction(), c3.SampleNoTransaction(), c4.SampleNoTransaction())));
+            IListener l = this.Listen(
+                @out.Node,
+                (trans2, a) => @out.Send(
+                    trans2,
+                    f(
+                        a,
+                        c1.SampleNoTransaction(),
+                        c2.SampleNoTransaction(),
+                        c3.SampleNoTransaction(),
+                        c4.SampleNoTransaction())));
             return @out.UnsafeAttachListener(l);
         }
 
@@ -595,16 +622,17 @@ namespace Sodium
             Stream<T> @out = new Stream<T>(this.KeepListenersAlive);
             Node<T> left = new Node<T>();
             Node<T> right = @out.Node;
-            ValueTuple<bool, Node<T>.Target> r = left.Link(trans, (t, v) => { }, right);
-            Node<T>.Target nodeTarget = r.Item2;
-            if (r.Item1)
+            (bool changed, Node<T>.Target nodeTarget) = left.Link(trans, (t, v) => { }, right);
+            if (changed)
             {
                 trans.SetNeedsRegenerating();
             }
             Action<Transaction, T> h = @out.Send;
             IListener l1 = this.Listen(left, h);
             IListener l2 = s.Listen(right, h);
-            return @out.UnsafeAttachListener(l1).UnsafeAttachListener(l2).UnsafeAttachListener(Listener.Create(left, nodeTarget));
+            return @out.UnsafeAttachListener(l1)
+                .UnsafeAttachListener(l2)
+                .UnsafeAttachListener(Listener.Create(left, nodeTarget));
         }
 
         /// <summary>
@@ -633,10 +661,8 @@ namespace Sodium
             return Transaction.Apply(trans => this.Merge(trans, s, f), false);
         }
 
-        internal Stream<T> Merge(Transaction trans, Stream<T> s, Func<T, T, T> f)
-        {
-            return this.Merge(trans, s).Coalesce(trans, f);
-        }
+        internal Stream<T> Merge(Transaction trans, Stream<T> s, Func<T, T, T> f) =>
+            this.Merge(trans, s).Coalesce(trans, f);
 
         internal Stream<T> Coalesce(Transaction trans1, Func<T, T, T> f)
         {
@@ -664,44 +690,42 @@ namespace Sodium
         public Stream<T> Filter(Func<T, bool> predicate)
         {
             Stream<T> @out = new Stream<T>(this.KeepListenersAlive);
-            IListener l = this.Listen(@out.Node, (trans2, a) =>
-            {
-                if (predicate(a))
+            IListener l = this.Listen(
+                @out.Node,
+                (trans2, a) =>
                 {
-                    @out.Send(trans2, a);
-                }
-            });
+                    if (predicate(a))
+                    {
+                        @out.Send(trans2, a);
+                    }
+                });
             return @out.UnsafeAttachListener(l);
         }
 
         /// <summary>
-        ///     Return a stream that only outputs events from the input stream when the specified cell's value is <code>true</code>.
+        ///     Return a stream that only outputs events from the input stream when the specified cell's value is <code>true</code>
+        ///     .
         /// </summary>
         /// <param name="c">The cell that acts as a gate.</param>
         /// <returns>A stream that only outputs events from the input stream when the specified cell's value is <code>true</code>.</returns>
-        public Stream<T> Gate(DiscreteCell<bool> c)
-        {
-            return this.Gate(c.Cell);
-        }
+        public Stream<T> Gate(DiscreteCell<bool> c) => this.Gate(c.Cell);
 
         /// <summary>
-        ///     Return a stream that only outputs events from the input stream when the specified cell's value is <code>true</code>.
+        ///     Return a stream that only outputs events from the input stream when the specified cell's value is <code>true</code>
+        ///     .
         /// </summary>
         /// <param name="c">The cell that acts as a gate.</param>
         /// <returns>A stream that only outputs events from the input stream when the specified cell's value is <code>true</code>.</returns>
         public Stream<T> Gate(Cell<bool> c)
         {
-            return this.Snapshot(c, (a, pred) => pred ? Maybe.Just(a) : Maybe.Nothing<T>()).FilterMaybe();
+            return this.Snapshot(c, (a, pred) => pred ? Maybe.Some(a) : Maybe.None).FilterMaybe();
         }
 
         /// <summary>
         ///     Return a stream that only outputs events which have a different value than the previous event.
         /// </summary>
         /// <returns>A stream that only outputs events which have a different value than the previous event.</returns>
-        public Stream<T> Calm()
-        {
-            return this.Calm(EqualityComparer<T>.Default);
-        }
+        public Stream<T> Calm() => this.Calm(EqualityComparer<T>.Default);
 
         /// <summary>
         ///     Return a stream that only outputs events which have a different value than the previous event.
@@ -710,21 +734,24 @@ namespace Sodium
         /// <returns>A stream that only outputs events which have a different value than the previous event.</returns>
         public Stream<T> Calm(IEqualityComparer<T> comparer)
         {
-            return this.Calm(new Lazy<IMaybe<T>>(Maybe.Nothing<T>), comparer);
+            return this.Calm(new Lazy<Maybe<T>>(() => Maybe.None), comparer);
         }
 
-        internal Stream<T> Calm(Lazy<IMaybe<T>> init, IEqualityComparer<T> comparer)
+        internal Stream<T> Calm(Lazy<Maybe<T>> init, IEqualityComparer<T> comparer)
         {
-            return this.CollectLazy(init, (a, lastA) =>
-            {
-                if (lastA.Match(v => comparer.Equals(v, a), () => false))
-                {
-                    return ValueTuple.Create(Maybe.Nothing<T>(), lastA);
-                }
+            return this.CollectLazy(
+                    init,
+                    (a, lastA) =>
+                    {
+                        if (lastA.Match(v => comparer.Equals(v, a), () => false))
+                        {
+                            return (ReturnValue: Maybe.None, State: lastA);
+                        }
 
-                IMaybe<T> ma = Maybe.Just(a);
-                return ValueTuple.Create(ma, ma);
-            }).FilterMaybe();
+                        Maybe<T> ma = Maybe.Some(a);
+                        return (ReturnValue: ma, State: ma);
+                    })
+                .FilterMaybe();
         }
 
         /// <summary>
@@ -740,7 +767,10 @@ namespace Sodium
         ///     <see cref="Snapshot{TReturn}(Cell{TReturn})" />.  Apart from this, the function must be pure.
         /// </param>
         /// <returns>A stream resulting from the transformation of this stream by the Mealy machine.</returns>
-        public Stream<TReturn> Collect<TState, TReturn>(TState initialState, Func<T, TState, ValueTuple<TReturn, TState>> f) => this.CollectLazy(new Lazy<TState>(() => initialState), f);
+        public Stream<TReturn> Collect<TState, TReturn>(
+            TState initialState,
+            Func<T, TState, (TReturn ReturnValue, TState State)> f) =>
+            this.CollectLazy(new Lazy<TState>(() => initialState), f);
 
         /// <summary>
         ///     Transform a stream with a generalized state loop (a Mealy machine) using a lazily evaluated initial state.
@@ -755,18 +785,21 @@ namespace Sodium
         ///     <see cref="Snapshot{TReturn}(Cell{TReturn})" />.  Apart from this, the function must be pure.
         /// </param>
         /// <returns>A stream resulting from the transformation of this stream by the Mealy machine.</returns>
-        public Stream<TReturn> CollectLazy<TState, TReturn>(Lazy<TState> initialState, Func<T, TState, ValueTuple<TReturn, TState>> f)
+        public Stream<TReturn> CollectLazy<TState, TReturn>(
+            Lazy<TState> initialState,
+            Func<T, TState, (TReturn ReturnValue, TState State)> f)
         {
-            return Transaction.Run(() =>
-            {
-                StreamLoop<TState> es = new StreamLoop<TState>();
-                Cell<TState> s = es.HoldLazyInternal(initialState);
-                Stream<ValueTuple<TReturn, TState>> ebs = this.Snapshot(s, f);
-                Stream<TReturn> eb = ebs.Map(bs => bs.Item1);
-                Stream<TState> esOut = ebs.Map(bs => bs.Item2);
-                es.Loop(esOut);
-                return eb;
-            });
+            return Transaction.Run(
+                () =>
+                {
+                    StreamLoop<TState> es = new StreamLoop<TState>();
+                    Cell<TState> s = es.HoldLazyInternal(initialState);
+                    Stream<(TReturn ReturnValue, TState State)> ebs = this.Snapshot(s, f);
+                    Stream<TReturn> eb = ebs.Map(bs => bs.ReturnValue);
+                    Stream<TState> esOut = ebs.Map(bs => bs.State);
+                    es.Loop(esOut);
+                    return eb;
+                });
         }
 
         /// <summary>
@@ -780,18 +813,20 @@ namespace Sodium
         ///     <see cref="Snapshot{TReturn}(Cell{TReturn})" />.  Apart from this, the function must be pure.
         /// </param>
         /// <returns>A cell holding the accumulated state of this stream.</returns>
-        public DiscreteCell<TReturn> Accum<TReturn>(TReturn initialState, Func<T, TReturn, TReturn> f) => this.AccumLazy(new Lazy<TReturn>(() => initialState), f);
+        public DiscreteCell<TReturn> Accum<TReturn>(TReturn initialState, Func<T, TReturn, TReturn> f) =>
+            this.AccumLazy(new Lazy<TReturn>(() => initialState), f);
 
         public DiscreteCell<TReturn> AccumLazy<TReturn>(Lazy<TReturn> initialState, Func<T, TReturn, TReturn> f)
         {
-            return Transaction.Run(() =>
-            {
-                StreamLoop<TReturn> es = new StreamLoop<TReturn>();
-                Cell<TReturn> s = es.HoldLazyInternal(initialState);
-                Stream<TReturn> esOut = this.Snapshot(s, f);
-                es.Loop(esOut);
-                return esOut.HoldLazy(initialState);
-            });
+            return Transaction.Run(
+                () =>
+                {
+                    StreamLoop<TReturn> es = new StreamLoop<TReturn>();
+                    Cell<TReturn> s = es.HoldLazyInternal(initialState);
+                    Stream<TReturn> esOut = this.Snapshot(s, f);
+                    es.Loop(esOut);
+                    return esOut.HoldLazy(initialState);
+                });
         }
 
         /// <summary>
@@ -808,19 +843,21 @@ namespace Sodium
             // the listener.
             Stream<T> @out = new Stream<T>(this.KeepListenersAlive);
             IListener l = null;
-            l = this.Listen(@out.Node, (trans, a) =>
-            {
-                // ReSharper disable AccessToModifiedClosure
-                if (l != null)
+            l = this.Listen(
+                @out.Node,
+                (trans, a) =>
                 {
-                    @out.Send(trans, a);
+                    // ReSharper disable AccessToModifiedClosure
+                    if (l != null)
+                    {
+                        @out.Send(trans, a);
 
-                    l?.Unlisten();
+                        l?.Unlisten();
 
-                    l = null;
-                }
-                // ReSharper restore AccessToModifiedClosure
-            });
+                        l = null;
+                    }
+                    // ReSharper restore AccessToModifiedClosure
+                });
             return @out.UnsafeAttachListener(l);
         }
 
@@ -847,34 +884,35 @@ namespace Sodium
 
             foreach (Node<T>.Target target in this.Node.GetListenersCopy())
             {
-                trans.Prioritized(target.Node, trans2 =>
-                {
-                    Transaction.InCallback++;
-                    try
+                trans.Prioritized(
+                    target.Node,
+                    trans2 =>
                     {
-                        // Don't allow transactions to interfere with Sodium
-                        // internals.
-                        // Dereference the weak reference
-                        Action<Transaction, T> action;
-                        if (target.Action.TryGetTarget(out action))
+                        Transaction.InCallback++;
+                        try
                         {
-                            // If it hasn't been garbage collected, call it.
-                            if (target.IsActivated)
+                            // Don't allow transactions to interfere with Sodium
+                            // internals.
+                            // Dereference the weak reference
+                            if (target.Action.TryGetTarget(out Action<Transaction, T> action))
                             {
-                                action(trans2, a);
+                                // If it hasn't been garbage collected, call it.
+                                if (target.IsActivated)
+                                {
+                                    action(trans2, a);
+                                }
+                            }
+                            else
+                            {
+                                // If it has been garbage collected, remove it.
+                                this.Node.RemoveListener(target);
                             }
                         }
-                        else
+                        finally
                         {
-                            // If it has been garbage collected, remove it.
-                            this.Node.RemoveListener(target);
+                            Transaction.InCallback--;
                         }
-                    }
-                    finally
-                    {
-                        Transaction.InCallback--;
-                    }
-                });
+                    });
             }
         }
 
@@ -899,10 +937,8 @@ namespace Sodium
                 this.unlisten();
             }
 
-            public IListenerWithWeakReference GetListenerWithWeakReference()
-            {
-                return this.listener.GetListenerWithWeakReference();
-            }
+            public IListenerWithWeakReference GetListenerWithWeakReference() =>
+                this.listener.GetListenerWithWeakReference();
 
             public void Dispose()
             {
@@ -916,6 +952,7 @@ namespace Sodium
             // a weak reference.
             // ReSharper disable once NotAccessedField.Local
             private readonly Action<Transaction, T> action;
+
             // It's essential that we keep the listener alive while the caller holds
             // the Listener, so that the garbage collector doesn't get triggered.
             // ReSharper disable once NotAccessedField.Local
@@ -936,10 +973,7 @@ namespace Sodium
                 this.weakListener.Unlisten();
             }
 
-            public IListenerWithWeakReference GetListenerWithWeakReference()
-            {
-                return this.weakListener;
-            }
+            public IListenerWithWeakReference GetListenerWithWeakReference() => this.weakListener;
         }
 
         private class WeakListener : IListenerWithWeakReference
@@ -962,6 +996,8 @@ namespace Sodium
         private class KeepListenersAliveImplementation : IKeepListenersAlive
         {
             private readonly HashSet<IListener> listeners = new HashSet<IListener>();
+
+            // ReSharper disable once CollectionNeverQueried.Local
             private readonly List<IKeepListenersAlive> childKeepListenersAliveList = new List<IKeepListenersAlive>();
 
             public void KeepListenerAlive(IListener listener)

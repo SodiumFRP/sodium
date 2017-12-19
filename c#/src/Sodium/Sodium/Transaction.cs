@@ -78,11 +78,13 @@ namespace Sodium
         /// </remarks>
         public static void RunVoid(Action action)
         {
-            Apply(_ =>
-            {
-                action();
-                return Unit.Value;
-            }, false);
+            Apply(
+                _ =>
+                {
+                    action();
+                    return Unit.Value;
+                },
+                false);
         }
 
         /// <summary>
@@ -108,16 +110,19 @@ namespace Sodium
         /// <param name="action">The action to execute.</param>
         /// <remarks>
         ///     This method is most useful for creating FRP logic which must be created within a Transaction (such as in a loop),
-        ///     but which should not block other transactions from running.  A use case for this is if the construction of FRP logic takes
+        ///     but which should not block other transactions from running.  A use case for this is if the construction of FRP
+        ///     logic takes
         ///     a significant amount of time, is being done asynchronously, and may be canceled by another stream event.
         /// </remarks>
         public static void RunConstructVoid(Action action)
         {
-            Apply(_ =>
-            {
-                action();
-                return Unit.Value;
-            }, true);
+            Apply(
+                _ =>
+                {
+                    action();
+                    return Unit.Value;
+                },
+                true);
         }
 
         /// <summary>
@@ -130,7 +135,8 @@ namespace Sodium
         /// <returns>The return value of <paramref name="f" />.</returns>
         /// <remarks>
         ///     This method is most useful for creating FRP logic which must be created within a Transaction (such as in a loop),
-        ///     but which should not block other transactions from running.  A use case for this is if the construction of FRP logic takes
+        ///     but which should not block other transactions from running.  A use case for this is if the construction of FRP
+        ///     logic takes
         ///     a significant amount of time, is being done asynchronously, and may be canceled by another stream event.
         /// </remarks>
         public static T RunConstruct<T>(Func<T> f)
@@ -362,8 +368,7 @@ namespace Sodium
         {
             // If an entry exists already, combine the old one with the new one.
             Action<Transaction> @new;
-            Action<Transaction> existing;
-            if (this.postQueue.TryGetValue(index, out existing))
+            if (this.postQueue.TryGetValue(index, out Action<Transaction> existing))
             {
                 @new = trans =>
                 {
@@ -498,17 +503,13 @@ namespace Sodium
 
         private class Entry
         {
-            private static long nextSeq;
-
             public readonly Node Node;
             public readonly Action<Transaction> Action;
-            private readonly long seq;
 
             public Entry(Node node, Action<Transaction> action)
             {
                 this.Node = node;
                 this.Action = action;
-                this.seq = nextSeq++;
             }
         }
     }

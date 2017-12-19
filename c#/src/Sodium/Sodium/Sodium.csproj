@@ -21,6 +21,8 @@
     <DefineConstants>DEBUG;TRACE</DefineConstants>
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
+    <DocumentationFile>
+    </DocumentationFile>
   </PropertyGroup>
   <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
     <DebugType>pdbonly</DebugType>
@@ -31,15 +33,13 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Reference Include="Priority Queue, Version=4.0.3.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\OptimizedPriorityQueue.4.0.3\lib\net45\Priority Queue.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="Priority Queue, Version=4.1.1.0, Culture=neutral, processorArchitecture=MSIL">
+      <HintPath>..\packages\OptimizedPriorityQueue.4.1.1\lib\net45\Priority Queue.dll</HintPath>
     </Reference>
     <Reference Include="System" />
     <Reference Include="System.Core" />
-    <Reference Include="System.ValueTuple, Version=4.0.1.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.ValueTuple.4.3.0\lib\netstandard1.0\System.ValueTuple.dll</HintPath>
-      <Private>True</Private>
+    <Reference Include="System.ValueTuple, Version=4.0.2.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
+      <HintPath>..\packages\System.ValueTuple.4.4.0\lib\netstandard1.0\System.ValueTuple.dll</HintPath>
     </Reference>
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
@@ -51,6 +51,11 @@
   <ItemGroup>
     <Compile Include="Cell.cs" />
     <Compile Include="CellExtensionMethods.cs" />
+    <Compile Include="Cleanup.cs" />
+    <Compile Include="IMaybe.cs" />
+    <Compile Include="UnitExtensionMethods.cs" />
+    <Compile Include="IEither.cs" />
+    <Compile Include="JetBrainsAnnotations.cs" />
     <Compile Include="CompositeStrongListener.cs" />
     <Compile Include="CompositeWeakListener.cs" />
     <Compile Include="DiscreteCell.cs" />
@@ -65,12 +70,13 @@
     <Compile Include="IListenerWithWeakReference.cs" />
     <Compile Include="IStrongListener.cs" />
     <Compile Include="IWeakListener.cs" />
+    <Compile Include="Maybe.cs" />
+    <Compile Include="MaybeExtensionMethods.cs" />
     <Compile Include="MaybeMonad.cs" />
     <Compile Include="MutableListener.cs" />
     <Compile Include="StreamListenerManager.cs" />
     <Compile Include="StreamExtensionMethods.cs" />
     <Compile Include="CellLoop.cs" />
-    <Compile Include="IMaybe.cs" />
     <Compile Include="LazyCell.cs" />
     <Compile Include="LazyExtensionMethods.cs" />
     <Compile Include="Listener.cs" />
@@ -78,8 +84,7 @@
     <Compile Include="StreamLoop.cs" />
     <Compile Include="StreamSink.cs" />
     <Compile Include="IListener.cs" />
-    <Compile Include="Maybe.cs" />
-    <Compile Include="MutableMaybeValue.cs" />
+    <Compile Include="Either.cs" />
     <Compile Include="Node.cs" />
     <Compile Include="Operational.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />

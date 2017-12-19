@@ -1,27 +1,26 @@
 package sodium
 
-import scala.collection.mutable.HashSet
+import scala.collection.mutable.ListBuffer
+import scala.ref.WeakReference
 
 class Node(private var rank: Long) extends Comparable[Node] {
   import Node._
 
-  private val listeners = HashSet[Node]()
+  val listeners = ListBuffer[Target]()
 
   /**
-   * @return true if any changes were made.
-   */
-  def linkTo(target: Node): Boolean =
-    if (target == NullNode) {
-      false
-    } else {
-      val changed = target.ensureBiggerThan(rank, Set())
-      listeners.add(target)
-      changed
-    }
+    * @return true if any changes were made.
+    */
+  def linkTo(action: TransactionHandler[Unit], target: Node, outTarget: Array[Target]): Boolean = {
+    val changed = target.ensureBiggerThan(rank, Set())
+    val t = Target(action, target)
+    listeners += t
+    outTarget(0) = t
+    changed
+  }
 
-  def unlinkTo(target: Node) {
-    if (target != NullNode)
-      listeners.remove(target)
+  def unlinkTo(target: Target): Unit = {
+    listeners -= target
   }
 
   private def ensureBiggerThan(limit: Long, visited: Set[Node]): Boolean =
@@ -30,7 +29,7 @@ class Node(private var rank: Long) extends Comparable[Node] {
     } else {
       val accVisited = Set(this) ++ visited
       rank = limit + 1
-      listeners.foreach(_.ensureBiggerThan(rank, accVisited))
+      listeners.foreach(_.node.ensureBiggerThan(rank, accVisited))
       true
     }
 
@@ -39,4 +38,11 @@ class Node(private var rank: Long) extends Comparable[Node] {
 
 object Node {
   val NullNode = new Node(Long.MaxValue)
+
+  case class Target(final var action: WeakReference[TransactionHandler[Unit]], final var node: Node)
+
+  object Target {
+    def apply(action: TransactionHandler[Unit], node: Node) = new Target(new WeakReference(action), node)
+  }
+
 }

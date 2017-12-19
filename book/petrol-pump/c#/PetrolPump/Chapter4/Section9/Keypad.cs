@@ -19,12 +19,12 @@ namespace PetrolPump.Chapter4.Section9
             {
                 if (key == Key.Clear)
                 {
-                    return Maybe.Just(0);
+                    return Maybe.Some(0);
                 }
                 int x10 = valueLocal * 10;
                 return x10 >= 1000
-                    ? Maybe.Nothing<int>()
-                    : Maybe.Just(
+                    ? Maybe.None
+                    : Maybe.Some(
                         key == Key.Zero ? x10 :
                             key == Key.One ? x10 + 1 :
                                 key == Key.Two ? x10 + 2 :

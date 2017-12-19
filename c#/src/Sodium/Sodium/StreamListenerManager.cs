@@ -10,13 +10,14 @@ namespace Sodium
     ///     Provides methods to clean up after objects which have gone out of scope.
     /// </summary>
     /// <remarks>
-    ///     This class checks for any streams which have been garbage collected and cleans them up by running <see cref="IListener.Unlisten"/> on each of their attached listeners.
+    ///     This class checks for any streams which have been garbage collected and cleans them up by running
+    ///     <see cref="IListener.Unlisten" /> on each of their attached listeners.
     ///     By default, this class automatically cleans up every 30 seconds.
     /// </remarks>
     internal static class StreamListenerManager
     {
-        private static Dictionary<Guid, StreamListeners> StreamsById = new Dictionary<Guid, StreamListeners>();
-        private static long StreamsByIdCapacity;
+        private static Dictionary<Guid, StreamListeners> streamsById = new Dictionary<Guid, StreamListeners>();
+        private static long streamsByIdCapacity;
         private static readonly object StreamsByIdLock = new object();
         private static readonly AsyncBlockingCollection<Guid> StreamIdsToRemove = new AsyncBlockingCollection<Guid>();
         private static readonly ConcurrentQueue<Guid> StreamIdsToRemoveLastChance = new ConcurrentQueue<Guid>();
@@ -60,12 +61,14 @@ namespace Sodium
                 Guid streamId;
                 while (StreamIdsToRemoveLastChance.TryDequeue(out streamId))
                 {
-                    StreamListeners streamListeners;
-                    bool found;
-                    lock (StreamsByIdLock)
+                    foreach (Guid streamId in StreamIdsToRemove.GetConsumingEnumerable())
                     {
-                        found = StreamsById.TryGetValue(streamId, out streamListeners);
-                    }
+                        StreamListeners streamListeners;
+                        bool found;
+                        lock (StreamsByIdLock)
+                        {
+                            found = streamsById.TryGetValue(streamId, out streamListeners);
+                        }
 
                     if (found)
                     {
@@ -92,8 +95,8 @@ namespace Sodium
 
                 lock (StreamsByIdLock)
                 {
-                    StreamsById.Add(streamId, this);
-                    StreamsByIdCapacity++;
+                    streamsById.Add(streamId, this);
+                    streamsByIdCapacity++;
                 }
             }
 
@@ -106,12 +109,12 @@ namespace Sodium
 
                 lock (StreamsByIdLock)
                 {
-                    StreamsById.Remove(this.streamId);
+                    streamsById.Remove(this.streamId);
                     // Dictionary does not reclaim space after items are removed, so we will create a new one if we can reclaim a substantial amount of space
-                    if (StreamsByIdCapacity > 100 && StreamsById.Count < StreamsByIdCapacity / 2)
+                    if (streamsByIdCapacity > 100 && streamsById.Count < streamsByIdCapacity / 2)
                     {
-                        StreamsById = new Dictionary<Guid, StreamListeners>(StreamsById);
-                        StreamsByIdCapacity = StreamsById.Count;
+                        streamsById = new Dictionary<Guid, StreamListeners>(streamsById);
+                        streamsByIdCapacity = streamsById.Count;
                     }
                 }
             }

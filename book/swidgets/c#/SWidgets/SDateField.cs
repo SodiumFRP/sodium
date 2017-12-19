@@ -27,15 +27,15 @@ namespace SWidgets
         public SDateField()
         {
             DateTime now = DateTime.Now;
-            SComboBox<int> year = new SComboBox<int>(Maybe.Just(now.Year), Enumerable.Range(now.Year - 10, 21));
-            SComboBox<string> month = new SComboBox<string>(Maybe.Just(Months.Single(p => p.Value == now.Month).Key), Months.Keys);
-            SComboBox<int> day = new SComboBox<int>(Maybe.Just(now.Day), Enumerable.Range(1, 31));
+            SComboBox<int> year = new SComboBox<int>(Maybe.Some(now.Year), Enumerable.Range(now.Year - 10, 21));
+            SComboBox<string> month = new SComboBox<string>(Maybe.Some(Months.Single(p => p.Value == now.Month).Key), Months.Keys);
+            SComboBox<int> day = new SComboBox<int>(Maybe.Some(now.Day), Enumerable.Range(1, 31));
 
             this.Children.Add(year);
             this.Children.Add(month);
             this.Children.Add(day);
 
-            DiscreteCell<IMaybe<int>> monthIndex = month.SelectedItem.Map(m => m.Match(s => Maybe.Just(Months[s]), Maybe.Nothing<int>));
+            DiscreteCell<Maybe<int>> monthIndex = month.SelectedItem.Map(m => m.Match(s => Maybe.Some(Months[s]), () => Maybe.None));
             this.SelectedDate = year.SelectedItem.Lift(monthIndex, day.SelectedItem,
                 (my, mm, md) =>
                     from y in my

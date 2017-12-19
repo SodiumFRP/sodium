@@ -7,7 +7,7 @@ namespace Shift
     public class Classic : IParadigm
     {
         private readonly Action<string> addMessage;
-        private readonly MutableMaybeValue<DragInfo> dragInfo = new MutableMaybeValue<DragInfo>();
+        private Maybe<DragInfo> dragInfo;
 
         private bool axisLock;
 
@@ -19,24 +19,23 @@ namespace Shift
         public void HandleMouseDown(MouseEvtWithElement me)
         {
             this.addMessage("classic dragging " + me.Element.Name);
-            this.dragInfo.Set(new DragInfo(me, Canvas.GetLeft(me.Element.Polygon).ZeroIfNaN(), Canvas.GetTop(me.Element.Polygon).ZeroIfNaN()));
+            this.dragInfo = Maybe.Some(new DragInfo(me, Canvas.GetLeft(me.Element.Polygon).ZeroIfNaN(), Canvas.GetTop(me.Element.Polygon).ZeroIfNaN()));
         }
 
         public void HandleMouseMove(MouseEvt me)
         {
-            this.dragInfo.Match(
+            this.dragInfo.MatchSome(
                 d =>
                 {
                     Reposition r = new Reposition(d, me, this.axisLock);
                     Canvas.SetLeft(r.Polygon, r.Left);
                     Canvas.SetTop(r.Polygon, r.Top);
-                },
-                () => { });
+                });
         }
 
         public void HandleMouseUp(MouseEvt me)
         {
-            this.dragInfo.Reset();
+            this.dragInfo = Maybe.None;
         }
 
         public void HandleShift(bool isDown)

@@ -23,6 +23,19 @@ namespace Sodium.Tests
         }
 
         [Test]
+        public void TestSendNull()
+        {
+            DiscreteCellSink<string> c = new DiscreteCellSink<string>(string.Empty);
+            List<string> @out = new List<string>();
+            IListener l = c.Listen(@out.Add);
+            c.Send("0");
+            c.Send(null);
+            c.Send("1");
+            l.Unlisten();
+            CollectionAssert.AreEqual(new[] { string.Empty, "0", null, "1" }, @out);
+        }
+
+        [Test]
         public void TestHoldUpdates()
         {
             StreamSink<int> s = Stream.CreateSink<int>();
@@ -137,13 +150,13 @@ namespace Sodium.Tests
                 this.Number1Cell = this.changeNumber1StreamSink.Hold(n1);
                 this.changeNumber2StreamSink = new StreamSink<int>();
                 this.Number2Cell = this.changeNumber2StreamSink.Hold(n2);
-                this.BothNumbersCell = this.Number1Cell.Lift(this.Number2Cell, Tuple.Create).Values.Hold(Tuple.Create(99, 99));
+                this.BothNumbersCell = this.Number1Cell.Lift(this.Number2Cell, (number1, number2) => (Number1: number1, Number2: number2)).Values.Hold((Number1: 99, Number2: 99));
             }
 
             public Stream<Unit> RemoveStream { get; }
             public DiscreteCell<int> Number1Cell { get; }
             public DiscreteCell<int> Number2Cell { get; }
-            public DiscreteCell<Tuple<int, int>> BothNumbersCell { get; }
+            public DiscreteCell<(int Number1, int Number2)> BothNumbersCell { get; }
 
             public void Remove()
             {
@@ -165,13 +178,13 @@ namespace Sodium.Tests
         public void TestDiscreteCellLoopComplex()
         {
             StreamSink<int> s = new StreamSink<int>();
-            StreamSink<Tuple<int, int>> addItemStreamSink = new StreamSink<Tuple<int, int>>();
+            StreamSink<(int Number1, int Number2)> addItemStreamSink = new StreamSink<(int Number1, int Number2)>();
             StreamSink<IReadOnlyList<TestObject>> removeItemsStreamSink = new StreamSink<IReadOnlyList<TestObject>>();
             DiscreteCell<IReadOnlyList<TestObject>> listCell = Transaction.Run(() =>
             {
                 DiscreteCellLoop<IReadOnlyList<TestObject>> listCellLoop = new DiscreteCellLoop<IReadOnlyList<TestObject>>();
                 DiscreteCell<IReadOnlyList<TestObject>> listCellLocal =
-                    addItemStreamSink.OrElse(s.Map(v => Tuple.Create(v, v))).Map<Func<IReadOnlyList<TestObject>, IReadOnlyList<TestObject>>>(o => c => c.Concat(new[] { new TestObject(o.Item1, o.Item2) }).ToArray())
+                    addItemStreamSink.OrElse(s.Map(v => (Number1: v, Number2: v))).Map<Func<IReadOnlyList<TestObject>, IReadOnlyList<TestObject>>>(o => c => c.Concat(new[] { new TestObject(o.Number1, o.Number2) }).ToArray())
                         .Merge(removeItemsStreamSink.Map<Func<IReadOnlyList<TestObject>, IReadOnlyList<TestObject>>>(o => c => c.Except(o).ToArray()), (f, g) => c => g(f(c)))
                         .Snapshot(listCellLoop, (f, c) => f(c))
                         .Hold(new TestObject[0]);
@@ -184,10 +197,10 @@ namespace Sodium.Tests
                 {
                     if (c.Any())
                     {
-                        Tuple<int, int> t = c.Last().BothNumbersCell.Cell.Sample();
-                        if (t.Item1 == 9 && t.Item2 == 9)
+                        (int n1, int n2) = c.Last().BothNumbersCell.Cell.Sample();
+                        if (n1 == 9 && n2 == 9)
                         {
-                            addItemStreamSink.Send(Tuple.Create(0, 0));
+                            addItemStreamSink.Send((Number1: 0, Number2: 0));
                         }
                     }
                 }));
@@ -195,20 +208,20 @@ namespace Sodium.Tests
             IListener l3 = Transaction.Run(() =>
                 listCell.Map(c => c.Select(o => o.RemoveStream.MapTo(new[] { o })).Merge((x, y) => x.Concat(y).ToArray())).SwitchS().Listen(o => Transaction.Post(() => removeItemsStreamSink.Send(o))));
             IListener l4 = Transaction.Run(() =>
-                listCell.Map(c => c.Any() ? c.Last().Number1Cell.Lift(c.Last().Number2Cell, (x, y) => x == 9 && y == 9).Updates : Stream.Never<bool>()).SwitchS().Filter(v => v).Listen(_ => Transaction.Post(() => addItemStreamSink.Send(Tuple.Create(0, 0)))));
-            List<IReadOnlyList<Tuple<int, int>>> @out = new List<IReadOnlyList<Tuple<int, int>>>();
-            IListener l = listCell.Map(c => c.Select(o => o.Number1Cell.Lift(o.Number2Cell, Tuple.Create)).Lift()).SwitchC().Listen(@out.Add);
-            addItemStreamSink.Send(Tuple.Create(5, 2));
-            addItemStreamSink.Send(Tuple.Create(9, 2));
+                listCell.Map(c => c.Any() ? c.Last().Number1Cell.Lift(c.Last().Number2Cell, (x, y) => x == 9 && y == 9).Updates : Stream.Never<bool>()).SwitchS().Filter(v => v).Listen(_ => Transaction.Post(() => addItemStreamSink.Send((Number1: 0, Number2: 0)))));
+            List<IReadOnlyList<(int Number1, int Number2)>> @out = new List<IReadOnlyList<(int Number1, int Number2)>>();
+            IListener l = listCell.Map(c => c.Select(o => o.Number1Cell.Lift(o.Number2Cell, (number1, number2) => (Number1: number1, Number2: number2))).Lift()).SwitchC().Listen(@out.Add);
+            addItemStreamSink.Send((Number1: 5, Number2: 2));
+            addItemStreamSink.Send((Number1: 9, Number2: 2));
             listCell.Cell.Sample()[0].Remove();
-            addItemStreamSink.Send(Tuple.Create(2, 9));
+            addItemStreamSink.Send((Number1: 2, Number2: 9));
             listCell.Cell.Sample()[1].ChangeNumber1(9);
-            addItemStreamSink.Send(Tuple.Create(9, 9));
+            addItemStreamSink.Send((Number1: 9, Number2: 9));
             s.Send(5);
             s.Send(9);
             Transaction.RunVoid(() =>
             {
-                addItemStreamSink.Send(Tuple.Create(5, 5));
+                addItemStreamSink.Send((Number1: 5, Number2: 5));
                 s.Send(5);
             });
             listCell.Cell.Sample()[8].ChangeNumber2(9);
@@ -218,29 +231,33 @@ namespace Sodium.Tests
             l3.Unlisten();
             l4.Unlisten();
 
-            Tuple<int, int>[][] expected =
+            (int Number1, int Number2)[][] expected =
             {
-                new Tuple<int, int>[0],
-                new[] { Tuple.Create(5, 2) },
-                new[] { Tuple.Create(5, 2), Tuple.Create(9, 2) },
-                new[] { Tuple.Create(9, 2) },
-                new[] { Tuple.Create(9, 2), Tuple.Create(2, 9) },
-                new[] { Tuple.Create(9, 2), Tuple.Create(9, 9) },
-                new[] { Tuple.Create(9, 2), Tuple.Create(9, 9), Tuple.Create(0, 0) },
-                new[] { Tuple.Create(9, 2), Tuple.Create(9, 9), Tuple.Create(0, 0), Tuple.Create(9, 9) },
-                new[] { Tuple.Create(9, 2), Tuple.Create(9, 9), Tuple.Create(0, 0), Tuple.Create(9, 9), Tuple.Create(0, 0) },
-                new[] { Tuple.Create(9, 2), Tuple.Create(9, 9), Tuple.Create(0, 0), Tuple.Create(9, 9), Tuple.Create(0, 0), Tuple.Create(5, 5) },
-                new[] { Tuple.Create(9, 2), Tuple.Create(9, 9), Tuple.Create(0, 0), Tuple.Create(9, 9), Tuple.Create(0, 0), Tuple.Create(5, 5), Tuple.Create(9, 9) },
-                new[] { Tuple.Create(9, 2), Tuple.Create(9, 9), Tuple.Create(0, 0), Tuple.Create(9, 9), Tuple.Create(0, 0), Tuple.Create(5, 5), Tuple.Create(9, 9), Tuple.Create(0, 0) },
-                new[] { Tuple.Create(9, 2), Tuple.Create(9, 9), Tuple.Create(0, 0), Tuple.Create(9, 9), Tuple.Create(0, 0), Tuple.Create(5, 5), Tuple.Create(9, 9), Tuple.Create(0, 0), Tuple.Create(5, 5) },
-                new[] { Tuple.Create(9, 2), Tuple.Create(9, 9), Tuple.Create(0, 0), Tuple.Create(9, 9), Tuple.Create(0, 0), Tuple.Create(5, 5), Tuple.Create(9, 9), Tuple.Create(0, 0), Tuple.Create(5, 9) },
-                new[] { Tuple.Create(9, 2), Tuple.Create(9, 9), Tuple.Create(0, 0), Tuple.Create(9, 9), Tuple.Create(0, 0), Tuple.Create(5, 5), Tuple.Create(9, 9), Tuple.Create(0, 0), Tuple.Create(9, 9) },
-                new[] { Tuple.Create(9, 2), Tuple.Create(9, 9), Tuple.Create(0, 0), Tuple.Create(9, 9), Tuple.Create(0, 0), Tuple.Create(5, 5), Tuple.Create(9, 9), Tuple.Create(0, 0), Tuple.Create(9, 9), Tuple.Create(0, 0) }
+                new (int Number1, int Number2)[0],
+                new[] { (Number1: 5, Number2: 2) },
+                new[] { (Number1: 5, Number2: 2), (Number1: 9, Number2: 2) },
+                new[] { (Number1: 9, Number2: 2) },
+                new[] { (Number1: 9, Number2: 2), (Number1: 2, Number2: 9) },
+                new[] { (Number1: 9, Number2: 2), (Number1: 9, Number2: 9) },
+                new[] { (Number1: 9, Number2: 2), (Number1: 9, Number2: 9), (Number1: 0, Number2: 0) },
+                new[] { (Number1: 9, Number2: 2), (Number1: 9, Number2: 9), (Number1: 0, Number2: 0), (Number1: 9, Number2: 9) },
+                new[] { (Number1: 9, Number2: 2), (Number1: 9, Number2: 9), (Number1: 0, Number2: 0), (Number1: 9, Number2: 9), (Number1: 0, Number2: 0) },
+                new[] { (Number1: 9, Number2: 2), (Number1: 9, Number2: 9), (Number1: 0, Number2: 0), (Number1: 9, Number2: 9), (Number1: 0, Number2: 0), (Number1: 5, Number2: 5) },
+                new[] { (Number1: 9, Number2: 2), (Number1: 9, Number2: 9), (Number1: 0, Number2: 0), (Number1: 9, Number2: 9), (Number1: 0, Number2: 0), (Number1: 5, Number2: 5), (Number1: 9, Number2: 9) },
+                new[] { (Number1: 9, Number2: 2), (Number1: 9, Number2: 9), (Number1: 0, Number2: 0), (Number1: 9, Number2: 9), (Number1: 0, Number2: 0), (Number1: 5, Number2: 5), (Number1: 9, Number2: 9), (Number1: 0, Number2: 0) },
+                new[] { (Number1: 9, Number2: 2), (Number1: 9, Number2: 9), (Number1: 0, Number2: 0), (Number1: 9, Number2: 9), (Number1: 0, Number2: 0), (Number1: 5, Number2: 5), (Number1: 9, Number2: 9), (Number1: 0, Number2: 0), (Number1: 5, Number2: 5) },
+                new[] { (Number1: 9, Number2: 2), (Number1: 9, Number2: 9), (Number1: 0, Number2: 0), (Number1: 9, Number2: 9), (Number1: 0, Number2: 0), (Number1: 5, Number2: 5), (Number1: 9, Number2: 9), (Number1: 0, Number2: 0), (Number1: 5, Number2: 9) },
+                new[] { (Number1: 9, Number2: 2), (Number1: 9, Number2: 9), (Number1: 0, Number2: 0), (Number1: 9, Number2: 9), (Number1: 0, Number2: 0), (Number1: 5, Number2: 5), (Number1: 9, Number2: 9), (Number1: 0, Number2: 0), (Number1: 9, Number2: 9) },
+                new[] { (Number1: 9, Number2: 2), (Number1: 9, Number2: 9), (Number1: 0, Number2: 0), (Number1: 9, Number2: 9), (Number1: 0, Number2: 0), (Number1: 5, Number2: 5), (Number1: 9, Number2: 9), (Number1: 0, Number2: 0), (Number1: 9, Number2: 9), (Number1: 0, Number2: 0) }
             };
             Assert.AreEqual(expected.Length, @out.Count);
             for (int i = 0; i < 16; i++)
             {
-                CollectionAssert.AreEqual(@out[i], expected[i]);
+                Assert.AreEqual(expected[i].Length, @out[i].Count);
+                for (int j = 0; j < expected[i].Length; j++)
+                {
+                    Assert.AreEqual(@out[i][j], expected[i][j]);
+                }
             }
         }
 
@@ -602,15 +619,13 @@ namespace Sodium.Tests
         [Test]
         public void TestLiftFromSimultaneous()
         {
-            ValueTuple<DiscreteCellSink<int>, DiscreteCellSink<int>> t = Transaction.Run(() =>
+            (DiscreteCellSink<int> c1, DiscreteCellSink<int> c2) = Transaction.Run(() =>
             {
                 DiscreteCellSink<int> localC1 = DiscreteCell.CreateSink(3);
                 DiscreteCellSink<int> localC2 = DiscreteCell.CreateSink(5);
                 localC2.Send(7);
-                return ValueTuple.Create(localC1, localC2);
+                return (localC1, localC2);
             });
-            DiscreteCellSink<int> c1 = t.Item1;
-            DiscreteCellSink<int> c2 = t.Item2;
             List<int> @out = new List<int>();
             IListener l = c1.Lift(c2, (x, y) => x + y).Listen(@out.Add);
             l.Unlisten();
@@ -633,11 +648,11 @@ namespace Sodium.Tests
 
         private class Sc
         {
-            public readonly IMaybe<char> A;
-            public readonly IMaybe<char> B;
-            public readonly IMaybe<DiscreteCell<char>> Sw;
+            public readonly Maybe<char> A;
+            public readonly Maybe<char> B;
+            public readonly Maybe<DiscreteCell<char>> Sw;
 
-            public Sc(IMaybe<char> a, IMaybe<char> b, IMaybe<DiscreteCell<char>> sw)
+            public Sc(Maybe<char> a, Maybe<char> b, Maybe<DiscreteCell<char>> sw)
             {
                 this.A = a;
                 this.B = b;
@@ -657,16 +672,16 @@ namespace Sodium.Tests
             DiscreteCell<char> co = csw.SwitchC();
             List<char> @out = new List<char>();
             IListener l = co.Listen(@out.Add);
-            ssc.Send(new Sc(Maybe.Just('B'), Maybe.Just('b'), Maybe.Nothing<DiscreteCell<char>>()));
-            ssc.Send(new Sc(Maybe.Just('C'), Maybe.Just('c'), Maybe.Just(cb)));
-            ssc.Send(new Sc(Maybe.Just('D'), Maybe.Just('d'), Maybe.Nothing<DiscreteCell<char>>()));
-            ssc.Send(new Sc(Maybe.Just('E'), Maybe.Just('e'), Maybe.Just(ca)));
-            ssc.Send(new Sc(Maybe.Just('F'), Maybe.Just('f'), Maybe.Nothing<DiscreteCell<char>>()));
-            ssc.Send(new Sc(Maybe.Nothing<char>(), Maybe.Nothing<char>(), Maybe.Just(cb)));
-            ssc.Send(new Sc(Maybe.Nothing<char>(), Maybe.Nothing<char>(), Maybe.Just(ca)));
-            ssc.Send(new Sc(Maybe.Just('G'), Maybe.Just('g'), Maybe.Just(cb)));
-            ssc.Send(new Sc(Maybe.Just('H'), Maybe.Just('h'), Maybe.Just(ca)));
-            ssc.Send(new Sc(Maybe.Just('I'), Maybe.Just('i'), Maybe.Just(ca)));
+            ssc.Send(new Sc(Maybe.Some('B'), Maybe.Some('b'), Maybe.None));
+            ssc.Send(new Sc(Maybe.Some('C'), Maybe.Some('c'), Maybe.Some(cb)));
+            ssc.Send(new Sc(Maybe.Some('D'), Maybe.Some('d'), Maybe.None));
+            ssc.Send(new Sc(Maybe.Some('E'), Maybe.Some('e'), Maybe.Some(ca)));
+            ssc.Send(new Sc(Maybe.Some('F'), Maybe.Some('f'), Maybe.None));
+            ssc.Send(new Sc(Maybe.None, Maybe.None, Maybe.Some(cb)));
+            ssc.Send(new Sc(Maybe.None, Maybe.None, Maybe.Some(ca)));
+            ssc.Send(new Sc(Maybe.Some('G'), Maybe.Some('g'), Maybe.Some(cb)));
+            ssc.Send(new Sc(Maybe.Some('H'), Maybe.Some('h'), Maybe.Some(ca)));
+            ssc.Send(new Sc(Maybe.Some('I'), Maybe.Some('i'), Maybe.Some(ca)));
             l.Unlisten();
             CollectionAssert.AreEqual(new[] { 'A', 'B', 'c', 'd', 'E', 'F', 'f', 'F', 'g', 'H', 'I' }, @out);
         }
@@ -716,9 +731,9 @@ namespace Sodium.Tests
         {
             public readonly char A;
             public readonly char B;
-            public readonly IMaybe<Stream<char>> Sw;
+            public readonly Maybe<Stream<char>> Sw;
 
-            public Ss(char a, char b, IMaybe<Stream<char>> sw)
+            public Ss(char a, char b, Maybe<Stream<char>> sw)
             {
                 this.A = a;
                 this.B = b;
@@ -738,15 +753,15 @@ namespace Sodium.Tests
             Stream<char> so = csw.Cell.SwitchS();
             List<char> @out = new List<char>();
             IListener l = so.Listen(@out.Add);
-            sss.Send(new Ss('A', 'a', Maybe.Nothing<Stream<char>>()));
-            sss.Send(new Ss('B', 'b', Maybe.Nothing<Stream<char>>()));
-            sss.Send(new Ss('C', 'c', Maybe.Just(sb)));
-            sss.Send(new Ss('D', 'd', Maybe.Nothing<Stream<char>>()));
-            sss.Send(new Ss('E', 'e', Maybe.Just(sa)));
-            sss.Send(new Ss('F', 'f', Maybe.Nothing<Stream<char>>()));
-            sss.Send(new Ss('G', 'g', Maybe.Just(sb)));
-            sss.Send(new Ss('H', 'h', Maybe.Just(sa)));
-            sss.Send(new Ss('I', 'i', Maybe.Just(sa)));
+            sss.Send(new Ss('A', 'a', Maybe.None));
+            sss.Send(new Ss('B', 'b', Maybe.None));
+            sss.Send(new Ss('C', 'c', Maybe.Some(sb)));
+            sss.Send(new Ss('D', 'd', Maybe.None));
+            sss.Send(new Ss('E', 'e', Maybe.Some(sa)));
+            sss.Send(new Ss('F', 'f', Maybe.None));
+            sss.Send(new Ss('G', 'g', Maybe.Some(sb)));
+            sss.Send(new Ss('H', 'h', Maybe.Some(sa)));
+            sss.Send(new Ss('I', 'i', Maybe.Some(sa)));
             l.Unlisten();
             CollectionAssert.AreEqual(new[] { 'A', 'B', 'C', 'd', 'e', 'F', 'G', 'h', 'I' }, @out);
         }
@@ -879,7 +894,7 @@ namespace Sodium.Tests
         [Test]
         public void TestLiftLoopList()
         {
-            ValueTuple<DiscreteCell<int>, IReadOnlyList<DiscreteCellSink<int>>> t = Transaction.Run(() =>
+            (DiscreteCell<int> c, IReadOnlyList<DiscreteCellSink<int>> s) = Transaction.Run(() =>
             {
                 IReadOnlyList<DiscreteCellLoop<int>> cellLoops = Enumerable.Range(0, 50).Select(_ => DiscreteCell.CreateLoop<int>()).ToArray();
                 DiscreteCell<int> sum = cellLoops.Lift().Map(v => v.Sum());
@@ -888,18 +903,18 @@ namespace Sodium.Tests
                 {
                     cellLoops[i].Loop(cellSinks[i]);
                 }
-                return ValueTuple.Create(sum, cellSinks);
+                return (sum, cellSinks);
             });
             List<int> @out = new List<int>();
-            IListener l = t.Item1.Listen(@out.Add);
-            t.Item2[4].Send(5);
-            t.Item2[5].Send(5);
+            IListener l = c.Listen(@out.Add);
+            s[4].Send(5);
+            s[5].Send(5);
             Transaction.RunVoid(() =>
             {
-                t.Item2[9].Send(5);
-                t.Item2[17].Send(5);
-                t.Item2[41].Send(5);
-                t.Item2[48].Send(5);
+                s[9].Send(5);
+                s[17].Send(5);
+                s[41].Send(5);
+                s[48].Send(5);
             });
             l.Unlisten();
             CollectionAssert.AreEqual(new[] { 50, 54, 58, 74 }, @out);
@@ -976,32 +991,32 @@ namespace Sodium.Tests
         [Test]
         public void SwitchCOnCellLoop()
         {
-            ValueTuple<DiscreteCell<int>, DiscreteCellSink<int>, DiscreteCellSink<int>, DiscreteCellSink<DiscreteCell<int>>> t = Transaction.Run(() =>
+            (DiscreteCell<int> c, DiscreteCellSink<int> c1, DiscreteCellSink<int> c2, DiscreteCellSink<DiscreteCell<int>> s) = Transaction.Run(() =>
             {
                 DiscreteCellLoop<DiscreteCell<int>> loop = DiscreteCell.CreateLoop<DiscreteCell<int>>();
-                DiscreteCellSink<int> c1 = DiscreteCell.CreateSink(1);
-                DiscreteCellSink<int> c2 = DiscreteCell.CreateSink(11);
-                DiscreteCell<int> c = loop.SwitchC();
-                DiscreteCellSink<DiscreteCell<int>> s = DiscreteCell.CreateSink(c1.AsDiscreteCell());
-                loop.Loop(s);
-                return ValueTuple.Create(c, c1, c2, s);
+                DiscreteCellSink<int> c1Local = DiscreteCell.CreateSink(1);
+                DiscreteCellSink<int> c2Local = DiscreteCell.CreateSink(11);
+                DiscreteCell<int> cLocal = loop.SwitchC();
+                DiscreteCellSink<DiscreteCell<int>> sLocal = DiscreteCell.CreateSink(c1Local.AsDiscreteCell());
+                loop.Loop(sLocal);
+                return (cLocal, c1Local, c2Local, sLocal);
             });
 
             List<int> output = new List<int>();
-            IListener l = t.Item1.Listen(output.Add);
+            IListener l = c.Listen(output.Add);
 
-            t.Item2.Send(2);
-            t.Item3.Send(12);
+            c1.Send(2);
+            c2.Send(12);
 
             Transaction.RunVoid(() =>
             {
-                t.Item2.Send(3);
-                t.Item3.Send(13);
-                t.Item4.Send(t.Item3);
+                c1.Send(3);
+                c2.Send(13);
+                s.Send(c2);
             });
 
-            t.Item2.Send(4);
-            t.Item3.Send(14);
+            c1.Send(4);
+            c2.Send(14);
 
             l.Unlisten();
 
@@ -1011,32 +1026,32 @@ namespace Sodium.Tests
         [Test]
         public void SwitchSOnCellLoop()
         {
-            ValueTuple<Stream<int>, StreamSink<int>, StreamSink<int>, CellSink<Stream<int>>> t = Transaction.Run(() =>
+            (Stream<int> c, StreamSink<int> c1, StreamSink<int> c2, CellSink<Stream<int>> s) = Transaction.Run(() =>
             {
                 CellLoop<Stream<int>> loop = Cell.CreateLoop<Stream<int>>();
-                StreamSink<int> c1 = Stream.CreateSink<int>();
-                StreamSink<int> c2 = Stream.CreateSink<int>();
-                Stream<int> c = loop.SwitchS();
-                CellSink<Stream<int>> s = Cell.CreateSink(c1.AsStream());
-                loop.Loop(s);
-                return ValueTuple.Create(c, c1, c2, s);
+                StreamSink<int> c1Local = Stream.CreateSink<int>();
+                StreamSink<int> c2Local = Stream.CreateSink<int>();
+                Stream<int> cLocal = loop.SwitchS();
+                CellSink<Stream<int>> sLocal = Cell.CreateSink(c1Local.AsStream());
+                loop.Loop(sLocal);
+                return (cLocal, c1Local, c2Local, sLocal);
             });
 
             List<int> output = new List<int>();
-            IListener l = t.Item1.Listen(output.Add);
+            IListener l = c.Listen(output.Add);
 
-            t.Item2.Send(2);
-            t.Item3.Send(12);
+            c1.Send(2);
+            c2.Send(12);
 
             Transaction.RunVoid(() =>
             {
-                t.Item2.Send(3);
-                t.Item3.Send(13);
-                t.Item4.Send(t.Item3);
+                c1.Send(3);
+                c2.Send(13);
+                s.Send(c2);
             });
 
-            t.Item2.Send(4);
-            t.Item3.Send(14);
+            c1.Send(4);
+            c2.Send(14);
 
             l.Unlisten();
 
@@ -1046,32 +1061,32 @@ namespace Sodium.Tests
         [Test]
         public void SwitchEarlySOnCellLoop()
         {
-            ValueTuple<Stream<int>, StreamSink<int>, StreamSink<int>, CellSink<Stream<int>>> t = Transaction.Run(() =>
+            (Stream<int> c, StreamSink<int> c1, StreamSink<int> c2, CellSink<Stream<int>> s) = Transaction.Run(() =>
             {
                 CellLoop<Stream<int>> loop = Cell.CreateLoop<Stream<int>>();
-                StreamSink<int> c1 = Stream.CreateSink<int>();
-                StreamSink<int> c2 = Stream.CreateSink<int>();
-                Stream<int> c = loop.SwitchEarlyS();
-                CellSink<Stream<int>> s = Cell.CreateSink(c1.AsStream());
-                loop.Loop(s);
-                return ValueTuple.Create(c, c1, c2, s);
+                StreamSink<int> c1Local = Stream.CreateSink<int>();
+                StreamSink<int> c2Local = Stream.CreateSink<int>();
+                Stream<int> cLocal = loop.SwitchEarlyS();
+                CellSink<Stream<int>> sLocal = Cell.CreateSink(c1Local.AsStream());
+                loop.Loop(sLocal);
+                return (cLocal, c1Local, c2Local, sLocal);
             });
 
             List<int> output = new List<int>();
-            IListener l = t.Item1.Listen(output.Add);
+            IListener l = c.Listen(output.Add);
 
-            t.Item2.Send(2);
-            t.Item3.Send(12);
+            c1.Send(2);
+            c2.Send(12);
 
             Transaction.RunVoid(() =>
             {
-                t.Item2.Send(3);
-                t.Item3.Send(13);
-                t.Item4.Send(t.Item3);
+                c1.Send(3);
+                c2.Send(13);
+                s.Send(c2);
             });
 
-            t.Item2.Send(4);
-            t.Item3.Send(14);
+            c1.Send(4);
+            c2.Send(14);
 
             l.Unlisten();
 
@@ -1083,36 +1098,36 @@ namespace Sodium.Tests
         {
             List<int> output = new List<int>();
 
-            ValueTuple<DiscreteCell<int>, DiscreteCellSink<int>, DiscreteCellSink<int>, DiscreteCellSink<DiscreteCell<int>>, IListener> t = Transaction.Run(() =>
+            (DiscreteCellSink<int> c1, DiscreteCellSink<int> c2, DiscreteCellSink<DiscreteCell<int>> s, IListener l) = Transaction.Run(() =>
             {
-                DiscreteCellSink<int> c1 = DiscreteCell.CreateSink(1);
-                DiscreteCellSink<int> c2 = DiscreteCell.CreateSink(11);
-                DiscreteCellSink<DiscreteCell<int>> s = DiscreteCell.CreateSink(c1.AsDiscreteCell());
-                DiscreteCell<int> c = s.SwitchC();
+                DiscreteCellSink<int> c1Local = DiscreteCell.CreateSink(1);
+                DiscreteCellSink<int> c2Local = DiscreteCell.CreateSink(11);
+                DiscreteCellSink<DiscreteCell<int>> sLocal = DiscreteCell.CreateSink(c1Local.AsDiscreteCell());
+                DiscreteCell<int> cLocal = sLocal.SwitchC();
 
-                c1.Send(2);
-                c2.Send(12);
-                s.Send(c2);
+                c1Local.Send(2);
+                c2Local.Send(12);
+                sLocal.Send(c2Local);
 
-                IListener l = c.Listen(output.Add);
+                IListener lLocal = cLocal.Listen(output.Add);
 
-                return ValueTuple.Create(c, c1, c2, s, l);
+                return (c1Local, c2Local, sLocal, lLocal);
             });
 
-            t.Item2.Send(3);
-            t.Item3.Send(13);
+            c1.Send(3);
+            c2.Send(13);
 
             Transaction.RunVoid(() =>
             {
-                t.Item2.Send(4);
-                t.Item3.Send(14);
-                t.Item4.Send(t.Item2);
+                c1.Send(4);
+                c2.Send(14);
+                s.Send(c1);
             });
 
-            t.Item2.Send(5);
-            t.Item3.Send(15);
+            c1.Send(5);
+            c2.Send(15);
 
-            t.Item5.Unlisten();
+            l.Unlisten();
 
             CollectionAssert.AreEqual(new[] { 12, 13, 4, 5 }, output);
         }
@@ -1122,36 +1137,36 @@ namespace Sodium.Tests
         {
             List<int> output = new List<int>();
 
-            ValueTuple<Stream<int>, StreamSink<int>, StreamSink<int>, CellSink<Stream<int>>, IListener> t = Transaction.Run(() =>
+            (StreamSink<int> c1, StreamSink<int> c2, CellSink<Stream<int>> s, IListener l) = Transaction.Run(() =>
             {
-                StreamSink<int> c1 = Stream.CreateSink<int>();
-                StreamSink<int> c2 = Stream.CreateSink<int>();
-                CellSink<Stream<int>> s = Cell.CreateSink(c1.AsStream());
-                Stream<int> c = s.SwitchS();
+                StreamSink<int> c1Local = Stream.CreateSink<int>();
+                StreamSink<int> c2Local = Stream.CreateSink<int>();
+                CellSink<Stream<int>> sLocal = Cell.CreateSink(c1Local.AsStream());
+                Stream<int> cLocal = sLocal.SwitchS();
 
-                c1.Send(2);
-                c2.Send(12);
-                s.Send(c2);
+                c1Local.Send(2);
+                c2Local.Send(12);
+                sLocal.Send(c2Local);
 
-                IListener l = c.Listen(output.Add);
+                IListener lLocal = cLocal.Listen(output.Add);
 
-                return ValueTuple.Create(c, c1, c2, s, l);
+                return (c1Local, c2Local, sLocal, lLocal);
             });
 
-            t.Item2.Send(3);
-            t.Item3.Send(13);
+            c1.Send(3);
+            c2.Send(13);
 
             Transaction.RunVoid(() =>
             {
-                t.Item2.Send(4);
-                t.Item3.Send(14);
-                t.Item4.Send(t.Item2);
+                c1.Send(4);
+                c2.Send(14);
+                s.Send(c1);
             });
 
-            t.Item2.Send(5);
-            t.Item3.Send(15);
+            c1.Send(5);
+            c2.Send(15);
 
-            t.Item5.Unlisten();
+            l.Unlisten();
 
             CollectionAssert.AreEqual(new[] { 2, 13, 14, 5 }, output);
         }
@@ -1161,37 +1176,37 @@ namespace Sodium.Tests
         {
             List<int> output = new List<int>();
 
-            ValueTuple<Stream<int>, StreamSink<int>, StreamSink<int>, CellSink<Stream<int>>, IListener> t = Transaction.Run(() =>
+            (StreamSink<int> c1, StreamSink<int> c2, CellSink<Stream<int>> s, IListener l) = Transaction.Run(() =>
             {
-                StreamSink<int> c1 = Stream.CreateSink<int>();
-                StreamSink<int> c2 = Stream.CreateSink<int>();
-                CellSink<Stream<int>> s = Cell.CreateSink(c1.AsStream());
+                StreamSink<int> c1Local = Stream.CreateSink<int>();
+                StreamSink<int> c2Local = Stream.CreateSink<int>();
+                CellSink<Stream<int>> sLocal = Cell.CreateSink(c1Local.AsStream());
 
-                c1.Send(2);
-                c2.Send(12);
-                s.Send(c2);
+                c1Local.Send(2);
+                c2Local.Send(12);
+                sLocal.Send(c2Local);
 
-                Stream<int> c = s.SwitchS();
+                Stream<int> cLocal = sLocal.SwitchS();
 
-                IListener l = c.Listen(output.Add);
+                IListener lLocal = cLocal.Listen(output.Add);
 
-                return ValueTuple.Create(c, c1, c2, s, l);
+                return (c1Local, c2Local, sLocal, lLocal);
             });
 
-            t.Item2.Send(3);
-            t.Item3.Send(13);
+            c1.Send(3);
+            c2.Send(13);
 
             Transaction.RunVoid(() =>
             {
-                t.Item2.Send(4);
-                t.Item3.Send(14);
-                t.Item4.Send(t.Item2);
+                c1.Send(4);
+                c2.Send(14);
+                s.Send(c1);
             });
 
-            t.Item2.Send(5);
-            t.Item3.Send(15);
+            c1.Send(5);
+            c2.Send(15);
 
-            t.Item5.Unlisten();
+            l.Unlisten();
 
             CollectionAssert.AreEqual(new[] { 2, 13, 14, 5 }, output);
         }
@@ -1201,36 +1216,36 @@ namespace Sodium.Tests
         {
             List<int> output = new List<int>();
 
-            ValueTuple<Stream<int>, StreamSink<int>, StreamSink<int>, CellSink<Stream<int>>, IListener> t = Transaction.Run(() =>
+            (StreamSink<int> c1, StreamSink<int> c2, CellSink<Stream<int>> s, IListener l) = Transaction.Run(() =>
             {
-                StreamSink<int> c1 = Stream.CreateSink<int>();
-                StreamSink<int> c2 = Stream.CreateSink<int>();
-                CellSink<Stream<int>> s = Cell.CreateSink(c1.AsStream());
-                Stream<int> c = s.SwitchEarlyS();
+                StreamSink<int> c1Local = Stream.CreateSink<int>();
+                StreamSink<int> c2Local = Stream.CreateSink<int>();
+                CellSink<Stream<int>> sLocal = Cell.CreateSink(c1Local.AsStream());
+                Stream<int> cLocal = sLocal.SwitchEarlyS();
 
-                c1.Send(2);
-                c2.Send(12);
-                s.Send(c2);
+                c1Local.Send(2);
+                c2Local.Send(12);
+                sLocal.Send(c2Local);
 
-                IListener l = c.Listen(output.Add);
+                IListener lLocal = cLocal.Listen(output.Add);
 
-                return ValueTuple.Create(c, c1, c2, s, l);
+                return (c1Local, c2Local, sLocal, lLocal);
             });
 
-            t.Item2.Send(3);
-            t.Item3.Send(13);
+            c1.Send(3);
+            c2.Send(13);
 
             Transaction.RunVoid(() =>
             {
-                t.Item2.Send(4);
-                t.Item3.Send(14);
-                t.Item4.Send(t.Item2);
+                c1.Send(4);
+                c2.Send(14);
+                s.Send(c1);
             });
 
-            t.Item2.Send(5);
-            t.Item3.Send(15);
+            c1.Send(5);
+            c2.Send(15);
 
-            t.Item5.Unlisten();
+            l.Unlisten();
 
             CollectionAssert.AreEqual(new[] { 12, 13, 4, 5 }, output);
         }

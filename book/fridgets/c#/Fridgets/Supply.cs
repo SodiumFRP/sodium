@@ -7,11 +7,11 @@ namespace Fridgets
     {
         private readonly Impl impl;
 
-        private IMaybe<long> mId = Maybe.Nothing<long>();
+        private Maybe<long> mId = Maybe.None;
         private readonly object idLock = new object();
-        private IMaybe<Supply> mChild1 = Maybe.Nothing<Supply>();
+        private Maybe<Supply> mChild1 = Maybe.None;
         private readonly object child1Lock = new object();
-        private IMaybe<Supply> mChild2 = Maybe.Nothing<Supply>();
+        private Maybe<Supply> mChild2 = Maybe.None;
         private readonly object child2Lock = new object();
 
         public Supply()
@@ -33,7 +33,7 @@ namespace Fridgets
                     () =>
                     {
                         long id = this.impl.Alloc();
-                        return new { Result = id, Action = (Action)(() => this.mId = Maybe.Just(id)) };
+                        return new { Result = id, Action = (Action)(() => this.mId = Maybe.Some(id)) };
                     });
                 result.Action();
                 return result.Result;
@@ -49,7 +49,7 @@ namespace Fridgets
                     () =>
                     {
                         Supply child1 = new Supply(this.impl);
-                        return new { Result = child1, Action = (Action)(() => this.mChild1 = Maybe.Just(child1)) };
+                        return new { Result = child1, Action = (Action)(() => this.mChild1 = Maybe.Some(child1)) };
                     });
                 result.Action();
                 return result.Result;
@@ -65,7 +65,7 @@ namespace Fridgets
                     () =>
                     {
                         Supply child2 = new Supply(this.impl);
-                        return new { Result = child2, Action = (Action)(() => this.mChild2 = Maybe.Just(child2)) };
+                        return new { Result = child2, Action = (Action)(() => this.mChild2 = Maybe.Some(child2)) };
                     });
                 result.Action();
                 return result.Result;

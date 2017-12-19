@@ -10,67 +10,67 @@ namespace SWidgets
         private readonly Action disposeListeners;
 
         public SComboBox()
-            : this((IEnumerable<T>)null)
+            : this(null)
         {
         }
 
         public SComboBox(IEnumerable<T> items)
-            : this(Stream.Never<IMaybe<T>>(), Maybe.Nothing<T>(), items)
+            : this(Stream.Never<Maybe<T>>(), Maybe.None, items)
         {
         }
 
-        public SComboBox(IMaybe<T> initSelectedItem)
+        public SComboBox(Maybe<T> initSelectedItem)
             : this(initSelectedItem, null)
         {
         }
 
-        public SComboBox(IMaybe<T> initSelectedItem, IEnumerable<T> items)
-            : this(Stream.Never<IMaybe<T>>(), initSelectedItem, items)
+        public SComboBox(Maybe<T> initSelectedItem, IEnumerable<T> items)
+            : this(Stream.Never<Maybe<T>>(), initSelectedItem, items)
         {
         }
 
-        public SComboBox(Stream<IMaybe<T>> setSelectedItem, IMaybe<T> initSelectedItem)
+        public SComboBox(Stream<Maybe<T>> setSelectedItem, Maybe<T> initSelectedItem)
             : this(setSelectedItem, initSelectedItem, null)
         {
         }
 
-        public SComboBox(Stream<IMaybe<T>> setSelectedItem, IMaybe<T> initSelectedItem, IEnumerable<T> items)
+        public SComboBox(Stream<Maybe<T>> setSelectedItem, Maybe<T> initSelectedItem, IEnumerable<T> items)
         {
-            Action<IMaybe<T>> setSelectedItemImpl = m => base.SelectedItem = m.Match<object>(v => v, () => null);
+            void SetSelectedItemImpl(Maybe<T> m) => base.SelectedItem = m.Match<object>(v => v, () => null);
 
             this.ItemsSource = items ?? new T[0];
-            setSelectedItemImpl(initSelectedItem);
+            SetSelectedItemImpl(initSelectedItem);
 
             List<IListener> listeners = new List<IListener>();
 
             StreamSink<int> sDecrement = new StreamSink<int>();
             DiscreteCell<bool> allow = setSelectedItem.Map(_ => 1).OrElse(sDecrement).Accum(0, (b, d) => b + d).Map(b => b == 0);
 
-            Func<IMaybe<T>> getSelectedItem = () =>
+            Maybe<T> GetSelectedItem()
             {
                 object sel = base.SelectedItem;
-                return sel == null ? Maybe.Nothing<T>() : Maybe.Just((T)sel);
-            };
+                return sel == null ? Maybe.None : Maybe.Some((T)sel);
+            }
 
-            StreamSink<IMaybe<T>> sUserSelectedItem = new StreamSink<IMaybe<T>>();
+            StreamSink<Maybe<T>> sUserSelectedItem = new StreamSink<Maybe<T>>();
             this.SUserSelectedItem = sUserSelectedItem;
             this.SelectedItem = sUserSelectedItem.Gate(allow).OrElse(setSelectedItem).Hold(initSelectedItem);
 
-            SelectionChangedEventHandler selectionChangedEventHandler = (sender, args) =>
+            void SelectionChangedEventHandler(object sender, SelectionChangedEventArgs args)
             {
-                IMaybe<T> selectedItem = getSelectedItem();
+                Maybe<T> selectedItem = GetSelectedItem();
                 this.Dispatcher.InvokeAsync(() => sUserSelectedItem.Send(selectedItem));
-            };
+            }
 
-            this.SelectionChanged += selectionChangedEventHandler;
+            this.SelectionChanged += SelectionChangedEventHandler;
 
             listeners.Add(setSelectedItem.Listen(m =>
             {
                 this.Dispatcher.InvokeAsync(() =>
                 {
-                    this.SelectionChanged -= selectionChangedEventHandler;
-                    setSelectedItemImpl(m);
-                    this.SelectionChanged += selectionChangedEventHandler;
+                    this.SelectionChanged -= SelectionChangedEventHandler;
+                    SetSelectedItemImpl(m);
+                    this.SelectionChanged += SelectionChangedEventHandler;
                     sDecrement.Send(-1);
                 });
             }));
@@ -84,8 +84,8 @@ namespace SWidgets
             };
         }
 
-        public new DiscreteCell<IMaybe<T>> SelectedItem { get; }
-        public Stream<IMaybe<T>> SUserSelectedItem { get; }
+        public new DiscreteCell<Maybe<T>> SelectedItem { get; }
+        public Stream<Maybe<T>> SUserSelectedItem { get; }
 
         public void Dispose()
         {

@@ -17,17 +17,16 @@ namespace Fridgets
             : base((size, sMouse, sKey, focus, idSupply) =>
             {
                 Stream<double> sPressed = sMouse.Snapshot(size, (e, mSize) =>
-                    mSize.Match(
+                    mSize.Bind(
                         s =>
                         {
                             MouseButtonEventArgs b = e.Args as MouseButtonEventArgs;
                             Point p = e.GetPosition();
                             return b != null && b.ChangedButton == MouseButton.Left && b.ButtonState == MouseButtonState.Pressed
                                    && p.X >= 2 && p.X < s.Width - 2 && p.Y >= 2 && p.Y < s.Height - 2
-                                ? Maybe.Just(p.X - 2)
-                                : Maybe.Nothing<double>();
-                        },
-                        Maybe.Nothing<double>)).FilterMaybe();
+                                ? Maybe.Some(p.X - 2)
+                                : Maybe.None;
+                        })).FilterMaybe();
                 DiscreteCellLoop<int> x = new DiscreteCellLoop<int>();
                 long myId = idSupply.Get();
                 DiscreteCell<bool> haveFocus = focus.Map(fId => fId == myId);
@@ -36,21 +35,20 @@ namespace Fridgets
                  {
                      if (key is BackspaceKeyEvent)
                      {
-                         return xValue > 0 ? Maybe.Just(new TextUpdate(
+                         return xValue > 0 ? Maybe.Some(new TextUpdate(
                              txt.Substring(0, xValue - 1) +
                              txt.Substring(xValue),
-                             xValue - 1)) : Maybe.Nothing<TextUpdate>();
+                             xValue - 1)) : Maybe.None;
                      }
 
-                     StringKeyEvent stringKey = key as StringKeyEvent;
-                     if (stringKey == null)
+                     if (!(key is StringKeyEvent stringKey))
                      {
                          throw new InvalidOperationException("Unexpected type encountered for " + typeof(KeyEvent).FullName + ": " + key.GetType().FullName + ".");
                      }
 
                      string keyString = stringKey.String;
-                     return keyString == "\b" ? Maybe.Nothing<TextUpdate>() :
-                         Maybe.Just(new TextUpdate(
+                     return keyString == "\b" ? Maybe.None :
+                         Maybe.Some(new TextUpdate(
                              txt.Substring(0, xValue) +
                              keyString +
                              txt.Substring(xValue),
@@ -81,7 +79,7 @@ namespace Fridgets
                         x, haveFocus, size,
                         (txt, xValue, haveFocusValue, mSize) => new DrawableDelegate(d =>
                         {
-                            mSize.Match(
+                            mSize.MatchSome(
                                 sz =>
                                 {
                                     d.DrawRectangle(Brushes.White, new Pen(Brushes.Black, 1), new Rect(new Point(2, 2), new Size(sz.Width - 5, sz.Height - 5)));
@@ -93,8 +91,7 @@ namespace Fridgets
                                         double cursorX = tCursor.Width;
                                         d.DrawLine(new Pen(Brushes.Red, 1), new Point(4 + cursorX, 4), new Point(4 + cursorX, sz.Height - 5));
                                     }
-                                },
-                                () => { });
+                                });
                         })),
                     desiredSize,
                     sPressed.Map(_ => myId));

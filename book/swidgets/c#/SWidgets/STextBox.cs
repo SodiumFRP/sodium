@@ -37,13 +37,13 @@ namespace SWidgets
             this.SUserChanges = sUserChanges;
             this.Text = sUserChanges.Gate(allow).OrElse(setText).Hold(initText);
 
-            TextChangedEventHandler textChangedEventHandler = (sender, args) =>
+            void TextChangedEventHandler(object sender, TextChangedEventArgs args)
             {
                 string text = base.Text;
                 this.Dispatcher.InvokeAsync(() => sUserChanges.Send(text));
-            };
+            }
 
-            this.TextChanged += textChangedEventHandler;
+            this.TextChanged += TextChangedEventHandler;
 
             // Set the initial value at the end of the transaction so it works with CellLoops.
             Transaction.Post(() => this.Dispatcher.InvokeIfNecessary(() => this.IsEnabled = enabled.Cell.Sample()));
@@ -52,9 +52,9 @@ namespace SWidgets
             {
                 this.Dispatcher.InvokeAsync(() =>
                 {
-                    this.TextChanged -= textChangedEventHandler;
+                    this.TextChanged -= TextChangedEventHandler;
                     base.Text = t;
-                    this.TextChanged += textChangedEventHandler;
+                    this.TextChanged += TextChangedEventHandler;
                     sDecrement.Send(-1);
                 });
             }));

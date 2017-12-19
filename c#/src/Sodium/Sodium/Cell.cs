@@ -1,5 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
 
 namespace Sodium
 {
@@ -14,10 +13,7 @@ namespace Sodium
         /// <typeparam name="T">The type of the value of the cell.</typeparam>
         /// <param name="value">The value of the cell.</param>
         /// <returns>A cell with a constant value.</returns>
-        public static Cell<T> Constant<T>(T value)
-        {
-            return new Cell<T>(value);
-        }
+        public static Cell<T> Constant<T>(T value) => new Cell<T>(value);
 
         /// <summary>
         ///     Creates a cell with a lazily computed constant value.
@@ -25,20 +21,15 @@ namespace Sodium
         /// <typeparam name="T">The type of the value of the cell.</typeparam>
         /// <param name="value">The lazily computed value of the cell.</param>
         /// <returns>A cell with a lazily computed constant value.</returns>
-        public static Cell<T> ConstantLazy<T>(Lazy<T> value)
-        {
-            return Stream.Never<T>().HoldLazyInternal(value);
-        }
+        public static Cell<T> ConstantLazy<T>(Lazy<T> value) => Stream.Never<T>().HoldLazyInternal(value);
 
         /// <summary>
-        ///     Creates a writable cell that uses the last value if <see cref="CellSink{T}.Send" /> is called more than once per transaction.
+        ///     Creates a writable cell that uses the last value if <see cref="CellSink{T}.Send" /> is called more than once per
+        ///     transaction.
         /// </summary>
         /// <param name="initialValue">The initial value of the cell.</param>
         /// <typeparam name="T">The type of values in the cell sink.</typeparam>
-        public static CellSink<T> CreateSink<T>(T initialValue)
-        {
-            return new CellSink<T>(initialValue);
-        }
+        public static CellSink<T> CreateSink<T>(T initialValue) => new CellSink<T>(initialValue);
 
         /// <summary>
         ///     Creates a writable cell that uses
@@ -46,21 +37,19 @@ namespace Sodium
         ///     to combine values if <see cref="CellSink{T}.Send" /> is called more than once per transaction.
         /// </summary>
         /// <param name="initialValue">The initial value of the cell.</param>
-        /// <param name="coalesce">Function to combine values when <see cref="CellSink{T}.Send(T)" /> is called more than once per transaction.</param>
+        /// <param name="coalesce">
+        ///     Function to combine values when <see cref="CellSink{T}.Send(T)" /> is called more than once per
+        ///     transaction.
+        /// </param>
         /// <typeparam name="T">The type of values in the cell sink.</typeparam>
-        public static CellSink<T> CreateSink<T>(T initialValue, Func<T, T, T> coalesce)
-        {
-            return new CellSink<T>(initialValue, coalesce);
-        }
+        public static CellSink<T> CreateSink<T>(T initialValue, Func<T, T, T> coalesce) =>
+            new CellSink<T>(initialValue, coalesce);
 
         /// <summary>
         ///     Creates a <see cref="CellLoop{T}" />.  This must be called and looped from within the same transaction.
         /// </summary>
         /// <typeparam name="T">The type of values in the cell loop.</typeparam>
-        public static CellLoop<T> CreateLoop<T>()
-        {
-            return new CellLoop<T>();
-        }
+        public static CellLoop<T> CreateLoop<T>() => new CellLoop<T>();
     }
 
     /// <summary>
@@ -70,7 +59,8 @@ namespace Sodium
     public class Cell<T>
     {
         private readonly Stream<T> stream;
-        private readonly MutableMaybeValue<T> valueUpdate = new MutableMaybeValue<T>();
+        private Maybe<T> valueUpdate;
+
         // ReSharper disable once NotAccessedField.Local - Used to keep object from being garbage collected
         private readonly IListener streamListener;
 
@@ -92,29 +82,35 @@ namespace Sodium
             this.valueProperty = initialValue;
             this.UsingInitialValue = true;
 
-            this.streamListener = Transaction.Apply(trans1 =>
-                this.stream.Listen(Node<T>.Null, trans1, (trans2, a) =>
-                {
-                    this.valueUpdate.Match(
-                        v => { },
-                        () =>
+            this.streamListener = Transaction.Apply(
+                trans1 =>
+                    this.stream.Listen(
+                        Node<T>.Null,
+                        trans1,
+                        (trans2, a) =>
                         {
-                            trans2.Last(() =>
-                            {
-                                this.valueUpdate.Match(v => this.ValueProperty = v, () => { });
-                                this.valueUpdate.Reset();
-                            });
-                        });
+                            this.valueUpdate.MatchNone(
+                                () =>
+                                {
+                                    trans2.Last(
+                                        () =>
+                                        {
+                                            this.valueUpdate.MatchSome(v => this.ValueProperty = v);
+                                            this.valueUpdate = Maybe.None;
+                                        });
+                                });
 
-                    this.valueUpdate.Set(a);
-                }, false), false);
+                            this.valueUpdate = Maybe.Some(a);
+                        },
+                        false),
+                false);
         }
 
         internal IKeepListenersAlive KeepListenersAlive => this.stream.KeepListenersAlive;
 
         protected T ValueProperty
         {
-            get { return this.valueProperty; }
+            get => this.valueProperty;
             set
             {
                 this.valueProperty = value;
@@ -143,8 +139,8 @@ namespace Sodium
         ///         <see cref="Stream{T}.Merge(Stream{T}, Func{T, T, T})" />
         ///     </para>
         ///     <para>
-        ///         It should generally be avoided in favor of <see cref="Listen(Action{T})" />
-        ///         so updates aren't missed, but in many circumstances it makes sense.
+        ///         It should generally be avoided in favor of <see cref="DiscreteCell{T}.Listen(Action{T})" />
+        ///         for discrete cells so updates aren't missed, but in many circumstances it makes sense.
         ///     </para>
         ///     <para>
         ///         It can be best to use this method inside an explicit transaction (using
@@ -153,15 +149,18 @@ namespace Sodium
         ///         current value and any updates without risk of missing any in between.
         ///     </para>
         /// </remarks>
-        public T Sample() => Transaction.Apply(trans =>
-        {
-            if (trans.IsConstructing && !trans.ReachedClose)
+        public T Sample() => Transaction.Apply(
+            trans =>
             {
-                throw new InvalidOperationException("A cell may not be sampled during the construction phase of Transaction.RunConstruct.");
-            }
+                if (trans.IsConstructing && !trans.ReachedClose)
+                {
+                    throw new InvalidOperationException(
+                        "A cell may not be sampled during the construction phase of Transaction.RunConstruct.");
+                }
 
-            return this.SampleNoTransaction();
-        }, false);
+                return this.SampleNoTransaction();
+            },
+            false);
 
         /// <summary>
         ///     Sample the current value of the cell lazily.
@@ -177,19 +176,17 @@ namespace Sodium
         internal Lazy<T> SampleLazy(Transaction trans)
         {
             LazySample s = new LazySample(this);
-            trans.Last(() =>
-            {
-                s.Value = this.valueUpdate.Match(v => v, this.SampleNoTransaction);
-                s.HasValue = true;
-                s.Cell = null;
-            });
+            trans.Last(
+                () =>
+                {
+                    s.Value = this.valueUpdate.Match(v => v, this.SampleNoTransaction);
+                    s.HasValue = true;
+                    s.Cell = null;
+                });
             return new Lazy<T>(() => s.HasValue ? s.Value : s.Cell.Sample());
         }
 
-        internal virtual T SampleNoTransaction()
-        {
-            return this.ValueProperty;
-        }
+        internal virtual T SampleNoTransaction() => this.ValueProperty;
 
         internal Stream<T> Updates(Transaction trans) => this.stream;
 
@@ -212,7 +209,9 @@ namespace Sodium
         /// <returns>An cell which fires values transformed by <paramref name="f" /> for each value fired by this cell.</returns>
         public Cell<TResult> Map<TResult>(Func<T, TResult> f)
         {
-            return Transaction.Apply(trans => this.Updates(trans).Map(f).HoldLazyInternal(this.SampleLazy(trans).Map(f)), false);
+            return Transaction.Apply(
+                trans => this.Updates(trans).Map(f).HoldLazyInternal(this.SampleLazy(trans).Map(f)),
+                false);
         }
 
         //      /**
@@ -232,8 +231,8 @@ namespace Sodium
         /// <returns>A cell containing values resulting from the binary function applied to the input cells' values.</returns>
         public Cell<TResult> Lift<T2, TResult>(Cell<T2> b2, Func<T, T2, TResult> f)
         {
-            Func<T, Func<T2, TResult>> ffa = a => b => f(a, b);
-            return b2.Apply(this.Map(ffa));
+            Func<T2, TResult> Ffa(T a) => b => f(a, b);
+            return b2.Apply(this.Map(Ffa));
         }
 
         /// <summary>
@@ -249,8 +248,8 @@ namespace Sodium
         /// <returns>A cell containing values resulting from the ternary function applied to the input cells' values.</returns>
         public Cell<TResult> Lift<T2, T3, TResult>(Cell<T2> b2, Cell<T3> b3, Func<T, T2, T3, TResult> f)
         {
-            Func<T, Func<T2, Func<T3, TResult>>> ffa = a => b => c => f(a, b, c);
-            return b3.Apply(b2.Apply(this.Map(ffa)));
+            Func<T2, Func<T3, TResult>> Ffa(T a) => b => c => f(a, b, c);
+            return b3.Apply(b2.Apply(this.Map(Ffa)));
         }
 
         /// <summary>
@@ -266,10 +265,14 @@ namespace Sodium
         /// <param name="b3">The third cell.</param>
         /// <param name="b4">The fourth cell.</param>
         /// <returns>A cell containing values resulting from the quaternary function applied to the input cells' values.</returns>
-        public Cell<TResult> Lift<T2, T3, T4, TResult>(Cell<T2> b2, Cell<T3> b3, Cell<T4> b4, Func<T, T2, T3, T4, TResult> f)
+        public Cell<TResult> Lift<T2, T3, T4, TResult>(
+            Cell<T2> b2,
+            Cell<T3> b3,
+            Cell<T4> b4,
+            Func<T, T2, T3, T4, TResult> f)
         {
-            Func<T, Func<T2, Func<T3, Func<T4, TResult>>>> ffa = a => b => c => d => f(a, b, c, d);
-            return b4.Apply(b3.Apply(b2.Apply(this.Map(ffa))));
+            Func<T2, Func<T3, Func<T4, TResult>>> Ffa(T a) => b => c => d => f(a, b, c, d);
+            return b4.Apply(b3.Apply(b2.Apply(this.Map(Ffa))));
         }
 
         /// <summary>
@@ -287,10 +290,15 @@ namespace Sodium
         /// <param name="b4">The fourth cell.</param>
         /// <param name="b5">The fifth cell.</param>
         /// <returns>A cell containing values resulting from the 5-argument function applied to the input cells' values.</returns>
-        public Cell<TResult> Lift<T2, T3, T4, T5, TResult>(Cell<T2> b2, Cell<T3> b3, Cell<T4> b4, Cell<T5> b5, Func<T, T2, T3, T4, T5, TResult> f)
+        public Cell<TResult> Lift<T2, T3, T4, T5, TResult>(
+            Cell<T2> b2,
+            Cell<T3> b3,
+            Cell<T4> b4,
+            Cell<T5> b5,
+            Func<T, T2, T3, T4, T5, TResult> f)
         {
-            Func<T, Func<T2, Func<T3, Func<T4, Func<T5, TResult>>>>> ffa = a => b => c => d => e => f(a, b, c, d, e);
-            return b5.Apply(b4.Apply(b3.Apply(b2.Apply(this.Map(ffa)))));
+            Func<T2, Func<T3, Func<T4, Func<T5, TResult>>>> Ffa(T a) => b => c => d => e => f(a, b, c, d, e);
+            return b5.Apply(b4.Apply(b3.Apply(b2.Apply(this.Map(Ffa)))));
         }
 
         /// <summary>
@@ -310,10 +318,18 @@ namespace Sodium
         /// <param name="b5">The fifth cell.</param>
         /// <param name="b6">The sixth cell.</param>
         /// <returns>A cell containing values resulting from the 6-argument function applied to the input cells' values.</returns>
-        public Cell<TResult> Lift<T2, T3, T4, T5, T6, TResult>(Cell<T2> b2, Cell<T3> b3, Cell<T4> b4, Cell<T5> b5, Cell<T6> b6, Func<T, T2, T3, T4, T5, T6, TResult> f)
+        public Cell<TResult> Lift<T2, T3, T4, T5, T6, TResult>(
+            Cell<T2> b2,
+            Cell<T3> b3,
+            Cell<T4> b4,
+            Cell<T5> b5,
+            Cell<T6> b6,
+            Func<T, T2, T3, T4, T5, T6, TResult> f)
         {
-            Func<T, Func<T2, Func<T3, Func<T4, Func<T5, Func<T6, TResult>>>>>> ffa = a => b => c => d => e => ff => f(a, b, c, d, e, ff);
-            return b6.Apply(b5.Apply(b4.Apply(b3.Apply(b2.Apply(this.Map(ffa))))));
+            Func<T2, Func<T3, Func<T4, Func<T5, Func<T6, TResult>>>>> Ffa(T a) =>
+                b => c => d => e => ff => f(a, b, c, d, e, ff);
+
+            return b6.Apply(b5.Apply(b4.Apply(b3.Apply(b2.Apply(this.Map(Ffa))))));
         }
 
         /// <summary>
@@ -327,44 +343,62 @@ namespace Sodium
         /// </returns>
         public Cell<TResult> Apply<TResult>(Cell<Func<T, TResult>> bf)
         {
-            return Transaction.Apply(trans0 =>
-            {
-                Stream<TResult> @out = new Stream<TResult>(this.stream.KeepListenersAlive);
+            return Transaction.Apply(
+                trans0 =>
+                {
+                    Stream<TResult> @out = new Stream<TResult>(this.stream.KeepListenersAlive);
 
-                Node<TResult> outTarget = @out.Node;
-                Node<Unit> inTarget = new Node<Unit>();
-                ValueTuple<bool, Node<Unit>.Target> r = inTarget.Link(trans0, (t, v) => { }, outTarget);
-                Node<Unit>.Target nodeTarget = r.Item2;
-                if (r.Item1)
-                {
-                    trans0.SetNeedsRegenerating();
-                }
+                    Node<TResult> outTarget = @out.Node;
+                    Node<Unit> inTarget = new Node<Unit>();
+                    (bool changed, Node<Unit>.Target nodeTarget) = inTarget.Link(trans0, (t, v) => { }, outTarget);
+                    if (changed)
+                    {
+                        trans0.SetNeedsRegenerating();
+                    }
 
-                Func<T, TResult> f = null;
-                T a = default(T);
-                bool isASet = false;
-                // ReSharper disable once PossibleNullReferenceException
-                Action<Transaction> h = trans1 => trans1.Prioritized(@out.Node, trans2 => @out.Send(trans2, f(a)));
-                IListener l1 = bf.Value(trans0).Listen(inTarget, trans0, (trans1, ff) =>
-                {
-                    f = ff;
-                    if (isASet)
-                    {
-                        h(trans1);
-                    }
-                }, false);
-                IListener l2 = this.Value(trans0).Listen(inTarget, trans0, (trans1, aa) =>
-                {
-                    a = aa;
-                    isASet = true;
-                    if (f != null)
-                    {
-                        h(trans1);
-                    }
-                }, false);
-                return @out.LastFiringOnly(trans0).UnsafeAttachListener(l1).UnsafeAttachListener(l2).UnsafeAttachListener(
-                    Listener.Create(inTarget, nodeTarget)).HoldLazyInternal(new Lazy<TResult>(() => bf.SampleNoTransaction()(this.SampleNoTransaction())));
-            }, false);
+                    Func<T, TResult> f = null;
+                    T a = default(T);
+                    bool isASet = false;
+
+                    // ReSharper disable once PossibleNullReferenceException
+                    void H(Transaction trans1) => trans1.Prioritized(@out.Node, trans2 => @out.Send(trans2, f(a)));
+
+                    IListener l1 = bf.Value(trans0)
+                        .Listen(
+                            inTarget,
+                            trans0,
+                            (trans1, ff) =>
+                            {
+                                f = ff;
+                                if (isASet)
+                                {
+                                    H(trans1);
+                                }
+                            },
+                            false);
+                    IListener l2 = this.Value(trans0)
+                        .Listen(
+                            inTarget,
+                            trans0,
+                            (trans1, aa) =>
+                            {
+                                a = aa;
+                                isASet = true;
+                                if (f != null)
+                                {
+                                    H(trans1);
+                                }
+                            },
+                            false);
+                    return @out.LastFiringOnly(trans0)
+                        .UnsafeAttachListener(l1)
+                        .UnsafeAttachListener(l2)
+                        .UnsafeAttachListener(
+                            Listener.Create(inTarget, nodeTarget))
+                        .HoldLazyInternal(
+                            new Lazy<TResult>(() => bf.SampleNoTransaction()(this.SampleNoTransaction())));
+                },
+                false);
         }
 
         private class LazySample
@@ -373,10 +407,7 @@ namespace Sodium
             internal bool HasValue;
             internal T Value;
 
-            internal LazySample(Cell<T> cell)
-            {
-                this.Cell = cell;
-            }
+            internal LazySample(Cell<T> cell) => this.Cell = cell;
         }
     }
 }

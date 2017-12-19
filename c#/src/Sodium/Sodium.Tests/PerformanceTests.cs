@@ -31,29 +31,29 @@ namespace Sodium.Tests
 
             public TestObject(Stream<bool> s, Stream<int> s1, Stream<int> s2)
             {
-                ValueTuple<DiscreteCell<int>, IStrongListener> t = Transaction.Run(() =>
+                (DiscreteCell<int> cell, IStrongListener l) = Transaction.Run(() =>
                 {
-                    var cell = s.Map(v => v ? 1 : 0).OrElse(s1).OrElse(s2).Hold(0);
-                    var cell2 = s1.Snapshot(cell.Cell, (left, right) => left + right).Filter(v => v > 5).OrElse(s.Snapshot(s1.Hold(0).Lift(s2.Hold(1), (left, right) => left + right).Cell).Map(v => v + 1)).Hold(3);
-                    var cell3 = s1.Snapshot(cell.Cell, (left, right) => left + right).Filter(v => v > 5).OrElse(s.Snapshot(s1.Hold(0).Lift(s2.Hold(1), (left, right) => left + right).Cell).Map(v => v + 1)).Hold(3);
-                    var cell4 = s1.Snapshot(cell.Cell, (left, right) => left + right).Filter(v => v > 5).OrElse(s.Snapshot(s1.Hold(0).Lift(s2.Hold(1), (left, right) => left + right).Cell).Map(v => v + 1)).Hold(3);
-                    var cell5 = s1.Snapshot(cell.Cell, (left, right) => left + right).Filter(v => v > 5).OrElse(s.Snapshot(s1.Hold(0).Lift(s2.Hold(1), (left, right) => left + right).Cell).Map(v => v + 1)).Hold(3);
-                    var cell6 = s1.Snapshot(cell.Cell, (left, right) => left + right).Filter(v => v > 5).OrElse(s.Snapshot(s1.Hold(0).Lift(s2.Hold(1), (left, right) => left + right).Cell).Map(v => v + 1)).Hold(3);
-                    var cell7 = s1.Snapshot(cell.Cell, (left, right) => left + right).Filter(v => v > 5).OrElse(s.Snapshot(s1.Hold(0).Lift(s2.Hold(1), (left, right) => left + right).Cell).Map(v => v + 1)).Hold(3);
-                    var cell8 = s1.Snapshot(cell.Cell, (left, right) => left + right).Filter(v => v > 5).OrElse(s.Snapshot(s1.Hold(0).Lift(s2.Hold(1), (left, right) => left + right).Cell).Map(v => v + 1)).Hold(3);
-                    var cell9 = s1.Snapshot(cell.Cell, (left, right) => left + right).Filter(v => v > 5).OrElse(s.Snapshot(s1.Hold(0).Lift(s2.Hold(1), (left, right) => left + right).Cell).Map(v => v + 1)).Hold(3);
+                    var cellLocal = s.Map(v => v ? 1 : 0).OrElse(s1).OrElse(s2).Hold(0);
+                    var cell2 = s1.Snapshot(cellLocal.Cell, (left, right) => left + right).Filter(v => v > 5).OrElse(s.Snapshot(s1.Hold(0).Lift(s2.Hold(1), (left, right) => left + right).Cell).Map(v => v + 1)).Hold(3);
+                    var cell3 = s1.Snapshot(cellLocal.Cell, (left, right) => left + right).Filter(v => v > 5).OrElse(s.Snapshot(s1.Hold(0).Lift(s2.Hold(1), (left, right) => left + right).Cell).Map(v => v + 1)).Hold(3);
+                    var cell4 = s1.Snapshot(cellLocal.Cell, (left, right) => left + right).Filter(v => v > 5).OrElse(s.Snapshot(s1.Hold(0).Lift(s2.Hold(1), (left, right) => left + right).Cell).Map(v => v + 1)).Hold(3);
+                    var cell5 = s1.Snapshot(cellLocal.Cell, (left, right) => left + right).Filter(v => v > 5).OrElse(s.Snapshot(s1.Hold(0).Lift(s2.Hold(1), (left, right) => left + right).Cell).Map(v => v + 1)).Hold(3);
+                    var cell6 = s1.Snapshot(cellLocal.Cell, (left, right) => left + right).Filter(v => v > 5).OrElse(s.Snapshot(s1.Hold(0).Lift(s2.Hold(1), (left, right) => left + right).Cell).Map(v => v + 1)).Hold(3);
+                    var cell7 = s1.Snapshot(cellLocal.Cell, (left, right) => left + right).Filter(v => v > 5).OrElse(s.Snapshot(s1.Hold(0).Lift(s2.Hold(1), (left, right) => left + right).Cell).Map(v => v + 1)).Hold(3);
+                    var cell8 = s1.Snapshot(cellLocal.Cell, (left, right) => left + right).Filter(v => v > 5).OrElse(s.Snapshot(s1.Hold(0).Lift(s2.Hold(1), (left, right) => left + right).Cell).Map(v => v + 1)).Hold(3);
+                    var cell9 = s1.Snapshot(cellLocal.Cell, (left, right) => left + right).Filter(v => v > 5).OrElse(s.Snapshot(s1.Hold(0).Lift(s2.Hold(1), (left, right) => left + right).Cell).Map(v => v + 1)).Hold(3);
 
-                    var l = Transaction.Run(() =>
+                    var lLocal = Transaction.Run(() =>
                     {
-                        this.currentValue = cell.Cell.SampleLazy();
-                        return cell.Updates.Listen(v => this.CurrentValue = v);
+                        this.currentValue = cellLocal.Cell.SampleLazy();
+                        return cellLocal.Updates.Listen(v => this.CurrentValue = v);
                     });
 
-                    return ValueTuple.Create(cell, l);
+                    return (cellLocal, lLocal);
                 });
 
-                this.Cell = t.Item1;
-                this.l = t.Item2;
+                this.Cell = cell;
+                this.l = l;
             }
 
             public DiscreteCell<int> Cell { get; }

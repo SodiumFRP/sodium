@@ -12,35 +12,36 @@ namespace Sodium
         private readonly Action<Transaction, T> coalescer;
 
         public StreamSink()
-            : this((left, right) => { throw new InvalidOperationException("Send was called more than once in a transaction, which isn't allowed.  To combine the streams, pass a coalescing function to the StreamSink constructor."); })
+            : this(
+                (left, right) => throw new InvalidOperationException(
+                    "Send was called more than once in a transaction, which isn't allowed.  To combine the streams, pass a coalescing function to the StreamSink constructor."))
         {
         }
 
-        public StreamSink(Func<T, T, T> coalesce)
-        {
-            this.coalescer = CoalesceHandler.Create(coalesce, this);
-        }
+        public StreamSink(Func<T, T, T> coalesce) => this.coalescer = CoalesceHandler.Create(coalesce, this);
 
         /// <summary>
         ///     Send a value.  This method may not be called from inside handlers registered with
-        ///     <see cref="Stream{T}.Listen(Action{T})" /> or <see cref="Cell{T}.Listen(Action{T})" />.
+        ///     <see cref="Stream{T}.Listen(Action{T})" /> or <see cref="DiscreteCell{T}.Listen(Action{T})" />.
         ///     An exception will be thrown, because sinks are for interfacing I/O to FRP only.  They are not meant to be used to
         ///     define new primitives.
         /// </summary>
         /// <param name="a">The value to send.</param>
         public void Send(T a)
         {
-            Transaction.Apply(trans =>
-            {
-                if (Transaction.InCallback > 0)
+            Transaction.Apply(
+                trans =>
                 {
-                    throw new InvalidOperationException("Send() may not be called inside a Sodium callback.");
-                }
+                    if (Transaction.InCallback > 0)
+                    {
+                        throw new InvalidOperationException("Send may not be called inside a Sodium callback.");
+                    }
 
-                trans.Send(t => this.coalescer(t, a));
+                    trans.Send(t => this.coalescer(t, a));
 
-                return Unit.Value;
-            }, false);
+                    return Unit.Value;
+                },
+                false);
         }
 
         /// <summary>

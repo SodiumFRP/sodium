@@ -23,14 +23,11 @@ namespace Sodium
         }
 
         private CellSink(StreamSink<T> streamSink, T initialValue)
-            : base(streamSink, initialValue)
-        {
-            this.streamSink = streamSink;
-        }
+            : base(streamSink, initialValue) => this.streamSink = streamSink;
 
         /// <summary>
         ///     Send a value, modifying the value of the cell.  This method may not be called from inside handlers registered with
-        ///     <see cref="Stream{T}.Listen(Action{T})" /> or <see cref="Cell{T}.Listen(Action{T})" />.
+        ///     <see cref="Stream{T}.Listen(Action{T})" /> or <see cref="DiscreteCell{T}.Listen(Action{T})" />.
         ///     An exception will be thrown, because sinks are for interfacing I/O to FRP only.  They are not meant to be used to
         ///     define new primitives.
         /// </summary>
