@@ -74,6 +74,22 @@ object Transaction {
 
   var currentTransaction: Option[Transaction] = None
   var inCallback: Int = 0
+  private val onStartHooks = new ListBuffer[Runnable]
+  private var runningOnStartHooks = false
+
+  /**
+    * Add a runnable that will be executed whenever a transaction is started.
+    * That runnable may start transactions itself, which will not cause the
+    * hooks to be run recursively.
+    *
+    * The main use case of this is the implementation of a time/alarm system.
+    */
+  def onStart(r: Runnable): Unit = {
+    transactionLock.synchronized {
+      onStartHooks += r
+      ()
+    }
+  }
 
   /**
     * Run the specified code inside a single transaction, with the contained
@@ -90,8 +106,7 @@ object Transaction {
       // keep using that same transaction.
       val transWas = currentTransaction
       try {
-        if (currentTransaction == None)
-          currentTransaction = Some(new Transaction())
+        startIfNecessary()
         code(currentTransaction.get)
       } finally {
         if (transWas == None)
@@ -105,6 +120,22 @@ object Transaction {
   //def run(f: Transaction => Unit): Unit = {
   //  apply(t => f(t))
   //}
+
+  private def startIfNecessary(): Unit = {
+    if (currentTransaction == None) {
+      if (!runningOnStartHooks) {
+        runningOnStartHooks = true
+        try {
+          for (r <- onStartHooks) {
+            r.run()
+          }
+        } finally {
+          runningOnStartHooks = false
+        }
+      }
+      currentTransaction = Some(new Transaction())
+    }
+  }
 
   /**
     * Return the current transaction.

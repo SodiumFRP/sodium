@@ -176,10 +176,10 @@ class StreamTester {
     val ea = new StreamSink[Int]()
     val out = new MutableList[Int]()
     val sum = ea.accum[Int](100, (a, s) => a + s)
-    val l = sum.updates().listen(out.+=(_))
+    val l = sum.listen(out.+=(_))
     List(5, 7, 1, 2, 3).foreach(ea.send(_))
     l.unlisten()
-    assertEquals(List(105, 112, 113, 115, 118), out)
+    assertEquals(List(100, 105, 112, 113, 115, 118), out)
   }
 
   @Test
@@ -211,11 +211,11 @@ class StreamTester {
     val as = new StreamSink[List[Int]]()
     val out = new MutableList[Int]()
     val sum = ea.split(as).accum[Int](0, (a, b) => a + b)
-    val l = sum.updates().listen(out.+=(_))
+    val l = sum.listen(out.+=(_))
     as.send(List(100, 15, 60))
     as.send(List(1, 5))
     l.unlisten()
-    assertEquals(List(100, 115, 175, 176, 181), out)
+    assertEquals(List(0, 100, 115, 175, 176, 181), out)
   }
 
 }
