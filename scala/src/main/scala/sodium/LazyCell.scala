@@ -4,7 +4,7 @@ class LazyCell[A](event: Stream[A], _lazyInitValue: Option[Lazy[A]]) extends Cel
 
   this.lazyInitValue = _lazyInitValue
 
-  override /*protected*/ def sampleNoTrans(): A = {
+  override def sampleNoTrans(): A = {
     if (currentValue.isEmpty && lazyInitValue.isDefined) {
       currentValue = Some(lazyInitValue.get.f.apply())
       lazyInitValue = None

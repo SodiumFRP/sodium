@@ -122,7 +122,7 @@ class StreamTester {
   def testFilterOptional(): Unit = {
     val e = new StreamSink[Option[String]]()
     val out = new MutableList[String]()
-    val l = Stream.filterOption(e).listen(s => out.+=(s))
+    val l = Stream.filterOptional(e).listen(s => out.+=(s))
     List(Some("tomato"), None, Some("peach")).foreach(e.send(_))
     l.unlisten()
     assertEquals(List("tomato", "peach"), out)
@@ -206,11 +206,9 @@ class StreamTester {
   //Tests temporarily add to Scala version only
   @Test
   def testSplit(): Unit = {
-
-    val ea = new StreamSink[Int]()
     val as = new StreamSink[List[Int]]()
     val out = new MutableList[Int]()
-    val sum = ea.split(as).accum[Int](0, (a, b) => a + b)
+    val sum = Stream.split[Int, List[Int]](as).accum[Int](0, (a, b) => a + b)
     val l = sum.listen(out.+=(_))
     as.send(List(100, 15, 60))
     as.send(List(1, 5))

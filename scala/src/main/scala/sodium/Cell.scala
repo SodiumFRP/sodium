@@ -2,7 +2,10 @@ package sodium
 
 import sodium.Node.Target
 
-class Cell[A](final protected val str: Stream[A], protected var currentValue: Option[A]) {
+/**
+  * Represents a value of type A that changes over time.
+  */
+class Cell[A](val str: Stream[A], protected var currentValue: Option[A]) {
 
   private var valueUpdate: Option[A] = None
   private var cleanup: Option[Listener] = None
@@ -49,20 +52,22 @@ class Cell[A](final protected val str: Stream[A], protected var currentValue: Op
 
   /**
     * Sample the cell's current value.
-    *
-    * This should generally be avoided in favour of value().listen(..) so you don't
+    * <p>
+    * It may be used inside the functions passed to primitives that return [[Stream]]s,
+    * namely [[Stream.map Stream.map(A=>B)]]] in which case it is equivalent to snapshotting the cell,
+    * [[sodium.Stream.snapshot[B,C]* Stream.snapshot(Cell,(A,B)=>C)]], [[Stream.filter Stream.filter(A=>Boolean)]],
+    * [[Stream!.merge(eb:sodium\.Stream[A],f:(A,A)=>A):sodium\.Stream[A]* Stream.merge(Stream,f:(A,A)=>1]]
+    * and [[sodium.Stream!.coalesce(f:(A,A)=>A):sodium\.Stream[A]* Stream.coalesce((A,A)=>A)]]
+    * It should generally be avoided in favour of [[listen listen(A=>Unit)]] so you don't
     * miss any updates, but in many circumstances it makes sense.
-    *
-    * It can be best to use it inside an explicit transaction (using Transaction.run()).
-    * For example, a b.sample() inside an explicit transaction along with a
-    * b.updates().listen(..) will capture the current value and any updates without risk
-    * of missing any in between.
     */
   final def sample(): A = Transaction(_ => sampleNoTrans())
 
   /**
-    * A variant of sample() that works for CellLoops when they haven't been looped yet.
-    * @see [[Stream#holdLazy]]
+    * A variant of [[sample():A* sample()]] that works with [[CellLoop]]s when they haven't been looped yet.
+    * It should be used in any code that's general enough that it could be passed a [[CellLoop]].
+    *
+    * @see [[sodium.Stream!.holdLazy(initValue:sodium\.Lazy[A]):sodium\.Cell[A]* Stream!.holdLazy()]]
     */
   final def sampleLazy(): Lazy[A] = {
     val me = this
@@ -83,7 +88,6 @@ class Cell[A](final protected val str: Stream[A], protected var currentValue: Op
         else s.cell.sample)
   }
 
-  /*protected*/
   def sampleNoTrans(): A = currentValue.get
 
   final def updates(trans: Transaction): Stream[A] = str.lastFiringOnly(trans)
@@ -97,14 +101,19 @@ class Cell[A](final protected val str: Stream[A], protected var currentValue: Op
   }
 
   /**
-    * Transform the cell's value according to the supplied function.
+    * Transform the cell's value according to the supplied function, so the returned Cell
+    * always reflects the value of the function applied to the input Cell's value.
+    *
+    * @param f Function to apply to convert the values. It must be <em>referentially transparent</em>.
     */
-  final def map[B](f: A => B): Cell[B] =
+  final def map[B](f: A => B) =
     Transaction(trans => updates(trans).map(f).holdLazy(trans, sampleLazy(trans).map(f)))
 
   /**
     * Transform a cell with a generalized state loop (a mealy machine). The function
     * is passed the input and the old state and returns the new state and output value.
+    *
+    * @param f Function to apply for each update. It must be <em>referentially transparent</em>.
     */
   final def collect[B, S](initState: S, f: (A, S) => (B, S)): Cell[B] = collect(new Lazy[S](initState), f)
 
@@ -112,6 +121,8 @@ class Cell[A](final protected val str: Stream[A], protected var currentValue: Op
     * Transform a cell with a generalized state loop (a mealy machine). The function
     * is passed the input and the old state and returns the new state and output value.
     * Variant that takes a lazy initial state.
+    *
+    * @param f Function to apply for each update. It must be <em>referentially transparent</em>.
     */
   final def collect[B, S](initState: Lazy[S], f: (A, S) => (B, S)): Cell[B] =
     Transaction[Cell[B]](trans0 => {
@@ -130,12 +141,19 @@ class Cell[A](final protected val str: Stream[A], protected var currentValue: Op
   }
 
   /**
-    * Listen for firings of this stream. The returned Listener has an unlisten()
-    * method to cause the listener to be removed. This is the observer pattern.
+    * Listen for updates to the value of this cell. This is the observer pattern. The
+    * returned [[Listener]] has a [[sodium.Listener.unlisten()* Listener.unlisten()]] method to cause the
+    * listener to be removed. This is an OPERATIONAL mechanism is for interfacing between
+    * the world of I/O and for FRP.
+    *
+    * @param action The handler to execute when there's a new value.
+    *               You should make no assumptions about what thread you are called on, and the
+    *               handler should not block. You are not allowed to use [[sodium.CellSink.send CellSink.send(A)]]
+    *               or [[sodium.StreamSink.send(a:A):Unit* StreamSink.send(A)]] in the handler.
+    *               An exception will be thrown, because you are not meant to use this to create
+    *               your own primitives.
     */
-  final def listen(action: A => Unit): Listener = {
-    Transaction(trans => value(trans).listen(action))
-  }
+  final def listen(action: A => Unit) = Transaction(trans => value(trans).listen(action))
 
 }
 
@@ -147,7 +165,10 @@ object Cell {
   }
 
   /**
-    * Lift a binary function into cells.
+    * Lift a binary function into cells, so the returned Cell always reflects the specified
+    * function applied to the input cells' values.
+    *
+    * @param f Function to apply. It must be <em>referentially transparent</em>.
     */
   final def lift[A, B, C](f: (A, B) => C, a: Cell[A], b: Cell[B]): Cell[C] = {
     def ffa(aa: A)(bb: B) = f(aa, bb)
@@ -155,7 +176,10 @@ object Cell {
   }
 
   /**
-    * Lift a ternary function into cells.
+    * Lift a ternary function into cells, so the returned Cell always reflects the specified
+    * function applied to the input cells' values.
+    *
+    * @param f Function to apply. It must be <em>referentially transparent</em>.
     */
   final def lift[A, B, C, D](f: (A, B, C) => D, a: Cell[A], b: Cell[B], c: Cell[C]): Cell[D] = {
     def ffa(aa: A)(bb: B)(cc: C) = f(aa, bb, cc)
@@ -163,7 +187,10 @@ object Cell {
   }
 
   /**
-    * Lift a quaternary function into cells.
+    * Lift a quaternary function into cells, so the returned Cell always reflects the specified
+    * function applied to the input cells' values.
+    *
+    * @param f Function to apply. It must be <em>referentially transparent</em>.
     */
   final def lift[A, B, C, D, E](f: (A, B, C, D) => E, a: Cell[A], b: Cell[B], c: Cell[C], d: Cell[D]): Cell[E] = {
     def ffa(aa: A)(bb: B)(cc: C)(dd: D) = f(aa, bb, cc, dd)
@@ -171,7 +198,10 @@ object Cell {
   }
 
   /**
-    * Lift a 5-argument function into cells.
+    * Lift a 5-argument function into cells, so the returned Cell always reflects the specified
+    * function applied to the input cells' values.
+    *
+    * @param f Function to apply. It must be <em>referentially transparent</em>.
     */
   final def lift[A, B, C, D, E, F](f: (A, B, C, D, E) => F,
                                    a: Cell[A],
@@ -184,7 +214,10 @@ object Cell {
   }
 
   /**
-    * Lift a 6-argument function into cells.
+    * Lift a 6-argument function into cells, so the returned Cell always reflects the specified
+    * function applied to the input cells' values.
+    *
+    * @param fn Function to apply. It must be <em>referentially transparent</em>.
     */
   final def lift[A, B, C, D, E, F, G](fn: (A, B, C, D, E, F) => G,
                                       a: Cell[A],
