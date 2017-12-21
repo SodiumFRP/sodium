@@ -93,7 +93,7 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
   /**
     * Create a [[Cell]] with the specified initial value, that is updated
     * by this stream's event values.
-    * <p>
+    *
     * There is an implicit delay: State updates caused by event firings don't become
     * visible as the cell's current value as viewed by [[sodium.Stream.snapshot[B,C]* Stream.snapshot(Cell,(A,B)=>C)]]
     * until the following transaction. To put this another way,
@@ -120,21 +120,20 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
   final def snapshot[B](beh: Cell[B]): Stream[B] = snapshot[B, B](beh, (a, b) => b)
 
   /**
-    * Sample the behavior at the time of the event firing. Note that the 'current value'
-    * of the behavior that's sampled is the value as at the start of the transaction
-    * before any state changes of the current transaction are applied through 'hold's.
+    * Return a stream whose events are the result of the combination using the specified
+    * function of the input stream's event value and the value of the cell at that time.
     *
     * There is an implicit delay: State updates caused by event firings being held with
-    * [[sodium.Stream.hold(initValue:A)* hold(A)]] don't become visible as the cell's current value until
-    * the following transaction. To put this another way, [[sodium.Stream.snapshot[B,C]* Stream.snapshot(Cell,(A,B)=>C)]]
+    * [[sodium.Stream.hold(initValue:A)* hold(A)]] don't become visible as the cell's current value until the
+    * following transaction. To put this another way, [[sodium.Stream.snapshot[B,C]* Stream.snapshot(Cell,(A,B)=>C)]]
     * always sees the value of a cell as it was before any state changes from the current
     * transaction.
     */
-  final def snapshot[B, C](b: Cell[B], f: (A, B) => C): Stream[C] = {
+  final def snapshot[B, C](c: Cell[B], f: (A, B) => C): Stream[C] = {
     val out = new StreamSink[C]()
     val l = listen_(out.node, new TransactionHandler[A]() {
       def run(trans: Transaction, a: A): Unit = {
-        out.send(trans, f(a, b.sampleNoTrans()))
+        out.send(trans, f(a, c.sampleNoTrans()))
       }
     })
     out.unsafeAddCleanup(l)
@@ -147,12 +146,12 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     * In the case where two event occurrences are simultaneous (i.e. both
     * within the same transaction), both will be delivered in the same
     * transaction with a left bias: All events from the left stream (this) will arrive
-    * before events from <em>eb</em>.
+    * before events from <em>s</em>.
     */
-  def merge(eb: Stream[A]): Stream[A] = Stream.merge[A](this, eb)
+  def merge(s: Stream[A]): Stream[A] = Stream.merge[A](this, s)
 
   /**
-    * Push each event onto a new transaction guaranteed to come before any externally
+    * Push each event onto a new transaction guaranteed to come before the next externally
     * initiated transaction. Same as [[sodium.Stream.split split(Stream)]] but it works on a single value.
     */
   final def defer(): Stream[A] = {
@@ -178,15 +177,16 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
   }
 
   /**
-    * If the stream contains simultaneous events (where more than event occurs in a
+    * If the stream contains simultaneous events (where more than one event occurs in a
     * single transaction), combine them into one using the specified combining function
     * so that the returned stream is guaranteed only ever to have one event per transaction.
-    * <p>
+    *
     * If the event firings are ordered, then the first will appear at the left
     * input of the combining function.
     *
     * @param f Function to combine the values. It must be <em>associative</em>. It may construct FRP logic or use
-    *          [[sodium.Cell.sample():A* Cell.sample()]]. Apart from this the function must be <em>referentially transparent</em>.
+    *          [[sodium.Cell.sample():A* Cell.sample()]]. Apart from this the function must be
+    *          <em>referentially transparent</em>.
     */
   final def coalesce(f: (A, A) => A): Stream[A] =
     Transaction(trans => coalesce(trans, f))
@@ -261,7 +261,7 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     filterOptional(snapshot[Boolean, Option[A]](c, (a, pred) => if (pred) Some(a) else None))
 
   /**
-    * Transform an event with a generalized state loop (a mealy machine). The function
+    * Transform an event with a generalized state loop (a Mealy machine). The function
     * is passed the input and the old state and returns the new state and output value.
     *
     * @param f Function to apply to update the state. It may construct FRP logic or use
@@ -272,8 +272,8 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
   final def collect[B, S](initState: S, f: (A, S) => (B, S)): Stream[B] = collectLazy(new Lazy[S](initState), f)
 
   /**
-    * A variant of [[sodium.Stream.collect[B,S](initState:S,f:(A,S)=>(B,S)):sodium\.Stream[B]*]] that takes an initial
-    * state returned by [[Cell.sampleLazy()* Cell.sampleLazy()]].
+    * A variant of [[sodium.Stream.collect[B,S](initState:S,f:(A,S)=>(B,S)):sodium\.Stream[B]* collect(S,(A,S)=>(B,S)]]
+    * that takes an initial state returned by [[Cell.sampleLazy()* Cell.sampleLazy()]].
     */
   final def collectLazy[B, S](initState: Lazy[S], f: (A, S) => (B, S)): Stream[B] =
     Transaction(_ => {
@@ -430,7 +430,7 @@ object Stream {
 
   /**
     * Push each event in the list onto a newly created transaction guaranteed
-    * to come before any externally initiated transaction.
+    * to come before the next externally initiated transaction.
     */
   final def split[A, C <: Traversable[A]](s: Stream[C]): Stream[A] = {
     val out = new StreamSink[A]

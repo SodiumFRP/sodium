@@ -6,6 +6,9 @@ import scala.collection.mutable.HashSet
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.PriorityQueue
 
+/**
+  * Functions for controlling transactions.
+  */
 final class Transaction {
   import Transaction._
 
@@ -95,9 +98,8 @@ object Transaction {
     * Run the specified code inside a single transaction, with the contained
     * code returning a value of the parameter type A.
     *
-    * In most cases this is not needed, because all APIs will create their own
-    * transaction automatically. It is useful where you want to run multiple
-    * reactive operations atomically.
+    * In most cases this is not needed, because the primitives always create their own
+    * transaction automatically, but it is needed in some circumstances.
     */
   def apply[A](code: Transaction => A): A = {
     transactionLock.synchronized {

@@ -4,7 +4,7 @@ package sodium
   * A cell that allows values to be pushed into it, acting as an interface between the
   * world of I/O and the world of FRP. Code that exports CellSinks for read-only use
   * should downcast to [[Cell]].
-  * @constructor Construct a writeable cell with the specified initial value.
+  * @constructor Construct a writable cell with the specified initial value.
   */
 final class CellSink[A](initValue: A) extends Cell[A](new StreamSink[A](), Some(initValue)) {
 

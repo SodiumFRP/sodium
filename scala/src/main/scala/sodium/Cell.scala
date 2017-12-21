@@ -52,9 +52,9 @@ class Cell[A](val str: Stream[A], protected var currentValue: Option[A]) {
 
   /**
     * Sample the cell's current value.
-    * <p>
-    * It may be used inside the functions passed to primitives that return [[Stream]]s,
-    * namely [[Stream.map Stream.map(A=>B)]]] in which case it is equivalent to snapshotting the cell,
+    *
+    * It may be used inside the functions passed to primitives that apply them to [[Stream]]s,
+    * including [[Stream.map Stream.map(A=>B)]]] in which case it is equivalent to snapshotting the cell,
     * [[sodium.Stream.snapshot[B,C]* Stream.snapshot(Cell,(A,B)=>C)]], [[Stream.filter Stream.filter(A=>Boolean)]],
     * [[Stream!.merge(eb:sodium\.Stream[A],f:(A,A)=>A):sodium\.Stream[A]* Stream.merge(Stream,f:(A,A)=>1]]
     * and [[sodium.Stream!.coalesce(f:(A,A)=>A):sodium\.Stream[A]* Stream.coalesce((A,A)=>A)]]
@@ -118,9 +118,8 @@ class Cell[A](val str: Stream[A], protected var currentValue: Option[A]) {
   final def collect[B, S](initState: S, f: (A, S) => (B, S)): Cell[B] = collect(new Lazy[S](initState), f)
 
   /**
-    * Transform a cell with a generalized state loop (a mealy machine). The function
-    * is passed the input and the old state and returns the new state and output value.
-    * Variant that takes a lazy initial state.
+    * A variant of [[sodium.Stream.collect[B,S](initState:S,f:(A,S)=>(B,S)):sodium\.Stream[B]* collect(S,(A,S)=>(B,S)]]
+    * that takes a lazy initial state.
     *
     * @param f Function to apply for each update. It must be <em>referentially transparent</em>.
     */
@@ -301,7 +300,7 @@ object Cell {
           // value().listen will always cause a sample to be fetched from the
           // one we just switched to. The caller will be fetching our output
           // using value().listen, and value() throws away all firings except
-          // for the last one. Therefore, anything from the old input behaviour
+          // for the last one. Therefore, anything from the old input cell
           // that might have happened during this transaction will be suppressed.
           currentListener.foreach(_.unlisten())
           currentListener = Some(

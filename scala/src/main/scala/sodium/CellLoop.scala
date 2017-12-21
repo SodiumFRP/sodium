@@ -1,7 +1,7 @@
 package sodium
 
 /**
-  * A forward reference for a [[Cell]] equivalent to the Cell that was referenced.
+  * A forward reference for a [[Cell]] equivalent to the Cell that is referenced.
   */
 final class CellLoop[A] extends LazyCell[A](new StreamLoop[A](), None) {
 
