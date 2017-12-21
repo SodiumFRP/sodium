@@ -335,6 +335,12 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     out.unsafeAddCleanup(la.get)
   }
 
+  /**
+    * This is not thread-safe, so one of these two conditions must apply:
+    1. We are within a transaction, since in the current implementation a transaction locks out all other threads.
+    1. The object on which this is being called was created has not yet
+       been returned from the method where it was created, so it can't be shared between threads.
+    */
   def unsafeAddCleanup(cleanup: Listener): Stream[A] = {
     finalizers += cleanup
     this
@@ -345,11 +351,12 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     * when this stream is garbage collected. Useful for functions that initiate I/O,
     * returning the result of it through a stream.
     */
-  def addCleanup(cleanup: Listener): Stream[A] = {
-    val fsNew: ListBuffer[Listener] = finalizers
-    fsNew += cleanup
-    new Stream[A](node, fsNew, firings)
-  }
+  def addCleanup(cleanup: Listener): Stream[A] =
+    Transaction(trans => {
+      val fsNew: ListBuffer[Listener] = finalizers
+      fsNew += cleanup
+      new Stream[A](node, fsNew, firings)
+    })
 
   protected override def finalize(): Unit = {
     finalizers.foreach(_.unlisten)

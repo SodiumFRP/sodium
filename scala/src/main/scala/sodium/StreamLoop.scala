@@ -19,11 +19,13 @@ class StreamLoop[A] extends StreamWithSend[A] {
     if (assigned)
       throw new RuntimeException("StreamLoop looped more than once")
     assigned = true
-    unsafeAddCleanup(initStream.listen_(this.node, new TransactionHandler[A]() {
-      override def run(trans: Transaction, a: A): Unit = {
-        StreamLoop.this.send(trans, a)
-      }
-    }))
+    Transaction(trans => {
+      unsafeAddCleanup(initStream.listen_(this.node, new TransactionHandler[A]() {
+        override def run(trans: Transaction, a: A): Unit = {
+          StreamLoop.this.send(trans, a)
+        }
+      }))
+    })
     ()
   }
 }
