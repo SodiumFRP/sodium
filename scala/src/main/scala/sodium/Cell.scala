@@ -109,32 +109,6 @@ class Cell[A](val str: Stream[A], protected var currentValue: Option[A]) {
   final def map[B](f: A => B) =
     Transaction(trans => updates(trans).map(f).holdLazy(trans, sampleLazy(trans).map(f)))
 
-  /**
-    * Transform a cell with a generalized state loop (a mealy machine). The function
-    * is passed the input and the old state and returns the new state and output value.
-    *
-    * @param f Function to apply for each update. It must be <em>referentially transparent</em>.
-    */
-  final def collect[B, S](initState: S, f: (A, S) => (B, S)): Cell[B] = collect(new Lazy[S](initState), f)
-
-  /**
-    * A variant of [[sodium.Stream.collect[B,S](initState:S,f:(A,S)=>(B,S)):sodium\.Stream[B]* collect(S,(A,S)=>(B,S)]]
-    * that takes a lazy initial state.
-    *
-    * @param f Function to apply for each update. It must be <em>referentially transparent</em>.
-    */
-  final def collect[B, S](initState: Lazy[S], f: (A, S) => (B, S)): Cell[B] =
-    Transaction[Cell[B]](trans0 => {
-      val ea = updates(trans0).coalesce((fst, snd) => snd)
-      val ebs = new StreamLoop[(B, S)]()
-      val zbs = Lazy.lift(f, sampleLazy(), initState)
-      val bbs = ebs.holdLazy(zbs)
-      val bs = bbs.map(x => x._2)
-      val ebs_out = ea.snapshot(bs, f)
-      ebs.loop(ebs_out)
-      bbs.map(x => x._1)
-    })
-
   protected override def finalize(): Unit = {
     cleanup.foreach(_.unlisten())
   }

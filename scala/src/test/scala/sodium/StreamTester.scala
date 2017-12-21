@@ -164,7 +164,7 @@ class StreamTester {
   def testCollect(): Unit = {
     val ea = new StreamSink[Int]()
     val out = new MutableList[Int]()
-    val sum = ea.collect[Int, Int](100, (a, s) => (a + s, a + s))
+    val sum = ea.collect[Int, Int](0, (a, s) => (a + s + 100, a + s))
     val l = sum.listen(out.+=(_))
     List(5, 7, 1, 2, 3).foreach(ea.send(_))
     l.unlisten()
