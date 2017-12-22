@@ -290,23 +290,23 @@ class CellTester {
     val esb = new StreamSink[SB]()
     // Split each field out of SB so we can update multiple behaviours in a
     // single transaction.
-    val ba = esb.map(s => s.a).filterNotNull().hold('A')
-    val bb = esb.map(s => s.b).filterNotNull().hold('a')
-    val bsw = esb.map(s => s.sw).filterNotNull().hold(ba)
+    val ba = Stream.filterOptional(esb.map(s => s.a)).hold('A')
+    val bb = Stream.filterOptional(esb.map(s => s.b)).hold('a')
+    val bsw = Stream.filterOptional(esb.map(s => s.sw)).hold(ba)
     val bo = Cell.switchC(bsw)
     val out = new ListBuffer[Character]()
     val l = bo.listen(out.+=(_))
     List(
-      new SB('B', 'b', null),
-      new SB('C', 'c', bb),
-      new SB('D', 'd', null),
-      new SB('E', 'e', ba),
-      new SB('F', 'f', null),
-      new SB(null, null, bb),
-      new SB(null, null, ba),
-      new SB('G', 'g', bb),
-      new SB('H', 'h', ba),
-      new SB('I', 'i', ba)
+      new SB(Some('B'), Some('b'), None),
+      new SB(Some('C'), Some('c'), Some(bb)),
+      new SB(Some('D'), Some('d'), None),
+      new SB(Some('E'), Some('e'), Some(ba)),
+      new SB(Some('F'), Some('f'), None),
+      new SB(None, None, Some(bb)),
+      new SB(None, None, Some(ba)),
+      new SB(Some('G'), Some('g'), Some(bb)),
+      new SB(Some('H'), Some('h'), Some(ba)),
+      new SB(Some('I'), Some('i'), Some(ba))
     ).foreach(esb.send(_))
     l.unlisten()
     assertEquals(List('A', 'B', 'c', 'd', 'E', 'F', 'f', 'F', 'g', 'H', 'I'), out)
@@ -315,22 +315,22 @@ class CellTester {
   @Test
   def testSwitchE(): Unit = {
     val ese = new StreamSink[SE]()
-    val ea = ese.map(s => s.a).filterNotNull()
-    val eb = ese.map(s => s.b).filterNotNull()
-    val bsw = ese.map(s => s.sw).filterNotNull().hold(ea)
+    val ea = ese.map(s => s.a)
+    val eb = ese.map(s => s.b)
+    val bsw = Stream.filterOptional(ese.map(s => s.sw)).hold(ea)
     val out = new ListBuffer[Char]()
     val eo = Cell.switchS(bsw)
     val l = eo.listen(out.+=(_))
     List(
-      new SE('A', 'a', null),
-      new SE('B', 'b', null),
-      new SE('C', 'c', eb),
-      new SE('D', 'd', null),
-      new SE('E', 'e', ea),
-      new SE('F', 'f', null),
-      new SE('G', 'g', eb),
-      new SE('H', 'h', ea),
-      new SE('I', 'i', ea)
+      new SE('A', 'a', None),
+      new SE('B', 'b', None),
+      new SE('C', 'c', Some(eb)),
+      new SE('D', 'd', None),
+      new SE('E', 'e', Some(ea)),
+      new SE('F', 'f', None),
+      new SE('G', 'g', Some(eb)),
+      new SE('H', 'h', Some(ea)),
+      new SE('I', 'i', Some(ea))
     ).foreach(ese.send(_))
     l.unlisten()
     assertEquals(List('A', 'B', 'C', 'd', 'e', 'F', 'G', 'h', 'I'), out)
@@ -423,6 +423,6 @@ object CellTester {
   private def doubleUp(ev: Stream[Int]): Stream[Int] = ev.merge(ev)
 }
 
-case class SB(val a: Character, val b: Character, val sw: Cell[Character])
+case class SB(val a: Option[Character], val b: Option[Character], val sw: Option[Cell[Character]])
 
-case class SE(val a: Character, val b: Character, val sw: Stream[Character])
+case class SE(val a: Character, val b: Character, val sw: Option[Stream[Character]])

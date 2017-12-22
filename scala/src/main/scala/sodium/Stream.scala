@@ -235,13 +235,6 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
   }
 
   /**
-    * Return a stream that only outputs event occurrences whose values are not a Java null pointer.
-    * We recommend you use [[sodium.Stream$.filterOptional* filterOptional(Stream)]] instead, because
-    * scala.Option should always be used to represent anything nullable.
-    */
-  final def filterNotNull(): Stream[A] = filter(_ != null)
-
-  /**
     * Return a stream that only outputs event occurrences from the input stream
     * when the specified cell's value is true.
     */

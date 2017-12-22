@@ -109,16 +109,6 @@ class StreamTester {
   }
 
   @Test
-  def testFilterNotNull(): Unit = {
-    val e = new StreamSink[String]()
-    val out = new MutableList[String]()
-    val l = e.filterNotNull().listen(s => out.+=(s))
-    List("tomato", null, "peach").foreach(e.send(_))
-    l.unlisten()
-    assertEquals(List("tomato", "peach"), out)
-  }
-
-  @Test
   def testFilterOptional(): Unit = {
     val e = new StreamSink[Option[String]]()
     val out = new MutableList[String]()
