@@ -410,6 +410,24 @@ class CellTester {
     l.unlisten()
     assertEquals(List("tea kettle", "tea caddy"), out)
   }
+
+  @Test
+  def testSwitchAndDefer(): Unit = {
+    val out = new ListBuffer[String]()
+    val si = new StreamSink[Integer]()
+    val l: Listener = Cell
+      .switchS(
+        si.map(i => {
+            val c = new Cell("A" + i)
+            Operational.value(c).defer()
+          })
+          .hold(new Stream[String]()))
+      .listen(out.+=(_))
+    List(2, 4).foreach(si.send(_))
+    l.unlisten()
+    assertEquals(List("A2", "A4"), out)
+  }
+
 }
 
 object CellTester {
