@@ -160,7 +160,7 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
       out.node,
       new TransactionHandler[A]() {
         def run(trans: Transaction, a: A): Unit = {
-          trans.post(new Runnable() {
+          trans.post_(new Runnable() {
             def run(): Unit = {
               val trans = new Transaction()
               try {
@@ -445,7 +445,7 @@ object Stream {
       out.node,
       new TransactionHandler[C]() {
         override def run(trans: Transaction, as: C): Unit = {
-          trans.post(new Runnable() {
+          trans.post_(new Runnable() {
             override def run(): Unit = {
               for (a <- as) {
                 val trans = new Transaction()

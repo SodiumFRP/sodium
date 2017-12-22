@@ -36,8 +36,16 @@ final class Transaction {
   /**
     * Add an action to run after all last() actions.
     */
-  def post(action: Runnable): Unit = {
+  def post_(action: Runnable): Unit = {
     postQ += action
+  }
+
+  /**
+    * Execute the specified code after the current transaction is closed,
+    * or immediately if there is no current transaction.
+    */
+  def post(action: Runnable): Unit = {
+    Transaction(trans => trans.post_(action))
   }
 
   def close(): Unit = {
