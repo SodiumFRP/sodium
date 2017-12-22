@@ -137,12 +137,70 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     * Merge two streams of the same type into one, so that events on either input appear
     * on the returned stream.
     *
-    * In the case where two event occurrences are simultaneous (i.e. both
-    * within the same transaction), both will be delivered in the same
-    * transaction with a left bias: All events from the left stream (this) will arrive
-    * before events from <em>s</em>.
+    * In the case where two events are simultaneous (i.e. both
+    * within the same transaction), the event from <em>s</em> will take precedence, and
+    * the event from <em>this</em> will be dropped.
+    * If you want to specify your own combining function, use
+    * [[Stream!.merge(s:sodium\.Stream[A],f:(A,A)=>A):sodium\.Stream[A]* Stream.merge(Stream,(A,A)=>A)]].
+    * merge(s) is equivalent to merge(s, (l, r) -&gt; r).
     */
-  def merge(s: Stream[A]): Stream[A] = Stream.merge[A](this, s)
+  def merge(s: Stream[A]): Stream[A] = merge(s, (left, right) => right)
+
+  /**
+    * A variant of [[sodium.Stream.merge(s:sodium\.Stream[A]):sodium\.Stream[A]* merge(Stream)]] that uses the specified
+    * function to combine simultaneous events.
+    *
+    * If the events are simultaneous (that is, one event from this and one from <em>s</em>
+    * occurring in the same transaction), combine them into one using the specified combining function
+    * so that the returned stream is guaranteed only ever to have one event per transaction.
+    * The event from <em>this</em> will appear at the left input of the combining function, and
+    * the event from <em>s</em> will appear at the right.
+    *
+    * @param f Function to combine the values. It may construct FRP logic or use
+    *          [[sodium.Cell.sample():A* Cell.sample()]].
+    *          Apart from this the function must be <em>referentially transparent</em>.
+    */
+  def merge(s: Stream[A], f: ((A, A) => A)): Stream[A] = {
+    Transaction(trans => merge_(this, s).coalesce(trans, f))
+  }
+
+  /**
+    * Coalesce simultaneous events on a single stream into one. This is only useful in the
+    * situation where [[sodium.StreamSink.send(a:A):Unit* StreamSink.send(A)]] has been called multiple times in a
+    * transaction on the same [[StreamSink]]. The combining function should be <em>associative</em>.
+    *
+    * @param f Function to combine the values. It may construct FRP logic or use
+    *           [[sodium.Cell.sample():A* Cell.sample()]].
+    *           Apart from this the function must be <em>referentially transparent</em>.
+    */
+  final def coalesce(f: (A, A) => A): Stream[A] = {
+    Transaction(trans => coalesce(trans, f))
+  }
+
+  final def coalesce(trans1: Transaction, f: (A, A) => A): Stream[A] = {
+    val out = new StreamSink[A]()
+    val l = listen(
+      out.node,
+      trans1,
+      new TransactionHandler[A]() {
+        private var acc: Option[A] = None
+        override def run(trans1: Transaction, a: A): Unit = {
+          acc match {
+            case Some(b) =>
+              acc = Some(f(b, a))
+            case None =>
+              trans1.prioritized(out.node, { trans2 =>
+                out.send(trans2, acc.get)
+                acc = None
+              })
+              acc = Some(a)
+          }
+        }
+      },
+      false
+    )
+    out.unsafeAddCleanup(l)
+  }
 
   /**
     * Push each event onto a new transaction guaranteed to come before the next externally
@@ -167,64 +225,13 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
   }
 
   /**
-    * If the stream contains simultaneous events (where more than one event occurs in a
-    * single transaction), combine them into one using the specified combining function
-    * so that the returned stream is guaranteed only ever to have one event per transaction.
-    *
-    * If the event firings are ordered, then the first will appear at the left
-    * input of the combining function.
-    *
-    * @param f Function to combine the values. It must be <em>associative</em>. It may construct FRP logic or use
-    *          [[sodium.Cell.sample():A* Cell.sample()]]. Apart from this the function must be
-    *          <em>referentially transparent</em>.
-    */
-  final def coalesce(f: (A, A) => A): Stream[A] =
-    Transaction(trans => coalesce(trans, f))
-
-  final def coalesce(trans: Transaction, f: (A, A) => A): Stream[A] = {
-    val out = new StreamSink[A]()
-    val l = listen(
-      out.node,
-      trans,
-      new TransactionHandler[A]() {
-        private var acc: Option[A] = None
-        override def run(trans1: Transaction, a: A): Unit = {
-          acc match {
-            case Some(b) =>
-              acc = Some(f(b, a))
-            case None =>
-              trans1.prioritized(out.node, { trans2 =>
-                out.send(trans2, acc.get)
-                acc = None
-              })
-              acc = Some(a)
-          }
-        }
-      },
-      false
-    )
-    out.unsafeAddCleanup(l)
-  }
-
-  /**
     * Clean up the output by discarding any firing other than the last one.
     */
   final def lastFiringOnly(trans: Transaction): Stream[A] =
     coalesce(trans, (first, second) => second)
 
   /**
-    * A variant of [[Stream!.merge(eb:sodium\.Stream[A],f:(A,A)=>A):sodium\.Stream[A]* Stream.merge(Stream,f:(A,A)=>1]]
-    *  that combines simultaneous event occurrences using
-    *  [[sodium.Stream!.coalesce(f:(A,A)=>A):sodium\.Stream[A]* Stream.coalesce((A,A)=>A)]] with the specified function.
-    *
-    * @param f Function to combine the values. It must be <em>associative</em>. It may construct FRP logic or use
-    * [[sodium.Cell.sample():A* Cell.sample()]]. Apart from this the function must be <em>referentially transparent</em>.
-    */
-  def merge(eb: Stream[A], f: (A, A) => A): Stream[A] =
-    merge(eb).coalesce(f)
-
-  /**
-    * Return a stream that only outputs event occurrences for which the predicate returns true.
+    * Return a stream that only outputs events for which the predicate returns true.
     */
   def filter(predicate: A => Boolean): Stream[A] = {
     val out = new StreamSink[A]()
@@ -375,7 +382,7 @@ object Stream {
     * their ordering is retained. In many common cases the ordering will
     * be undefined.
     */
-  private def merge[A](ea: Stream[A], eb: Stream[A]): Stream[A] = {
+  private def merge_[A](ea: Stream[A], eb: Stream[A]): Stream[A] = {
     val out = new StreamSink[A]()
     val left = new Node(0)
     val right = out.node
@@ -401,7 +408,7 @@ object Stream {
   }
 
   /**
-    * Return a stream that only outputs event occurrences that have present
+    * Return a stream that only outputs events that have present
     * values, removing the scala.Option wrapper, discarding empty values.
     */
   final def filterOptional[A](ev: Stream[Option[A]]): Stream[A] = {

@@ -52,7 +52,7 @@ class Cell[A](val str: Stream[A], protected var currentValue: Option[A]) {
     * It may be used inside the functions passed to primitives that apply them to [[Stream]]s,
     * including [[Stream.map Stream.map(A=>B)]]] in which case it is equivalent to snapshotting the cell,
     * [[sodium.Stream.snapshot[B,C]* Stream.snapshot(Cell,(A,B)=>C)]], [[Stream.filter Stream.filter(A=>Boolean)]],
-    * [[Stream!.merge(eb:sodium\.Stream[A],f:(A,A)=>A):sodium\.Stream[A]* Stream.merge(Stream,f:(A,A)=>1]]
+    * [[Stream!.merge(s:sodium\.Stream[A],f:(A,A)=>A):sodium\.Stream[A]* Stream.merge(Stream,(A,A)=>A)]]
     * and [[sodium.Stream!.coalesce(f:(A,A)=>A):sodium\.Stream[A]* Stream.coalesce((A,A)=>A)]]
     * It should generally be avoided in favour of [[listen listen(A=>Unit)]] so you don't
     * miss any updates, but in many circumstances it makes sense.
