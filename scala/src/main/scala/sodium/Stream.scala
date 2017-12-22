@@ -29,10 +29,8 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     *               your own primitives.
     */
   final def listen(action: A => Unit): Listener =
-    listen_(Node.NullNode, new TransactionHandler[A]() {
-      def run(trans2: Transaction, a: A): Unit = {
-        action(a)
-      }
+    listen_(Node.NullNode, (trans2: Transaction, a: A) => {
+      action(a)
     })
 
   final def listen_(target: Node, action: TransactionHandler[A]): Listener =
@@ -57,7 +55,7 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
           firings.foreach { a =>
             Transaction.inCallback += 1
             try { // Don't allow transactions to interfere with Sodium internals.
-              action.run(trans, a)
+              action.run(trans2, a)
             } catch {
               case t: Throwable => t.printStackTrace()
             } finally {
@@ -82,10 +80,8 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     */
   final def map[B](f: A => B): Stream[B] = {
     val out = new StreamSink[B]
-    val l = listen_(out.node, new TransactionHandler[A]() {
-      override def run(trans: Transaction, a: A): Unit = {
-        out.send(trans, f(a))
-      }
+    val l = listen_(out.node, (trans: Transaction, a: A) => {
+      out.send(trans, f(a))
     })
     out.unsafeAddCleanup(l)
   }
@@ -131,10 +127,8 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     */
   final def snapshot[B, C](c: Cell[B], f: (A, B) => C): Stream[C] = {
     val out = new StreamSink[C]()
-    val l = listen_(out.node, new TransactionHandler[A]() {
-      def run(trans: Transaction, a: A): Unit = {
-        out.send(trans, f(a, c.sampleNoTrans()))
-      }
+    val l = listen_(out.node, (trans: Transaction, a: A) => {
+      out.send(trans, f(a, c.sampleNoTrans()))
     })
     out.unsafeAddCleanup(l)
   }
@@ -158,19 +152,15 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     val out = new StreamSink[A]()
     val l = listen_(
       out.node,
-      new TransactionHandler[A]() {
-        def run(trans: Transaction, a: A): Unit = {
-          trans.post_(new Runnable() {
-            def run(): Unit = {
-              val trans = new Transaction()
-              try {
-                out.send(trans, a)
-              } finally {
-                trans.close()
-              }
-            }
-          })
-        }
+      (trans: Transaction, a: A) => {
+        trans.post_(() => {
+          val trans = new Transaction()
+          try {
+            out.send(trans, a)
+          } finally {
+            trans.close()
+          }
+        })
       }
     )
     out.unsafeAddCleanup(l)
@@ -238,10 +228,8 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     */
   def filter(predicate: A => Boolean): Stream[A] = {
     val out = new StreamSink[A]()
-    val l = listen_(out.node, new TransactionHandler[A]() {
-      def run(trans: Transaction, a: A): Unit = {
-        if (predicate(a)) out.send(trans, a)
-      }
+    val l = listen_(out.node, (trans: Transaction, a: A) => {
+      if (predicate(a)) out.send(trans, a)
     })
     out.unsafeAddCleanup(l)
   }
@@ -322,13 +310,11 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     la = Some(
       ev.listen_(
         out.node,
-        new TransactionHandler[A]() {
-          def run(trans: Transaction, a: A): Unit = {
-            if (la.isDefined) {
-              out.send(trans, a)
-              la.foreach(_.unlisten())
-              la = None
-            }
+        (trans: Transaction, a: A) => {
+          if (la.isDefined) {
+            out.send(trans, a)
+            la.foreach(_.unlisten())
+            la = None
           }
         }
       ))
@@ -427,10 +413,8 @@ object Stream {
     */
   final def filterOptional[A](ev: Stream[Option[A]]): Stream[A] = {
     val out = new StreamSink[A]()
-    val l = ev.listen_(out.node, new TransactionHandler[Option[A]]() {
-      def run(trans: Transaction, oa: Option[A]): Unit = {
-        oa.foreach(out.send(trans, _))
-      }
+    val l = ev.listen_(out.node, (trans: Transaction, oa: Option[A]) => {
+      oa.foreach(out.send(trans, _))
     })
     out.unsafeAddCleanup(l)
   }
@@ -443,18 +427,14 @@ object Stream {
     val out = new StreamSink[A]
     val l1 = s.listen_(
       out.node,
-      new TransactionHandler[C]() {
-        override def run(trans: Transaction, as: C): Unit = {
-          trans.post_(new Runnable() {
-            override def run(): Unit = {
-              for (a <- as) {
-                val trans = new Transaction()
-                try out.send(trans, a)
-                finally trans.close()
-              }
-            }
-          })
-        }
+      (trans: Transaction, as: C) => {
+        trans.post_(() => {
+          for (a <- as) {
+            val trans = new Transaction()
+            try out.send(trans, a)
+            finally trans.close()
+          }
+        })
       }
     )
     out.unsafeAddCleanup(l1)

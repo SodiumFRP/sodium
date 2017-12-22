@@ -16,19 +16,15 @@ class Cell[A](val str: Stream[A], protected var currentValue: Option[A]) {
       str.listen(
         Node.NullNode,
         trans1,
-        new TransactionHandler[A]() {
-          def run(trans2: Transaction, a: A): Unit = {
-            if (Cell.this.valueUpdate.isEmpty) {
-              trans2.last(new Runnable() {
-                def run(): Unit = {
-                  Cell.this.currentValue = Cell.this.valueUpdate
-                  Cell.this.lazyInitValue = None
-                  Cell.this.valueUpdate = None
-                }
-              })
-            }
-            valueUpdate = Some(a)
+        (trans2: Transaction, a: A) => {
+          if (Cell.this.valueUpdate.isEmpty) {
+            trans2.last(() => {
+              Cell.this.currentValue = Cell.this.valueUpdate
+              Cell.this.lazyInitValue = None
+              Cell.this.valueUpdate = None
+            })
           }
+          valueUpdate = Some(a)
         },
         false
       ))
@@ -229,22 +225,18 @@ object Cell {
       val h: ApplyHandler = new ApplyHandler(trans0)
       val l1 = bf
         .value(trans0)
-        .listen_(in_target, new TransactionHandler[A => B]() {
-          def run(trans1: Transaction, f: A => B): Unit = {
-            h.f = f
-            if (h.a != null)
-              h.run(trans1)
-          }
+        .listen_(in_target, (trans1: Transaction, f: A => B) => {
+          h.f = f
+          if (h.a != null)
+            h.run(trans1)
         })
 
       val l2 = ba
         .value(trans0)
-        .listen_(in_target, new TransactionHandler[A]() {
-          def run(trans1: Transaction, a: A): Unit = {
-            h.a = a
-            if (h.a != null)
-              h.run(trans1)
-          }
+        .listen_(in_target, (trans1: Transaction, a: A) => {
+          h.a = a
+          if (h.a != null)
+            h.run(trans1)
         })
       out
         .unsafeAddCleanup(l1)
@@ -279,10 +271,8 @@ object Cell {
           currentListener.foreach(_.unlisten())
           currentListener = Some(
             ba.value(trans)
-              .listen(out.node, trans, new TransactionHandler[A]() {
-                def run(trans3: Transaction, a: A): Unit = {
-                  out.send(trans3, a)
-                }
+              .listen(out.node, trans, (trans3: Transaction, a: A) => {
+                out.send(trans3, a)
               }, false))
         }
 
@@ -310,11 +300,9 @@ object Cell {
         private var currentListener = bea.sampleNoTrans().listen(out.node, trans1, h2, false)
 
         override def run(trans2: Transaction, ea: Stream[A]): Unit = {
-          trans2.last(new Runnable() {
-            def run(): Unit = {
-              currentListener.unlisten()
-              currentListener = ea.listen(out.node, trans2, h2, true)
-            }
+          trans2.last(() => {
+            currentListener.unlisten()
+            currentListener = ea.listen(out.node, trans2, h2, true)
           })
         }
 

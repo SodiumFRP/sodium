@@ -6,10 +6,8 @@ class StreamWithSend[A] extends Stream[A] {
 
   def send(trans: Transaction, a: A): Unit = {
     if (firings.isEmpty)
-      trans.last(new Runnable() {
-        def run(): Unit = {
-          firings.clear()
-        }
+      trans.last(() => {
+        firings.clear()
       })
     firings += a
 
@@ -29,7 +27,7 @@ class StreamWithSend[A] extends Stream[A] {
             val uta = target.action.get
             if (uta.isDefined) // If it hasn't been gc'ed..., call it
               uta.get match {
-                case t: TransactionHandler[_] => t.asInstanceOf[TransactionHandler[A]].run(trans, a)
+                case t: TransactionHandler[_] => t.asInstanceOf[TransactionHandler[A]].run(trans2, a)
                 case _                        =>
               }
           } catch {
