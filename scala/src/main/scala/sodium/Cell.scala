@@ -51,9 +51,8 @@ class Cell[A](val str: Stream[A], protected var currentValue: Option[A]) {
     *
     * It may be used inside the functions passed to primitives that apply them to [[Stream]]s,
     * including [[Stream.map Stream.map(A=>B)]]] in which case it is equivalent to snapshotting the cell,
-    * [[sodium.Stream.snapshot[B,C]* Stream.snapshot(Cell,(A,B)=>C)]], [[Stream.filter Stream.filter(A=>Boolean)]],
+    * [[sodium.Stream.snapshot[B,C]* Stream.snapshot(Cell,(A,B)=>C)]], [[Stream.filter Stream.filter(A=>Boolean)]] and
     * [[Stream!.merge(s:sodium\.Stream[A],f:(A,A)=>A):sodium\.Stream[A]* Stream.merge(Stream,(A,A)=>A)]]
-    * and [[sodium.Stream!.coalesce(f:(A,A)=>A):sodium\.Stream[A]* Stream.coalesce((A,A)=>A)]]
     * It should generally be avoided in favour of [[listen listen(A=>Unit)]] so you don't
     * miss any updates, but in many circumstances it makes sense.
     */
@@ -89,9 +88,8 @@ class Cell[A](val str: Stream[A], protected var currentValue: Option[A]) {
   final def updates(trans: Transaction): Stream[A] = str.lastFiringOnly(trans)
 
   final def value(trans1: Transaction): Stream[A] = {
-    val sSpark = new StreamSink[Unit]()
+    val sSpark = new StreamWithSend[Unit]()
     trans1.prioritized(sSpark.node, trans2 => sSpark.send(trans2, ()))
-
     val sInitial = sSpark.snapshot[A](this)
     sInitial.merge(updates(trans1))
   }
@@ -205,7 +203,7 @@ object Cell {
     */
   def apply[A, B](bf: Cell[A => B], ba: Cell[A]): Cell[B] =
     Transaction(trans0 => {
-      val out = new StreamSink[B]
+      val out = new StreamWithSend[B]()
 
       final class ApplyHandler(val trans0: Transaction) {
         var a: A = _
@@ -257,7 +255,7 @@ object Cell {
     Transaction(trans0 => {
       val za = bba.sampleLazy.map((ba: Cell[A]) => ba.sample)
 
-      val out = new StreamSink[A]()
+      val out = new StreamWithSend[A]()
       val h = new TransactionHandler[Cell[A]]() {
         private var currentListener: Option[Listener] = None
 
@@ -290,7 +288,7 @@ object Cell {
     */
   def switchS[A](bea: Cell[Stream[A]]): Stream[A] = {
     def switchS(trans1: Transaction, bea: Cell[Stream[A]]): Stream[A] = {
-      val out = new StreamSink[A]()
+      val out = new StreamWithSend[A]()
       val h2 = new TransactionHandler[A]() {
         def run(trans2: Transaction, a: A): Unit = {
           out.send(trans2, a)

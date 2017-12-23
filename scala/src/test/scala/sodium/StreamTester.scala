@@ -84,11 +84,9 @@ class StreamTester {
 
   @Test
   def testCoalesce(): Unit = {
-    val s = new StreamSink[Int]()
+    val s = new StreamSink[Int]((a, b) => a + b)
     val out = new ListBuffer[Int]()
-    val l =
-      s.coalesce((a, b) => a + b)
-        .listen(out.+=(_))
+    val l = s.listen(out.+=(_))
     Transaction(_ => s.send(2))
     Transaction(_ => {
       s.send(8)

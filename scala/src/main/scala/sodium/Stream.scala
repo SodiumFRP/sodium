@@ -79,7 +79,7 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     *          cell. Apart from this the function must be <em>referentially transparent</em>.
     */
   final def map[B](f: A => B): Stream[B] = {
-    val out = new StreamSink[B]
+    val out = new StreamWithSend[B]()
     val l = listen_(out.node, (trans: Transaction, a: A) => {
       out.send(trans, f(a))
     })
@@ -113,7 +113,7 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     * Variant of [[sodium.Stream.snapshot[B,C]* Stream.snapshot(Cell,(A,B)=>C)]] that captures the cell's value
     * at the time of the event firing, ignoring the stream's value.
     */
-  final def snapshot[B](beh: Cell[B]): Stream[B] = snapshot[B, B](beh, (a, b) => b)
+  final def snapshot[B](c: Cell[B]): Stream[B] = snapshot[B, B](c, (a, b) => b)
 
   /**
     * Return a stream whose events are the result of the combination using the specified
@@ -126,7 +126,7 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     * transaction.
     */
   final def snapshot[B, C](c: Cell[B], f: (A, B) => C): Stream[C] = {
-    val out = new StreamSink[C]()
+    val out = new StreamWithSend[C]()
     val l = listen_(out.node, (trans: Transaction, a: A) => {
       out.send(trans, f(a, c.sampleNoTrans()))
     })
@@ -161,44 +161,13 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     *          Apart from this the function must be <em>referentially transparent</em>.
     */
   def merge(s: Stream[A], f: ((A, A) => A)): Stream[A] = {
-    Transaction(trans => merge_(this, s).coalesce(trans, f))
-  }
-
-  /**
-    * Coalesce simultaneous events on a single stream into one. This is only useful in the
-    * situation where [[sodium.StreamSink.send(a:A):Unit* StreamSink.send(A)]] has been called multiple times in a
-    * transaction on the same [[StreamSink]]. The combining function should be <em>associative</em>.
-    *
-    * @param f Function to combine the values. It may construct FRP logic or use
-    *           [[sodium.Cell.sample():A* Cell.sample()]].
-    *           Apart from this the function must be <em>referentially transparent</em>.
-    */
-  final def coalesce(f: (A, A) => A): Stream[A] = {
-    Transaction(trans => coalesce(trans, f))
+    Transaction(trans => Stream.merge(Stream.this, s).coalesce(trans, f))
   }
 
   final def coalesce(trans1: Transaction, f: (A, A) => A): Stream[A] = {
-    val out = new StreamSink[A]()
-    val l = listen(
-      out.node,
-      trans1,
-      new TransactionHandler[A]() {
-        private var acc: Option[A] = None
-        override def run(trans1: Transaction, a: A): Unit = {
-          acc match {
-            case Some(b) =>
-              acc = Some(f(b, a))
-            case None =>
-              trans1.prioritized(out.node, { trans2 =>
-                out.send(trans2, acc.get)
-                acc = None
-              })
-              acc = Some(a)
-          }
-        }
-      },
-      false
-    )
+    val out = new StreamWithSend[A]()
+    val h: TransactionHandler[A] = new CoalesceHandler[A](f, out)
+    val l = listen(out.node, trans1, h, false)
     out.unsafeAddCleanup(l)
   }
 
@@ -207,7 +176,7 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     * initiated transaction. Same as [[sodium.Stream.split split(Stream)]] but it works on a single value.
     */
   final def defer(): Stream[A] = {
-    val out = new StreamSink[A]()
+    val out = new StreamWithSend[A]()
     val l = listen_(
       out.node,
       (trans: Transaction, a: A) => {
@@ -234,7 +203,7 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     * Return a stream that only outputs events for which the predicate returns true.
     */
   def filter(predicate: A => Boolean): Stream[A] = {
-    val out = new StreamSink[A]()
+    val out = new StreamWithSend[A]()
     val l = listen_(out.node, (trans: Transaction, a: A) => {
       if (predicate(a)) out.send(trans, a)
     })
@@ -306,7 +275,7 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     // the listener.
     val ev = this
     var la: Option[Listener] = None
-    val out = new StreamSink[A]()
+    val out = new StreamWithSend[A]()
     la = Some(
       ev.listen_(
         out.node,
@@ -382,8 +351,8 @@ object Stream {
     * their ordering is retained. In many common cases the ordering will
     * be undefined.
     */
-  private def merge_[A](ea: Stream[A], eb: Stream[A]): Stream[A] = {
-    val out = new StreamSink[A]()
+  private def merge[A](ea: Stream[A], eb: Stream[A]): Stream[A] = {
+    val out = new StreamWithSend[A]()
     val left = new Node(0)
     val right = out.node
     val node_target_ = new Array[Target](1)
@@ -412,7 +381,7 @@ object Stream {
     * values, removing the scala.Option wrapper, discarding empty values.
     */
   final def filterOptional[A](ev: Stream[Option[A]]): Stream[A] = {
-    val out = new StreamSink[A]()
+    val out = new StreamWithSend[A]()
     val l = ev.listen_(out.node, (trans: Transaction, oa: Option[A]) => {
       oa.foreach(out.send(trans, _))
     })
@@ -424,7 +393,7 @@ object Stream {
     * to come before the next externally initiated transaction.
     */
   final def split[A, C <: Traversable[A]](s: Stream[C]): Stream[A] = {
-    val out = new StreamSink[A]
+    val out = new StreamWithSend[A]()
     val l1 = s.listen_(
       out.node,
       (trans: Transaction, as: C) => {
