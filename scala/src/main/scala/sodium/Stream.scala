@@ -144,7 +144,7 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     * [[Stream!.merge(s:sodium\.Stream[A],f:(A,A)=>A):sodium\.Stream[A]* Stream.merge(Stream,(A,A)=>A)]].
     * merge(s) is equivalent to merge(s, (l, r) -&gt; r).
     */
-  def merge(s: Stream[A]): Stream[A] = merge(s, (left, right) => right)
+  final def merge(s: Stream[A]): Stream[A] = merge(s, (left, right) => right)
 
   /**
     * A variant of [[sodium.Stream.merge(s:sodium\.Stream[A]):sodium\.Stream[A]* merge(Stream)]] that uses the specified
@@ -160,7 +160,7 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     *          [[sodium.Cell.sample():A* Cell.sample()]].
     *          Apart from this the function must be <em>referentially transparent</em>.
     */
-  def merge(s: Stream[A], f: ((A, A) => A)): Stream[A] = {
+  final def merge(s: Stream[A], f: ((A, A) => A)): Stream[A] = {
     Transaction(trans => Stream.merge(Stream.this, s).coalesce(trans, f))
   }
 
@@ -377,10 +377,38 @@ object Stream {
   }
 
   /**
+    * Variant of [[sodium.Stream.merge(s:sodium\.Stream[A]):sodium\.Stream[A]* merge(Stream)]]
+    * that merges a collection of streams.
+    */
+  def merge[A](ss: Traversable[Stream[A]]): Stream[A] = Stream.merge[A](ss, (left: A, right: A) => right)
+
+  /**
+    * Variant of [[Stream!.merge(s:sodium\.Stream[A],f:(A,A)=>A):sodium\.Stream[A]* Stream.merge(Stream,(A,A)=>A)]]
+    * that merges a collection of streams.
+    */
+  def merge[A](ss: Traversable[Stream[A]], f: (A, A) => A): Stream[A] = {
+    val ss_ : Array[Stream[A]] = ss.toArray
+    Stream.merge[A](ss_, 0, ss_.length, f)
+  }
+
+  //TODO this method is recursive but not tailrec
+  private def merge[A](sas: Array[Stream[A]], start: Int, end: Int, f: (A, A) => A): Stream[A] = {
+    val len = end - start
+    len match {
+      case 0 => new Stream[A]()
+      case 1 => sas(start)
+      case 2 => sas(start).merge(sas(start + 1), f)
+      case _ =>
+        val mid = (start + end) / 2
+        Stream.merge[A](sas, start, mid, f).merge(Stream.merge[A](sas, mid, end, f), f)
+    }
+  }
+
+  /**
     * Return a stream that only outputs events that have present
     * values, removing the scala.Option wrapper, discarding empty values.
     */
-  final def filterOptional[A](ev: Stream[Option[A]]): Stream[A] = {
+  def filterOptional[A](ev: Stream[Option[A]]): Stream[A] = {
     val out = new StreamWithSend[A]()
     val l = ev.listen_(out.node, (trans: Transaction, oa: Option[A]) => {
       oa.foreach(out.send(trans, _))
@@ -392,7 +420,7 @@ object Stream {
     * Push each event in the list onto a newly created transaction guaranteed
     * to come before the next externally initiated transaction.
     */
-  final def split[A, C <: Traversable[A]](s: Stream[C]): Stream[A] = {
+  def split[A, C <: Traversable[A]](s: Stream[C]): Stream[A] = {
     val out = new StreamWithSend[A]()
     val l1 = s.listen_(
       out.node,
