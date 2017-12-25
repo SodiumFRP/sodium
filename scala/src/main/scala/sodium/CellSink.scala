@@ -14,7 +14,14 @@ final class CellSink[A](initValue: A, f: (A, A) => A) extends Cell[A](new Stream
     * If multiple values are sent in the same transaction, the last one is used.
     */
   //TODO remove this trick, what we really want is the constructor StreamSink.this() not a copy of it.
-  def this(initValue: A) = this(initValue, (left: A, right: A) => right)
+  def this(initValue: A) =
+    this(
+      initValue,
+      (left: A, right: A) =>
+        throw new RuntimeException(
+          """send() called more than once per transaction, which isn't allowed. Did you want to combine the events?
+        |Then pass a combining function to your StreamSink constructor.""".stripMargin)
+    )
 
   /**
     * Send a value, modifying the value of the cell. send(A) may not be used inside

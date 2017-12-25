@@ -15,7 +15,18 @@ class StreamSink[A](val f: (A, A) => A) extends StreamWithSend[A] {
 
   private val coalescer: CoalesceHandler[A] = new CoalesceHandler[A](f, this)
 
-  def this() = this((left: A, right: A) => right)
+  //TODO Scaladoc bug [[sodium.StreamSink(f:(A,A)=>A):sodium\.StreamSink[A]* StreamSink((A,A)=>A)]]
+  /**
+    * Construct a StreamSink that allows send() to be called once on it per transaction.
+    * If you call send() more than once, it will throw an exception. If you need to do
+    * this, then use [[StreamSink StreamSink((A,A)=>A)]].
+    */
+  def this() =
+    this(
+      (left: A, right: A) =>
+        throw new RuntimeException(
+          """send() called more than once per transaction, which isn't allowed. Did you want to combine the events?
+            |Then pass a combining function to your StreamSink constructor.""".stripMargin))
 
   /**
     * Send a value to be made available to consumers of the stream. send(A) may not be used inside
