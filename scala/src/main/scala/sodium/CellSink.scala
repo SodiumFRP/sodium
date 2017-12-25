@@ -18,7 +18,7 @@ final class CellSink[A](initValue: A, f: (A, A) => A) extends Cell[A](new Stream
 
   /**
     * Send a value, modifying the value of the cell. send(A) may not be used inside
-    * handlers registered with [[Stream.listen(action:A=>Unit):sodium\.Listener* Stream.listen(A=>Unit)]] or
+    * handlers registered with [[Stream.listen(handler:A=>Unit):sodium\.Listener* Stream.listen(A=>Unit)]] or
     * [[Cell.listen Cell.listen(A=>Unit)]].
     * An exception will be thrown, because CellSink is for interfacing I/O to FRP only.
     * You are not meant to use this to define your own primitives.

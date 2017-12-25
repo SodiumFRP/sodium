@@ -2,7 +2,7 @@ package sodium
 
 /**
   * A handle for a listener that was registered with [[Cell.listen Cell.listen(A=>Unit)]] or
-  * [[Stream.listen(action:A=>Unit):sodium\.Listener* Stream.listen(A=>Unit)]].
+  * [[Stream.listen(handler:A=>Unit):sodium\.Listener* Stream.listen(A=>Unit)]].
   * To keep the FRP logic alive, you must prevent this object being garbage
   * collected. You're recommended either to ensure you call [[sodium.Listener.unlisten()* unlisten()]] when you've
   * finished with it, or to store it in a field of an object that you know will stay in memory.

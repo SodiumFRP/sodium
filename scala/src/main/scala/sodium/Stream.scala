@@ -2,6 +2,7 @@ package sodium
 
 import sodium.Node.Target
 
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
 /**
@@ -21,20 +22,60 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     * listener to be removed. This is an OPERATIONAL mechanism is for interfacing between
     * the world of I/O and for FRP.
     *
-    * @param action The handler to execute when there's a new value.
+    * @param handler The handler to execute when there's a new value.
     *               You should make no assumptions about what thread you are called on, and the
     *               handler should not block. You are not allowed to use [[sodium.CellSink.send CellSink.send(A)]]
     *               or [[sodium.StreamSink.send(a:A):Unit* StreamSink.send(A)]] in the handler.
     *               An exception will be thrown, because you are not meant to use this to create
     *               your own primitives.
     */
-  final def listen(action: A => Unit): Listener =
-    listen_(Node.NullNode, (trans2: Transaction, a: A) => {
-      action(a)
+  final def listen(handler: A => Unit): Listener = {
+    val l0: Listener = listenWeak(handler)
+    val l = new Listener {
+      override def unlisten(): Unit = {
+        l0.unlisten()
+        keepListenersAlive.synchronized {
+          keepListenersAlive.remove(this)
+          ()
+        }
+      }
+    }
+    keepListenersAlive.synchronized {
+      keepListenersAlive.add(l)
+    }
+    l
+  }
+
+  /**
+    * A variant of [[sodium.Stream.listen(handler:A=>Unit):sodium\.Listener* listen(A=>Unit)]]  that handles the first
+    * event and then automatically deregisters itself. This is useful for implementing things that work like promises.
+    */
+  def listenOnce(handler: A => Unit): Listener = {
+    val lRef = new Array[Listener](1)
+    lRef(0) = listen(a => {
+      lRef(0).unlisten()
+      handler(a)
     })
+    lRef(0)
+  }
 
   final def listen_(target: Node, action: TransactionHandler[A]): Listener =
     Transaction(trans1 => listen(target, trans1, action, false))
+
+  /**
+    * A variant of [[Stream.listen(handler:A=>Unit):sodium\.Listener* listen(A=>Unit)]] that will deregister the
+    * listener automatically if the listener is garbage collected.
+    * With [[Stream.listen(handler:A=>Unit):sodium\.Listener* listen(A=>Unit)]], the listener is
+    * only deregistered if [[sodium.Listener.unlisten()* Listenerunlisten()]] is called explicitly.
+    *
+    * This method should be used for listeners that are to be passed to
+    * [[sodium.Stream.addCleanup* Stream.addCleanup(Listener]] to ensure that things don't get kept alive
+    * when they shouldn't.
+    */
+  final def listenWeak(action: A => Unit): Listener =
+    listen_(Node.NullNode, (trans2: Transaction, a: A) => {
+      action(a)
+    })
 
   def listen(target: Node,
              trans: Transaction,
@@ -305,6 +346,9 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     * Attach a listener to this stream so that its [[sodium.Listener.unlisten()* Listener.unlisten()]] is invoked
     * when this stream is garbage collected. Useful for functions that initiate I/O,
     * returning the result of it through a stream.
+    *
+    * You must use this only with listeners returned by [[listenWeak* listenWeak(A=>Unit)]] so that
+    * things don't get kept alive when they shouldn't.
     */
   def addCleanup(cleanup: Listener): Stream[A] =
     Transaction(trans => {
@@ -319,6 +363,8 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
 }
 
 object Stream {
+
+  val keepListenersAlive = new mutable.HashSet[Listener]()
 
   /**
     * It's essential that we keep the listener alive while the caller holds
