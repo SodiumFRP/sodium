@@ -91,7 +91,7 @@ class Cell[A](val str: Stream[A], protected var currentValue: Option[A]) {
     val sSpark = new StreamWithSend[Unit]()
     trans1.prioritized(sSpark.node, trans2 => sSpark.send(trans2, ()))
     val sInitial = sSpark.snapshot[A](this)
-    sInitial.merge(updates(trans1))
+    updates(trans1).orElse(sInitial)
   }
 
   /**

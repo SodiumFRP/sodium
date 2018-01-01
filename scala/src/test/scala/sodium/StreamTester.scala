@@ -41,7 +41,7 @@ class StreamTester {
     val e1 = new StreamSink[Int]()
     val e2 = new StreamSink[Int]()
     val out = new ListBuffer[Int]()
-    val l = e1.merge(e2).listen(out.+=(_))
+    val l = e2.orElse(e1).listen(out.+=(_))
     e1.send(7)
     e2.send(9)
     e1.send(8)
@@ -54,7 +54,7 @@ class StreamTester {
     val s1 = new StreamSink[Int]((l, r) => r)
     val s2 = new StreamSink[Int]((l, r) => r)
     val out = new ListBuffer[Int]()
-    val l = s1.merge(s2).listen(out.+=(_))
+    val l = s2.orElse(s1).listen(out.+=(_))
     Transaction(_ => {
       s1.send(7)
       s2.send(60)
@@ -185,23 +185,10 @@ class StreamTester {
     val e = new StreamSink[Char]()
     val b = e.hold(' ')
     val out = new ListBuffer[Char]()
-    val l = e.defer().snapshot(b).listen(out.+=(_))
+    val l = Operational.defer(e).snapshot(b).listen(out.+=(_))
     List('C', 'B', 'A').foreach(e.send(_))
     l.unlisten()
     assertEquals(List('C', 'B', 'A'), out)
-  }
-
-  //Tests temporarily add to Scala version only
-  @Test
-  def testSplit(): Unit = {
-    val as = new StreamSink[List[Int]]()
-    val out = new ListBuffer[Int]()
-    val sum = Stream.split[Int, List[Int]](as).accum[Int](0, (a, b) => a + b)
-    val l = sum.listen(out.+=(_))
-    as.send(List(100, 15, 60))
-    as.send(List(1, 5))
-    l.unlisten()
-    assertEquals(List(0, 100, 115, 175, 176, 181), out)
   }
 
 }

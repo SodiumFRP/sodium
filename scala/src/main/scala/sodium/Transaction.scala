@@ -2,6 +2,7 @@ package sodium
 
 import java.util.concurrent.atomic.AtomicLong
 
+import scala.collection.mutable
 import scala.collection.mutable.HashSet
 import scala.collection.mutable.ListBuffer
 import scala.collection.mutable.PriorityQueue
@@ -18,7 +19,7 @@ final class Transaction {
   private final val prioritizedQ = new PriorityQueue[Entry]()(EntryOrdering)
   private final val entries = new HashSet[Entry]()
   private final val lastQ = ListBuffer[Runnable]()
-  private val postQ = ListBuffer[Runnable]()
+  private val postQ = mutable.TreeMap[Int, Transaction => Unit]()
 
   def prioritized(rank: Node, action: Transaction => Unit): Unit = {
     val e = new Entry(rank, action)
@@ -36,18 +37,31 @@ final class Transaction {
   /**
     * Add an action to run after all last() actions.
     */
-  def post_(action: Runnable): Unit = {
-    postQ += action
+  def post_(childIx: Int, action: Transaction => Unit): Unit = {
+    val existing: Transaction => Unit = postQ.getOrElse(childIx, null)
+    val neu = (existing == null) match {
+      case true => action
+      case _ =>
+        trans: Transaction =>
+          {
+            existing(trans)
+            action(trans)
+          }
+    }
+    postQ += (childIx -> neu)
   }
 
+  /*
   /**
-    * Execute the specified code after the current transaction is closed,
-    * or immediately if there is no current transaction.
-    */
+   * Execute the specified code after the current transaction is closed,
+   * or immediately if there is no current transaction.
+   */
   def post(action: Runnable): Unit = {
-    Transaction(trans => trans.post_(action))
+    // -1 will mean it runs before anything split/deferred, and will run
+    // outside a transaction context.
+    Transaction(trans => trans.post_(-1, trans1 => action.run()))
   }
-
+   */
   def close(): Unit = {
 
     /*
@@ -62,16 +76,44 @@ final class Transaction {
       }
     }
 
-    while (!prioritizedQ.isEmpty) {
-      checkRegen()
-      val e = prioritizedQ.dequeue()
-      entries.remove(e)
-      e.action(this)
+    import util.control.Breaks._
+    breakable {
+      while (true) {
+        checkRegen()
+        if (prioritizedQ.isEmpty) break
+        val e = prioritizedQ.dequeue()
+        entries.remove(e)
+        e.action(this)
+      }
     }
     lastQ.foreach(_.run())
     lastQ.clear()
-    postQ.foreach(_.run())
-    postQ.clear()
+    while (!postQ.isEmpty) {
+      val iter = postQ.iterator
+      if (iter.hasNext) {
+        val e = iter.next()
+        val (ix, h) = e
+        iter.drop(1)
+        postQ.-=(ix)
+        val parent = currentTransaction
+        try {
+          if (ix >= 0) {
+            val trans = new Transaction()
+            currentTransaction = Some(trans)
+            try {
+              h(trans)
+            } finally {
+              trans.close()
+            }
+          } else {
+            currentTransaction = None
+            h(null)
+          }
+        } finally {
+          currentTransaction = parent
+        }
+      }
+    }
   }
 }
 
@@ -119,8 +161,9 @@ object Transaction {
         startIfNecessary()
         code(currentTransaction.get)
       } finally {
-        if (transWas == None)
+        if (transWas == None) {
           currentTransaction.foreach(_.close())
+        }
         currentTransaction = transWas
       }
     }
@@ -130,6 +173,16 @@ object Transaction {
   //def run(f: Transaction => Unit): Unit = {
   //  apply(t => f(t))
   //}
+
+  /**
+    * Execute the specified code after the current transaction is closed,
+    * or immediately if there is no current transaction.
+    */
+  def post(action: Runnable): Unit = {
+    // -1 will mean it runs before anything split/deferred, and will run
+    // outside a transaction context.
+    Transaction(trans => trans.post_(-1, trans1 => action.run()))
+  }
 
   private def startIfNecessary(): Unit = {
     if (currentTransaction == None) {

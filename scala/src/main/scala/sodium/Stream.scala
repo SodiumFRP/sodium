@@ -175,21 +175,24 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
   }
 
   /**
-    * Merge two streams of the same type into one, so that events on either input appear
-    * on the returned stream.
+    * Variant of [[Stream!.merge(s:sodium\.Stream[A],f:(A,A)=>A):sodium\.Stream[A]* Stream.merge(Stream,(A,A)=>A)]]
+    * that merges two streams and will drop an event in the simultaneous case.
     *
     * In the case where two events are simultaneous (i.e. both
-    * within the same transaction), the event from <em>s</em> will take precedence, and
-    * the event from <em>this</em> will be dropped.
-    * If you want to specify your own combining function, use
-    * [[Stream!.merge(s:sodium\.Stream[A],f:(A,A)=>A):sodium\.Stream[A]* Stream.merge(Stream,(A,A)=>A)]].
-    * merge(s) is equivalent to merge(s, (l, r) -&gt; r).
+    * within the same transaction), the event from <em>this</em> will take precedence, and
+    * the event from <em>s</em> will be dropped.
+    * If you want to specify your own combining function,
+    * use [[Stream!.merge(s:sodium\.Stream[A],f:(A,A)=>A):sodium\.Stream[A]* Stream.merge(Stream,(A,A)=>A)]].
+    * s1.orElse(s2) is equivalent to s1.merge(s2, (l, r) -&gt; l).
+    *
+    * The name orElse() is used instead of merge() to make it really clear that care should
+    * be taken, because events can be dropped.
     */
-  final def merge(s: Stream[A]): Stream[A] = merge(s, (left, right) => right)
+  final def orElse(s: Stream[A]): Stream[A] = merge(s, (left, right) => left)
 
   /**
-    * A variant of [[sodium.Stream.merge(s:sodium\.Stream[A]):sodium\.Stream[A]* merge(Stream)]] that uses the specified
-    * function to combine simultaneous events.
+    * Merge two streams of the same type into one, so that events on either input appear
+    * on the returned stream.
     *
     * If the events are simultaneous (that is, one event from this and one from <em>s</em>
     * occurring in the same transaction), combine them into one using the specified combining function
@@ -213,28 +216,6 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
   }
 
   /**
-    * Push each event onto a new transaction guaranteed to come before the next externally
-    * initiated transaction. Same as [[sodium.Stream.split split(Stream)]] but it works on a single value.
-    */
-  final def defer(): Stream[A] = {
-    val out = new StreamWithSend[A]()
-    val l = listen_(
-      out.node,
-      (trans: Transaction, a: A) => {
-        trans.post_(() => {
-          val trans = new Transaction()
-          try {
-            out.send(trans, a)
-          } finally {
-            trans.close()
-          }
-        })
-      }
-    )
-    out.unsafeAddCleanup(l)
-  }
-
-  /**
     * Clean up the output by discarding any firing other than the last one.
     */
   final def lastFiringOnly(trans: Transaction): Stream[A] =
@@ -245,9 +226,7 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     */
   def filter(predicate: A => Boolean): Stream[A] = {
     val out = new StreamWithSend[A]()
-    val l = listen_(out.node, (trans: Transaction, a: A) => {
-      if (predicate(a)) out.send(trans, a)
-    })
+    val l = listen_(out.node, (trans: Transaction, a: A) => if (predicate(a)) out.send(trans, a))
     out.unsafeAddCleanup(l)
   }
 
@@ -309,7 +288,7 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
 
   /**
     * Return a stream that outputs only one value: the next event occurrence of the
-    * input stream.
+    * input stream, starting from the transaction in which once() was invoked.
     */
   final def once(): Stream[A] = {
     // This is a bit long-winded but it's efficient because it deregisters
@@ -423,10 +402,10 @@ object Stream {
   }
 
   /**
-    * Variant of [[sodium.Stream.merge(s:sodium\.Stream[A]):sodium\.Stream[A]* merge(Stream)]]
+    * Variant of [[sodium.Stream.orElse(s:sodium\.Stream[A]):sodium\.Stream[A]* orElse(Stream)]]
     * that merges a collection of streams.
     */
-  def merge[A](ss: Traversable[Stream[A]]): Stream[A] = Stream.merge[A](ss, (left: A, right: A) => right)
+  def orElse[A](ss: Traversable[Stream[A]]): Stream[A] = Stream.merge[A](ss, (left: A, right: A) => right)
 
   /**
     * Variant of [[Stream!.merge(s:sodium\.Stream[A],f:(A,A)=>A):sodium\.Stream[A]* Stream.merge(Stream,(A,A)=>A)]]
@@ -460,27 +439,6 @@ object Stream {
       oa.foreach(out.send(trans, _))
     })
     out.unsafeAddCleanup(l)
-  }
-
-  /**
-    * Push each event in the list onto a newly created transaction guaranteed
-    * to come before the next externally initiated transaction.
-    */
-  def split[A, C <: Traversable[A]](s: Stream[C]): Stream[A] = {
-    val out = new StreamWithSend[A]()
-    val l1 = s.listen_(
-      out.node,
-      (trans: Transaction, as: C) => {
-        trans.post_(() => {
-          for (a <- as) {
-            val trans = new Transaction()
-            try out.send(trans, a)
-            finally trans.close()
-          }
-        })
-      }
-    )
-    out.unsafeAddCleanup(l1)
   }
 
 }

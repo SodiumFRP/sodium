@@ -336,12 +336,12 @@ class CellTester {
   @Test
   def testSwitchAndDefer(): Unit = {
     val out = new ListBuffer[String]()
-    val si = new StreamSink[Integer]()
+    val si = new StreamSink[Int]()
     val l: Listener = Cell
       .switchS(
         si.map(i => {
             val c = new Cell("A" + i)
-            Operational.value(c).defer()
+            Operational.defer(Operational.value(c))
           })
           .hold(new Stream[String]()))
       .listen(out.+=(_))
