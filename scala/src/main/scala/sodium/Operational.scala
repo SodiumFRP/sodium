@@ -49,7 +49,7 @@ object Operational {
     * new transaction, so the resulting stream's events could be simultaneous with
     * events output by split() or [[sodium.Operational.defer* defer(Stream)]] invoked elsewhere in the code.
     */
-  def split[A, C <: Traversable[A]](s: Stream[C]): Stream[A] = {
+  def split[A, C <: Iterable[A]](s: Stream[C]): Stream[A] = {
     val out = new StreamWithSend[A]()
     val l1 = s.listen_(out.node, (trans: Transaction, as: C) => {
       var childIx = 0

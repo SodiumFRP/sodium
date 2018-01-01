@@ -405,13 +405,13 @@ object Stream {
     * Variant of [[sodium.Stream.orElse(s:sodium\.Stream[A]):sodium\.Stream[A]* orElse(Stream)]]
     * that merges a collection of streams.
     */
-  def orElse[A](ss: Traversable[Stream[A]]): Stream[A] = Stream.merge[A](ss, (left: A, right: A) => right)
+  def orElse[A](ss: Iterable[Stream[A]]): Stream[A] = Stream.merge[A](ss, (left: A, right: A) => right)
 
   /**
     * Variant of [[Stream!.merge(s:sodium\.Stream[A],f:(A,A)=>A):sodium\.Stream[A]* Stream.merge(Stream,(A,A)=>A)]]
     * that merges a collection of streams.
     */
-  def merge[A](ss: Traversable[Stream[A]], f: (A, A) => A): Stream[A] = {
+  def merge[A](ss: Iterable[Stream[A]], f: (A, A) => A): Stream[A] = {
     val ss_ : Array[Stream[A]] = ss.toArray
     Stream.merge[A](ss_, 0, ss_.length, f)
   }
