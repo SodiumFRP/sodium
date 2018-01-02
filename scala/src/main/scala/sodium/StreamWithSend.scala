@@ -16,7 +16,7 @@ class StreamWithSend[A] extends Stream[A] {
       listeners = HashSet() ++ node.listeners
     }
 
-    for (target <- node.listeners) {
+    for (target <- listeners) {
       trans.prioritized(
         target.node,
         trans2 => {

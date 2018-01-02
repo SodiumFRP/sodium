@@ -85,13 +85,13 @@ class Cell[A](val str: Stream[A], protected var currentValue: Option[A]) {
 
   def sampleNoTrans(): A = currentValue.get
 
-  final def updates(trans: Transaction): Stream[A] = str.lastFiringOnly(trans)
+  final def updates(): Stream[A] = str
 
   final def value(trans1: Transaction): Stream[A] = {
     val sSpark = new StreamWithSend[Unit]()
     trans1.prioritized(sSpark.node, trans2 => sSpark.send(trans2, ()))
     val sInitial = sSpark.snapshot[A](this)
-    updates(trans1).orElse(sInitial)
+    sInitial.merge(updates(), (left, right) => right)
   }
 
   /**
@@ -101,7 +101,68 @@ class Cell[A](val str: Stream[A], protected var currentValue: Option[A]) {
     * @param f Function to apply to convert the values. It must be <em>referentially transparent</em>.
     */
   final def map[B](f: A => B) =
-    Transaction(trans => updates(trans).map(f).holdLazy(trans, sampleLazy(trans).map(f)))
+    Transaction(trans => updates().map(f).holdLazy(sampleLazy(trans).map(f)))
+
+  /**
+    * Lift a binary function into cells, so the returned Cell always reflects the specified
+    * function applied to the input cells' values.
+    *
+    * @param fn Function to apply. It must be <em>referentially transparent</em>.
+    */
+  final def lift[B, C](b: Cell[B], fn: (A, B) => C): Cell[C] = {
+    def ffa(aa: A)(bb: B) = fn(aa, bb)
+    val bf: Cell[B => C] = this.map(ffa)
+    Cell(bf, b)
+  }
+
+  /**
+    * Lift a ternary function into cells, so the returned Cell always reflects the specified
+    * function applied to the input cells' values.
+    *
+    * @param fn Function to apply. It must be <em>referentially transparent</em>.
+    */
+  final def lift[B, C, D](fn: (A, B, C) => D, b: Cell[B], c: Cell[C]): Cell[D] = {
+    def ffa(aa: A)(bb: B)(cc: C) = fn(aa, bb, cc)
+    Cell(Cell(this.map(ffa), b), c)
+  }
+
+  /**
+    * Lift a quaternary function into cells, so the returned Cell always reflects the specified
+    * function applied to the input cells' values.
+    *
+    * @param fn Function to apply. It must be <em>referentially transparent</em>.
+    */
+  final def lift[B, C, D, E](fn: (A, B, C, D) => E, b: Cell[B], c: Cell[C], d: Cell[D]): Cell[E] = {
+    def ffa(aa: A)(bb: B)(cc: C)(dd: D) = fn(aa, bb, cc, dd)
+    Cell(Cell(Cell(this.map(ffa), b), c), d)
+  }
+
+  /**
+    * Lift a 5-argument function into cells, so the returned Cell always reflects the specified
+    * function applied to the input cells' values.
+    *
+    * @param fn Function to apply. It must be <em>referentially transparent</em>.
+    */
+  final def lift[B, C, D, E, F](fn: (A, B, C, D, E) => F, b: Cell[B], c: Cell[C], d: Cell[D], e: Cell[E]): Cell[F] = {
+    def ffa(aa: A)(bb: B)(cc: C)(dd: D)(ee: E) = fn(aa, bb, cc, dd, ee)
+    Cell(Cell(Cell(Cell(this.map(ffa), b), c), d), e)
+  }
+
+  /**
+    * Lift a 6-argument function into cells, so the returned Cell always reflects the specified
+    * function applied to the input cells' values.
+    *
+    * @param fn Function to apply. It must be <em>referentially transparent</em>.
+    */
+  final def lift[B, C, D, E, F, G](fn: (A, B, C, D, E, F) => G,
+                                   b: Cell[B],
+                                   c: Cell[C],
+                                   d: Cell[D],
+                                   e: Cell[E],
+                                   f: Cell[F]): Cell[G] = {
+    def ffa(aa: A)(bb: B)(cc: C)(dd: D)(ee: E)(ff: F) = fn(aa, bb, cc, dd, ee, ff)
+    Cell(Cell(Cell(Cell(Cell(this.map(ffa), b), c), d), e), f)
+  }
 
   protected override def finalize(): Unit = {
     cleanup.foreach(_.unlisten())
@@ -129,72 +190,6 @@ object Cell {
   private class LazySample[A] private[sodium] (var cell: Cell[A]) {
     private[sodium] var hasValue = false
     private[sodium] var value: A = _
-  }
-
-  /**
-    * Lift a binary function into cells, so the returned Cell always reflects the specified
-    * function applied to the input cells' values.
-    *
-    * @param f Function to apply. It must be <em>referentially transparent</em>.
-    */
-  final def lift[A, B, C](f: (A, B) => C, a: Cell[A], b: Cell[B]): Cell[C] = {
-    def ffa(aa: A)(bb: B) = f(aa, bb)
-    apply(a.map(ffa), b)
-  }
-
-  /**
-    * Lift a ternary function into cells, so the returned Cell always reflects the specified
-    * function applied to the input cells' values.
-    *
-    * @param f Function to apply. It must be <em>referentially transparent</em>.
-    */
-  final def lift[A, B, C, D](f: (A, B, C) => D, a: Cell[A], b: Cell[B], c: Cell[C]): Cell[D] = {
-    def ffa(aa: A)(bb: B)(cc: C) = f(aa, bb, cc)
-    apply(apply(a.map(ffa), b), c)
-  }
-
-  /**
-    * Lift a quaternary function into cells, so the returned Cell always reflects the specified
-    * function applied to the input cells' values.
-    *
-    * @param f Function to apply. It must be <em>referentially transparent</em>.
-    */
-  final def lift[A, B, C, D, E](f: (A, B, C, D) => E, a: Cell[A], b: Cell[B], c: Cell[C], d: Cell[D]): Cell[E] = {
-    def ffa(aa: A)(bb: B)(cc: C)(dd: D) = f(aa, bb, cc, dd)
-    apply(apply(apply(a.map(ffa), b), c), d)
-  }
-
-  /**
-    * Lift a 5-argument function into cells, so the returned Cell always reflects the specified
-    * function applied to the input cells' values.
-    *
-    * @param f Function to apply. It must be <em>referentially transparent</em>.
-    */
-  final def lift[A, B, C, D, E, F](f: (A, B, C, D, E) => F,
-                                   a: Cell[A],
-                                   b: Cell[B],
-                                   c: Cell[C],
-                                   d: Cell[D],
-                                   e: Cell[E]): Cell[F] = {
-    def ffa(aa: A)(bb: B)(cc: C)(dd: D)(ee: E) = f(aa, bb, cc, dd, ee)
-    apply(apply(apply(apply(a.map(ffa), b), c), d), e)
-  }
-
-  /**
-    * Lift a 6-argument function into cells, so the returned Cell always reflects the specified
-    * function applied to the input cells' values.
-    *
-    * @param fn Function to apply. It must be <em>referentially transparent</em>.
-    */
-  final def lift[A, B, C, D, E, F, G](fn: (A, B, C, D, E, F) => G,
-                                      a: Cell[A],
-                                      b: Cell[B],
-                                      c: Cell[C],
-                                      d: Cell[D],
-                                      e: Cell[E],
-                                      f: Cell[F]): Cell[G] = {
-    def ffa(aa: A)(bb: B)(cc: C)(dd: D)(ee: E)(ff: F) = fn(aa, bb, cc, dd, ee, ff)
-    apply(apply(apply(apply(apply(a.map(ffa), b), c), d), e), f)
   }
 
   /**
@@ -237,6 +232,7 @@ object Cell {
             h.run(trans1)
         })
       out
+        .lastFiringOnly(trans0)
         .unsafeAddCleanup(l1)
         .unsafeAddCleanup(l2)
         .unsafeAddCleanup(new Listener() {
@@ -251,7 +247,7 @@ object Cell {
   /**
     * Unwrap a stream inside another behavior to give a time-varying stream implementation.
     */
-  def switchC[A](bba: Cell[Cell[A]]): Cell[A] = {
+  def switchC[A](bba: Cell[Cell[A]]): Cell[A] =
     Transaction(trans0 => {
       val za = bba.sampleLazy.map((ba: Cell[A]) => ba.sample)
 
@@ -261,10 +257,8 @@ object Cell {
 
         override def run(trans: Transaction, ba: Cell[A]): Unit = {
           // Note: If any switch takes place during a transaction, then the
-          // value().listen will always cause a sample to be fetched from the
-          // one we just switched to. The caller will be fetching our output
-          // using value().listen, and value() throws away all firings except
-          // for the last one. Therefore, anything from the old input cell
+          // lastFiringOnly() below will always cause a sample to be fetched
+          // from the one we just switched to. So anything from the old input cell
           // that might have happened during this transaction will be suppressed.
           currentListener.foreach(_.unlisten())
           currentListener = Some(
@@ -279,9 +273,8 @@ object Cell {
         }
       }
       val l = bba.value(trans0).listen_(out.node, h)
-      out.unsafeAddCleanup(l).holdLazy(za)
+      out.lastFiringOnly(trans0).unsafeAddCleanup(l).holdLazy(za)
     })
-  }
 
   /**
     * Unwrap an event inside a cell to give a time-varying event implementation.
@@ -308,7 +301,7 @@ object Cell {
           currentListener.unlisten()
         }
       }
-      val l1 = bea.updates(trans1).listen(out.node, trans1, h1, false)
+      val l1 = bea.updates().listen(out.node, trans1, h1, false)
       out.unsafeAddCleanup(l1)
     }
 

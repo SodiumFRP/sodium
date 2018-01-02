@@ -14,7 +14,7 @@ final class CellLoop[A] extends LazyCell[A](new StreamLoop[A](), None) {
     val me = this
     Transaction(trans => {
       str match {
-        case s: StreamLoop[A] => s.loop(a_out.updates(trans))
+        case s: StreamLoop[A] => s.loop(a_out.updates())
         case _                =>
       }
       me.lazyInitValue = Some(a_out.sampleLazy(trans))

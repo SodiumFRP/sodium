@@ -3,8 +3,7 @@ package sodium
 import scala.collection.mutable
 
 /**
-  * Operational primitives that must be used with care because they
-  * break non-detectability of cell steps/updates.
+  * Operational primitives that must be used with care.
   */
 object Operational {
 
@@ -16,7 +15,7 @@ object Operational {
     * The rule with this primitive is that you should only use it in functions
     * that do not allow the caller to detect the cell updates.
     */
-  def updates[A](c: Cell[A]) = Transaction(trans => c.updates(trans))
+  def updates[A](c: Cell[A]) = Transaction(_ => c.updates())
 
   /**
     * A stream that is guaranteed to fire once when you listen to it, giving
@@ -34,13 +33,12 @@ object Operational {
     * Push each event onto a new transaction guaranteed to come before the next externally
     * initiated transaction. Same as [[sodium.Operational.split* split(Stream)]] but it works on a single value.
     */
-  final def defer[A](s: Stream[A]): Stream[A] = {
+  final def defer[A](s: Stream[A]): Stream[A] =
     split(s.map(a => {
       val l = mutable.ListBuffer[A]()
       l += a
       l
     }))
-  }
 
   /**
     * Push each event in the list onto a newly created transaction guaranteed

@@ -128,6 +128,13 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
   }
 
   /**
+    * Transform the stream's event values into the specified constant value.
+    *
+    * @param b Constant value.
+    */
+  final def mapTo[B](b: B): Stream[B] = this.map(a => b)
+
+  /**
     * Create a [[Cell]] with the specified initial value, that is updated
     * by this stream's event values.
     *
@@ -138,17 +145,14 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     * any state changes from the current transaction.
     */
   final def hold(initValue: A): Cell[A] =
-    Transaction(trans => new Cell[A](lastFiringOnly(trans), initValue))
+    Transaction(trans => new Cell[A](Stream.this, initValue))
 
   /**
     * A variant of [[sodium.Stream.hold(initValue:A)* hold(A)]] with an initial value captured by
       [[Cell.sampleLazy()* Cell.sampleLazy()]].
     */
   final def holdLazy(initValue: Lazy[A]): Cell[A] =
-    Transaction(trans => holdLazy(trans, initValue))
-
-  final def holdLazy(trans: Transaction, initValue: Lazy[A]): Cell[A] =
-    new LazyCell[A](lastFiringOnly(trans), Some(initValue))
+    Transaction(_ => new LazyCell[A](this, Some(initValue)))
 
   /**
     * Variant of [[sodium.Stream.snapshot[B,C]* Stream.snapshot(Cell,(A,B)=>C)]] that captures the cell's value

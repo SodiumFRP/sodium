@@ -37,6 +37,18 @@ class StreamTester {
   }
 
   @Test
+  def testMapTo(): Unit = {
+    val e = new StreamSink[Int]()
+    val m = e.mapTo("fusebox")
+    val out = new ListBuffer[String]()
+    val l = m.listen(out.+=(_))
+    e.send(5)
+    e.send(6)
+    l.unlisten()
+    assertEquals(List("fusebox", "fusebox"), out)
+  }
+
+  @Test
   def testMergeNonSimultaneous(): Unit = {
     val e1 = new StreamSink[Int]()
     val e2 = new StreamSink[Int]()

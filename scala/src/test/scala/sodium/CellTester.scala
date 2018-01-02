@@ -159,7 +159,7 @@ class CellTester {
     val a = new CellSink(1)
     val b = new CellSink(5L)
     val out = new ListBuffer[String]()
-    val l = Cell.lift[Int, Long, String]((x, y) => x + " " + y, a, b).listen(out.+=(_))
+    val l = a.lift[Long, String](b, (x, y) => x + " " + y).listen(out.+=(_))
     a.send(12)
     b.send(6L)
     l.unlisten()
@@ -172,7 +172,7 @@ class CellTester {
     val a3 = a.map(x => x * 3)
     val a5 = a.map(x => x * 5)
     val out = new ListBuffer[String]()
-    val l = Cell.lift[Int, Int, String]((x, y) => x + " " + y, a3, a5).listen(out.+=(_))
+    val l = a3.lift[Int, String](a5, (x, y) => x + " " + y).listen(out.+=(_))
     a.send(2)
     l.unlisten()
     assertEquals(List("3 5", "6 10"), out)
@@ -189,8 +189,8 @@ class CellTester {
     val b1 = t._1
     val b2 = t._2
     val out = new ListBuffer[Int]()
-    val l = Cell
-      .lift((x: Int, y: Int) => x + y, b1, b2)
+    val l = b1
+      .lift(b2, (x: Int, y: Int) => x + y)
       .listen((x: Int) => out.+=(x))
     l.unlisten()
     assertEquals(List(10), out)
@@ -208,7 +208,7 @@ class CellTester {
   }
 
   @Test
-  def testSwitchB(): Unit = {
+  def testSwitchC(): Unit = {
     val esb = new StreamSink[SB]()
     // Split each field out of SB so we can update multiple behaviours in a
     // single transaction.
@@ -235,7 +235,7 @@ class CellTester {
   }
 
   @Test
-  def testSwitchE(): Unit = {
+  def testSwitchS(): Unit = {
     val ese = new StreamSink[SE]()
     val ea = ese.map(s => s.a)
     val eb = ese.map(s => s.b)
@@ -323,7 +323,7 @@ class CellTester {
     val b = new CellSink("kettle")
     val c = Transaction(_ => {
       val a = new CellLoop[String]()
-      val c_ = Cell.lift[String, String, String]((aa, bb) => aa + " " + bb, a, b)
+      val c_ = a.lift[String, String](b, (aa, bb) => aa + " " + bb)
       a.loop(new Cell[String]("tea"))
       c_
     })
