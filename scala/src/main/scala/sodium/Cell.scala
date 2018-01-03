@@ -183,6 +183,14 @@ class Cell[A](val str: Stream[A], protected var currentValue: Option[A]) {
     */
   final def listen(action: A => Unit) = Transaction(trans => value(trans).listen(action))
 
+  /**
+    * A variant of [[sodium.Cell.listen(action:A=>Unit):sodium\.Listener* listen(A=>Unit)]] that will deregister
+    * the listener automatically if the listener is garbage collected. With
+    * [[sodium.Cell.listen(action:A=>Unit):sodium\.Listener* listen(A=>Unit)]], the listener is
+    * only deregistered if [[sodium.Listener.unlisten()* Listener.unlisten()]] is called explicitly.
+    */
+  final def listenWeak(action: A => Unit) = Transaction(trans => value(trans).listenWeak(action))
+
 }
 
 object Cell {
@@ -202,7 +210,9 @@ object Cell {
 
       final class ApplyHandler(val trans0: Transaction) {
         var a: A = _
+        var f_present = false
         var f: A => B = _
+        var a_present = false
         def run(trans1: Transaction): Unit = {
           trans1.prioritized(out.node, { trans2 =>
             out.send(trans2, f(a))
@@ -220,7 +230,8 @@ object Cell {
         .value(trans0)
         .listen_(in_target, (trans1: Transaction, f: A => B) => {
           h.f = f
-          if (h.a != null)
+          h.f_present = true
+          if (h.a_present)
             h.run(trans1)
         })
 
@@ -228,7 +239,8 @@ object Cell {
         .value(trans0)
         .listen_(in_target, (trans1: Transaction, a: A) => {
           h.a = a
-          if (h.a != null)
+          h.a_present = true
+          if (h.f_present)
             h.run(trans1)
         })
       out
