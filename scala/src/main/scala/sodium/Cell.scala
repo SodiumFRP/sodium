@@ -121,7 +121,7 @@ class Cell[A](val str: Stream[A], protected var currentValue: Option[A]) {
     *
     * @param fn Function to apply. It must be <em>referentially transparent</em>.
     */
-  final def lift[B, C, D](fn: (A, B, C) => D, b: Cell[B], c: Cell[C]): Cell[D] = {
+  final def lift[B, C, D](b: Cell[B], c: Cell[C], fn: (A, B, C) => D): Cell[D] = {
     def ffa(aa: A)(bb: B)(cc: C) = fn(aa, bb, cc)
     Cell(Cell(this.map(ffa), b), c)
   }
@@ -132,7 +132,7 @@ class Cell[A](val str: Stream[A], protected var currentValue: Option[A]) {
     *
     * @param fn Function to apply. It must be <em>referentially transparent</em>.
     */
-  final def lift[B, C, D, E](fn: (A, B, C, D) => E, b: Cell[B], c: Cell[C], d: Cell[D]): Cell[E] = {
+  final def lift[B, C, D, E](b: Cell[B], c: Cell[C], d: Cell[D], fn: (A, B, C, D) => E): Cell[E] = {
     def ffa(aa: A)(bb: B)(cc: C)(dd: D) = fn(aa, bb, cc, dd)
     Cell(Cell(Cell(this.map(ffa), b), c), d)
   }
@@ -143,7 +143,7 @@ class Cell[A](val str: Stream[A], protected var currentValue: Option[A]) {
     *
     * @param fn Function to apply. It must be <em>referentially transparent</em>.
     */
-  final def lift[B, C, D, E, F](fn: (A, B, C, D, E) => F, b: Cell[B], c: Cell[C], d: Cell[D], e: Cell[E]): Cell[F] = {
+  final def lift[B, C, D, E, F](b: Cell[B], c: Cell[C], d: Cell[D], e: Cell[E], fn: (A, B, C, D, E) => F): Cell[F] = {
     def ffa(aa: A)(bb: B)(cc: C)(dd: D)(ee: E) = fn(aa, bb, cc, dd, ee)
     Cell(Cell(Cell(Cell(this.map(ffa), b), c), d), e)
   }
@@ -154,12 +154,12 @@ class Cell[A](val str: Stream[A], protected var currentValue: Option[A]) {
     *
     * @param fn Function to apply. It must be <em>referentially transparent</em>.
     */
-  final def lift[B, C, D, E, F, G](fn: (A, B, C, D, E, F) => G,
-                                   b: Cell[B],
+  final def lift[B, C, D, E, F, G](b: Cell[B],
                                    c: Cell[C],
                                    d: Cell[D],
                                    e: Cell[E],
-                                   f: Cell[F]): Cell[G] = {
+                                   f: Cell[F],
+                                   fn: (A, B, C, D, E, F) => G): Cell[G] = {
     def ffa(aa: A)(bb: B)(cc: C)(dd: D)(ee: E)(ff: F) = fn(aa, bb, cc, dd, ee, ff)
     Cell(Cell(Cell(Cell(Cell(this.map(ffa), b), c), d), e), f)
   }
