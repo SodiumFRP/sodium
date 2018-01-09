@@ -179,27 +179,34 @@ namespace Sodium
             // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
             this.Match(onFirst.ToFunc(), onSecond.ToFunc());
 
+        [Pure]
         public Task<T> MatchAsync<T>(Func<T1, Task<T>> onFirst, Func<T2, Task<T>> onSecond) =>
             this.Match(onFirst, onSecond);
 
         public Task MatchAsyncVoid(Func<T1, Task> onFirst, Func<T2, Task> onSecond) =>
             this.MatchAsync(onFirst.ToAsyncFunc(), onSecond.ToAsyncFunc());
 
+        [Pure]
         public Either<T, T2> MapFirst<T>(Func<T1, T> f) =>
             this.Match(v1 => Either<T, T2>.First(f(v1)), v2 => Either.Second(v2));
 
+        [Pure]
         public Either<T1, T> MapSecond<T>(Func<T2, T> f) =>
             this.Match(Either<T1, T>.First, v2 => Either.Second(f(v2)));
 
+        [Pure]
         public Maybe<T1> TryGetFirst() =>
             this.Match(Maybe.Some, _ => Maybe.None);
 
+        [Pure]
         public Maybe<T2> TryGetSecond() =>
             this.Match(_ => Maybe.None, Maybe.Some);
 
+        [Pure]
         public bool IsFirst() =>
             this.Match(_ => true, _ => false);
 
+        [Pure]
         public bool IsSecond() =>
             this.Match(_ => false, _ => true);
 
@@ -287,6 +294,7 @@ namespace Sodium
             // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
             this.Match(onFirst.ToFunc(), onSecond.ToFunc(), onThird.ToFunc());
 
+        [Pure]
         public Task<T> MatchAsync<T>(
             Func<T1, Task<T>> onFirst,
             Func<T2, Task<T>> onSecond,
@@ -296,30 +304,39 @@ namespace Sodium
         public Task MatchAsyncVoid(Func<T1, Task> onFirst, Func<T2, Task> onSecond, Func<T3, Task> onThird) =>
             this.MatchAsync(onFirst.ToAsyncFunc(), onSecond.ToAsyncFunc(), onThird.ToAsyncFunc());
 
+        [Pure]
         public Either<T, T2, T3> MapFirst<T>(Func<T1, T> f) =>
             this.Match(v1 => Either<T, T2, T3>.First(f(v1)), v2 => Either.Second(v2), v3 => Either.Third(v3));
 
+        [Pure]
         public Either<T1, T, T3> MapSecond<T>(Func<T2, T> f) =>
             this.Match(Either<T1, T, T3>.First, v2 => Either.Second(f(v2)), v3 => Either.Third(v3));
 
+        [Pure]
         public Either<T1, T2, T> MapThird<T>(Func<T3, T> f) =>
             this.Match(Either<T1, T2, T>.First, v2 => Either.Second(v2), v3 => Either.Third(f(v3)));
 
+        [Pure]
         public Maybe<T1> TryGetFirst() =>
             this.Match(Maybe.Some, _ => Maybe.None, _ => Maybe.None);
 
+        [Pure]
         public Maybe<T2> TryGetSecond() =>
             this.Match(_ => Maybe.None, Maybe.Some, _ => Maybe.None);
 
+        [Pure]
         public Maybe<T3> TryGetThird() =>
             this.Match(_ => Maybe.None, _ => Maybe.None, Maybe.Some);
 
+        [Pure]
         public bool IsFirst() =>
             this.Match(_ => true, _ => false, _ => false);
 
+        [Pure]
         public bool IsSecond() =>
             this.Match(_ => false, _ => true, _ => false);
 
+        [Pure]
         public bool IsThird() =>
             this.Match(_ => false, _ => false, _ => true);
 
@@ -438,6 +455,7 @@ namespace Sodium
             // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
             this.Match(onFirst.ToFunc(), onSecond.ToFunc(), onThird.ToFunc(), onFourth.ToFunc());
 
+        [Pure]
         public Task<T> MatchAsync<T>(
             Func<T1, Task<T>> onFirst,
             Func<T2, Task<T>> onSecond,
@@ -456,6 +474,7 @@ namespace Sodium
                 onThird.ToAsyncFunc(),
                 onFourth.ToAsyncFunc());
 
+        [Pure]
         public Either<T, T2, T3, T4> MapFirst<T>(Func<T1, T> f) =>
             this.Match(
                 v1 => Either<T, T2, T3, T4>.First(f(v1)),
@@ -463,6 +482,7 @@ namespace Sodium
                 v3 => Either.Third(v3),
                 v4 => Either.Fourth(v4));
 
+        [Pure]
         public Either<T1, T, T3, T4> MapSecond<T>(Func<T2, T> f) =>
             this.Match(
                 Either<T1, T, T3, T4>.First,
@@ -470,6 +490,7 @@ namespace Sodium
                 v3 => Either.Third(v3),
                 v4 => Either.Fourth(v4));
 
+        [Pure]
         public Either<T1, T2, T, T4> MapThird<T>(Func<T3, T> f) =>
             this.Match(
                 Either<T1, T2, T, T4>.First,
@@ -477,6 +498,7 @@ namespace Sodium
                 v3 => Either.Third(f(v3)),
                 v4 => Either.Fourth(v4));
 
+        [Pure]
         public Either<T1, T2, T3, T> MapFourth<T>(Func<T4, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T>.First,
@@ -484,27 +506,35 @@ namespace Sodium
                 v3 => Either.Third(v3),
                 v4 => Either.Fourth(f(v4)));
 
+        [Pure]
         public Maybe<T1> TryGetFirst() =>
             this.Match(Maybe.Some, _ => Maybe.None, _ => Maybe.None, _ => Maybe.None);
 
+        [Pure]
         public Maybe<T2> TryGetSecond() =>
             this.Match(_ => Maybe.None, Maybe.Some, _ => Maybe.None, _ => Maybe.None);
 
+        [Pure]
         public Maybe<T3> TryGetThird() =>
             this.Match(_ => Maybe.None, _ => Maybe.None, Maybe.Some, _ => Maybe.None);
 
+        [Pure]
         public Maybe<T4> TryGetFourth() =>
             this.Match(_ => Maybe.None, _ => Maybe.None, _ => Maybe.None, Maybe.Some);
 
+        [Pure]
         public bool IsFirst() =>
             this.Match(_ => true, _ => false, _ => false, _ => false);
 
+        [Pure]
         public bool IsSecond() =>
             this.Match(_ => false, _ => true, _ => false, _ => false);
 
+        [Pure]
         public bool IsThird() =>
             this.Match(_ => false, _ => false, _ => true, _ => false);
 
+        [Pure]
         public bool IsFourth() =>
             this.Match(_ => false, _ => false, _ => false, _ => true);
 
@@ -683,6 +713,7 @@ namespace Sodium
             // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
             this.Match(onFirst.ToFunc(), onSecond.ToFunc(), onThird.ToFunc(), onFourth.ToFunc(), onFifth.ToFunc());
 
+        [Pure]
         public Task<T> MatchAsync<T>(
             Func<T1, Task<T>> onFirst,
             Func<T2, Task<T>> onSecond,
@@ -704,6 +735,7 @@ namespace Sodium
                 onFourth.ToAsyncFunc(),
                 onFifth.ToAsyncFunc());
 
+        [Pure]
         public Either<T, T2, T3, T4, T5> MapFirst<T>(Func<T1, T> f) =>
             this.Match(
                 v1 => Either<T, T2, T3, T4, T5>.First(f(v1)),
@@ -712,6 +744,7 @@ namespace Sodium
                 v4 => Either.Fourth(v4),
                 v5 => Either.Fifth(v5));
 
+        [Pure]
         public Either<T1, T, T3, T4, T5> MapSecond<T>(Func<T2, T> f) =>
             this.Match(
                 Either<T1, T, T3, T4, T5>.First,
@@ -720,6 +753,7 @@ namespace Sodium
                 v4 => Either.Fourth(v4),
                 v5 => Either.Fifth(v5));
 
+        [Pure]
         public Either<T1, T2, T, T4, T5> MapThird<T>(Func<T3, T> f) =>
             this.Match(
                 Either<T1, T2, T, T4, T5>.First,
@@ -728,6 +762,7 @@ namespace Sodium
                 v4 => Either.Fourth(v4),
                 v5 => Either.Fifth(v5));
 
+        [Pure]
         public Either<T1, T2, T3, T, T5> MapFourth<T>(Func<T4, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T, T5>.First,
@@ -736,6 +771,7 @@ namespace Sodium
                 v4 => Either.Fourth(f(v4)),
                 v5 => Either.Fifth(v5));
 
+        [Pure]
         public Either<T1, T2, T3, T4, T> MapFifth<T>(Func<T5, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T4, T>.First,
@@ -744,33 +780,43 @@ namespace Sodium
                 v4 => Either.Fourth(v4),
                 v5 => Either.Fifth(f(v5)));
 
+        [Pure]
         public Maybe<T1> TryGetFirst() =>
             this.Match(Maybe.Some, _ => Maybe.None, _ => Maybe.None, _ => Maybe.None, _ => Maybe.None);
 
+        [Pure]
         public Maybe<T2> TryGetSecond() =>
             this.Match(_ => Maybe.None, Maybe.Some, _ => Maybe.None, _ => Maybe.None, _ => Maybe.None);
 
+        [Pure]
         public Maybe<T3> TryGetThird() =>
             this.Match(_ => Maybe.None, _ => Maybe.None, Maybe.Some, _ => Maybe.None, _ => Maybe.None);
 
+        [Pure]
         public Maybe<T4> TryGetFourth() =>
             this.Match(_ => Maybe.None, _ => Maybe.None, _ => Maybe.None, Maybe.Some, _ => Maybe.None);
 
+        [Pure]
         public Maybe<T5> TryGetFifth() =>
             this.Match(_ => Maybe.None, _ => Maybe.None, _ => Maybe.None, _ => Maybe.None, Maybe.Some);
 
+        [Pure]
         public bool IsFirst() =>
             this.Match(_ => true, _ => false, _ => false, _ => false, _ => false);
 
+        [Pure]
         public bool IsSecond() =>
             this.Match(_ => false, _ => true, _ => false, _ => false, _ => false);
 
+        [Pure]
         public bool IsThird() =>
             this.Match(_ => false, _ => false, _ => true, _ => false, _ => false);
 
+        [Pure]
         public bool IsFourth() =>
             this.Match(_ => false, _ => false, _ => false, _ => true, _ => false);
 
+        [Pure]
         public bool IsFifth() =>
             this.Match(_ => false, _ => false, _ => false, _ => false, _ => true);
 
@@ -992,6 +1038,7 @@ namespace Sodium
                 onFifth.ToFunc(),
                 onSixth.ToFunc());
 
+        [Pure]
         public Task<T> MatchAsync<T>(
             Func<T1, Task<T>> onFirst,
             Func<T2, Task<T>> onSecond,
@@ -1016,6 +1063,7 @@ namespace Sodium
                 onFifth.ToAsyncFunc(),
                 onSixth.ToAsyncFunc());
 
+        [Pure]
         public Either<T, T2, T3, T4, T5, T6> MapFirst<T>(Func<T1, T> f) =>
             this.Match(
                 v1 => Either<T, T2, T3, T4, T5, T6>.First(f(v1)),
@@ -1025,6 +1073,7 @@ namespace Sodium
                 v5 => Either.Fifth(v5),
                 v6 => Either.Sixth(v6));
 
+        [Pure]
         public Either<T1, T, T3, T4, T5, T6> MapSecond<T>(Func<T2, T> f) =>
             this.Match(
                 Either<T1, T, T3, T4, T5, T6>.First,
@@ -1034,6 +1083,7 @@ namespace Sodium
                 v5 => Either.Fifth(v5),
                 v6 => Either.Sixth(v6));
 
+        [Pure]
         public Either<T1, T2, T, T4, T5, T6> MapThird<T>(Func<T3, T> f) =>
             this.Match(
                 Either<T1, T2, T, T4, T5, T6>.First,
@@ -1043,6 +1093,7 @@ namespace Sodium
                 v5 => Either.Fifth(v5),
                 v6 => Either.Sixth(v6));
 
+        [Pure]
         public Either<T1, T2, T3, T, T5, T6> MapFourth<T>(Func<T4, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T, T5, T6>.First,
@@ -1052,6 +1103,7 @@ namespace Sodium
                 v5 => Either.Fifth(v5),
                 v6 => Either.Sixth(v6));
 
+        [Pure]
         public Either<T1, T2, T3, T4, T, T6> MapFifth<T>(Func<T5, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T4, T, T6>.First,
@@ -1061,6 +1113,7 @@ namespace Sodium
                 v5 => Either.Fifth(f(v5)),
                 v6 => Either.Sixth(v6));
 
+        [Pure]
         public Either<T1, T2, T3, T4, T5, T> MapSixth<T>(Func<T6, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T4, T5, T>.First,
@@ -1070,39 +1123,51 @@ namespace Sodium
                 v5 => Either.Fifth(v5),
                 v6 => Either.Sixth(f(v6)));
 
+        [Pure]
         public Maybe<T1> TryGetFirst() =>
             this.Match(Maybe.Some, _ => Maybe.None, _ => Maybe.None, _ => Maybe.None, _ => Maybe.None, _ => Maybe.None);
 
+        [Pure]
         public Maybe<T2> TryGetSecond() =>
             this.Match(_ => Maybe.None, Maybe.Some, _ => Maybe.None, _ => Maybe.None, _ => Maybe.None, _ => Maybe.None);
 
+        [Pure]
         public Maybe<T3> TryGetThird() =>
             this.Match(_ => Maybe.None, _ => Maybe.None, Maybe.Some, _ => Maybe.None, _ => Maybe.None, _ => Maybe.None);
 
+        [Pure]
         public Maybe<T4> TryGetFourth() =>
             this.Match(_ => Maybe.None, _ => Maybe.None, _ => Maybe.None, Maybe.Some, _ => Maybe.None, _ => Maybe.None);
 
+        [Pure]
         public Maybe<T5> TryGetFifth() =>
             this.Match(_ => Maybe.None, _ => Maybe.None, _ => Maybe.None, _ => Maybe.None, Maybe.Some, _ => Maybe.None);
 
+        [Pure]
         public Maybe<T6> TryGetSixth() =>
             this.Match(_ => Maybe.None, _ => Maybe.None, _ => Maybe.None, _ => Maybe.None, _ => Maybe.None, Maybe.Some);
 
+        [Pure]
         public bool IsFirst() =>
             this.Match(_ => true, _ => false, _ => false, _ => false, _ => false, _ => false);
 
+        [Pure]
         public bool IsSecond() =>
             this.Match(_ => false, _ => true, _ => false, _ => false, _ => false, _ => false);
 
+        [Pure]
         public bool IsThird() =>
             this.Match(_ => false, _ => false, _ => true, _ => false, _ => false, _ => false);
 
+        [Pure]
         public bool IsFourth() =>
             this.Match(_ => false, _ => false, _ => false, _ => true, _ => false, _ => false);
 
+        [Pure]
         public bool IsFifth() =>
             this.Match(_ => false, _ => false, _ => false, _ => false, _ => true, _ => false);
 
+        [Pure]
         public bool IsSixth() =>
             this.Match(_ => false, _ => false, _ => false, _ => false, _ => false, _ => true);
 
@@ -1365,6 +1430,7 @@ namespace Sodium
                 onSixth.ToFunc(),
                 onSeventh.ToFunc());
 
+        [Pure]
         public Task<T> MatchAsync<T>(
             Func<T1, Task<T>> onFirst,
             Func<T2, Task<T>> onSecond,
@@ -1392,6 +1458,7 @@ namespace Sodium
                 onSixth.ToAsyncFunc(),
                 onSeventh.ToAsyncFunc());
 
+        [Pure]
         public Either<T, T2, T3, T4, T5, T6, T7> MapFirst<T>(Func<T1, T> f) =>
             this.Match(
                 v1 => Either<T, T2, T3, T4, T5, T6, T7>.First(f(v1)),
@@ -1402,6 +1469,7 @@ namespace Sodium
                 v6 => Either.Sixth(v6),
                 v7 => Either.Seventh(v7));
 
+        [Pure]
         public Either<T1, T, T3, T4, T5, T6, T7> MapSecond<T>(Func<T2, T> f) =>
             this.Match(
                 Either<T1, T, T3, T4, T5, T6, T7>.First,
@@ -1412,6 +1480,7 @@ namespace Sodium
                 v6 => Either.Sixth(v6),
                 v7 => Either.Seventh(v7));
 
+        [Pure]
         public Either<T1, T2, T, T4, T5, T6, T7> MapThird<T>(Func<T3, T> f) =>
             this.Match(
                 Either<T1, T2, T, T4, T5, T6, T7>.First,
@@ -1422,6 +1491,7 @@ namespace Sodium
                 v6 => Either.Sixth(v6),
                 v7 => Either.Seventh(v7));
 
+        [Pure]
         public Either<T1, T2, T3, T, T5, T6, T7> MapFourth<T>(Func<T4, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T, T5, T6, T7>.First,
@@ -1432,6 +1502,7 @@ namespace Sodium
                 v6 => Either.Sixth(v6),
                 v7 => Either.Seventh(v7));
 
+        [Pure]
         public Either<T1, T2, T3, T4, T, T6, T7> MapFifth<T>(Func<T5, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T4, T, T6, T7>.First,
@@ -1442,6 +1513,7 @@ namespace Sodium
                 v6 => Either.Sixth(v6),
                 v7 => Either.Seventh(v7));
 
+        [Pure]
         public Either<T1, T2, T3, T4, T5, T, T7> MapSixth<T>(Func<T6, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T4, T5, T, T7>.First,
@@ -1452,6 +1524,7 @@ namespace Sodium
                 v6 => Either.Sixth(f(v6)),
                 v7 => Either.Seventh(v7));
 
+        [Pure]
         public Either<T1, T2, T3, T4, T5, T6, T> MapSeventh<T>(Func<T7, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T4, T5, T6, T>.First,
@@ -1462,6 +1535,7 @@ namespace Sodium
                 v6 => Either.Sixth(v6),
                 v7 => Either.Seventh(f(v7)));
 
+        [Pure]
         public Maybe<T1> TryGetFirst() =>
             this.Match(
                 Maybe.Some,
@@ -1472,6 +1546,7 @@ namespace Sodium
                 _ => Maybe.None,
                 _ => Maybe.None);
 
+        [Pure]
         public Maybe<T2> TryGetSecond() =>
             this.Match(
                 _ => Maybe.None,
@@ -1482,6 +1557,7 @@ namespace Sodium
                 _ => Maybe.None,
                 _ => Maybe.None);
 
+        [Pure]
         public Maybe<T3> TryGetThird() =>
             this.Match(
                 _ => Maybe.None,
@@ -1492,6 +1568,7 @@ namespace Sodium
                 _ => Maybe.None,
                 _ => Maybe.None);
 
+        [Pure]
         public Maybe<T4> TryGetFourth() =>
             this.Match(
                 _ => Maybe.None,
@@ -1502,6 +1579,7 @@ namespace Sodium
                 _ => Maybe.None,
                 _ => Maybe.None);
 
+        [Pure]
         public Maybe<T5> TryGetFifth() =>
             this.Match(
                 _ => Maybe.None,
@@ -1512,6 +1590,7 @@ namespace Sodium
                 _ => Maybe.None,
                 _ => Maybe.None);
 
+        [Pure]
         public Maybe<T6> TryGetSixth() =>
             this.Match(
                 _ => Maybe.None,
@@ -1522,6 +1601,7 @@ namespace Sodium
                 Maybe.Some,
                 _ => Maybe.None);
 
+        [Pure]
         public Maybe<T7> TryGetSeventh() =>
             this.Match(
                 _ => Maybe.None,
@@ -1532,24 +1612,31 @@ namespace Sodium
                 _ => Maybe.None,
                 Maybe.Some);
 
+        [Pure]
         public bool IsFirst() =>
             this.Match(_ => true, _ => false, _ => false, _ => false, _ => false, _ => false, _ => false);
 
+        [Pure]
         public bool IsSecond() =>
             this.Match(_ => false, _ => true, _ => false, _ => false, _ => false, _ => false, _ => false);
 
+        [Pure]
         public bool IsThird() =>
             this.Match(_ => false, _ => false, _ => true, _ => false, _ => false, _ => false, _ => false);
 
+        [Pure]
         public bool IsFourth() =>
             this.Match(_ => false, _ => false, _ => false, _ => true, _ => false, _ => false, _ => false);
 
+        [Pure]
         public bool IsFifth() =>
             this.Match(_ => false, _ => false, _ => false, _ => false, _ => true, _ => false, _ => false);
 
+        [Pure]
         public bool IsSixth() =>
             this.Match(_ => false, _ => false, _ => false, _ => false, _ => false, _ => true, _ => false);
 
+        [Pure]
         public bool IsSeventh() =>
             this.Match(_ => false, _ => false, _ => false, _ => false, _ => false, _ => false, _ => true);
 
@@ -1869,6 +1956,7 @@ namespace Sodium
                 onSeventh.ToFunc(),
                 onEighth.ToFunc());
 
+        [Pure]
         public Task<T> MatchAsync<T>(
             Func<T1, Task<T>> onFirst,
             Func<T2, Task<T>> onSecond,
@@ -1899,6 +1987,7 @@ namespace Sodium
                 onSeventh.ToAsyncFunc(),
                 onEighth.ToAsyncFunc());
 
+        [Pure]
         public Either<T, T2, T3, T4, T5, T6, T7, T8> MapFirst<T>(Func<T1, T> f) =>
             this.Match(
                 v1 => Either<T, T2, T3, T4, T5, T6, T7, T8>.First(f(v1)),
@@ -1910,6 +1999,7 @@ namespace Sodium
                 v7 => Either.Seventh(v7),
                 v8 => Either.Eighth(v8));
 
+        [Pure]
         public Either<T1, T, T3, T4, T5, T6, T7, T8> MapSecond<T>(Func<T2, T> f) =>
             this.Match(
                 Either<T1, T, T3, T4, T5, T6, T7, T8>.First,
@@ -1921,6 +2011,7 @@ namespace Sodium
                 v7 => Either.Seventh(v7),
                 v8 => Either.Eighth(v8));
 
+        [Pure]
         public Either<T1, T2, T, T4, T5, T6, T7, T8> MapThird<T>(Func<T3, T> f) =>
             this.Match(
                 Either<T1, T2, T, T4, T5, T6, T7, T8>.First,
@@ -1932,6 +2023,7 @@ namespace Sodium
                 v7 => Either.Seventh(v7),
                 v8 => Either.Eighth(v8));
 
+        [Pure]
         public Either<T1, T2, T3, T, T5, T6, T7, T8> MapFourth<T>(Func<T4, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T, T5, T6, T7, T8>.First,
@@ -1943,6 +2035,7 @@ namespace Sodium
                 v7 => Either.Seventh(v7),
                 v8 => Either.Eighth(v8));
 
+        [Pure]
         public Either<T1, T2, T3, T4, T, T6, T7, T8> MapFifth<T>(Func<T5, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T4, T, T6, T7, T8>.First,
@@ -1954,6 +2047,7 @@ namespace Sodium
                 v7 => Either.Seventh(v7),
                 v8 => Either.Eighth(v8));
 
+        [Pure]
         public Either<T1, T2, T3, T4, T5, T, T7, T8> MapSixth<T>(Func<T6, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T4, T5, T, T7, T8>.First,
@@ -1965,6 +2059,7 @@ namespace Sodium
                 v7 => Either.Seventh(v7),
                 v8 => Either.Eighth(v8));
 
+        [Pure]
         public Either<T1, T2, T3, T4, T5, T6, T, T8> MapSeventh<T>(Func<T7, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T4, T5, T6, T, T8>.First,
@@ -1976,6 +2071,7 @@ namespace Sodium
                 v7 => Either.Seventh(f(v7)),
                 v8 => Either.Eighth(v8));
 
+        [Pure]
         public Either<T1, T2, T3, T4, T5, T6, T7, T> MapEighth<T>(Func<T8, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T4, T5, T6, T7, T>.First,
@@ -1987,6 +2083,7 @@ namespace Sodium
                 v7 => Either.Seventh(v7),
                 v8 => Either.Eighth(f(v8)));
 
+        [Pure]
         public Maybe<T1> TryGetFirst() =>
             this.Match(
                 Maybe.Some,
@@ -1998,6 +2095,7 @@ namespace Sodium
                 _ => Maybe.None,
                 _ => Maybe.None);
 
+        [Pure]
         public Maybe<T2> TryGetSecond() =>
             this.Match(
                 _ => Maybe.None,
@@ -2009,6 +2107,7 @@ namespace Sodium
                 _ => Maybe.None,
                 _ => Maybe.None);
 
+        [Pure]
         public Maybe<T3> TryGetThird() =>
             this.Match(
                 _ => Maybe.None,
@@ -2020,6 +2119,7 @@ namespace Sodium
                 _ => Maybe.None,
                 _ => Maybe.None);
 
+        [Pure]
         public Maybe<T4> TryGetFourth() =>
             this.Match(
                 _ => Maybe.None,
@@ -2031,6 +2131,7 @@ namespace Sodium
                 _ => Maybe.None,
                 _ => Maybe.None);
 
+        [Pure]
         public Maybe<T5> TryGetFifth() =>
             this.Match(
                 _ => Maybe.None,
@@ -2042,6 +2143,7 @@ namespace Sodium
                 _ => Maybe.None,
                 _ => Maybe.None);
 
+        [Pure]
         public Maybe<T6> TryGetSixth() =>
             this.Match(
                 _ => Maybe.None,
@@ -2053,6 +2155,7 @@ namespace Sodium
                 _ => Maybe.None,
                 _ => Maybe.None);
 
+        [Pure]
         public Maybe<T7> TryGetSeventh() =>
             this.Match(
                 _ => Maybe.None,
@@ -2064,6 +2167,7 @@ namespace Sodium
                 Maybe.Some,
                 _ => Maybe.None);
 
+        [Pure]
         public Maybe<T8> TryGetEighth() =>
             this.Match(
                 _ => Maybe.None,
@@ -2075,27 +2179,35 @@ namespace Sodium
                 _ => Maybe.None,
                 Maybe.Some);
 
+        [Pure]
         public bool IsFirst() =>
             this.Match(_ => true, _ => false, _ => false, _ => false, _ => false, _ => false, _ => false, _ => false);
 
+        [Pure]
         public bool IsSecond() =>
             this.Match(_ => false, _ => true, _ => false, _ => false, _ => false, _ => false, _ => false, _ => false);
 
+        [Pure]
         public bool IsThird() =>
             this.Match(_ => false, _ => false, _ => true, _ => false, _ => false, _ => false, _ => false, _ => false);
 
+        [Pure]
         public bool IsFourth() =>
             this.Match(_ => false, _ => false, _ => false, _ => true, _ => false, _ => false, _ => false, _ => false);
 
+        [Pure]
         public bool IsFifth() =>
             this.Match(_ => false, _ => false, _ => false, _ => false, _ => true, _ => false, _ => false, _ => false);
 
+        [Pure]
         public bool IsSixth() =>
             this.Match(_ => false, _ => false, _ => false, _ => false, _ => false, _ => true, _ => false, _ => false);
 
+        [Pure]
         public bool IsSeventh() =>
             this.Match(_ => false, _ => false, _ => false, _ => false, _ => false, _ => false, _ => true, _ => false);
 
+        [Pure]
         public bool IsEighth() =>
             this.Match(_ => false, _ => false, _ => false, _ => false, _ => false, _ => false, _ => false, _ => true);
 

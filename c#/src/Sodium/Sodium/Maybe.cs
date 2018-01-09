@@ -54,6 +54,7 @@ namespace Sodium
         // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
         public void MatchNone(Action onNone) => this.MatchVoid(_ => { }, onNone);
 
+        [Pure]
         public Task<TResult> MatchAsync<TResult>(Func<T, Task<TResult>> onSome, Func<Task<TResult>> onNone) =>
             this.Match(onSome, onNone);
 
@@ -74,8 +75,10 @@ namespace Sodium
         ///     The <see cref="Maybe{TResult}" /> which results from transforming this <see cref="Maybe{T}" /> using
         ///     <paramref name="f" />.
         /// </returns>
+        [Pure]
         public Maybe<TResult> Map<TResult>(Func<T, TResult> f) => this.Bind(v => Maybe.Some(f(v)));
 
+        [Pure]
         public bool HasValue() => this.Match(v => true, () => false);
 
         // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
