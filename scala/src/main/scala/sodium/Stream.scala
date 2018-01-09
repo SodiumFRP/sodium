@@ -155,7 +155,7 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     Transaction(_ => new LazyCell[A](this, Some(initValue)))
 
   /**
-    * Variant of [[sodium.Stream.snapshot[B,C]* Stream.snapshot(Cell,(A,B)=>C)]] that captures the cell's value
+    * Variant of [[sodium.Stream.snapshot[B,C]* snapshot(Cell,(A,B)=>C)]] that captures the cell's value
     * at the time of the event firing, ignoring the stream's value.
     */
   final def snapshot[B](c: Cell[B]): Stream[B] = snapshot[B, B](c, (a, b) => b)
@@ -166,7 +166,7 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     *
     * There is an implicit delay: State updates caused by event firings being held with
     * [[sodium.Stream.hold(initValue:A)* hold(A)]] don't become visible as the cell's current value until the
-    * following transaction. To put this another way, [[sodium.Stream.snapshot[B,C]* Stream.snapshot(Cell,(A,B)=>C)]]
+    * following transaction. To put this another way, [[sodium.Stream.snapshot[B,C]* snapshot(Cell,(A,B)=>C)]]
     * always sees the value of a cell as it was before any state changes from the current
     * transaction.
     */
@@ -179,7 +179,44 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
   }
 
   /**
-    * Variant of [[Stream!.merge(s:sodium\.Stream[A],f:(A,A)=>A):sodium\.Stream[A]* Stream.merge(Stream,(A,A)=>A)]]
+    * Variant of [[sodium.Stream.snapshot[B,C]* snapshot(Cell,(A,B)=>C)]] that captures the values of
+    * two cells.
+    */
+  final def snapshot[B, C, D](cb: Cell[B], cc: Cell[C], fn: (A, B, C) => D): Stream[D] =
+    this.snapshot[B, D](cb, (a: A, b: B) ⇒ fn(a, b, cc.sample()))
+
+  /**
+    * Variant of [[sodium.Stream.snapshot[B,C]* snapshot(Cell,(A,B)=>C)]] that captures the values of
+    * three cells.
+    */
+  final def snapshot[B, C, D, E](cb: Cell[B], cc: Cell[C], cd: Cell[D], fn: (A, B, C, D) => E): Stream[E] =
+    this.snapshot[B, E](cb, (a: A, b: B) ⇒ fn(a, b, cc.sample(), cd.sample()))
+
+  /**
+    * Variant of [[sodium.Stream.snapshot[B,C]* snapshot(Cell,(A,B)=>C)]] that captures the values of
+    * four cells.
+    */
+  final def snapshot[B, C, D, E, F](cb: Cell[B],
+                                    cc: Cell[C],
+                                    cd: Cell[D],
+                                    ce: Cell[E],
+                                    fn: (A, B, C, D, E) => F): Stream[F] =
+    this.snapshot[B, F](cb, (a: A, b: B) ⇒ fn(a, b, cc.sample(), cd.sample(), ce.sample()))
+
+  /**
+    * Variant of [[sodium.Stream.snapshot[B,C]* snapshot(Cell,(A,B)=>C)]] that captures the values of
+    * five cells.
+    */
+  final def snapshot[B, C, D, E, F, G](cb: Cell[B],
+                                       cc: Cell[C],
+                                       cd: Cell[D],
+                                       ce: Cell[E],
+                                       cf: Cell[F],
+                                       fn: (A, B, C, D, E, F) => G): Stream[G] =
+    this.snapshot[B, G](cb, (a: A, b: B) ⇒ fn(a, b, cc.sample(), cd.sample(), ce.sample(), cf.sample()))
+
+  /**
+    * Variant of [[Stream!.merge(s:sodium\.Stream[A],f:(A,A)=>A):sodium\.Stream[A]* merge(Stream,(A,A)=>A)]]
     * that merges two streams and will drop an event in the simultaneous case.
     *
     * In the case where two events are simultaneous (i.e. both

@@ -121,7 +121,7 @@ class Cell[A](val str: Stream[A], protected var currentValue: Option[A]) {
     *
     * @param fn Function to apply. It must be <em>referentially transparent</em>.
     */
-  final def lift[B, C, D](fn: (A, B, C) => D, b: Cell[B], c: Cell[C]): Cell[D] = {
+  final def lift[B, C, D](b: Cell[B], c: Cell[C], fn: (A, B, C) => D): Cell[D] = {
     def ffa(aa: A)(bb: B)(cc: C) = fn(aa, bb, cc)
     Cell(Cell(this.map(ffa), b), c)
   }
@@ -132,7 +132,7 @@ class Cell[A](val str: Stream[A], protected var currentValue: Option[A]) {
     *
     * @param fn Function to apply. It must be <em>referentially transparent</em>.
     */
-  final def lift[B, C, D, E](fn: (A, B, C, D) => E, b: Cell[B], c: Cell[C], d: Cell[D]): Cell[E] = {
+  final def lift[B, C, D, E](b: Cell[B], c: Cell[C], d: Cell[D], fn: (A, B, C, D) => E): Cell[E] = {
     def ffa(aa: A)(bb: B)(cc: C)(dd: D) = fn(aa, bb, cc, dd)
     Cell(Cell(Cell(this.map(ffa), b), c), d)
   }
@@ -143,7 +143,7 @@ class Cell[A](val str: Stream[A], protected var currentValue: Option[A]) {
     *
     * @param fn Function to apply. It must be <em>referentially transparent</em>.
     */
-  final def lift[B, C, D, E, F](fn: (A, B, C, D, E) => F, b: Cell[B], c: Cell[C], d: Cell[D], e: Cell[E]): Cell[F] = {
+  final def lift[B, C, D, E, F](b: Cell[B], c: Cell[C], d: Cell[D], e: Cell[E], fn: (A, B, C, D, E) => F): Cell[F] = {
     def ffa(aa: A)(bb: B)(cc: C)(dd: D)(ee: E) = fn(aa, bb, cc, dd, ee)
     Cell(Cell(Cell(Cell(this.map(ffa), b), c), d), e)
   }
@@ -154,12 +154,12 @@ class Cell[A](val str: Stream[A], protected var currentValue: Option[A]) {
     *
     * @param fn Function to apply. It must be <em>referentially transparent</em>.
     */
-  final def lift[B, C, D, E, F, G](fn: (A, B, C, D, E, F) => G,
-                                   b: Cell[B],
+  final def lift[B, C, D, E, F, G](b: Cell[B],
                                    c: Cell[C],
                                    d: Cell[D],
                                    e: Cell[E],
-                                   f: Cell[F]): Cell[G] = {
+                                   f: Cell[F],
+                                   fn: (A, B, C, D, E, F) => G): Cell[G] = {
     def ffa(aa: A)(bb: B)(cc: C)(dd: D)(ee: E)(ff: F) = fn(aa, bb, cc, dd, ee, ff)
     Cell(Cell(Cell(Cell(Cell(this.map(ffa), b), c), d), e), f)
   }
@@ -183,6 +183,14 @@ class Cell[A](val str: Stream[A], protected var currentValue: Option[A]) {
     */
   final def listen(action: A => Unit) = Transaction(trans => value(trans).listen(action))
 
+  /**
+    * A variant of [[sodium.Cell.listen(action:A=>Unit):sodium\.Listener* listen(A=>Unit)]] that will deregister
+    * the listener automatically if the listener is garbage collected. With
+    * [[sodium.Cell.listen(action:A=>Unit):sodium\.Listener* listen(A=>Unit)]], the listener is
+    * only deregistered if [[sodium.Listener.unlisten()* Listener.unlisten()]] is called explicitly.
+    */
+  final def listenWeak(action: A => Unit) = Transaction(trans => value(trans).listenWeak(action))
+
 }
 
 object Cell {
@@ -202,7 +210,9 @@ object Cell {
 
       final class ApplyHandler(val trans0: Transaction) {
         var a: A = _
+        var f_present = false
         var f: A => B = _
+        var a_present = false
         def run(trans1: Transaction): Unit = {
           trans1.prioritized(out.node, { trans2 =>
             out.send(trans2, f(a))
@@ -220,7 +230,8 @@ object Cell {
         .value(trans0)
         .listen_(in_target, (trans1: Transaction, f: A => B) => {
           h.f = f
-          if (h.a != null)
+          h.f_present = true
+          if (h.a_present)
             h.run(trans1)
         })
 
@@ -228,7 +239,8 @@ object Cell {
         .value(trans0)
         .listen_(in_target, (trans1: Transaction, a: A) => {
           h.a = a
-          if (h.a != null)
+          h.a_present = true
+          if (h.f_present)
             h.run(trans1)
         })
       out

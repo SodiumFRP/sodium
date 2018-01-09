@@ -18,7 +18,7 @@ object Operational {
   def updates[A](c: Cell[A]) = Transaction(_ => c.updates())
 
   /**
-    * A stream that is guaranteed to fire once when you listen to it, giving
+    * A stream that is guaranteed to fire once in the transaction where value() is invoked, giving
     * the current value of the cell, and thereafter behaves like [[updates update(Cell)]],
     * firing for each update/step of the cell's value.
     *
