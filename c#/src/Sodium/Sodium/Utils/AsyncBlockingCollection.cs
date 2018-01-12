@@ -13,7 +13,7 @@ namespace Sodium.Utils
         {
             while (true)
             {
-                yield return this.WaitRecursive();
+                yield return this.Wait();
 
                 Result result;
                 do
@@ -29,11 +29,17 @@ namespace Sodium.Utils
             // ReSharper disable once IteratorNeverReturns
         }
 
-        private async Task<TValue> WaitRecursive()
+        private async Task<TValue> Wait()
         {
-            await this.autoResetEvent.WaitAsync();
-            Result result = this.TakeItem();
-            return result.HasValue ? result.Value : await this.WaitRecursive();
+            Result result;
+            do
+            {
+                await this.autoResetEvent.WaitAsync().ConfigureAwait(false);
+                result = this.TakeItem();
+            }
+            while (!result.HasValue);
+
+            return result.Value;
         }
 
         public void Add(TValue value)
