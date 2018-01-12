@@ -13,17 +13,27 @@ namespace Sodium.Utils
         {
             while (true)
             {
-                yield return this.autoResetEvent.WaitAsync().ContinueWith(t => this.TakeItem());
+                yield return this.WaitRecursive();
 
-                //it is not really important to lock before getting Count
-                //the iterator will catch up any items missed here
-                // ReSharper disable once InconsistentlySynchronizedField
-                while (this.collection.Count != 0)
+                Result result;
+                do
                 {
-                    yield return Task.FromResult(this.TakeItem());
+                    result = this.TakeItem();
+                    if (result.HasValue)
+                    {
+                        yield return Task.FromResult(result.Value);
+                    }
                 }
+                while (result.HasValue);
             }
             // ReSharper disable once IteratorNeverReturns
+        }
+
+        private async Task<TValue> WaitRecursive()
+        {
+            await this.autoResetEvent.WaitAsync();
+            Result result = this.TakeItem();
+            return result.HasValue ? result.Value : await this.WaitRecursive();
         }
 
         public void Add(TValue value)
@@ -32,14 +42,27 @@ namespace Sodium.Utils
             {
                 this.collection.Enqueue(value);
             }
+
             this.autoResetEvent.Set();
         }
 
-        private TValue TakeItem()
+        private Result TakeItem()
         {
             lock (this.syncLock)
             {
-                return this.collection.Dequeue();
+                return this.collection.Count > 0 ? new Result(this.collection.Dequeue()) : new Result();
+            }
+        }
+
+        private struct Result
+        {
+            public readonly bool HasValue;
+            public readonly TValue Value;
+
+            public Result(TValue value)
+            {
+                this.HasValue = true;
+                this.Value = value;
             }
         }
     }
