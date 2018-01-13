@@ -370,11 +370,7 @@ namespace Sodium
             Action<Transaction> @new;
             if (this.postQueue.TryGetValue(index, out Action<Transaction> existing))
             {
-                @new = trans =>
-                {
-                    existing(trans);
-                    action(trans);
-                };
+                @new = existing + action;
             }
             else
             {
