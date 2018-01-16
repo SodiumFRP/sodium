@@ -10,7 +10,7 @@ namespace Sodium.Tests
     {
         /*
          * Desired behavior:
-         *     A list of items of type TestObject are held in a Cell.  TestObject contains a Cell of type int named Output, which is calculated from other values.
+         *     A list of items of type TestObject are held in a cell.  TestObject contains a cell of type int named Output, which is calculated from other values.
          *     Any time a new TestObject is created, it will have the values for the cells from which Output is calculated.  The sum of all Output values in the list should always be 50 or greater.
          */
         private class DependencyCycleTest
@@ -19,18 +19,18 @@ namespace Sodium.Tests
             {
                 public TestObject()
                 {
-                    this.Input1 = new DiscreteCellStreamSink<int>();
-                    DiscreteCell<int> input1Cell = this.Input1.Hold(3);
+                    this.Input1 = new CellStreamSink<int>();
+                    Cell<int> input1Cell = this.Input1.Hold(3);
 
-                    this.Input2 = new DiscreteCellStreamSink<int>();
-                    DiscreteCell<int> input2Cell = this.Input2.Hold(2);
+                    this.Input2 = new CellStreamSink<int>();
+                    Cell<int> input2Cell = this.Input2.Hold(2);
 
                     this.Output = input1Cell.Lift(input2Cell, (i1, i2) => i1 + i2);
                 }
 
                 public StreamSink<int> Input1 { get; }
                 public StreamSink<int> Input2 { get; }
-                public DiscreteCell<int> Output { get; }
+                public Cell<int> Output { get; }
             }
 
             /*
@@ -44,11 +44,11 @@ namespace Sodium.Tests
                 Exception actual = null;
                 try
                 {
-                    DiscreteCellStreamSink<IReadOnlyList<TestObject>> streamSink = new DiscreteCellStreamSink<IReadOnlyList<TestObject>>();
-                    DiscreteCell<IReadOnlyList<TestObject>> cell = Transaction.Run(() =>
+                    CellStreamSink<IReadOnlyList<TestObject>> streamSink = new CellStreamSink<IReadOnlyList<TestObject>>();
+                    Cell<IReadOnlyList<TestObject>> cell = Transaction.Run(() =>
                     {
-                        DiscreteCellLoop<IReadOnlyList<TestObject>> cellLoop = new DiscreteCellLoop<IReadOnlyList<TestObject>>();
-                        DiscreteCell<IReadOnlyList<TestObject>> cellLocal = streamSink.Map<Func<IReadOnlyList<TestObject>, IReadOnlyList<TestObject>>>(v => _ => v)
+                        CellLoop<IReadOnlyList<TestObject>> cellLoop = new CellLoop<IReadOnlyList<TestObject>>();
+                        Cell<IReadOnlyList<TestObject>> cellLocal = streamSink.Map<Func<IReadOnlyList<TestObject>, IReadOnlyList<TestObject>>>(v => _ => v)
                             .Merge(cellLoop.Map(oo => oo.Select(o => o.Output).Lift(vv => vv.Sum())).SwitchC().Updates.Filter(sum => sum < 50).MapTo<Func<IReadOnlyList<TestObject>, IReadOnlyList<TestObject>>>(v => v.Concat(new[] { new TestObject() }).ToArray()), (f, g) => v => g(f(v)))
                             .Snapshot(cellLoop, (f, v) => f(v))
                             .Hold(Enumerable.Range(1, 10).Select(_ => new TestObject()).ToArray());
@@ -60,9 +60,9 @@ namespace Sodium.Tests
                     objectCounts.Add(-1);
                     cell.Listen(vv => objectCounts.Add(vv.Count));
                     objectCounts.Add(-1);
-                    cell.Cell.Sample()[2].Input1.Send(1);
+                    cell.Sample()[2].Input1.Send(1);
                     objectCounts.Add(-1);
-                    cell.Cell.Sample()[1].Input1.Send(-20);
+                    cell.Sample()[1].Input1.Send(-20);
                     objectCounts.Add(-1);
                     streamSink.Send(new TestObject[0]);
                     objectCounts.Add(-1);
@@ -88,11 +88,11 @@ namespace Sodium.Tests
             [Test]
             public void TestSwitchSValuesLoop()
             {
-                DiscreteCellStreamSink<IReadOnlyList<TestObject>> streamSink = new DiscreteCellStreamSink<IReadOnlyList<TestObject>>();
-                DiscreteCell<IReadOnlyList<TestObject>> cell = Transaction.Run(() =>
+                CellStreamSink<IReadOnlyList<TestObject>> streamSink = new CellStreamSink<IReadOnlyList<TestObject>>();
+                Cell<IReadOnlyList<TestObject>> cell = Transaction.Run(() =>
                 {
-                    DiscreteCellLoop<IReadOnlyList<TestObject>> cellLoop = new DiscreteCellLoop<IReadOnlyList<TestObject>>();
-                    DiscreteCell<IReadOnlyList<TestObject>> cellLocal = streamSink.Map<Func<IReadOnlyList<TestObject>, IReadOnlyList<TestObject>>>(v => _ => v)
+                    CellLoop<IReadOnlyList<TestObject>> cellLoop = new CellLoop<IReadOnlyList<TestObject>>();
+                    Cell<IReadOnlyList<TestObject>> cellLocal = streamSink.Map<Func<IReadOnlyList<TestObject>, IReadOnlyList<TestObject>>>(v => _ => v)
                         .Merge(cellLoop.Map(oo => oo.Select(o => o.Output).Lift(vv => vv.Sum()).Values).SwitchS().Filter(sum => sum < 50).MapTo<Func<IReadOnlyList<TestObject>, IReadOnlyList<TestObject>>>(v => v.Concat(new[] { new TestObject() }).ToArray()), (f, g) => v => g(f(v)))
                         .Snapshot(cellLoop, (f, v) => f(v))
                         .Hold(Enumerable.Range(1, 10).Select(_ => new TestObject()).ToArray());
@@ -104,9 +104,9 @@ namespace Sodium.Tests
                 objectCounts.Add(-1);
                 cell.Listen(vv => objectCounts.Add(vv.Count));
                 objectCounts.Add(-1);
-                cell.Cell.Sample()[2].Input1.Send(1);
+                cell.Sample()[2].Input1.Send(1);
                 objectCounts.Add(-1);
-                cell.Cell.Sample()[1].Input1.Send(-20);
+                cell.Sample()[1].Input1.Send(-20);
                 objectCounts.Add(-1);
                 streamSink.Send(new TestObject[0]);
                 objectCounts.Add(-1);
@@ -129,11 +129,11 @@ namespace Sodium.Tests
             [Test]
             public void TestSwitchCDeferredLoop()
             {
-                DiscreteCellStreamSink<IReadOnlyList<TestObject>> streamSink = new DiscreteCellStreamSink<IReadOnlyList<TestObject>>();
-                DiscreteCell<IReadOnlyList<TestObject>> cell = Transaction.Run(() =>
+                CellStreamSink<IReadOnlyList<TestObject>> streamSink = new CellStreamSink<IReadOnlyList<TestObject>>();
+                Cell<IReadOnlyList<TestObject>> cell = Transaction.Run(() =>
                 {
-                    DiscreteCellLoop<IReadOnlyList<TestObject>> cellLoop = new DiscreteCellLoop<IReadOnlyList<TestObject>>();
-                    DiscreteCell<IReadOnlyList<TestObject>> cellLocal = streamSink
+                    CellLoop<IReadOnlyList<TestObject>> cellLoop = new CellLoop<IReadOnlyList<TestObject>>();
+                    Cell<IReadOnlyList<TestObject>> cellLocal = streamSink
                         .OrElse(Operational.Defer(cellLoop.Map(oo => oo.Select(o => o.Output).Lift(vv => vv.Sum())).SwitchC().Values).Filter(sum => sum < 50).Snapshot(cellLoop, (_, items) => (IReadOnlyList<TestObject>)items.Concat(new[] { new TestObject() }).ToArray()))
                         .Hold(Enumerable.Range(1, 10).Select(_ => new TestObject()).ToArray());
                     cellLoop.Loop(cellLocal);
@@ -144,9 +144,9 @@ namespace Sodium.Tests
                 objectCounts.Add(-1);
                 cell.Listen(vv => objectCounts.Add(vv.Count));
                 objectCounts.Add(-1);
-                cell.Cell.Sample()[2].Input1.Send(1);
+                cell.Sample()[2].Input1.Send(1);
                 objectCounts.Add(-1);
-                cell.Cell.Sample()[1].Input1.Send(-20);
+                cell.Sample()[1].Input1.Send(-20);
                 objectCounts.Add(-1);
                 streamSink.Send(new TestObject[0]);
                 objectCounts.Add(-1);
@@ -168,11 +168,11 @@ namespace Sodium.Tests
             [Test]
             public void TestSwitchCDeferredLoopWithBetterApi()
             {
-                DiscreteCellStreamSink<IReadOnlyList<TestObject>> streamSink = new DiscreteCellStreamSink<IReadOnlyList<TestObject>>();
-                DiscreteCell<IReadOnlyList<TestObject>> cell = Transaction.Run(() =>
+                CellStreamSink<IReadOnlyList<TestObject>> streamSink = new CellStreamSink<IReadOnlyList<TestObject>>();
+                Cell<IReadOnlyList<TestObject>> cell = Transaction.Run(() =>
                 {
-                    DiscreteCellLoop<IReadOnlyList<TestObject>> cellLoop = new DiscreteCellLoop<IReadOnlyList<TestObject>>();
-                    DiscreteCell<IReadOnlyList<TestObject>> cellLocal = streamSink
+                    CellLoop<IReadOnlyList<TestObject>> cellLoop = new CellLoop<IReadOnlyList<TestObject>>();
+                    Cell<IReadOnlyList<TestObject>> cellLocal = streamSink
                         .OrElse(Operational.Defer(cellLoop.Map(oo => oo.Select(o => o.Output).Lift(vv => vv.Sum())).SwitchCWithDeferredValues()).Filter(sum => sum < 50).Snapshot(cellLoop, (_, items) => (IReadOnlyList<TestObject>)items.Concat(new[] { new TestObject() }).ToArray()))
                         .Hold(Enumerable.Range(1, 10).Select(_ => new TestObject()).ToArray());
                     cellLoop.Loop(cellLocal);
@@ -183,9 +183,9 @@ namespace Sodium.Tests
                 objectCounts.Add(-1);
                 cell.Listen(vv => objectCounts.Add(vv.Count));
                 objectCounts.Add(-1);
-                cell.Cell.Sample()[2].Input1.Send(1);
+                cell.Sample()[2].Input1.Send(1);
                 objectCounts.Add(-1);
-                cell.Cell.Sample()[1].Input1.Send(-20);
+                cell.Sample()[1].Input1.Send(-20);
                 objectCounts.Add(-1);
                 streamSink.Send(new TestObject[0]);
                 objectCounts.Add(-1);
@@ -201,12 +201,12 @@ namespace Sodium.Tests
 
     public static class TestExtensions
     {
-        public static Stream<T> SwitchCWithDeferredUpdates<T>(this DiscreteCell<DiscreteCell<T>> cca)
+        public static Stream<T> SwitchCWithDeferredUpdates<T>(this Cell<Cell<T>> cca)
         {
             return Operational.Defer(cca.SwitchC().Updates);
         }
 
-        public static Stream<T> SwitchCWithDeferredValues<T>(this DiscreteCell<DiscreteCell<T>> cca)
+        public static Stream<T> SwitchCWithDeferredValues<T>(this Cell<Cell<T>> cca)
         {
             return Operational.Defer(cca.SwitchC().Values);
         }

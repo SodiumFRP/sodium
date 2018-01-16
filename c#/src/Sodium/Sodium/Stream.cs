@@ -365,27 +365,19 @@ namespace Sodium
         ///     it was before
         ///     any state changes from the current transaction.
         /// </remarks>
-        public DiscreteCell<T> Hold(T initialValue) => new DiscreteCell<T>(this.HoldInternal(initialValue));
+        public Cell<T> Hold(T initialValue) => new Cell<T>(this.HoldInternal(initialValue));
 
-        internal Cell<T> HoldInternal(T initialValue) => new Cell<T>(this, initialValue);
+        internal Behavior<T> HoldInternal(T initialValue) => new Behavior<T>(this, initialValue);
 
         /// <summary>
         ///     Create a cell with the specified lazily initialized initial value, that is updated by this stream's values.
         /// </summary>
         /// <param name="initialValue">The lazily initialized initial value of the cell.</param>
         /// <returns>A cell with the specified lazily initialized initial value, that is updated by this stream's values.</returns>
-        public DiscreteCell<T> HoldLazy(Lazy<T> initialValue) =>
-            new DiscreteCell<T>(this.HoldLazyInternal(initialValue));
+        public Cell<T> HoldLazy(Lazy<T> initialValue) =>
+            new Cell<T>(this.HoldLazyInternal(initialValue));
 
-        internal Cell<T> HoldLazyInternal(Lazy<T> initialValue) => new LazyCell<T>(this, initialValue);
-
-        /// <summary>
-        ///     Return a stream whose events are the values of the cell at the time of the stream event firing.
-        /// </summary>
-        /// <typeparam name="TResult">The return type.</typeparam>
-        /// <param name="c">The cell to combine with.</param>
-        /// <returns>A stream whose events are the values of the cell at the time of the stream event firing.</returns>
-        public Stream<TResult> Snapshot<TResult>(DiscreteCell<TResult> c) => this.Snapshot(c.Cell);
+        internal Behavior<T> HoldLazyInternal(Lazy<T> initialValue) => new LazyBehavior<T>(this, initialValue);
 
         /// <summary>
         ///     Return a stream whose events are the values of the cell at the time of the stream event firing.
@@ -393,9 +385,17 @@ namespace Sodium
         /// <typeparam name="TResult">The return type.</typeparam>
         /// <param name="c">The cell to combine with.</param>
         /// <returns>A stream whose events are the values of the cell at the time of the stream event firing.</returns>
-        public Stream<TResult> Snapshot<TResult>(Cell<TResult> c)
+        public Stream<TResult> Snapshot<TResult>(Cell<TResult> c) => this.Snapshot(c.Behavior);
+
+        /// <summary>
+        ///     Return a stream whose events are the values of the behavior at the time of the stream event firing.
+        /// </summary>
+        /// <typeparam name="TResult">The return type.</typeparam>
+        /// <param name="b">The behavior to combine with.</param>
+        /// <returns>A stream whose events are the values of the behavior at the time of the stream event firing.</returns>
+        public Stream<TResult> Snapshot<TResult>(Behavior<TResult> b)
         {
-            return this.Snapshot(c, (a, b) => b);
+            return this.Snapshot(b, (_, a) => a);
         }
 
         /// <summary>
@@ -410,25 +410,25 @@ namespace Sodium
         ///     A stream whose events are the result of the combination using the specified function of the input stream's
         ///     value and the value of the cell at the time of the stream event firing.
         /// </returns>
-        public Stream<TResult> Snapshot<T1, TResult>(DiscreteCell<T1> c, Func<T, T1, TResult> f) =>
-            this.Snapshot(c.Cell, f);
+        public Stream<TResult> Snapshot<T1, TResult>(Cell<T1> c, Func<T, T1, TResult> f) =>
+            this.Snapshot(c.Behavior, f);
 
         /// <summary>
         ///     Return a stream whose events are the result of the combination using the specified
-        ///     function of the input stream's value and the value of the cell at the time of the stream event firing.
+        ///     function of the input stream's value and the value of the behavior at the time of the stream event firing.
         /// </summary>
-        /// <typeparam name="T1">The type of the cell.</typeparam>
+        /// <typeparam name="T1">The type of the behavior.</typeparam>
         /// <typeparam name="TResult">The return type.</typeparam>
-        /// <param name="c">The cell to combine with.</param>
-        /// <param name="f">A function to convert the stream value and cell value into a return value.</param>
+        /// <param name="b">The behavior to combine with.</param>
+        /// <param name="f">A function to convert the stream value and behavior value into a return value.</param>
         /// <returns>
         ///     A stream whose events are the result of the combination using the specified function of the input stream's
-        ///     value and the value of the cell at the time of the stream event firing.
+        ///     value and the value of the behavior at the time of the stream event firing.
         /// </returns>
-        public Stream<TResult> Snapshot<T1, TResult>(Cell<T1> c, Func<T, T1, TResult> f)
+        public Stream<TResult> Snapshot<T1, TResult>(Behavior<T1> b, Func<T, T1, TResult> f)
         {
             Stream<TResult> @out = new Stream<TResult>(this.KeepListenersAlive);
-            IListener l = this.Listen(@out.Node, (trans2, a) => @out.Send(trans2, f(a, c.SampleNoTransaction())));
+            IListener l = this.Listen(@out.Node, (trans2, a) => @out.Send(trans2, f(a, b.SampleNoTransaction())));
             return @out.UnsafeAttachListener(l);
         }
 
@@ -447,54 +447,32 @@ namespace Sodium
         ///     value and the value of the cells at the time of the stream event firing.
         /// </returns>
         public Stream<TResult> Snapshot<T1, T2, TResult>(
-            DiscreteCell<T1> c1,
-            DiscreteCell<T2> c2,
-            Func<T, T1, T2, TResult> f) => this.Snapshot(c1.Cell, c2.Cell, f);
+            Cell<T1> c1,
+            Cell<T2> c2,
+            Func<T, T1, T2, TResult> f) => this.Snapshot(c1.Behavior, c2.Behavior, f);
 
         /// <summary>
         ///     Return a stream whose events are the result of the combination using the specified
-        ///     function of the input stream's value and the value of the cells at the time of the stream event firing.
+        ///     function of the input stream's value and the value of the behaviors at the time of the stream event firing.
         /// </summary>
-        /// <typeparam name="T1">The type of the first cell.</typeparam>
-        /// <typeparam name="T2">The type of the second cell.</typeparam>
+        /// <typeparam name="T1">The type of the first behavior.</typeparam>
+        /// <typeparam name="T2">The type of the second behavior.</typeparam>
         /// <typeparam name="TResult">The return type.</typeparam>
-        /// <param name="c1">The first cell to combine with.</param>
-        /// <param name="c2">The second cell to combine with.</param>
-        /// <param name="f">A function to convert the stream value and cell value into a return value.</param>
+        /// <param name="b1">The first behavior to combine with.</param>
+        /// <param name="b2">The second behavior to combine with.</param>
+        /// <param name="f">A function to convert the stream value and behavior value into a return value.</param>
         /// <returns>
         ///     A stream whose events are the result of the combination using the specified function of the input stream's
-        ///     value and the value of the cells at the time of the stream event firing.
+        ///     value and the value of the behaviors at the time of the stream event firing.
         /// </returns>
-        public Stream<TResult> Snapshot<T1, T2, TResult>(Cell<T1> c1, Cell<T2> c2, Func<T, T1, T2, TResult> f)
+        public Stream<TResult> Snapshot<T1, T2, TResult>(Behavior<T1> b1, Behavior<T2> b2, Func<T, T1, T2, TResult> f)
         {
             Stream<TResult> @out = new Stream<TResult>(this.KeepListenersAlive);
             IListener l = this.Listen(
                 @out.Node,
-                (trans2, a) => @out.Send(trans2, f(a, c1.SampleNoTransaction(), c2.SampleNoTransaction())));
+                (trans2, a) => @out.Send(trans2, f(a, b1.SampleNoTransaction(), b2.SampleNoTransaction())));
             return @out.UnsafeAttachListener(l);
         }
-
-        /// <summary>
-        ///     Return a stream whose events are the result of the combination using the specified
-        ///     function of the input stream's value and the value of the cells at the time of the stream event firing.
-        /// </summary>
-        /// <typeparam name="T1">The type of the first cell.</typeparam>
-        /// <typeparam name="T2">The type of the second cell.</typeparam>
-        /// <typeparam name="T3">The type of the third cell.</typeparam>
-        /// <typeparam name="TResult">The return type.</typeparam>
-        /// <param name="c1">The first cell to combine with.</param>
-        /// <param name="c2">The second cell to combine with.</param>
-        /// <param name="c3">The third cell to combine with.</param>
-        /// <param name="f">A function to convert the stream value and cell value into a return value.</param>
-        /// <returns>
-        ///     A stream whose events are the result of the combination using the specified function of the input stream's
-        ///     value and the value of the cells at the time of the stream event firing.
-        /// </returns>
-        public Stream<TResult> Snapshot<T1, T2, T3, TResult>(
-            DiscreteCell<T1> c1,
-            DiscreteCell<T2> c2,
-            DiscreteCell<T3> c3,
-            Func<T, T1, T2, T3, TResult> f) => this.Snapshot(c1.Cell, c2.Cell, c3.Cell, f);
 
         /// <summary>
         ///     Return a stream whose events are the result of the combination using the specified
@@ -516,6 +494,28 @@ namespace Sodium
             Cell<T1> c1,
             Cell<T2> c2,
             Cell<T3> c3,
+            Func<T, T1, T2, T3, TResult> f) => this.Snapshot(c1.Behavior, c2.Behavior, c3.Behavior, f);
+
+        /// <summary>
+        ///     Return a stream whose events are the result of the combination using the specified
+        ///     function of the input stream's value and the value of the behaviors at the time of the stream event firing.
+        /// </summary>
+        /// <typeparam name="T1">The type of the first behavior.</typeparam>
+        /// <typeparam name="T2">The type of the second behavior.</typeparam>
+        /// <typeparam name="T3">The type of the third behavior.</typeparam>
+        /// <typeparam name="TResult">The return type.</typeparam>
+        /// <param name="b1">The first behavior to combine with.</param>
+        /// <param name="b2">The second behavior to combine with.</param>
+        /// <param name="b3">The third behavior to combine with.</param>
+        /// <param name="f">A function to convert the stream value and behavior value into a return value.</param>
+        /// <returns>
+        ///     A stream whose events are the result of the combination using the specified function of the input stream's
+        ///     value and the value of the behaviors at the time of the stream event firing.
+        /// </returns>
+        public Stream<TResult> Snapshot<T1, T2, T3, TResult>(
+            Behavior<T1> b1,
+            Behavior<T2> b2,
+            Behavior<T3> b3,
             Func<T, T1, T2, T3, TResult> f)
         {
             Stream<TResult> @out = new Stream<TResult>(this.KeepListenersAlive);
@@ -523,34 +523,9 @@ namespace Sodium
                 @out.Node,
                 (trans2, a) => @out.Send(
                     trans2,
-                    f(a, c1.SampleNoTransaction(), c2.SampleNoTransaction(), c3.SampleNoTransaction())));
+                    f(a, b1.SampleNoTransaction(), b2.SampleNoTransaction(), b3.SampleNoTransaction())));
             return @out.UnsafeAttachListener(l);
         }
-
-        /// <summary>
-        ///     Return a stream whose events are the result of the combination using the specified
-        ///     function of the input stream's value and the value of the cells at the time of the stream event firing.
-        /// </summary>
-        /// <typeparam name="T1">The type of the first cell.</typeparam>
-        /// <typeparam name="T2">The type of the second cell.</typeparam>
-        /// <typeparam name="T3">The type of the third cell.</typeparam>
-        /// <typeparam name="T4">The type of the fourth cell.</typeparam>
-        /// <typeparam name="TResult">The return type.</typeparam>
-        /// <param name="c1">The first cell to combine with.</param>
-        /// <param name="c2">The second cell to combine with.</param>
-        /// <param name="c3">The third cell to combine with.</param>
-        /// <param name="c4">The fourth cell to combine with.</param>
-        /// <param name="f">A function to convert the stream value and cell value into a return value.</param>
-        /// <returns>
-        ///     A stream whose events are the result of the combination using the specified function of the input stream's
-        ///     value and the value of the cells at the time of the stream event firing.
-        /// </returns>
-        public Stream<TResult> Snapshot<T1, T2, T3, T4, TResult>(
-            DiscreteCell<T1> c1,
-            DiscreteCell<T2> c2,
-            DiscreteCell<T3> c3,
-            DiscreteCell<T4> c4,
-            Func<T, T1, T2, T3, T4, TResult> f) => this.Snapshot(c1.Cell, c2.Cell, c3.Cell, c4.Cell, f);
 
         /// <summary>
         ///     Return a stream whose events are the result of the combination using the specified
@@ -575,6 +550,31 @@ namespace Sodium
             Cell<T2> c2,
             Cell<T3> c3,
             Cell<T4> c4,
+            Func<T, T1, T2, T3, T4, TResult> f) => this.Snapshot(c1.Behavior, c2.Behavior, c3.Behavior, c4.Behavior, f);
+
+        /// <summary>
+        ///     Return a stream whose events are the result of the combination using the specified
+        ///     function of the input stream's value and the value of the behaviors at the time of the stream event firing.
+        /// </summary>
+        /// <typeparam name="T1">The type of the first behavior.</typeparam>
+        /// <typeparam name="T2">The type of the second behavior.</typeparam>
+        /// <typeparam name="T3">The type of the third behavior.</typeparam>
+        /// <typeparam name="T4">The type of the fourth behavior.</typeparam>
+        /// <typeparam name="TResult">The return type.</typeparam>
+        /// <param name="b1">The first behavior to combine with.</param>
+        /// <param name="b2">The second behavior to combine with.</param>
+        /// <param name="b3">The third behavior to combine with.</param>
+        /// <param name="b4">The fourth behavior to combine with.</param>
+        /// <param name="f">A function to convert the stream value and behavior value into a return value.</param>
+        /// <returns>
+        ///     A stream whose events are the result of the combination using the specified function of the input stream's
+        ///     value and the value of the behaviors at the time of the stream event firing.
+        /// </returns>
+        public Stream<TResult> Snapshot<T1, T2, T3, T4, TResult>(
+            Behavior<T1> b1,
+            Behavior<T2> b2,
+            Behavior<T3> b3,
+            Behavior<T4> b4,
             Func<T, T1, T2, T3, T4, TResult> f)
         {
             Stream<TResult> @out = new Stream<TResult>(this.KeepListenersAlive);
@@ -584,10 +584,10 @@ namespace Sodium
                     trans2,
                     f(
                         a,
-                        c1.SampleNoTransaction(),
-                        c2.SampleNoTransaction(),
-                        c3.SampleNoTransaction(),
-                        c4.SampleNoTransaction())));
+                        b1.SampleNoTransaction(),
+                        b2.SampleNoTransaction(),
+                        b3.SampleNoTransaction(),
+                        b4.SampleNoTransaction())));
             return @out.UnsafeAttachListener(l);
         }
 
@@ -708,17 +708,17 @@ namespace Sodium
         /// </summary>
         /// <param name="c">The cell that acts as a gate.</param>
         /// <returns>A stream that only outputs events from the input stream when the specified cell's value is <code>true</code>.</returns>
-        public Stream<T> Gate(DiscreteCell<bool> c) => this.Gate(c.Cell);
+        public Stream<T> Gate(Cell<bool> c) => this.Gate(c.Behavior);
 
         /// <summary>
-        ///     Return a stream that only outputs events from the input stream when the specified cell's value is <code>true</code>
+        ///     Return a stream that only outputs events from the input stream when the specified behavior's value is <code>true</code>
         ///     .
         /// </summary>
-        /// <param name="c">The cell that acts as a gate.</param>
-        /// <returns>A stream that only outputs events from the input stream when the specified cell's value is <code>true</code>.</returns>
-        public Stream<T> Gate(Cell<bool> c)
+        /// <param name="b">The behavior that acts as a gate.</param>
+        /// <returns>A stream that only outputs events from the input stream when the specified behavior's value is <code>true</code>.</returns>
+        public Stream<T> Gate(Behavior<bool> b)
         {
-            return this.Snapshot(c, (a, pred) => pred ? Maybe.Some(a) : Maybe.None).FilterMaybe();
+            return this.Snapshot(b, (a, pred) => pred ? Maybe.Some(a) : Maybe.None).FilterMaybe();
         }
 
         /// <summary>
@@ -793,7 +793,7 @@ namespace Sodium
                 () =>
                 {
                     StreamLoop<TState> es = new StreamLoop<TState>();
-                    Cell<TState> s = es.HoldLazyInternal(initialState);
+                    Behavior<TState> s = es.HoldLazyInternal(initialState);
                     Stream<(TReturn ReturnValue, TState State)> ebs = this.Snapshot(s, f);
                     Stream<TReturn> eb = ebs.Map(bs => bs.ReturnValue);
                     Stream<TState> esOut = ebs.Map(bs => bs.State);
@@ -813,16 +813,16 @@ namespace Sodium
         ///     <see cref="Snapshot{TReturn}(Cell{TReturn})" />.  Apart from this, the function must be pure.
         /// </param>
         /// <returns>A cell holding the accumulated state of this stream.</returns>
-        public DiscreteCell<TReturn> Accum<TReturn>(TReturn initialState, Func<T, TReturn, TReturn> f) =>
+        public Cell<TReturn> Accum<TReturn>(TReturn initialState, Func<T, TReturn, TReturn> f) =>
             this.AccumLazy(new Lazy<TReturn>(() => initialState), f);
 
-        public DiscreteCell<TReturn> AccumLazy<TReturn>(Lazy<TReturn> initialState, Func<T, TReturn, TReturn> f)
+        public Cell<TReturn> AccumLazy<TReturn>(Lazy<TReturn> initialState, Func<T, TReturn, TReturn> f)
         {
             return Transaction.Run(
                 () =>
                 {
                     StreamLoop<TReturn> es = new StreamLoop<TReturn>();
-                    Cell<TReturn> s = es.HoldLazyInternal(initialState);
+                    Behavior<TReturn> s = es.HoldLazyInternal(initialState);
                     Stream<TReturn> esOut = this.Snapshot(s, f);
                     es.Loop(esOut);
                     return esOut.HoldLazy(initialState);

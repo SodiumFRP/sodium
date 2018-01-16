@@ -5,8 +5,8 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <Compile Include="..\Sodium\Cell.cs" Link="Cell.cs" />
-    <Compile Include="..\Sodium\CellExtensionMethods.cs" Link="CellExtensionMethods.cs" />
+    <Compile Include="..\Sodium\Behavior.cs" Link="Behavior.cs" />
+    <Compile Include="..\Sodium\BehaviorExtensionMethods.cs" Link="BehaviorExtensionMethods.cs" />
     <Compile Include="..\Sodium\Cleanup.cs" Link="Cleanup.cs" />
     <Compile Include="..\Sodium\IMaybe.cs" Link="IMaybe.cs" />
     <Compile Include="..\Sodium\UnitExtensionMethods.cs" Link="UnitExtensionMethods.cs" />
@@ -14,12 +14,12 @@
     <Compile Include="..\Sodium\JetBrainsAnnotations.cs" Link="JetBrainsAnnotations.cs" />
     <Compile Include="..\Sodium\CompositeStrongListener.cs" Link="CompositeStrongListener.cs" />
     <Compile Include="..\Sodium\CompositeWeakListener.cs" Link="CompositeWeakListener.cs" />
-    <Compile Include="..\Sodium\DiscreteCell.cs" Link="DiscreteCell.cs" />
-    <Compile Include="..\Sodium\DiscreteCellExtensionMethods.cs" Link="DiscreteCellExtensionMethods.cs" />
-    <Compile Include="..\Sodium\DiscreteCellLoop.cs" Link="DiscreteCellLoop.cs" />
-    <Compile Include="..\Sodium\DiscreteCellSink.cs" Link="DiscreteCellSink.cs" />
-    <Compile Include="..\Sodium\DiscreteCellStreamSink.cs" Link="DiscreteCellStreamSink.cs" />
+    <Compile Include="..\Sodium\Cell.cs" Link="Cell.cs" />
+    <Compile Include="..\Sodium\CellExtensionMethods.cs" Link="CellExtensionMethods.cs" />
+    <Compile Include="..\Sodium\CellLoop.cs" Link="CellLoop.cs" />
     <Compile Include="..\Sodium\CellSink.cs" Link="CellSink.cs" />
+    <Compile Include="..\Sodium\CellStreamSink.cs" Link="CellStreamSink.cs" />
+    <Compile Include="..\Sodium\BehaviorSink.cs" Link="BehaviorSink.cs" />
     <Compile Include="..\Sodium\CoalesceHandler.cs" Link="CoalesceHandler.cs" />
     <Compile Include="..\Sodium\CompositeListener.cs" Link="CompositeListener.cs" />
     <Compile Include="..\Sodium\IKeepListenersAlive.cs" Link="IKeepListenersAlive.cs" />
@@ -32,8 +32,8 @@
     <Compile Include="..\Sodium\MutableListener.cs" Link="MutableListener.cs" />
     <Compile Include="..\Sodium\StreamListenerManager.cs" Link="StreamListenerManager.cs" />
     <Compile Include="..\Sodium\StreamExtensionMethods.cs" Link="StreamExtensionMethods.cs" />
-    <Compile Include="..\Sodium\CellLoop.cs" Link="CellLoop.cs" />
-    <Compile Include="..\Sodium\LazyCell.cs" Link="LazyCell.cs" />
+    <Compile Include="..\Sodium\BehaviorLoop.cs" Link="BehaviorLoop.cs" />
+    <Compile Include="..\Sodium\LazyBehavior.cs" Link="LazyBehavior.cs" />
     <Compile Include="..\Sodium\LazyExtensionMethods.cs" Link="LazyExtensionMethods.cs" />
     <Compile Include="..\Sodium\Listener.cs" Link="Listener.cs" />
     <Compile Include="..\Sodium\Stream.cs" Link="Stream.cs" />

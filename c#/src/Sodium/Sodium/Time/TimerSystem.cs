@@ -14,7 +14,7 @@ namespace Sodium.Time
         {
             this.implementation = implementation;
             this.implementation.Start(handleException);
-            CellSink<T> timeSink = new CellSink<T>(this.implementation.Now);
+            BehaviorSink<T> timeSink = new BehaviorSink<T>(this.implementation.Now);
             this.Time = timeSink;
             Transaction.OnStart(
                 () =>
@@ -53,9 +53,9 @@ namespace Sodium.Time
         }
 
         /// <summary>
-        ///     Gets a cell giving the current clock time.
+        ///     Gets a behavior giving the current clock time.
         /// </summary>
-        public Cell<T> Time { get; }
+        public Behavior<T> Time { get; }
 
         private class Event
         {
@@ -74,7 +74,7 @@ namespace Sodium.Time
         /// </summary>
         /// <param name="t">The time to fire at.</param>
         /// <returns>A stream which fires at the specified time.</returns>
-        public Stream<T> At(DiscreteCell<Maybe<T>> t)
+        public Stream<T> At(Cell<Maybe<T>> t)
         {
             StreamSink<T> alarm = new StreamSink<T>();
             Maybe<ITimer> currentTimer = Maybe.None;
