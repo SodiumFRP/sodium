@@ -8,21 +8,23 @@ namespace Sodium
     public class Cleanup
     {
         // ReSharper disable once PrivateFieldCanBeConvertedToLocalVariable
-        private readonly Stream<Unit> stream;
-
-        private readonly Action cleanup;
+        // ReSharper disable once NotAccessedField.Local
+        private Stream<Unit> stream;
 
         public Cleanup(Action cleanup)
         {
-            this.cleanup = cleanup;
+            Stream<Unit> stream = Stream.Never<Unit>();
+            stream.AttachListener(Listener.Create(cleanup));
 
-            this.stream = Stream.Never<Unit>();
-            this.stream.AttachListener(Listener.Create(cleanup));
+            this.stream = stream;
         }
 
         /// <summary>
         ///     Force the cleanup to happen now rather than waiting for this object to be garbage collected.
         /// </summary>
-        public void CleanupNow() => this.cleanup();
+        public void CleanupNow()
+        {
+            this.stream = null;
+        }
     }
 }
