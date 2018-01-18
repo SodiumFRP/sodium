@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Collections.Concurrent;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
-using Sodium.Utils;
 
 namespace Sodium
 {
@@ -19,7 +19,7 @@ namespace Sodium
         private static Dictionary<Guid, StreamListeners> streamsById = new Dictionary<Guid, StreamListeners>();
         private static long streamsByIdCapacity;
         private static readonly object StreamsByIdLock = new object();
-        private static readonly AsyncBlockingCollection<Guid> StreamIdsToRemove = new AsyncBlockingCollection<Guid>();
+        private static readonly BlockingCollection<Guid> StreamIdsToRemove = new BlockingCollection<Guid>();
         private static readonly ConcurrentQueue<Guid> StreamIdsToRemoveLastChance = new ConcurrentQueue<Guid>();
 
         static StreamListenerManager()
@@ -32,12 +32,10 @@ namespace Sodium
                 TaskCreationOptions.LongRunning | TaskCreationOptions.DenyChildAttach);
         }
 
-        private static async Task SodiumCleanupTask()
+        private static void SodiumCleanupTask()
         {
-            foreach (Task<Guid> taskStreamId in StreamIdsToRemove.GetConsumingEnumerable())
+            foreach (Guid streamId in StreamIdsToRemove.GetConsumingEnumerable())
             {
-                Guid streamId = await taskStreamId;
-
                 StreamListeners streamListeners;
                 bool found;
                 lock (StreamsByIdLock)

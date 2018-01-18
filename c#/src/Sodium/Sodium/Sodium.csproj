@@ -98,8 +98,6 @@
     <Compile Include="Time\TimerSystemImplementationImplementationBase.cs" />
     <Compile Include="Transaction.cs" />
     <Compile Include="Unit.cs" />
-    <Compile Include="Utils\AsyncAutoResetEvent.cs" />
-    <Compile Include="Utils\AsyncBlockingCollection.cs" />
   </ItemGroup>
   <ItemGroup>
     <None Include="packages.config" />

@@ -53,11 +53,8 @@
     <Compile Include="..\Sodium\Time\TimerSystemImplementationImplementationBase.cs" Link="Time\TimerSystemImplementationImplementationBase.cs" />
     <Compile Include="..\Sodium\Transaction.cs" Link="Transaction.cs" />
     <Compile Include="..\Sodium\Unit.cs" Link="Unit.cs" />
-    <Compile Include="..\Sodium\Utils\AsyncAutoResetEvent.cs" Link="Utils\AsyncAutoResetEvent.cs" />
-    <Compile Include="..\Sodium\Utils\AsyncBlockingCollection.cs" Link="Utils\AsyncBlockingCollection.cs" />
   </ItemGroup>
   <ItemGroup>
-    <Folder Include="Utils\" />
     <Folder Include="Time\" />
   </ItemGroup>
   <ItemGroup>
