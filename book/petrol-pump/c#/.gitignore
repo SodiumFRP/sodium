@@ -218,4 +218,6 @@ pip-log.txt
 
 /packages/
 .paket/paket.exe
+.paket/paket.restore.targets
 paket.local
+paket-files/

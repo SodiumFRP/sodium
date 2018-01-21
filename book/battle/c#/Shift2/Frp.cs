@@ -17,13 +17,13 @@ namespace Shift2
         {
             this.listener = Transaction.Run(() =>
             {
-                DiscreteCell<Maybe<DragInfo>> dragInfo =
+                Cell<Maybe<DragInfo>> dragInfo =
                     this.sMouseDown.Map(me => Maybe.Some(new DragInfo(me, Canvas.GetLeft(me.Element.Polygon).ZeroIfNaN(), Canvas.GetTop(me.Element.Polygon).ZeroIfNaN())))
                         .OrElse(this.sMouseUp.Map(_ => Maybe<DragInfo>.None)).Hold(Maybe.None);
-                DiscreteCell<bool> axisLock = this.sShift.Hold(false);
-                DiscreteCell<Maybe<Tuple<MouseEvt, bool>>> mouseMoveAndAxisLock = dragInfo.Map(md => md.Match(
+                Cell<bool> axisLock = this.sShift.Hold(false);
+                Cell<Maybe<Tuple<MouseEvt, bool>>> mouseMoveAndAxisLock = dragInfo.Map(md => md.Match(
                     d => this.sMouseMove.Hold(d.Me).Lift(axisLock, Tuple.Create).Map(Maybe.Some),
-                    () => DiscreteCell.Constant(Maybe<Tuple<MouseEvt, bool>>.None))).SwitchC();
+                    () => Cell.Constant(Maybe<Tuple<MouseEvt, bool>>.None))).SwitchC();
                 IListener listener1 = dragInfo.Values.FilterMaybe().Listen(d => addMessage("FRP dragging " + d.Me.Element.Name));
                 IListener listener2 = mouseMoveAndAxisLock
                     .Values

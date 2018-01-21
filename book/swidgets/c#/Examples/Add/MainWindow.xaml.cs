@@ -12,9 +12,9 @@ namespace Add
             STextBox txtA = new STextBox("5") { Width = 100 };
             STextBox txtB = new STextBox("10") { Width = 100 };
 
-            DiscreteCell<int> a = txtA.Text.Map(ParseInt);
-            DiscreteCell<int> b = txtB.Text.Map(ParseInt);
-            DiscreteCell<int> sum = a.Lift(b, (x, y) => x + y);
+            Cell<int> a = txtA.Text.Map(ParseInt);
+            Cell<int> b = txtB.Text.Map(ParseInt);
+            Cell<int> sum = a.Lift(b, (x, y) => x + y);
 
             SLabel lblSum = new SLabel(sum.Map(i => i.ToString()));
 

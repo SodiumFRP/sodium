@@ -22,7 +22,7 @@ namespace PetrolPump.Chapter4.Section11
                 inputs.SClearSale,
                 fi);
             sStart.Loop(np.SStart);
-            DiscreteCellLoop<bool> keypadActive = new DiscreteCellLoop<bool>();
+            CellLoop<bool> keypadActive = new CellLoop<bool>();
             Keypad ke = new Keypad(inputs.SKeypad,
                 inputs.SClearSale,
                 keypadActive);

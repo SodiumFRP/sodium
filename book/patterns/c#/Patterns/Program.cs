@@ -48,7 +48,7 @@ namespace Patterns
 
             public void Run()
             {
-                DiscreteCellSink<int> sa = new DiscreteCellSink<int>(1);
+                CellSink<int> sa = new CellSink<int>(1);
                 IListener l = Calm(sa).Listen(Console.WriteLine);
                 sa.Send(1);
                 sa.Send(2);
@@ -73,9 +73,9 @@ namespace Patterns
                 return Calm(sA, new Lazy<Maybe<T>>(() => Maybe.None));
             }
 
-            private static DiscreteCell<T> Calm<T>(DiscreteCell<T> a)
+            private static Cell<T> Calm<T>(Cell<T> a)
             {
-                Lazy<T> initA = a.Cell.SampleLazy();
+                Lazy<T> initA = a.SampleLazy();
                 Lazy<Maybe<T>> mInitA = initA.Map(Maybe.Some);
                 return Calm(a.Updates, mInitA).HoldLazy(initA);
             }
@@ -87,10 +87,10 @@ namespace Patterns
 
             public void Run()
             {
-                DiscreteCellSink<double> mainClock = new DiscreteCellSink<double>(0.0);
+                CellSink<double> mainClock = new CellSink<double>(0.0);
                 StreamSink<Unit> sPause = new StreamSink<Unit>();
                 StreamSink<Unit> sResume = new StreamSink<Unit>();
-                DiscreteCell<double> gameClock = PausableClock(sPause, sResume, mainClock);
+                Cell<double> gameClock = PausableClock(sPause, sResume, mainClock);
                 IListener l = mainClock.Lift(gameClock, (m, g) => "main=" + m + " game=" + g).Listen(Console.WriteLine);
                 mainClock.Send(1.0);
                 mainClock.Send(2.0);
@@ -104,13 +104,13 @@ namespace Patterns
                 l.Unlisten();
             }
 
-            private static DiscreteCell<double> PausableClock(Stream<Unit> sPause, Stream<Unit> sResume, DiscreteCell<double> clock)
+            private static Cell<double> PausableClock(Stream<Unit> sPause, Stream<Unit> sResume, Cell<double> clock)
             {
-                DiscreteCell<Maybe<double>> pauseTime = sPause.Snapshot(clock, (_, t) => Maybe.Some(t)).OrElse(sResume.Map(_ => Maybe<double>.None)).Hold(Maybe.None);
-                DiscreteCell<double> lostTime = sResume.Accum(0.0, (_, total) =>
+                Cell<Maybe<double>> pauseTime = sPause.Snapshot(clock, (_, t) => Maybe.Some(t)).OrElse(sResume.Map(_ => Maybe<double>.None)).Hold(Maybe.None);
+                Cell<double> lostTime = sResume.Accum(0.0, (_, total) =>
                 {
-                    double tPause = pauseTime.Cell.Sample().Match(v => v, () => 0);
-                    double now = clock.Cell.Sample();
+                    double tPause = pauseTime.Sample().Match(v => v, () => 0);
+                    double now = clock.Sample();
                     return total + (now - tPause);
                 });
                 return pauseTime.Lift(clock, lostTime, (otPause, tClk, tLost) => otPause.Match(v => v, () => tClk) - tLost);

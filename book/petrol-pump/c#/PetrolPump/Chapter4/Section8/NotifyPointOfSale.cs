@@ -11,7 +11,7 @@ namespace PetrolPump.Chapter4.Section8
             Stream<Unit> sClearSale,
             Fill fi)
         {
-            DiscreteCell<bool> locked = lc.SStart.Map(u => true).OrElse(sClearSale.Map(u => false)).Hold(false);
+            Cell<bool> locked = lc.SStart.Map(u => true).OrElse(sClearSale.Map(u => false)).Hold(false);
             this.SStart = lc.SStart.Gate(locked.Map(l => !l));
             this.SEnd = lc.SEnd.Gate(locked);
             this.FuelFlowing =
@@ -32,8 +32,8 @@ namespace PetrolPump.Chapter4.Section8
         }
 
         public Stream<Fuel> SStart { get; }
-        public DiscreteCell<Maybe<Fuel>> FillActive { get; }
-        public DiscreteCell<Maybe<Fuel>> FuelFlowing { get; }
+        public Cell<Maybe<Fuel>> FillActive { get; }
+        public Cell<Maybe<Fuel>> FuelFlowing { get; }
         public Stream<End> SEnd { get; }
         public Stream<Unit> SBeep { get; }
         public Stream<Sale> SSaleComplete { get; }

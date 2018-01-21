@@ -14,24 +14,24 @@ namespace SWidgets
         {
         }
 
-        public STextBox(string initText, DiscreteCell<bool> enabled)
+        public STextBox(string initText, Cell<bool> enabled)
             : this(Stream.Never<string>(), initText, enabled)
         {
         }
 
         public STextBox(Stream<string> setText, string initText)
-            : this(setText, initText, DiscreteCell.Constant(true))
+            : this(setText, initText, Cell.Constant(true))
         {
         }
 
-        public STextBox(Stream<string> setText, string initText, DiscreteCell<bool> enabled)
+        public STextBox(Stream<string> setText, string initText, Cell<bool> enabled)
         {
             base.Text = initText;
 
             List<IListener> listeners = new List<IListener>();
 
             StreamSink<int> sDecrement = new StreamSink<int>();
-            DiscreteCell<bool> allow = setText.Map(_ => 1).OrElse(sDecrement).Accum(0, (b, d) => b + d).Map(b => b == 0);
+            Cell<bool> allow = setText.Map(_ => 1).OrElse(sDecrement).Accum(0, (b, d) => b + d).Map(b => b == 0);
 
             StreamSink<string> sUserChanges = new StreamSink<string>();
             this.SUserChanges = sUserChanges;
@@ -46,7 +46,7 @@ namespace SWidgets
             this.TextChanged += TextChangedEventHandler;
 
             // Set the initial value at the end of the transaction so it works with CellLoops.
-            Transaction.Post(() => this.Dispatcher.InvokeIfNecessary(() => this.IsEnabled = enabled.Cell.Sample()));
+            Transaction.Post(() => this.Dispatcher.InvokeIfNecessary(() => this.IsEnabled = enabled.Sample()));
 
             listeners.Add(setText.Listen(t =>
             {
@@ -75,7 +75,7 @@ namespace SWidgets
             this.disposeListeners();
         }
 
-        public new DiscreteCell<string> Text { get; }
+        public new Cell<string> Text { get; }
         public Stream<string> SUserChanges { get; }
     }
 }

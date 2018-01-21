@@ -35,7 +35,7 @@ namespace SWidgets
             this.Children.Add(month);
             this.Children.Add(day);
 
-            DiscreteCell<Maybe<int>> monthIndex = month.SelectedItem.Map(m => m.Match(s => Maybe.Some(Months[s]), () => Maybe.None));
+            Cell<Maybe<int>> monthIndex = month.SelectedItem.Map(m => m.Match(s => Maybe.Some(Months[s]), () => Maybe.None));
             this.SelectedDate = year.SelectedItem.Lift(monthIndex, day.SelectedItem,
                 (my, mm, md) =>
                     from y in my
@@ -44,6 +44,6 @@ namespace SWidgets
                     select new DateTime(y, m, d)).Map(m => m.Match(v => v, () => DateTime.Now));
         }
 
-        public DiscreteCell<DateTime> SelectedDate;
+        public Cell<DateTime> SelectedDate;
     }
 }

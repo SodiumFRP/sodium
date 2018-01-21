@@ -9,7 +9,7 @@ namespace PetrolPump
         public STextField(string initialText)
         {
             base.Text = initialText;
-            DiscreteCellSink<string> text = new DiscreteCellSink<string>(initialText);
+            CellSink<string> text = new CellSink<string>(initialText);
             this.TextChanged += async (sender, args) =>
             {
                 string t = base.Text;
@@ -18,6 +18,6 @@ namespace PetrolPump
             this.Text = text;
         }
 
-        public new DiscreteCell<string> Text { get; }
+        public new Cell<string> Text { get; }
     }
 }

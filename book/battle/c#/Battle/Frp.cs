@@ -16,7 +16,7 @@ namespace Battle
         {
             this.listener = Transaction.Run(() =>
             {
-                DiscreteCell<Maybe<DragInfo>> dragInfo =
+                Cell<Maybe<DragInfo>> dragInfo =
                     this.sMouseDown.Map(me => Maybe.Some(new DragInfo(me, Canvas.GetLeft(me.Element.Polygon).ZeroIfNaN(), Canvas.GetTop(me.Element.Polygon).ZeroIfNaN())))
                         .OrElse(this.sMouseUp.Map(_ => Maybe<DragInfo>.None)).Hold(Maybe.None);
                 Stream<MouseEvt> mouseMoveWhileDragging = dragInfo.Map(md => md.Match(d => this.sMouseMove, Stream.Never<MouseEvt>)).SwitchS();

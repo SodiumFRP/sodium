@@ -13,8 +13,8 @@ namespace Flow
 
             this.Container.Children.Add(Transaction.Run(() =>
             {
-                FrButton ok = new FrButton(DiscreteCell.Constant("OK"));
-                FrButton cancel = new FrButton(DiscreteCell.Constant("Cancel"));
+                FrButton ok = new FrButton(Cell.Constant("OK"));
+                FrButton cancel = new FrButton(Cell.Constant("Cancel"));
                 IReadOnlyList<Fridget> fridgets = new[] { ok, cancel };
                 Fridget dialog = new FrFlow(Orientation.Horizontal, fridgets);
                 IListener lOk = ok.SClicked.Listen(_ => this.AddMessage("OK"));

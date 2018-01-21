@@ -68,7 +68,8 @@ namespace PetrolPump
                     Image image = new Image();
                     BitmapImage source = new BitmapImage();
                     source.BeginInit();
-                    source.UriSource = new Uri("pack://application:,,,/" + this.assemblyName + ";component/images/large" + n + ".png");
+                    source.UriSource = new Uri("pack://application:,,,/" + this.assemblyName +
+                                               ";component/images/large" + n + ".png");
                     source.EndInit();
                     image.Source = source;
                     image.Width = source.PixelWidth;
@@ -81,7 +82,8 @@ namespace PetrolPump
                     Image image = new Image();
                     BitmapImage source = new BitmapImage();
                     source.BeginInit();
-                    source.UriSource = new Uri("pack://application:,,,/" + this.assemblyName + ";component/images/small" + n + ".png");
+                    source.UriSource = new Uri("pack://application:,,,/" + this.assemblyName +
+                                               ";component/images/small" + n + ".png");
                     source.EndInit();
                     image.Source = source;
                     image.Width = source.PixelWidth;
@@ -92,16 +94,16 @@ namespace PetrolPump
 
             IReadOnlyList<IReadOnlyList<int>> layouts = new[]
             {
-                new[] { 0, 1, 2, 4, 5, 6 },
-                new[] { 2, 5 },
-                new[] { 0, 1, 3, 5, 6 },
-                new[] { 0, 2, 3, 5, 6 },
-                new[] { 2, 3, 4, 5 },
-                new[] { 0, 2, 3, 4, 6 },
-                new[] { 0, 1, 2, 3, 4, 6 },
-                new[] { 2, 5, 6 },
-                new[] { 0, 1, 2, 3, 4, 5, 6 },
-                new[] { 2, 3, 4, 5, 6 }
+                new[] {0, 1, 2, 4, 5, 6},
+                new[] {2, 5},
+                new[] {0, 1, 3, 5, 6},
+                new[] {0, 2, 3, 5, 6},
+                new[] {2, 3, 4, 5},
+                new[] {0, 2, 3, 4, 6},
+                new[] {0, 1, 2, 3, 4, 6},
+                new[] {2, 5, 6},
+                new[] {0, 1, 2, 3, 4, 5, 6},
+                new[] {2, 3, 4, 5, 6}
             };
             Func<Grid>[] largeNumberImages = new Func<Grid>[10];
             Func<Grid>[] smallNumberImages = new Func<Grid>[10];
@@ -116,6 +118,7 @@ namespace PetrolPump
                     {
                         grid.Children.Add(largeSegments[n]());
                     }
+
                     return grid;
                 };
 
@@ -126,6 +129,7 @@ namespace PetrolPump
                     {
                         grid.Children.Add(smallSegments[n]());
                     }
+
                     return grid;
                 };
             }
@@ -222,10 +226,15 @@ namespace PetrolPump
         private void SetLcdDigits(StackPanel placeholder, string text, int maxDigits, bool isLarge)
         {
             placeholder.Children.Clear();
-            Func<IEnumerable<Grid>, Grid, IEnumerable<Grid>> defaultAppend = (gg, g) => gg.Concat(new[] { g });
+            Func<IEnumerable<Grid>, Grid, IEnumerable<Grid>> defaultAppend = (gg, g) => gg.Concat(new[] {g});
             // ReSharper disable once PossibleMultipleEnumeration
             Func<IEnumerable<Grid>, IEnumerable<Grid>> defaultComplete = g => g;
-            var initialState = new { Append = defaultAppend, Grids = new Grid[0].AsEnumerable(), Complete = defaultComplete };
+            var initialState = new
+            {
+                Append = defaultAppend,
+                Grids = new Grid[0].AsEnumerable(),
+                Complete = defaultComplete
+            };
             foreach (Grid g in text.ToArray().Reverse().Aggregate(initialState, (s, c) =>
             {
                 Grid imageGrid = this.GetImage(c, isLarge);
@@ -235,16 +244,17 @@ namespace PetrolPump
                     container.Children.Add(imageGrid);
                     return new
                     {
-                        Append = (Func<IEnumerable<Grid>, Grid, IEnumerable<Grid>>)((gg, g) =>
+                        Append = (Func<IEnumerable<Grid>, Grid, IEnumerable<Grid>>) ((gg, g) =>
                         {
                             container.Children.Add(g);
                             return s.Append(gg, container);
                         }),
                         s.Grids,
-                        Complete = (Func<IEnumerable<Grid>, IEnumerable<Grid>>)(g => g.Concat(new[] { imageGrid }))
+                        Complete = (Func<IEnumerable<Grid>, IEnumerable<Grid>>) (g => g.Concat(new[] {imageGrid}))
                     };
                 }
-                return new { Append = defaultAppend, Grids = s.Append(s.Grids, imageGrid), Complete = defaultComplete };
+
+                return new {Append = defaultAppend, Grids = s.Append(s.Grids, imageGrid), Complete = defaultComplete};
             }, s => s.Complete(s.Grids)).Where(i => i != null).Take(maxDigits).Reverse())
             {
                 placeholder.Children.Add(g);
@@ -277,13 +287,13 @@ namespace PetrolPump
                     p => p.GetType().FullName);
                 petrolPump.LogicComboBoxPlaceholder.Children.Add(logic);
 
-                STextField textPrice1 = new STextField("2.149") { Width = 100 };
+                STextField textPrice1 = new STextField("2.149") {Width = 100};
                 petrolPump.Price1Placeholder.Children.Add(textPrice1);
 
-                STextField textPrice2 = new STextField("2.341") { Width = 100 };
+                STextField textPrice2 = new STextField("2.341") {Width = 100};
                 petrolPump.Price2Placeholder.Children.Add(textPrice2);
 
-                STextField textPrice3 = new STextField("1.499") { Width = 100 };
+                STextField textPrice3 = new STextField("1.499") {Width = 100};
                 petrolPump.Price3Placeholder.Children.Add(textPrice3);
 
                 Func<string, double> parseDoubleSafe = s =>
@@ -300,17 +310,17 @@ namespace PetrolPump
                 StreamSink<Key> sKey = new StreamSink<Key>();
                 Dictionary<Key, FrameworkElement> containersByKey = new Dictionary<Key, FrameworkElement>
                 {
-                    { Key.One, petrolPump.Keypad1Button },
-                    { Key.Two, petrolPump.Keypad2Button },
-                    { Key.Three, petrolPump.Keypad3Button },
-                    { Key.Four, petrolPump.Keypad4Button },
-                    { Key.Five, petrolPump.Keypad5Button },
-                    { Key.Six, petrolPump.Keypad6Button },
-                    { Key.Seven, petrolPump.Keypad7Button },
-                    { Key.Eight, petrolPump.Keypad8Button },
-                    { Key.Nine, petrolPump.Keypad9Button },
-                    { Key.Zero, petrolPump.Keypad0Button },
-                    { Key.Clear, petrolPump.KeypadClearButton }
+                    {Key.One, petrolPump.Keypad1Button},
+                    {Key.Two, petrolPump.Keypad2Button},
+                    {Key.Three, petrolPump.Keypad3Button},
+                    {Key.Four, petrolPump.Keypad4Button},
+                    {Key.Five, petrolPump.Keypad5Button},
+                    {Key.Six, petrolPump.Keypad6Button},
+                    {Key.Seven, petrolPump.Keypad7Button},
+                    {Key.Eight, petrolPump.Keypad8Button},
+                    {Key.Nine, petrolPump.Keypad9Button},
+                    {Key.Zero, petrolPump.Keypad0Button},
+                    {Key.Clear, petrolPump.KeypadClearButton}
                 };
                 foreach (KeyValuePair<Key, FrameworkElement> containerAndKey in containersByKey)
                 {
@@ -323,15 +333,15 @@ namespace PetrolPump
                     };
                 }
 
-                DiscreteCellLoop<UpDown> nozzle1 = new DiscreteCellLoop<UpDown>();
-                DiscreteCellLoop<UpDown> nozzle2 = new DiscreteCellLoop<UpDown>();
-                DiscreteCellLoop<UpDown> nozzle3 = new DiscreteCellLoop<UpDown>();
+                CellLoop<UpDown> nozzle1 = new CellLoop<UpDown>();
+                CellLoop<UpDown> nozzle2 = new CellLoop<UpDown>();
+                CellLoop<UpDown> nozzle3 = new CellLoop<UpDown>();
 
-                DiscreteCell<double> calibration = DiscreteCell.Constant(0.001);
-                DiscreteCell<double> price1 = textPrice1.Text.Map(parseDoubleSafe);
-                DiscreteCell<double> price2 = textPrice2.Text.Map(parseDoubleSafe);
-                DiscreteCell<double> price3 = textPrice3.Text.Map(parseDoubleSafe);
-                DiscreteCellSink<Stream<Unit>> csClearSale = new DiscreteCellSink<Stream<Unit>>(Sodium.Stream.Never<Unit>());
+                Cell<double> calibration = Cell.Constant(0.001);
+                Cell<double> price1 = textPrice1.Text.Map(parseDoubleSafe);
+                Cell<double> price2 = textPrice2.Text.Map(parseDoubleSafe);
+                Cell<double> price3 = textPrice3.Text.Map(parseDoubleSafe);
+                CellSink<Stream<Unit>> csClearSale = new CellSink<Stream<Unit>>(Sodium.Stream.Never<Unit>());
                 Stream<Unit> sClearSale = csClearSale.SwitchS();
 
                 StreamSink<int> sFuelPulses = new StreamSink<int>();
@@ -348,18 +358,19 @@ namespace PetrolPump
                         price3,
                         sClearSale)));
 
-                DiscreteCell<Delivery> delivery = outputs.Map(o => o.Delivery).SwitchC();
-                DiscreteCell<string> presetLcd = outputs.Map(o => o.PresetLcd).SwitchC();
-                DiscreteCell<string> saleCostLcd = outputs.Map(o => o.SaleCostLcd).SwitchC();
-                DiscreteCell<string> saleQuantityLcd = outputs.Map(o => o.SaleQuantityLcd).SwitchC();
-                DiscreteCell<string> priceLcd1 = outputs.Map(o => o.PriceLcd1).SwitchC();
-                DiscreteCell<string> priceLcd2 = outputs.Map(o => o.PriceLcd2).SwitchC();
-                DiscreteCell<string> priceLcd3 = outputs.Map(o => o.PriceLcd3).SwitchC();
+                Cell<Delivery> delivery = outputs.Map(o => o.Delivery).SwitchC();
+                Cell<string> presetLcd = outputs.Map(o => o.PresetLcd).SwitchC();
+                Cell<string> saleCostLcd = outputs.Map(o => o.SaleCostLcd).SwitchC();
+                Cell<string> saleQuantityLcd = outputs.Map(o => o.SaleQuantityLcd).SwitchC();
+                Cell<string> priceLcd1 = outputs.Map(o => o.PriceLcd1).SwitchC();
+                Cell<string> priceLcd2 = outputs.Map(o => o.PriceLcd2).SwitchC();
+                Cell<string> priceLcd3 = outputs.Map(o => o.PriceLcd3).SwitchC();
                 Stream<Unit> sBeep = outputs.Map(o => o.SBeep).SwitchS();
                 Stream<Sale> sSaleComplete = outputs.Map(o => o.SSaleComplete).SwitchS();
 
                 SoundPlayer beepPlayer = new SoundPlayer(GetResourceStream(@"sounds\beep.wav"));
-                this.listeners.Add(sBeep.Listen(_ => new Thread(() => beepPlayer.PlaySync()) { IsBackground = true }.Start()));
+                this.listeners.Add(sBeep.Listen(_ =>
+                    new Thread(() => beepPlayer.PlaySync()) {IsBackground = true}.Start()));
 
                 SoundPlayer fastRumblePlayer = new SoundPlayer(GetResourceStream(@"sounds\fast.wav"));
                 Action stopFast = () => { };
@@ -372,7 +383,7 @@ namespace PetrolPump
                         fastRumblePlayer.PlayLooping();
                         mre.WaitOne();
                         fastRumblePlayer.Stop();
-                    }) { IsBackground = true }.Start();
+                    }) {IsBackground = true}.Start();
                     stopFast = () =>
                     {
                         mre.Set();
@@ -391,7 +402,7 @@ namespace PetrolPump
                         slowRumblePlayer.PlayLooping();
                         mre.WaitOne();
                         slowRumblePlayer.Stop();
-                    }) { IsBackground = true }.Start();
+                    }) {IsBackground = true}.Start();
                     stopSlow = () =>
                     {
                         mre.Set();
@@ -401,7 +412,7 @@ namespace PetrolPump
 
                 this.listeners.Add(delivery.Changes().Listen(d =>
                 {
-                    petrolPump.Dispatcher.InvokeIfNecessary(() =>
+                    petrolPump.Dispatcher.InvokeAsync(() =>
                     {
                         if (d == Delivery.Fast1 || d == Delivery.Fast2 || d == Delivery.Fast3)
                         {
@@ -423,39 +434,52 @@ namespace PetrolPump
                     });
                 }));
 
-                StackPanel presetLcdStackPanel = new StackPanel { Orientation = Orientation.Horizontal };
+                StackPanel presetLcdStackPanel = new StackPanel {Orientation = Orientation.Horizontal};
                 petrolPump.PresetPlaceholder.Children.Add(presetLcdStackPanel);
-                this.listeners.Add(presetLcd.Listen(t => petrolPump.Dispatcher.InvokeIfNecessary(() => petrolPump.SetLcdDigits(presetLcdStackPanel, t, 5, true))));
+                this.listeners.Add(presetLcd.Listen(t =>
+                    petrolPump.Dispatcher.InvokeAsync(() => petrolPump.SetLcdDigits(presetLcdStackPanel, t, 5, true))));
 
-                StackPanel saleCostStackPanel = new StackPanel { Orientation = Orientation.Horizontal };
+                StackPanel saleCostStackPanel = new StackPanel {Orientation = Orientation.Horizontal};
                 petrolPump.DollarsPlaceholder.Children.Add(saleCostStackPanel);
-                this.listeners.Add(saleCostLcd.Listen(t => petrolPump.Dispatcher.InvokeIfNecessary(() => petrolPump.SetLcdDigits(saleCostStackPanel, t, 5, true))));
+                this.listeners.Add(saleCostLcd.Listen(t =>
+                    petrolPump.Dispatcher.InvokeAsync(() => petrolPump.SetLcdDigits(saleCostStackPanel, t, 5, true))));
 
-                StackPanel saleQuantityLcdStackPanel = new StackPanel { Orientation = Orientation.Horizontal };
+                StackPanel saleQuantityLcdStackPanel = new StackPanel {Orientation = Orientation.Horizontal};
                 petrolPump.LitersPlaceholder.Children.Add(saleQuantityLcdStackPanel);
-                this.listeners.Add(saleQuantityLcd.Listen(t => petrolPump.Dispatcher.InvokeIfNecessary(() => petrolPump.SetLcdDigits(saleQuantityLcdStackPanel, t, 5, true))));
+                this.listeners.Add(saleQuantityLcd.Listen(t =>
+                    petrolPump.Dispatcher.InvokeAsync(() =>
+                        petrolPump.SetLcdDigits(saleQuantityLcdStackPanel, t, 5, true))));
 
-                StackPanel priceLcd1StackPanel = new StackPanel { Orientation = Orientation.Horizontal };
+                StackPanel priceLcd1StackPanel = new StackPanel {Orientation = Orientation.Horizontal};
                 petrolPump.Fuel1Placeholder.Children.Add(priceLcd1StackPanel);
-                this.listeners.Add(priceLcd1.Listen(t => petrolPump.Dispatcher.InvokeIfNecessary(() => petrolPump.SetLcdDigits(priceLcd1StackPanel, t, 5, false))));
+                this.listeners.Add(priceLcd1.Listen(t =>
+                    petrolPump.Dispatcher.InvokeAsync(() =>
+                        petrolPump.SetLcdDigits(priceLcd1StackPanel, t, 5, false))));
 
-                StackPanel priceLcd2StackPanel = new StackPanel { Orientation = Orientation.Horizontal };
+                StackPanel priceLcd2StackPanel = new StackPanel {Orientation = Orientation.Horizontal};
                 petrolPump.Fuel2Placeholder.Children.Add(priceLcd2StackPanel);
-                this.listeners.Add(priceLcd2.Listen(t => petrolPump.Dispatcher.InvokeIfNecessary(() => petrolPump.SetLcdDigits(priceLcd2StackPanel, t, 5, false))));
+                this.listeners.Add(priceLcd2.Listen(t =>
+                    petrolPump.Dispatcher.InvokeAsync(() =>
+                        petrolPump.SetLcdDigits(priceLcd2StackPanel, t, 5, false))));
 
-                StackPanel priceLcd3StackPanel = new StackPanel { Orientation = Orientation.Horizontal };
+                StackPanel priceLcd3StackPanel = new StackPanel {Orientation = Orientation.Horizontal};
                 petrolPump.Fuel3Placeholder.Children.Add(priceLcd3StackPanel);
-                this.listeners.Add(priceLcd3.Listen(t => petrolPump.Dispatcher.InvokeIfNecessary(() => petrolPump.SetLcdDigits(priceLcd3StackPanel, t, 5, false))));
+                this.listeners.Add(priceLcd3.Listen(t =>
+                    petrolPump.Dispatcher.InvokeAsync(() =>
+                        petrolPump.SetLcdDigits(priceLcd3StackPanel, t, 5, false))));
 
-                Dictionary<DiscreteCellLoop<UpDown>, Image> nozzles = new Dictionary<DiscreteCellLoop<UpDown>, Image>
+                Dictionary<CellLoop<UpDown>, Image> nozzles = new Dictionary<CellLoop<UpDown>, Image>
                 {
-                    { nozzle1, petrolPump.Nozzle1Image },
-                    { nozzle2, petrolPump.Nozzle2Image },
-                    { nozzle3, petrolPump.Nozzle3Image }
+                    {nozzle1, petrolPump.Nozzle1Image},
+                    {nozzle2, petrolPump.Nozzle2Image},
+                    {nozzle3, petrolPump.Nozzle3Image}
                 };
-                this.listeners.AddRange(nozzles.Select(nozzle => nozzle.Key.Listen(p => petrolPump.Dispatcher.InvokeIfNecessary(() => nozzle.Value.Margin = p == UpDown.Up ? new Thickness(0, 0, 0, 0) : new Thickness(0, 30, 0, 0)))));
+                this.listeners.AddRange(nozzles.Select(nozzle => nozzle.Key.Listen(p =>
+                    petrolPump.Dispatcher.InvokeAsync(() =>
+                        nozzle.Value.Margin =
+                            p == UpDown.Up ? new Thickness(0, 0, 0, 0) : new Thickness(0, 30, 0, 0)))));
 
-                foreach (KeyValuePair<DiscreteCellLoop<UpDown>, Image> nozzle in nozzles)
+                foreach (KeyValuePair<CellLoop<UpDown>, Image> nozzle in nozzles)
                 {
                     StreamSink<Unit> nozzleClicks = new StreamSink<Unit>();
                     nozzle.Value.MouseDown += async (sender, args) =>
@@ -465,32 +489,30 @@ namespace PetrolPump
                             await Task.Run(() => nozzleClicks.Send(Unit.Value));
                         }
                     };
-                    nozzle.Key.Loop(nozzleClicks.Snapshot(nozzle.Key, (_, n) => n == UpDown.Down ? UpDown.Up : UpDown.Down).Hold(UpDown.Down));
+                    nozzle.Key.Loop(nozzleClicks
+                        .Snapshot(nozzle.Key, (_, n) => n == UpDown.Down ? UpDown.Up : UpDown.Down).Hold(UpDown.Down));
                 }
 
                 this.listeners.Add(sSaleComplete.Listen(sale =>
                 {
-                    Task.Run(() =>
+                    petrolPump.Dispatcher.InvokeAsync(() =>
                     {
-                        petrolPump.Dispatcher.InvokeIfNecessary(() =>
+                        SaleCompleteDialog dialog = new SaleCompleteDialog(
+                            sale.Fuel.ToString(),
+                            Formatters.FormatPrice(sale.Price, null),
+                            Formatters.FormatSaleCost(sale.Cost),
+                            Formatters.FormatSaleQuantity(sale.Quantity));
+                        dialog.Owner = petrolPump;
+                        csClearSale.Send(dialog.SOkClicked);
+                        dialog.Show();
+                        IListener l = null;
+                        // ReSharper disable once RedundantAssignment
+                        l = dialog.SOkClicked.Listen(_ =>
                         {
-                            SaleCompleteDialog dialog = new SaleCompleteDialog(
-                                sale.Fuel.ToString(),
-                                Formatters.FormatPrice(sale.Price, null),
-                                Formatters.FormatSaleCost(sale.Cost),
-                                Formatters.FormatSaleQuantity(sale.Quantity));
-                            dialog.Owner = petrolPump;
-                            csClearSale.Send(dialog.SOkClicked);
-                            dialog.Show();
-                            IListener l = null;
-                            // ReSharper disable once RedundantAssignment
-                            l = dialog.SOkClicked.Listen(_ =>
-                            {
-                                petrolPump.Dispatcher.InvokeIfNecessary(() => dialog.Close());
+                            petrolPump.Dispatcher.InvokeAsync(() => dialog.Close());
 
-                                // ReSharper disable once AccessToModifiedClosure
-                                l?.Unlisten();
-                            });
+                            // ReSharper disable once AccessToModifiedClosure
+                            l?.Unlisten();
                         });
                     });
                 }));
@@ -501,7 +523,7 @@ namespace PetrolPump
                     {
                         Transaction.RunVoid(() =>
                         {
-                            switch (delivery.Cell.Sample())
+                            switch (delivery.Sample())
                             {
                                 case Delivery.Fast1:
                                 case Delivery.Fast2:
@@ -518,6 +540,7 @@ namespace PetrolPump
 
                         await Task.Delay(200).ConfigureAwait(false);
                     }
+
                     // ReSharper disable once FunctionNeverReturns
                 });
             }

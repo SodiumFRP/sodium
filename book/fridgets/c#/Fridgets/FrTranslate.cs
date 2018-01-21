@@ -6,7 +6,7 @@ namespace Fridgets
 {
     public class FrTranslate : Fridget
     {
-        public FrTranslate(Fridget fr, DiscreteCell<Point> offset)
+        public FrTranslate(Fridget fr, Cell<Point> offset)
             : base((size, sMouse, sKey, focus, idSupply) =>
             {
                 Stream<MouseEvent> sMouseNew =
@@ -17,7 +17,7 @@ namespace Fridgets
                             return new Point(p.X - o.X, p.Y - o.Y);
                         }));
                 Output fo = fr.Reify(size, sMouseNew, sKey, focus, idSupply);
-                DiscreteCell<DrawableDelegate> drawableNew = fo.Drawable.Lift(offset,
+                Cell<DrawableDelegate> drawableNew = fo.Drawable.Lift(offset,
                     (dr, o) => new DrawableDelegate(d =>
                     {
                         d.PushTransform(new TranslateTransform(o.X, o.Y));
