@@ -12,7 +12,7 @@ namespace Button
 
             this.Container.Children.Add(Transaction.Run(() =>
             {
-                FrButton b = new FrButton(DiscreteCell.Constant("OK"));
+                FrButton b = new FrButton(Cell.Constant("OK"));
                 IListener l = b.SClicked.Listen(_ => this.AddMessage("clicked!"));
                 return new FrView(this, b, l);
             }));

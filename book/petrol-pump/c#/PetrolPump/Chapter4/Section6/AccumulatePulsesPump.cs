@@ -10,7 +10,7 @@ namespace PetrolPump.Chapter4.Section6
             LifeCycle lc = new LifeCycle(inputs.SNozzle1,
                 inputs.SNozzle2,
                 inputs.SNozzle3);
-            DiscreteCell<double> litersDelivered =
+            Cell<double> litersDelivered =
                 Accumulate(lc.SStart.Map(_ => Unit.Value),
                     inputs.SFuelPulses,
                     inputs.Calibration);
@@ -24,12 +24,12 @@ namespace PetrolPump.Chapter4.Section6
                 .SetSaleQuantityLcd(litersDelivered.Map(Formatters.FormatSaleQuantity));
         }
 
-        public static DiscreteCell<double> Accumulate(
+        public static Cell<double> Accumulate(
             Stream<Unit> sClearAccumulator,
             Stream<int> sPulses,
-            DiscreteCell<double> calibration)
+            Cell<double> calibration)
         {
-            DiscreteCellLoop<int> total = new DiscreteCellLoop<int>();
+            CellLoop<int> total = new CellLoop<int>();
             total.Loop(sClearAccumulator.Map(u => 0)
                 .OrElse(sPulses.Snapshot(total, (pulsesLocal, totalLocal) => pulsesLocal + totalLocal))
                 .Hold(0));

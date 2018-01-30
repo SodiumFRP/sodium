@@ -10,18 +10,18 @@ namespace SWidgets
         private readonly IReadOnlyList<IListener> listeners;
 
         public SButton()
-            : this(DiscreteCell.Constant(true))
+            : this(Cell.Constant(true))
         {
         }
 
-        public SButton(DiscreteCell<bool> enabled)
+        public SButton(Cell<bool> enabled)
         {
             StreamSink<Unit> sClickedSink = new StreamSink<Unit>();
             this.SClicked = sClickedSink;
             this.Click += (sender, args) => sClickedSink.Send(Unit.Value);
 
             // Set the initial value at the end of the transaction so it works with CellLoops.
-            Transaction.Post(() => this.IsEnabled = enabled.Cell.Sample());
+            Transaction.Post(() => this.IsEnabled = enabled.Sample());
 
             // ReSharper disable once UseObjectOrCollectionInitializer
             List<IListener> listeners = new List<IListener>();

@@ -11,7 +11,7 @@ namespace Airline1
 
             SDateField dep = new SDateField();
             SDateField ret = new SDateField();
-            DiscreteCell<bool> valid = dep.SelectedDate.Lift(ret.SelectedDate, (d, r) => d <= r);
+            Cell<bool> valid = dep.SelectedDate.Lift(ret.SelectedDate, (d, r) => d <= r);
             SButton ok = new SButton(valid) { Content = "OK", Width = 75 };
 
             this.DeparturePlaceholder.Children.Add(dep);

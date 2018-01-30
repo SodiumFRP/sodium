@@ -16,18 +16,18 @@ namespace Cross
             {
                 Animate animate = new Animate((sys, extents) =>
                 {
-                    Cell<double> time = sys.Time;
+                    Behavior<double> time = sys.Time;
                     double maxSize = 105;
-                    Cell<double> offset = time.Map(t =>
+                    Behavior<double> offset = time.Map(t =>
                     {
                         double frac = t - Math.Floor(t);
                         return (frac < 0.5 ? frac - 0.25 : 0.75 - frac) * 4.0 * maxSize;
                     });
-                    Cell<double> fifty = Cell.Constant(50.0);
-                    Cell<DrawableDelegate> greenBall = Shapes.Translate(
+                    Behavior<double> fifty = Behavior.Constant(50.0);
+                    Behavior<DrawableDelegate> greenBall = Shapes.Translate(
                         Shapes.Scale(Shapes.Circle(Colors.Green), fifty),
                         offset.Map(x => new Point(x, 0.0)));
-                    Cell<DrawableDelegate> blueBall = Shapes.Translate(
+                    Behavior<DrawableDelegate> blueBall = Shapes.Translate(
                         Shapes.Scale(Shapes.Circle(Colors.Blue), fifty),
                         offset.Map(y => new Point(0.0, y)));
                     return Shapes.Over(greenBall, blueBall);

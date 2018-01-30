@@ -9,11 +9,11 @@ namespace Fridgets
     public class FrTextField : Fridget
     {
         public FrTextField(string initText)
-            : this(initText, new DiscreteCellLoop<string>())
+            : this(initText, new CellLoop<string>())
         {
         }
 
-        private FrTextField(string initText, DiscreteCellLoop<string> text)
+        private FrTextField(string initText, CellLoop<string> text)
             : base((size, sMouse, sKey, focus, idSupply) =>
             {
                 Stream<double> sPressed = sMouse.Snapshot(size, (e, mSize) =>
@@ -27,9 +27,9 @@ namespace Fridgets
                                 ? Maybe.Some(p.X - 2)
                                 : Maybe.None;
                         })).FilterMaybe();
-                DiscreteCellLoop<int> x = new DiscreteCellLoop<int>();
+                CellLoop<int> x = new CellLoop<int>();
                 long myId = idSupply.Get();
-                DiscreteCell<bool> haveFocus = focus.Map(fId => fId == myId);
+                Cell<bool> haveFocus = focus.Map(fId => fId == myId);
                 Typeface typeface = new Typeface(new FontFamily("Helvetica"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal);
                 Stream<TextUpdate> sTextUpdate = sKey.Gate(haveFocus).Snapshot(text, x, (key, txt, xValue) =>
                  {
@@ -69,7 +69,7 @@ namespace Fridgets
                     .OrElse(sTextUpdate.Map(tu => tu.NewX))
                     .Hold(0));
                 text.Loop(sTextUpdate.Map(tu => tu.Txt).Hold(initText));
-                DiscreteCell<Size> desiredSize = text.Map(txt =>
+                Cell<Size> desiredSize = text.Map(txt =>
                 {
                     Size s = FontUtilities.MeasureString(txt, typeface, 13);
                     return new Size(s.Width + 14, s.Height + 10);
@@ -100,7 +100,7 @@ namespace Fridgets
             this.Text = text;
         }
 
-        public DiscreteCell<string> Text { get; }
+        public Cell<string> Text { get; }
 
         private class TextUpdate
         {

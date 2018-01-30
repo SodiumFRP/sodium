@@ -14,7 +14,7 @@ namespace Translate
             this.TextBoxPlaceholder.Children.Add(english);
 
             Stream<string> sLatin = this.TranslateButton.SClicked.Snapshot(english.Text, (u, t) => Regex.Replace(t.Trim(), " |$", "us "));
-            DiscreteCell<string> latin = sLatin.Hold(string.Empty);
+            Cell<string> latin = sLatin.Hold(string.Empty);
             SLabel lblLatin = new SLabel(latin);
             this.TextPlaceholder.Children.Add(lblLatin);
         }

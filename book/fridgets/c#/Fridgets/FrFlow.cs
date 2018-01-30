@@ -11,12 +11,12 @@ namespace Fridgets
         public FrFlow(Orientation dir, IEnumerable<Fridget> fridgets)
             : base((size, sMouse, sKey, focus, idSupply) =>
             {
-                DiscreteCell<Size> desiredSize = DiscreteCell.Constant(new Size(0, 0));
-                DiscreteCell<DrawableDelegate> drawable = DiscreteCell.Constant(new DrawableDelegate(d => { }));
+                Cell<Size> desiredSize = Cell.Constant(new Size(0, 0));
+                Cell<DrawableDelegate> drawable = Cell.Constant(new DrawableDelegate(d => { }));
                 Stream<long> sChangeFocus = Stream.Never<long>();
                 foreach (Fridget fridget in fridgets)
                 {
-                    DiscreteCellLoop<Maybe<Size>> childSz = new DiscreteCellLoop<Maybe<Size>>();
+                    CellLoop<Maybe<Size>> childSz = new CellLoop<Maybe<Size>>();
                     Output fo = new FrTranslate(fridget,
                         dir == Orientation.Horizontal
                             ? desiredSize.Map(dsz => new Point(dsz.Width, 0))

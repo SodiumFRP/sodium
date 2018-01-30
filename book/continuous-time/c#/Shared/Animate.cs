@@ -9,7 +9,7 @@ namespace Shared
     public class Animate : UIElement
     {
         private readonly Task<Renderer> renderer;
-        private readonly DiscreteCellSink<bool> isStarted = new DiscreteCellSink<bool>(false);
+        private readonly CellSink<bool> isStarted = new CellSink<bool>(false);
 
         public Animate(AnimationDelegate animation, Size size)
         {
@@ -20,7 +20,7 @@ namespace Shared
             {
                 CompositionTargetSecondsTimerSystem timerSystem = CompositionTargetSecondsTimerSystem.Create(((RenderingEventArgs)args).RenderingTime.TotalSeconds, e => this.Dispatcher.Invoke(() => throw e));
                 Point extents = new Point(size.Width / 2, size.Height / 2);
-                tcs.SetResult(new Renderer(timerSystem, Transaction.Run(() => Shapes.Translate(animation(timerSystem, extents), Cell.Constant(extents))), size, this, this.isStarted));
+                tcs.SetResult(new Renderer(timerSystem, Transaction.Run(() => Shapes.Translate(animation(timerSystem, extents), Behavior.Constant(extents))), size, this, this.isStarted));
                 CompositionTarget.Rendering -= CreateTimerSystem;
             }
 
@@ -44,10 +44,10 @@ namespace Shared
 
         private class Renderer
         {
-            private readonly Cell<DrawableDelegate> drawable;
+            private readonly Behavior<DrawableDelegate> drawable;
             private readonly Size size;
 
-            public Renderer(CompositionTargetSecondsTimerSystem timerSystem, Cell<DrawableDelegate> drawable, Size size, Animate animation, DiscreteCell<bool> isStarted)
+            public Renderer(CompositionTargetSecondsTimerSystem timerSystem, Behavior<DrawableDelegate> drawable, Size size, Animate animation, Cell<bool> isStarted)
             {
                 this.drawable = drawable;
                 this.size = size;
