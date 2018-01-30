@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 
@@ -148,6 +149,19 @@ namespace Sodium.Tests
             }
 
             public CellSink<int> Value { get; }
+        }
+
+        [Test]
+        public void TestLiftCellsInSwitchC()
+        {
+            List<int> @out = new List<int>();
+            CellSink<int> s = new CellSink<int>(0);
+            Cell<Cell<int>> c = Cell.Constant(Cell.Constant(1));
+            Cell<Cell<int>> r = c.Map(c2 => c2.Lift(s, (v1, v2) => v1 + v2));
+            r.SwitchC().Listen(@out.Add);
+            s.Send(2);
+            s.Send(4);
+            CollectionAssert.AreEqual(new[] { 1, 3, 5 }, @out);
         }
     }
 }

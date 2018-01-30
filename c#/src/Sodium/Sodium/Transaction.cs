@@ -24,6 +24,7 @@ namespace Sodium
         private static bool runningOnStartHooks;
         private readonly HashSet<Entry> entries = new HashSet<Entry>();
         private readonly List<Action<Transaction>> sendQueue = new List<Action<Transaction>>();
+        private bool finishedPriorityQueue;
         private readonly List<Action> lastQueue = new List<Action>();
         private readonly Dictionary<int, Action<Transaction>> postQueue = new Dictionary<int, Action<Transaction>>();
         internal readonly List<Node.Target> TargetsToActivate;
@@ -348,6 +349,12 @@ namespace Sodium
                 this.prioritizedQueue.Enqueue(e, node.Rank);
             }
             this.entries.Add(e);
+
+            // we have already processed all prioritized items, so run the action now
+            if (this.finishedPriorityQueue)
+            {
+                action(this);
+            }
         }
 
         /// <summary>
@@ -446,6 +453,8 @@ namespace Sodium
 
                 this.CheckRegen();
             }
+
+            this.finishedPriorityQueue = true;
 
             // ReSharper disable once ForCanBeConvertedToForeach
             for (int i = 0; i < this.lastQueue.Count; i++)
