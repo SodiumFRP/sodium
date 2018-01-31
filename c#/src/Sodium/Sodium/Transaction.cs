@@ -343,17 +343,18 @@ namespace Sodium
 
         internal void Prioritized(Node node, Action<Transaction> action)
         {
-            Entry e = new Entry(node, action);
-            lock (Node.NodeRanksLock)
-            {
-                this.prioritizedQueue.Enqueue(e, node.Rank);
-            }
-            this.entries.Add(e);
-
-            // we have already processed all prioritized items, so run the action now
             if (this.finishedPriorityQueue)
             {
-                action(this);
+                this.lastQueue.Add(() => action(this));
+            }
+            else
+            {
+                Entry e = new Entry(node, action);
+                lock (Node.NodeRanksLock)
+                {
+                    this.prioritizedQueue.Enqueue(e, node.Rank);
+                }
+                this.entries.Add(e);
             }
         }
 
