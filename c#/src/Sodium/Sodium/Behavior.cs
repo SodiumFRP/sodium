@@ -172,7 +172,7 @@ namespace Sodium
         internal Lazy<T> SampleLazy(Transaction trans)
         {
             LazySample s = new LazySample(this);
-            trans.Last(
+            trans.Sample(
                 () =>
                 {
                     s.Value = this.valueUpdate.Match(v => v, this.SampleNoTransaction);

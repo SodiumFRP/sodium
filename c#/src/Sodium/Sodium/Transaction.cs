@@ -24,7 +24,7 @@ namespace Sodium
         private static bool runningOnStartHooks;
         private readonly HashSet<Entry> entries = new HashSet<Entry>();
         private readonly List<Action<Transaction>> sendQueue = new List<Action<Transaction>>();
-        private bool finishedPriorityQueue;
+        private List<Action> sampleQueue = new List<Action>();
         private readonly List<Action> lastQueue = new List<Action>();
         private readonly Dictionary<int, Action<Transaction>> postQueue = new Dictionary<int, Action<Transaction>>();
         internal readonly List<Node.Target> TargetsToActivate;
@@ -343,19 +343,17 @@ namespace Sodium
 
         internal void Prioritized(Node node, Action<Transaction> action)
         {
-            if (this.finishedPriorityQueue)
+            Entry e = new Entry(node, action);
+            lock (Node.NodeRanksLock)
             {
-                this.lastQueue.Add(() => action(this));
+                this.prioritizedQueue.Enqueue(e, node.Rank);
             }
-            else
-            {
-                Entry e = new Entry(node, action);
-                lock (Node.NodeRanksLock)
-                {
-                    this.prioritizedQueue.Enqueue(e, node.Rank);
-                }
-                this.entries.Add(e);
-            }
+            this.entries.Add(e);
+        }
+
+        internal void Sample(Action action)
+        {
+            this.sampleQueue.Add(action);
         }
 
         /// <summary>
@@ -439,23 +437,25 @@ namespace Sodium
 
             this.ReachedClose = true;
 
-            this.CheckRegen();
-
-            while (true)
+            do
             {
-                if (this.prioritizedQueue.Count < 1)
+                while (this.prioritizedQueue.Count > 0)
                 {
-                    break;
+                    this.CheckRegen();
+
+                    Entry e = this.prioritizedQueue.Dequeue();
+                    this.entries.Remove(e);
+                    e.Action(this);
                 }
 
-                Entry e = this.prioritizedQueue.Dequeue();
-                this.entries.Remove(e);
-                e.Action(this);
-
-                this.CheckRegen();
+                List<Action> sq = this.sampleQueue;
+                this.sampleQueue = new List<Action>();
+                foreach (Action s in sq)
+                {
+                    s();
+                }
             }
-
-            this.finishedPriorityQueue = true;
+            while (this.prioritizedQueue.Count > 0);
 
             // ReSharper disable once ForCanBeConvertedToForeach
             for (int i = 0; i < this.lastQueue.Count; i++)
