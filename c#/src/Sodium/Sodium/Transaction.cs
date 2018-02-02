@@ -455,7 +455,7 @@ namespace Sodium
                     s();
                 }
             }
-            while (this.prioritizedQueue.Count > 0);
+            while (this.prioritizedQueue.Count > 0 || this.sampleQueue.Count > 0);
 
             // ReSharper disable once ForCanBeConvertedToForeach
             for (int i = 0; i < this.lastQueue.Count; i++)
