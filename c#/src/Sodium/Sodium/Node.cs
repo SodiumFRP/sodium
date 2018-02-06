@@ -17,10 +17,7 @@ namespace Sodium
         {
         }
 
-        protected Node(long rank)
-        {
-            this.Rank = rank;
-        }
+        protected Node(long rank) => this.Rank = rank;
 
         protected static bool EnsureBiggerThan(Node node, long limit)
         {
@@ -132,10 +129,7 @@ namespace Sodium
             public readonly WeakReference<Action<Transaction, T>> Action;
 
             public Target(Action<Transaction, T> action, Node node, bool isActivated)
-                : base(node, isActivated)
-            {
-                this.Action = new WeakReference<Action<Transaction, T>>(action);
-            }
+                : base(node, isActivated) => this.Action = new WeakReference<Action<Transaction, T>>(action);
         }
 
         internal IReadOnlyList<Target> GetListenersCopy()

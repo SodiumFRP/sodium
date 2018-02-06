@@ -50,8 +50,8 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
-    <Compile Include="DiscreteCellTests.cs" />
     <Compile Include="CellTests.cs" />
+    <Compile Include="BehaviorTests.cs" />
     <Compile Include="CommonTests.cs" />
     <Compile Include="DenotationalSemanticsTests.cs" />
     <Compile Include="EitherTests.cs" />

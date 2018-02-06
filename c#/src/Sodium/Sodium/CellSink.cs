@@ -1,32 +1,33 @@
-﻿using System;
+using System;
 
 namespace Sodium
 {
     /// <summary>
-    ///     A cell that allows values to be pushed into it, acting as an interface between the world of I/O and the world of
+    ///     A cell that allows values to be pushed into it, acting as an interface between the world of I/O and the
+    ///     world of
     ///     FRP.  Code that exports instances of <see cref="CellSink{T}" /> for read-only use should downcast to
     ///     <see cref="Cell{T}" />.
     /// </summary>
     /// <typeparam name="T">The type of values in the cell sink.</typeparam>
     public class CellSink<T> : Cell<T>
     {
-        private readonly StreamSink<T> streamSink;
-
         public CellSink(T initialValue)
-            : this(new StreamSink<T>((left, right) => right), initialValue)
+            : this(new CellStreamSink<T>(), initialValue)
         {
         }
 
-        public CellSink(T initialValue, Func<T, T, T> coalesce)
-            : this(new StreamSink<T>(coalesce), initialValue)
+        private CellSink(CellStreamSink<T> streamSink, T initialValue)
+            : this(streamSink, new Behavior<T>(streamSink, initialValue))
         {
         }
 
-        private CellSink(StreamSink<T> streamSink, T initialValue)
-            : base(streamSink, initialValue)
-        {
-            this.streamSink = streamSink;
-        }
+        private CellSink(CellStreamSink<T> streamSink, Behavior<T> behavior)
+            : base(behavior) => this.StreamSink = streamSink;
+
+        /// <summary>
+        ///     The underlying stream sink providing discrete updates to this cell and through which new values are sent.
+        /// </summary>
+        public CellStreamSink<T> StreamSink { get; }
 
         /// <summary>
         ///     Send a value, modifying the value of the cell.  This method may not be called from inside handlers registered with
@@ -35,7 +36,7 @@ namespace Sodium
         ///     define new primitives.
         /// </summary>
         /// <param name="a">The value to send.</param>
-        public void Send(T a) => this.streamSink.Send(a);
+        public void Send(T a) => this.StreamSink.Send(a);
 
         /// <summary>
         ///     Return a reference to this <see cref="CellSink{T}" /> as a <see cref="Cell{T}" />.

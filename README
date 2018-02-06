@@ -8,7 +8,7 @@ Status:
   C# - complete
   Java - complete
   Kotlin - complete - in separate sodium-kotlin repository
-  Scala - complete but in need of some updating
+  Scala - complete
   Typescript/Javascript - complete - in separate sodium-typescript repository
 
   Haskell - deprecated in favour of Heinrich Apfelmus's Reactive Banana

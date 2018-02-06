@@ -7,5 +7,9 @@ To compile
 To run tests
 
     sbt test
+    
+To generate Scaladoc (diagrams requires Graphviz executables in path)
+
+    sbt doc
 
 

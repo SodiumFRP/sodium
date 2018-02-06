@@ -10,10 +10,10 @@ namespace PetrolPump
             Stream<UpDown> sNozzle3,
             Stream<Key> sKeypad,
             Stream<int> sFuelPulses,
-            DiscreteCell<double> calibration,
-            DiscreteCell<double> price1,
-            DiscreteCell<double> price2,
-            DiscreteCell<double> price3,
+            Cell<double> calibration,
+            Cell<double> price1,
+            Cell<double> price2,
+            Cell<double> price3,
             Stream<Unit> sClearSale)
         {
             this.SNozzle1 = sNozzle1;
@@ -33,10 +33,10 @@ namespace PetrolPump
         public Stream<UpDown> SNozzle3 { get; }
         public Stream<Key> SKeypad { get; }
         public Stream<int> SFuelPulses { get; }
-        public DiscreteCell<double> Calibration { get; }
-        public DiscreteCell<double> Price1 { get; }
-        public DiscreteCell<double> Price2 { get; }
-        public DiscreteCell<double> Price3 { get; }
+        public Cell<double> Calibration { get; }
+        public Cell<double> Price1 { get; }
+        public Cell<double> Price2 { get; }
+        public Cell<double> Price3 { get; }
         public Stream<Unit> SClearSale { get; }
     }
 }

@@ -6,6 +6,7 @@ namespace Sodium
     public class TaskWithListener
     {
         private readonly Task task;
+
         // ReSharper disable once NotAccessedField.Local - Used to keep object from being garbage collected
         private readonly IListener listener;
 
@@ -15,10 +16,7 @@ namespace Sodium
             this.listener = listener;
         }
 
-        public TaskAwaiter GetAwaiter()
-        {
-            return this.task.GetAwaiter();
-        }
+        public TaskAwaiter GetAwaiter() => this.task.GetAwaiter();
     }
 
     public class TaskWithListener<T> : TaskWithListener
@@ -26,14 +24,8 @@ namespace Sodium
         private readonly Task<T> task;
 
         public TaskWithListener(Task<T> task, IListener listener)
-            : base(task, listener)
-        {
-            this.task = task;
-        }
+            : base(task, listener) => this.task = task;
 
-        public new TaskAwaiter<T> GetAwaiter()
-        {
-            return this.task.GetAwaiter();
-        }
+        public new TaskAwaiter<T> GetAwaiter() => this.task.GetAwaiter();
     }
 }

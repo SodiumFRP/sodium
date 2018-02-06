@@ -9,7 +9,7 @@ namespace Sodium.Tests
         [Test]
         public void DefaultValue2Test()
         {
-            Either<Test1, Test2> e = new Either<Test1, Test2>();
+            Either<Test1, Test2> e = default(Either<Test1, Test2>);
 
             object o = e.Upcast<IEither>().GetValueAsObject();
 
@@ -20,7 +20,7 @@ namespace Sodium.Tests
         [Test]
         public void DefaultValue3Test()
         {
-            Either<Test1, Test2, Test3> e = new Either<Test1, Test2, Test3>();
+            Either<Test1, Test2, Test3> e = default(Either<Test1, Test2, Test3>);
 
             object o = e.Upcast<IEither>().GetValueAsObject();
 
@@ -31,7 +31,7 @@ namespace Sodium.Tests
         [Test]
         public void DefaultValue4Test()
         {
-            Either<Test1, Test2, Test3, Test4> e = new Either<Test1, Test2, Test3, Test4>();
+            Either<Test1, Test2, Test3, Test4> e = default(Either<Test1, Test2, Test3, Test4>);
 
             object o = e.Upcast<IEither>().GetValueAsObject();
 
@@ -42,7 +42,7 @@ namespace Sodium.Tests
         [Test]
         public void DefaultValue5Test()
         {
-            Either<Test1, Test2, Test3, Test4, Test5> e = new Either<Test1, Test2, Test3, Test4, Test5>();
+            Either<Test1, Test2, Test3, Test4, Test5> e = default(Either<Test1, Test2, Test3, Test4, Test5>);
 
             object o = e.Upcast<IEither>().GetValueAsObject();
 
@@ -53,7 +53,7 @@ namespace Sodium.Tests
         [Test]
         public void DefaultValue6Test()
         {
-            Either<Test1, Test2, Test3, Test4, Test5, Test6> e = new Either<Test1, Test2, Test3, Test4, Test5, Test6>();
+            Either<Test1, Test2, Test3, Test4, Test5, Test6> e = default(Either<Test1, Test2, Test3, Test4, Test5, Test6>);
 
             object o = e.Upcast<IEither>().GetValueAsObject();
 
@@ -64,7 +64,7 @@ namespace Sodium.Tests
         [Test]
         public void DefaultValue7Test()
         {
-            Either<Test1, Test2, Test3, Test4, Test5, Test6, Test7> e = new Either<Test1, Test2, Test3, Test4, Test5, Test6, Test7>();
+            Either<Test1, Test2, Test3, Test4, Test5, Test6, Test7> e = default(Either<Test1, Test2, Test3, Test4, Test5, Test6, Test7>);
 
             object o = e.Upcast<IEither>().GetValueAsObject();
 
@@ -74,6 +74,83 @@ namespace Sodium.Tests
 
         [Test]
         public void DefaultValue8Test()
+        {
+            Either<Test1, Test2, Test3, Test4, Test5, Test6, Test7, Test8> e = default(Either<Test1, Test2, Test3, Test4, Test5, Test6, Test7, Test8>);
+
+            object o = e.Upcast<IEither>().GetValueAsObject();
+
+            Assert.AreEqual(1, TestIt8(e));
+            Assert.IsNull(o);
+        }
+
+        [Test]
+        public void DefaultConstructor2Test()
+        {
+            Either<Test1, Test2> e = new Either<Test1, Test2>();
+
+            object o = e.Upcast<IEither>().GetValueAsObject();
+
+            Assert.AreEqual(1, TestIt2(e));
+            Assert.IsNull(o);
+        }
+
+        [Test]
+        public void DefaultConstructor3Test()
+        {
+            Either<Test1, Test2, Test3> e = new Either<Test1, Test2, Test3>();
+
+            object o = e.Upcast<IEither>().GetValueAsObject();
+
+            Assert.AreEqual(1, TestIt3(e));
+            Assert.IsNull(o);
+        }
+
+        [Test]
+        public void DefaultConstructor4Test()
+        {
+            Either<Test1, Test2, Test3, Test4> e = new Either<Test1, Test2, Test3, Test4>();
+
+            object o = e.Upcast<IEither>().GetValueAsObject();
+
+            Assert.AreEqual(1, TestIt4(e));
+            Assert.IsNull(o);
+        }
+
+        [Test]
+        public void DefaultConstructor5Test()
+        {
+            Either<Test1, Test2, Test3, Test4, Test5> e = new Either<Test1, Test2, Test3, Test4, Test5>();
+
+            object o = e.Upcast<IEither>().GetValueAsObject();
+
+            Assert.AreEqual(1, TestIt5(e));
+            Assert.IsNull(o);
+        }
+
+        [Test]
+        public void DefaultConstructor6Test()
+        {
+            Either<Test1, Test2, Test3, Test4, Test5, Test6> e = new Either<Test1, Test2, Test3, Test4, Test5, Test6>();
+
+            object o = e.Upcast<IEither>().GetValueAsObject();
+
+            Assert.AreEqual(1, TestIt6(e));
+            Assert.IsNull(o);
+        }
+
+        [Test]
+        public void DefaultConstructor7Test()
+        {
+            Either<Test1, Test2, Test3, Test4, Test5, Test6, Test7> e = new Either<Test1, Test2, Test3, Test4, Test5, Test6, Test7>();
+
+            object o = e.Upcast<IEither>().GetValueAsObject();
+
+            Assert.AreEqual(1, TestIt7(e));
+            Assert.IsNull(o);
+        }
+
+        [Test]
+        public void DefaultConstructor8Test()
         {
             Either<Test1, Test2, Test3, Test4, Test5, Test6, Test7, Test8> e = new Either<Test1, Test2, Test3, Test4, Test5, Test6, Test7, Test8>();
 
@@ -262,6 +339,33 @@ namespace Sodium.Tests
             Either<int, double, DateTime, string, char, float, long, byte> e2 = Either.Seventh(3L);
 
             Assert.AreNotEqual(e1, e2);
+        }
+
+        [Test]
+        public void EqualityOperatorTest()
+        {
+            Either<int, double, DateTime, string, char, float, long, byte> e1 = Either.Seventh(2L);
+            Either<int, double, DateTime, string, char, float, long, byte> e2 = Either.Seventh(2L);
+
+            Assert.IsTrue(e1 == e2);
+        }
+
+        [Test]
+        public void NonEqualityOperatorTest1()
+        {
+            Either<int, double, DateTime, string, char, float, long, byte> e1 = Either.Seventh(2L);
+            Either<int, double, DateTime, string, char, float, long, byte> e2 = Either.First(2);
+
+            Assert.IsTrue(e1 != e2);
+        }
+
+        [Test]
+        public void NonEqualityOperatorTest2()
+        {
+            Either<int, double, DateTime, string, char, float, long, byte> e1 = Either.Seventh(2L);
+            Either<int, double, DateTime, string, char, float, long, byte> e2 = Either.Seventh(3L);
+
+            Assert.IsTrue(e1 != e2);
         }
 
         private class Test1

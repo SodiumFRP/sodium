@@ -9,8 +9,8 @@ namespace Sodium
 
         public static IEnumerable<T> WhereMaybe<T>(this IEnumerable<Maybe<T>> o) =>
             (o ?? new Maybe<T>[0])
-                .Select(m => m.Match(v => (Value: v, HasValue: true), () => (Value: default(T), HasValue: false)))
-                .Where(p => p.HasValue)
-                .Select(p => p.Value);
+            .Select(m => m.Match(v => (Value: v, HasValue: true), () => (Value: default(T), HasValue: false)))
+            .Where(p => p.HasValue)
+            .Select(p => p.Value);
     }
 }

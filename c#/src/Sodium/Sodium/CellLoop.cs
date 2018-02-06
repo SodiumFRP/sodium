@@ -3,22 +3,25 @@ using System;
 namespace Sodium
 {
     /// <summary>
-    ///     A forward reference for a <see cref="Cell{T}" /> equivalent to the <see cref="Cell{T}" /> that is referenced.
+    ///     A forward reference for a <see cref="Cell{T}" /> equivalent to the <see cref="Cell{T}" /> that is
+    ///     referenced.
     /// </summary>
     /// <typeparam name="T">The type of values in the cell loop.</typeparam>
-    public class CellLoop<T> : LazyCell<T>
+    public class CellLoop<T> : Cell<T>
     {
         private readonly StreamLoop<T> streamLoop;
+        private readonly BehaviorLoop<T> behaviorLoop;
 
         public CellLoop()
-            : this(new StreamLoop<T>())
+            : this(new BehaviorLoop<T>())
         {
         }
 
-        private CellLoop(StreamLoop<T> streamLoop)
-            : base(streamLoop, null)
+        private CellLoop(BehaviorLoop<T> behaviorLoop)
+            : base(behaviorLoop)
         {
-            this.streamLoop = streamLoop;
+            this.streamLoop = new StreamLoop<T>();
+            this.behaviorLoop = behaviorLoop;
         }
 
         /// <summary>
@@ -31,28 +34,16 @@ namespace Sodium
         /// <param name="c">The cell that was forward referenced.</param>
         public void Loop(Cell<T> c)
         {
-            Transaction.Apply(trans =>
-            {
-                this.streamLoop.Loop(c.Updates(trans));
-                this.LazyInitialValue = c.SampleLazy(trans);
-                return Unit.Value;
-            }, false);
+            this.streamLoop.Loop(c.Updates);
+            this.behaviorLoop.Loop(c.Behavior);
         }
+
+        public override Stream<T> Updates => this.streamLoop;
 
         /// <summary>
         ///     Return a reference to this <see cref="CellLoop{T}" /> as a <see cref="Cell{T}" />.
         /// </summary>
         /// <returns>A reference to this <see cref="CellLoop{T}" /> as a <see cref="Cell{T}" />.</returns>
         public Cell<T> AsCell() => this;
-
-        internal override T SampleNoTransaction()
-        {
-            if (!this.streamLoop.IsAssigned)
-            {
-                throw new InvalidOperationException("CellLoop was sampled before it was looped.");
-            }
-
-            return base.SampleNoTransaction();
-        }
     }
 }

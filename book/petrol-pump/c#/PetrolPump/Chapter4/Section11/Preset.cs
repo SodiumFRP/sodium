@@ -5,8 +5,8 @@ namespace PetrolPump.Chapter4.Section11
 {
     internal class Preset
     {
-        public DiscreteCell<Delivery> Delivery { get; }
-        public DiscreteCell<bool> KeypadActive { get; }
+        public Cell<Delivery> Delivery { get; }
+        public Cell<bool> KeypadActive { get; }
 
         private enum Speed
         {
@@ -15,9 +15,9 @@ namespace PetrolPump.Chapter4.Section11
             Stopped
         };
 
-        public Preset(DiscreteCell<int> presetDollars, Fill fi, DiscreteCell<Maybe<Fuel>> fuelFlowing)
+        public Preset(Cell<int> presetDollars, Fill fi, Cell<Maybe<Fuel>> fuelFlowing)
         {
-            DiscreteCell<Speed> speed = presetDollars.Lift(
+            Cell<Speed> speed = presetDollars.Lift(
                 fi.Price, fi.DollarsDelivered, fi.LitersDelivered,
                 (presetDollarsLocal, price, dollarsDelivered, litersDelivered) =>
                 {

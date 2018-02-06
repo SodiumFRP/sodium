@@ -469,6 +469,19 @@ public class Cell<A> {
 	}
 
 	/**
+	 * A variant of {@link listen(Handler)} that will deregister the listener automatically
+	 * if the listener is garbage collected. With {@link listen(Handler)}, the listener is
+	 * only deregistered if {@link Listener#unlisten()} is called explicitly.
+	 */
+	public final Listener listenWeak(final Handler<A> action) {
+		return Transaction.apply(new Lambda1<Transaction, Listener>() {
+			public Listener apply(final Transaction trans) {
+				return value(trans).listenWeak(action);
+			}
+		});
+	}
+
+	/**
 	 * Lift a binary function into cells, so the returned Cell always reflects the specified
 	 * function applied to the input cells' values.
 	 * @param fn Function to apply. It must be <em>referentially transparent</em>.

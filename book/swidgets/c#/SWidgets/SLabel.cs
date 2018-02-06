@@ -9,12 +9,12 @@ namespace SWidgets
     {
         private readonly IReadOnlyList<IListener> listeners;
 
-        public SLabel(DiscreteCell<string> text)
+        public SLabel(Cell<string> text)
         {
             Action<string> setText = t => this.Dispatcher.InvokeIfNecessary(() => this.Text = t);
 
             // Set the initial value at the end of the transaction so it works with CellLoops.
-            Transaction.Post(() => setText(text.Cell.Sample()));
+            Transaction.Post(() => setText(text.Sample()));
 
             // ReSharper disable once UseObjectOrCollectionInitializer
             List<IListener> listeners = new List<IListener>();

@@ -1,24 +1,22 @@
 package sodium
 
-
-
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Test
 
-import scala.collection.mutable.MutableList
+import scala.collection.mutable.ListBuffer
 
 class StreamTester {
   @After
-  def tearDown() {
+  def tearDown(): Unit = {
     System.gc()
     Thread.sleep(100)
   }
 
   @Test
-  def testSendStream() {
+  def testSendStream(): Unit = {
     val e = new StreamSink[Int]()
-    val out = new MutableList[Int]()
+    val out = new ListBuffer[Int]()
     val l = e.listen(out.+=(_))
     e.send(5)
     l.unlisten()
@@ -28,10 +26,10 @@ class StreamTester {
   }
 
   @Test
-  def testMap() {
+  def testMap(): Unit = {
     val e = new StreamSink[Int]()
     val m = e.map(x => x.toString)
-    val out = new MutableList[String]()
+    val out = new ListBuffer[String]()
     val l = m.listen(out.+=(_))
     e.send(5)
     l.unlisten()
@@ -39,11 +37,23 @@ class StreamTester {
   }
 
   @Test
-  def testMergeNonSimultaneous() {
+  def testMapTo(): Unit = {
+    val e = new StreamSink[Int]()
+    val m = e.mapTo("fusebox")
+    val out = new ListBuffer[String]()
+    val l = m.listen(out.+=(_))
+    e.send(5)
+    e.send(6)
+    l.unlisten()
+    assertEquals(List("fusebox", "fusebox"), out)
+  }
+
+  @Test
+  def testMergeNonSimultaneous(): Unit = {
     val e1 = new StreamSink[Int]()
     val e2 = new StreamSink[Int]()
-    val out = new MutableList[Int]()
-    val l = e1.merge(e2).listen(out.+=(_))
+    val out = new ListBuffer[Int]()
+    val l = e2.orElse(e1).listen(out.+=(_))
     e1.send(7)
     e2.send(9)
     e1.send(8)
@@ -52,62 +62,56 @@ class StreamTester {
   }
 
   @Test
-  def testMergeSimultaneous() {
-    val e = new StreamSink[Int]()
-    val out = new MutableList[Int]()
-    val l = e.merge(e).listen(out.+=(_))
-    e.send(7)
-    e.send(9)
-    l.unlisten()
-    assertEquals(List(7, 7, 9, 9), out)
-  }
-
-  @Test
-  def testMergeLeftBias() {
-    val e1 = new StreamSink[String]()
-    val e2 = new StreamSink[String]()
-    val out = new MutableList[String]()
-    val l = e1.merge(e2).listen(out.+=(_))
+  def testMergeSimultaneous(): Unit = {
+    val s1 = new StreamSink[Int]((l, r) => r)
+    val s2 = new StreamSink[Int]((l, r) => r)
+    val out = new ListBuffer[Int]()
+    val l = s2.orElse(s1).listen(out.+=(_))
     Transaction(_ => {
-      e1.send("left1a")
-      e1.send("left1b")
-      e2.send("right1a")
-      e2.send("right1b")
+      s1.send(7)
+      s2.send(60)
+    })
+    Transaction(_ => s1.send(9))
+    Transaction(_ => {
+      s1.send(7)
+      s1.send(60)
+      s2.send(8)
+      s2.send(90)
     })
     Transaction(_ => {
-      e2.send("right2a")
-      e2.send("right2b")
-      e1.send("left2a")
-      e1.send("left2b")
+      s2.send(8)
+      s2.send(90)
+      s1.send(7)
+      s1.send(60)
+    })
+    Transaction(_ => {
+      s2.send(8)
+      s1.send(7)
+      s2.send(90)
+      s1.send(60)
     })
     l.unlisten()
-    assertEquals(List(
-      "left1a", "left1b",
-      "right1a", "right1b",
-      "left2a", "left2b",
-      "right2a", "right2b"), out)
+    assertEquals(List(60, 9, 90, 90, 90), out)
   }
 
   @Test
-  def testCoalesce() {
-    val e1 = new StreamSink[Int]()
-    val e2 = new StreamSink[Int]()
-    val out = new MutableList[Int]()
-    val l =
-      e1.merge(e1.map(x => x * 100).merge(e2))
-        .coalesce((a, b) => a + b)
-        .listen(out.+=(_))
-    e1.send(2)
-    e1.send(8)
-    e2.send(40)
+  def testCoalesce(): Unit = {
+    val s = new StreamSink[Int]((a, b) => a + b)
+    val out = new ListBuffer[Int]()
+    val l = s.listen(out.+=(_))
+    Transaction(_ => s.send(2))
+    Transaction(_ => {
+      s.send(8)
+      s.send(40)
+    })
     l.unlisten()
-    assertEquals(List(202, 808, 40), out)
+    assertEquals(List(2, 48), out)
   }
 
   @Test
-  def testFilter() {
+  def testFilter(): Unit = {
     val e = new StreamSink[Char]()
-    val out = new MutableList[Char]()
+    val out = new ListBuffer[Char]()
     val l = e.filter(c => Character.isUpperCase(c)).listen(c => out.+=(c))
     List('H', 'o', 'I').foreach(e.send(_))
     l.unlisten()
@@ -115,27 +119,17 @@ class StreamTester {
   }
 
   @Test
-  def testFilterNotNull() {
-    val e = new StreamSink[String]()
-    val out = new MutableList[String]()
-    val l = e.filterNotNull().listen(s => out.+=(s))
-    List("tomato", null, "peach").foreach(e.send(_))
-    l.unlisten()
-    assertEquals(List("tomato", "peach"), out)
-  }
-
-  @Test
-  def testFilterOptional() {
+  def testFilterOptional(): Unit = {
     val e = new StreamSink[Option[String]]()
-    val out = new MutableList[String]()
-    val l = Stream.filterOption(e).listen(s => out.+=(s))
+    val out = new ListBuffer[String]()
+    val l = Stream.filterOptional(e).listen(s => out.+=(s))
     List(Some("tomato"), None, Some("peach")).foreach(e.send(_))
     l.unlisten()
     assertEquals(List("tomato", "peach"), out)
   }
 
   @Test
-  def testLoopStream() {
+  def testLoopStream(): Unit = {
     val ea = new StreamSink[Int]()
     val ec = Transaction(_ => {
       val eb = new StreamLoop[Int]()
@@ -144,7 +138,7 @@ class StreamTester {
       eb.loop(eb_out)
       ec_
     })
-    val out = new MutableList[Int]()
+    val out = new ListBuffer[Int]()
     val l = ec.listen(out.+=(_))
     List(2, 52).foreach(ea.send(_))
     l.unlisten()
@@ -152,10 +146,10 @@ class StreamTester {
   }
 
   @Test
-  def testGate() {
+  def testGate(): Unit = {
     val ec = new StreamSink[Char]()
     val epred = new CellSink(true)
-    val out = new MutableList[Char]()
+    val out = new ListBuffer[Char]()
     val l = ec.gate(epred).listen(out.+=(_))
     ec.send('H')
     epred.send(false)
@@ -167,10 +161,10 @@ class StreamTester {
   }
 
   @Test
-  def testCollect() {
+  def testCollect(): Unit = {
     val ea = new StreamSink[Int]()
-    val out = new MutableList[Int]()
-    val sum = ea.collect[Int, Int](100, (a, s) => (a + s, a + s))
+    val out = new ListBuffer[Int]()
+    val sum = ea.collect[Int, Int](0, (a, s) => (a + s + 100, a + s))
     val l = sum.listen(out.+=(_))
     List(5, 7, 1, 2, 3).foreach(ea.send(_))
     l.unlisten()
@@ -178,20 +172,20 @@ class StreamTester {
   }
 
   @Test
-  def testAccum() {
+  def testAccum(): Unit = {
     val ea = new StreamSink[Int]()
-    val out = new MutableList[Int]()
+    val out = new ListBuffer[Int]()
     val sum = ea.accum[Int](100, (a, s) => a + s)
-    val l = sum.updates().listen(out.+=(_))
+    val l = sum.listen(out.+=(_))
     List(5, 7, 1, 2, 3).foreach(ea.send(_))
     l.unlisten()
-    assertEquals(List(105, 112, 113, 115, 118), out)
+    assertEquals(List(100, 105, 112, 113, 115, 118), out)
   }
 
   @Test
-  def testOnce() {
+  def testOnce(): Unit = {
     val e = new StreamSink[Char]()
-    val out = new MutableList[Char]()
+    val out = new ListBuffer[Char]()
     val l = e.once().listen(out.+=(_))
     List('A', 'B', 'C').foreach(e.send(_))
     l.unlisten()
@@ -199,14 +193,14 @@ class StreamTester {
   }
 
   @Test
-  def testDelay() {
+  def testDefer(): Unit = {
     val e = new StreamSink[Char]()
     val b = e.hold(' ')
-    val out = new MutableList[Char]()
-    val l = e.delay().snapshot(b).listen(out.+=(_))
+    val out = new ListBuffer[Char]()
+    val l = Operational.defer(e).snapshot(b).listen(out.+=(_))
     List('C', 'B', 'A').foreach(e.send(_))
     l.unlisten()
     assertEquals(List('C', 'B', 'A'), out)
   }
-}
 
+}

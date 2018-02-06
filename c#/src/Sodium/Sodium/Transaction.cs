@@ -24,6 +24,7 @@ namespace Sodium
         private static bool runningOnStartHooks;
         private readonly HashSet<Entry> entries = new HashSet<Entry>();
         private readonly List<Action<Transaction>> sendQueue = new List<Action<Transaction>>();
+        private List<Action> sampleQueue = new List<Action>();
         private readonly List<Action> lastQueue = new List<Action>();
         private readonly Dictionary<int, Action<Transaction>> postQueue = new Dictionary<int, Action<Transaction>>();
         internal readonly List<Node.Target> TargetsToActivate;
@@ -78,11 +79,13 @@ namespace Sodium
         /// </remarks>
         public static void RunVoid(Action action)
         {
-            Apply(_ =>
-            {
-                action();
-                return Unit.Value;
-            }, false);
+            Apply(
+                _ =>
+                {
+                    action();
+                    return Unit.Value;
+                },
+                false);
         }
 
         /// <summary>
@@ -108,16 +111,19 @@ namespace Sodium
         /// <param name="action">The action to execute.</param>
         /// <remarks>
         ///     This method is most useful for creating FRP logic which must be created within a Transaction (such as in a loop),
-        ///     but which should not block other transactions from running.  A use case for this is if the construction of FRP logic takes
+        ///     but which should not block other transactions from running.  A use case for this is if the construction of FRP
+        ///     logic takes
         ///     a significant amount of time, is being done asynchronously, and may be canceled by another stream event.
         /// </remarks>
         public static void RunConstructVoid(Action action)
         {
-            Apply(_ =>
-            {
-                action();
-                return Unit.Value;
-            }, true);
+            Apply(
+                _ =>
+                {
+                    action();
+                    return Unit.Value;
+                },
+                true);
         }
 
         /// <summary>
@@ -130,7 +136,8 @@ namespace Sodium
         /// <returns>The return value of <paramref name="f" />.</returns>
         /// <remarks>
         ///     This method is most useful for creating FRP logic which must be created within a Transaction (such as in a loop),
-        ///     but which should not block other transactions from running.  A use case for this is if the construction of FRP logic takes
+        ///     but which should not block other transactions from running.  A use case for this is if the construction of FRP
+        ///     logic takes
         ///     a significant amount of time, is being done asynchronously, and may be canceled by another stream event.
         /// </remarks>
         public static T RunConstruct<T>(Func<T> f)
@@ -344,6 +351,11 @@ namespace Sodium
             this.entries.Add(e);
         }
 
+        internal void Sample(Action action)
+        {
+            this.sampleQueue.Add(action);
+        }
+
         /// <summary>
         ///     Add an action to run after all prioritized actions.
         /// </summary>
@@ -362,14 +374,9 @@ namespace Sodium
         {
             // If an entry exists already, combine the old one with the new one.
             Action<Transaction> @new;
-            Action<Transaction> existing;
-            if (this.postQueue.TryGetValue(index, out existing))
+            if (this.postQueue.TryGetValue(index, out Action<Transaction> existing))
             {
-                @new = trans =>
-                {
-                    existing(trans);
-                    action(trans);
-                };
+                @new = existing + action;
             }
             else
             {
@@ -430,21 +437,25 @@ namespace Sodium
 
             this.ReachedClose = true;
 
-            this.CheckRegen();
-
-            while (true)
+            do
             {
-                if (this.prioritizedQueue.Count < 1)
+                while (this.prioritizedQueue.Count > 0)
                 {
-                    break;
+                    this.CheckRegen();
+
+                    Entry e = this.prioritizedQueue.Dequeue();
+                    this.entries.Remove(e);
+                    e.Action(this);
                 }
 
-                Entry e = this.prioritizedQueue.Dequeue();
-                this.entries.Remove(e);
-                e.Action(this);
-
-                this.CheckRegen();
+                List<Action> sq = this.sampleQueue;
+                this.sampleQueue = new List<Action>();
+                foreach (Action s in sq)
+                {
+                    s();
+                }
             }
+            while (this.prioritizedQueue.Count > 0 || this.sampleQueue.Count > 0);
 
             // ReSharper disable once ForCanBeConvertedToForeach
             for (int i = 0; i < this.lastQueue.Count; i++)
@@ -498,17 +509,13 @@ namespace Sodium
 
         private class Entry
         {
-            private static long nextSeq;
-
             public readonly Node Node;
             public readonly Action<Transaction> Action;
-            private readonly long seq;
 
             public Entry(Node node, Action<Transaction> action)
             {
                 this.Node = node;
                 this.Action = action;
-                this.seq = nextSeq++;
             }
         }
     }

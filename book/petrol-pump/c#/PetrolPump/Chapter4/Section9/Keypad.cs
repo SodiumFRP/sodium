@@ -6,14 +6,14 @@ namespace PetrolPump.Chapter4.Section9
     {
         public Keypad(Stream<Key> sKeypad,
             Stream<Unit> sClear,
-            DiscreteCell<bool> active)
+            Cell<bool> active)
             : this(sKeypad.Gate(active), sClear)
         {
         }
 
         public Keypad(Stream<Key> sKeypad, Stream<Unit> sClear)
         {
-            DiscreteCellLoop<int> value = new DiscreteCellLoop<int>();
+            CellLoop<int> value = new CellLoop<int>();
             this.Value = value;
             Stream<int> sKeyUpdate = sKeypad.Snapshot(value, (key, valueLocal) =>
             {
@@ -40,7 +40,7 @@ namespace PetrolPump.Chapter4.Section9
             this.SBeep = sKeyUpdate.Map(_ => Unit.Value);
         }
 
-        public DiscreteCell<int> Value { get; }
+        public Cell<int> Value { get; }
         public Stream<Unit> SBeep { get; }
     }
 }

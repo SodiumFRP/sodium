@@ -44,7 +44,7 @@ namespace SWidgets
             List<IListener> listeners = new List<IListener>();
 
             StreamSink<int> sDecrement = new StreamSink<int>();
-            DiscreteCell<bool> allow = setSelectedItem.Map(_ => 1).OrElse(sDecrement).Accum(0, (b, d) => b + d).Map(b => b == 0);
+            Cell<bool> allow = setSelectedItem.Map(_ => 1).OrElse(sDecrement).Accum(0, (b, d) => b + d).Map(b => b == 0);
 
             Maybe<T> GetSelectedItem()
             {
@@ -84,7 +84,7 @@ namespace SWidgets
             };
         }
 
-        public new DiscreteCell<Maybe<T>> SelectedItem { get; }
+        public new Cell<Maybe<T>> SelectedItem { get; }
         public Stream<Maybe<T>> SUserSelectedItem { get; }
 
         public void Dispose()

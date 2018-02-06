@@ -3,7 +3,8 @@ using System.Collections.Generic;
 
 namespace Sodium.Time
 {
-    public class TimerSystem<T> : ITimerSystem<T> where T : IComparable<T>
+    public class TimerSystem<T> : ITimerSystem<T>
+        where T : IComparable<T>
     {
         private readonly ITimerSystemImplementation<T> implementation;
 
@@ -13,45 +14,48 @@ namespace Sodium.Time
         {
             this.implementation = implementation;
             this.implementation.Start(handleException);
-            CellSink<T> timeSink = new CellSink<T>(this.implementation.Now);
+            BehaviorSink<T> timeSink = new BehaviorSink<T>(this.implementation.Now);
             this.Time = timeSink;
-            Transaction.OnStart(() =>
-            {
-                T t = this.implementation.Now;
-                this.implementation.RunTimersTo(t);
-                while (true)
+            Transaction.OnStart(
+                () =>
                 {
-                    Event ev = null;
-                    // Pop all events earlier than t.
-                    lock (this.eventQueue)
+                    T t = this.implementation.Now;
+                    this.implementation.RunTimersTo(t);
+                    while (true)
                     {
-                        if (this.eventQueue.Count > 0)
+                        Event ev = null;
+                        // Pop all events earlier than t.
+                        lock (this.eventQueue)
                         {
-                            Event tempEvent = this.eventQueue.Peek();
-                            if (tempEvent != null && tempEvent.Time.CompareTo(t) <= 0)
+                            if (this.eventQueue.Count > 0)
                             {
-                                ev = this.eventQueue.Dequeue();
+                                Event tempEvent = this.eventQueue.Peek();
+                                if (tempEvent != null && tempEvent.Time.CompareTo(t) <= 0)
+                                {
+                                    ev = this.eventQueue.Dequeue();
+                                }
                             }
+                        }
+
+                        if (ev != null)
+                        {
+                            timeSink.Send(ev.Time);
+                            ev.Alarm.Send(ev.Time);
+                        }
+                        else
+                        {
+                            break;
                         }
                     }
 
-                    if (ev != null)
-                    {
-                        timeSink.Send(ev.Time);
-                        ev.Alarm.Send(ev.Time);
-                    }
-                    else
-                        break;
-                }
-
-                timeSink.Send(t);
-            });
+                    timeSink.Send(t);
+                });
         }
 
         /// <summary>
-        ///     Gets a cell giving the current clock time.
+        ///     Gets a behavior giving the current clock time.
         /// </summary>
-        public Cell<T> Time { get; }
+        public Behavior<T> Time { get; }
 
         private class Event
         {
@@ -63,33 +67,37 @@ namespace Sodium.Time
 
             internal readonly T Time;
             internal readonly StreamSink<T> Alarm;
-        };
+        }
 
         /// <summary>
         ///     A timer that fires at the specified time.
         /// </summary>
         /// <param name="t">The time to fire at.</param>
         /// <returns>A stream which fires at the specified time.</returns>
-        public Stream<T> At(DiscreteCell<Maybe<T>> t)
+        public Stream<T> At(Cell<Maybe<T>> t)
         {
             StreamSink<T> alarm = new StreamSink<T>();
             Maybe<ITimer> currentTimer = Maybe.None;
-            IListener l = t.Listen(m =>
-            {
-                currentTimer.MatchSome(timer => timer.Cancel());
-                currentTimer = m.Match(
-                    time => Maybe.Some(this.implementation.SetTimer(time, () =>
-                    {
-                        lock (this.eventQueue)
-                        {
-                            this.eventQueue.Enqueue(new Event(time, alarm));
-                        }
-                        // Open and close a transaction to trigger queued
-                        // events to run.
-                        Transaction.RunVoid(() => { });
-                    })),
-                    () => Maybe.None);
-            });
+            IListener l = t.Listen(
+                m =>
+                {
+                    currentTimer.MatchSome(timer => timer.Cancel());
+                    currentTimer = m.Match(
+                        time => Maybe.Some(
+                            this.implementation.SetTimer(
+                                time,
+                                () =>
+                                {
+                                    lock (this.eventQueue)
+                                    {
+                                        this.eventQueue.Enqueue(new Event(time, alarm));
+                                    }
+                                    // Open and close a transaction to trigger queued
+                                    // events to run.
+                                    Transaction.RunVoid(() => { });
+                                })),
+                        () => Maybe.None);
+                });
             return alarm.AttachListener(l);
         }
     }

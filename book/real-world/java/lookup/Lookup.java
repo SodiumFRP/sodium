@@ -14,12 +14,12 @@ import java.util.Optional;
 class IsBusy<A,B> {
     public IsBusy(Lambda1<Stream<A>, Stream<B>> action, Stream<A> sIn) {
         sOut = action.apply(sIn);
-        busy = sIn.map(i -> true)
-                  .orElse(sOut.map(i -> false))
-                  .hold(false);
+        busy = sOut.map(i -> false)
+                   .orElse(sIn.map(i -> true))
+                   .hold(false);
     }
-    public Stream<B> sOut;
-    public Cell<Boolean> busy;
+    public final Stream<B> sOut;
+    public final Cell<Boolean> busy;
 }
 
 public class Lookup {
@@ -101,7 +101,7 @@ public class Lookup {
             IsBusy<String, Optional<String>> ib =
                                      new IsBusy<>(lookup, sWord);
             Stream<String> sDefinition = ib.sOut
-                .map(o -> o.isPresent() ? o.get() : "ERROR!");
+                .map(o -> o.orElse("ERROR!"));
             Cell<String> definition = sDefinition.hold("");
             Cell<String> output = definition.lift(ib.busy, (def, bsy) ->
                 bsy ? "Looking up..." : def);

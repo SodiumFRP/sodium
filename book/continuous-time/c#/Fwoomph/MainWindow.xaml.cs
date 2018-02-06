@@ -15,7 +15,7 @@ namespace Fwoomph
             {
                 Animate animate = new Animate((sys, extents) =>
                 {
-                    Cell<double> time = sys.Time;
+                    Behavior<double> time = sys.Time;
                     double maxSize = 200.0;
                     return Shapes.Scale(
                         Shapes.Circle(Colors.Green),

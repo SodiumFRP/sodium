@@ -20,13 +20,15 @@ namespace Sodium
                     accum = a;
                     accumValid = true;
 
-                    trans1.Prioritized(@out.Node, trans2 =>
-                    {
-                        // ReSharper disable once AccessToModifiedClosure
-                        @out.Send(trans2, accum);
-                        accumValid = false;
-                        accum = default(T);
-                    });
+                    trans1.Prioritized(
+                        @out.Node,
+                        trans2 =>
+                        {
+                            // ReSharper disable once AccessToModifiedClosure
+                            @out.Send(trans2, accum);
+                            accumValid = false;
+                            accum = default(T);
+                        });
                 }
             };
         }

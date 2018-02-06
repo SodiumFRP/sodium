@@ -54,7 +54,7 @@ namespace Operational
 
             public void Run()
             {
-                DiscreteCellSink<int> x = new DiscreteCellSink<int>(0);
+                CellSink<int> x = new CellSink<int>(0);
                 IListener l = x.Listen(Console.WriteLine);
                 x.Send(10);
                 x.Send(20);
@@ -140,7 +140,7 @@ namespace Operational
 
             public void Run()
             {
-                DiscreteCellSink<int> x = new DiscreteCellSink<int>(0);
+                CellSink<int> x = new CellSink<int>(0);
                 x.Send(1);
                 IListener l = x.Updates.Listen(Console.WriteLine);
                 x.Send(2);
@@ -155,7 +155,7 @@ namespace Operational
 
             public void Run()
             {
-                DiscreteCellSink<int> x = new DiscreteCellSink<int>(0);
+                CellSink<int> x = new CellSink<int>(0);
                 x.Send(1);
                 IListener l = x.Values.Listen(Console.WriteLine);
                 x.Send(2);
@@ -172,7 +172,7 @@ namespace Operational
             {
                 CellSink<int> x = new CellSink<int>(0);
                 x.Send(1);
-                IListener l = Transaction.Run(() => Sodium.Operational.Value(x).Listen(Console.WriteLine));
+                IListener l = Transaction.Run(() => x.Values.Listen(Console.WriteLine));
                 x.Send(2);
                 x.Send(3);
                 l.Unlisten();

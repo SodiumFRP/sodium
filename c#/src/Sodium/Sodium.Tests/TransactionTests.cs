@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
 using NUnit.Framework;
@@ -84,14 +83,14 @@ namespace Sodium.Tests
         [Test]
         public void Post()
         {
-            DiscreteCell<int> cell = Transaction.Run(() =>
+            Cell<int> cell = Transaction.Run(() =>
             {
                 StreamSink<int> s = Stream.CreateSink<int>();
                 s.Send(2);
                 return s.Hold(1);
             });
             int value = 0;
-            Transaction.Post(() => value = cell.Cell.Sample());
+            Transaction.Post(() => value = cell.Sample());
 
             Assert.AreEqual(value, 2);
         }
@@ -104,8 +103,8 @@ namespace Sodium.Tests
             {
                 StreamSink<int> s = Stream.CreateSink<int>();
                 s.Send(2);
-                DiscreteCell<int> c = s.Hold(1);
-                Transaction.Post(() => value = c.Cell.Sample());
+                Cell<int> c = s.Hold(1);
+                Transaction.Post(() => value = c.Sample());
                 Assert.AreEqual(value, 0);
             });
 
@@ -122,8 +121,8 @@ namespace Sodium.Tests
                 s.Send(2);
                 Transaction.RunVoid(() =>
                 {
-                    DiscreteCell<int> c = s.Hold(1);
-                    Transaction.Post(() => value = c.Cell.Sample());
+                    Cell<int> c = s.Hold(1);
+                    Transaction.Post(() => value = c.Sample());
                 });
                 Assert.AreEqual(value, 0);
             });
@@ -141,8 +140,8 @@ namespace Sodium.Tests
                 s.Send(2);
                 Transaction.RunConstruct(() =>
                 {
-                    DiscreteCell<int> c = s.Hold(1);
-                    Transaction.Post(() => value = c.Cell.Sample());
+                    Cell<int> c = s.Hold(1);
+                    Transaction.Post(() => value = c.Sample());
                     return Unit.Value;
                 });
                 Assert.AreEqual(value, 0);
@@ -159,8 +158,8 @@ namespace Sodium.Tests
             {
                 StreamSink<int> s = Stream.CreateSink<int>();
                 s.Send(2);
-                DiscreteCell<int> c = s.Hold(1);
-                Transaction.Post(() => value = c.Cell.Sample());
+                Cell<int> c = s.Hold(1);
+                Transaction.Post(() => value = c.Sample());
                 Assert.AreEqual(value, 0);
                 return Unit.Value;
             });
@@ -178,8 +177,8 @@ namespace Sodium.Tests
                 s.Send(2);
                 Transaction.RunVoid(() =>
                 {
-                    DiscreteCell<int> c = s.Hold(1);
-                    Transaction.Post(() => value = c.Cell.Sample());
+                    Cell<int> c = s.Hold(1);
+                    Transaction.Post(() => value = c.Sample());
                 });
                 Assert.AreEqual(value, 0);
                 return Unit.Value;
@@ -198,8 +197,8 @@ namespace Sodium.Tests
                 s.Send(2);
                 Transaction.RunConstruct(() =>
                 {
-                    DiscreteCell<int> c = s.Hold(1);
-                    Transaction.Post(() => value = c.Cell.Sample());
+                    Cell<int> c = s.Hold(1);
+                    Transaction.Post(() => value = c.Sample());
                     return Unit.Value;
                 });
                 Assert.AreEqual(value, 0);

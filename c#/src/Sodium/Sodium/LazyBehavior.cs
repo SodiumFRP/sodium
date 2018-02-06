@@ -2,15 +2,12 @@ using System;
 
 namespace Sodium
 {
-    public class LazyCell<T> : Cell<T>
+    public class LazyBehavior<T> : Behavior<T>
     {
         internal Lazy<T> LazyInitialValue;
 
-        internal LazyCell(Stream<T> stream, Lazy<T> lazyInitialValue)
-            : base(stream, default(T))
-        {
-            this.LazyInitialValue = lazyInitialValue;
-        }
+        internal LazyBehavior(Stream<T> stream, Lazy<T> lazyInitialValue)
+            : base(stream, default(T)) => this.LazyInitialValue = lazyInitialValue;
 
         protected override void NotUsingInitialValue()
         {

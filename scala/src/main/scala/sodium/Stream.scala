@@ -1,235 +1,302 @@
 package sodium
 
-import scala.IndexedSeq
+import sodium.Node.Target
+
+import scala.collection.mutable
 import scala.collection.mutable.ListBuffer
 
-class Stream[A] {
+/**
+  * Represents a stream of discrete events/firings containing values of type A.
+  */
+class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], val firings: ListBuffer[A]) {
   import Stream._
 
-  protected val listeners = ListBuffer[TransactionHandler[A]]()
-  protected val finalizers = ListBuffer[Listener]()
-  val node = new Node(0L)
-  protected val firings = ListBuffer[A]()
-
-  def sampleNow(): IndexedSeq[A] = IndexedSeq()
+  /**
+    * A stream that never fires.
+    */
+  def this() = this(new Node(0L), ListBuffer[Listener](), ListBuffer[A]())
 
   /**
-   * Listen for firings of this event. The returned Listener has an unlisten()
-   * method to cause the listener to be removed. This is the observer pattern.
-   */
-  final def listen(action: A => Unit): Listener =
-    listen_(Node.NullNode, new TransactionHandler[A]() {
-      def run(trans2: Transaction, a: A) {
-        action(a)
+    * Listen for events/firings on this stream. This is the observer pattern. The
+    * returned [[Listener]] has a [[sodium.Listener.unlisten()* Listenerunlisten()]] method to cause the
+    * listener to be removed. This is an OPERATIONAL mechanism is for interfacing between
+    * the world of I/O and for FRP.
+    *
+    * @param handler The handler to execute when there's a new value.
+    *               You should make no assumptions about what thread you are called on, and the
+    *               handler should not block. You are not allowed to use [[sodium.CellSink.send CellSink.send(A)]]
+    *               or [[sodium.StreamSink.send(a:A):Unit* StreamSink.send(A)]] in the handler.
+    *               An exception will be thrown, because you are not meant to use this to create
+    *               your own primitives.
+    */
+  final def listen(handler: A => Unit): Listener = {
+    val l0: Listener = listenWeak(handler)
+    val l = new Listener {
+      override def unlisten(): Unit = {
+        l0.unlisten()
+        keepListenersAlive.synchronized {
+          keepListenersAlive.remove(this)
+          ()
+        }
       }
+    }
+    keepListenersAlive.synchronized {
+      keepListenersAlive.add(l)
+    }
+    l
+  }
+
+  /**
+    * A variant of [[sodium.Stream.listen(handler:A=>Unit):sodium\.Listener* listen(A=>Unit)]]  that handles the first
+    * event and then automatically deregisters itself. This is useful for implementing things that work like promises.
+    */
+  def listenOnce(handler: A => Unit): Listener = {
+    val lRef = new Array[Listener](1)
+    lRef(0) = listen(a => {
+      lRef(0).unlisten()
+      handler(a)
     })
+    lRef(0)
+  }
 
   final def listen_(target: Node, action: TransactionHandler[A]): Listener =
     Transaction(trans1 => listen(target, trans1, action, false))
 
-  def listen(target: Node, trans: Transaction, action: TransactionHandler[A],
-    suppressEarlierFirings: Boolean): Listener = {
+  /**
+    * A variant of [[Stream.listen(handler:A=>Unit):sodium\.Listener* listen(A=>Unit)]] that will deregister the
+    * listener automatically if the listener is garbage collected.
+    * With [[Stream.listen(handler:A=>Unit):sodium\.Listener* listen(A=>Unit)]], the listener is
+    * only deregistered if [[sodium.Listener.unlisten()* Listenerunlisten()]] is called explicitly.
+    *
+    * This method should be used for listeners that are to be passed to
+    * [[sodium.Stream.addCleanup* Stream.addCleanup(Listener]] to ensure that things don't get kept alive
+    * when they shouldn't.
+    */
+  final def listenWeak(action: A => Unit): Listener =
+    listen_(Node.NullNode, (trans2: Transaction, a: A) => {
+      action(a)
+    })
+
+  def listen(target: Node,
+             trans: Transaction,
+             action: TransactionHandler[A],
+             suppressEarlierFirings: Boolean): Listener = {
+    val node_target_ = new Array[Target](1)
     Transaction.listenersLock.synchronized {
-      if (node.linkTo(target))
+      if (node.linkTo(action.asInstanceOf[TransactionHandler[Unit]], target, node_target_))
         trans.toRegen = true
-      listeners += action
     }
-    trans.prioritized(target, {
-      trans2 =>
-        sampleNow().foreach(action.run(trans, _))
-        if (!suppressEarlierFirings) {
+    val node_target = node_target_(0)
+    val firings = this.firings.clone() //TODO check if deep clone is needed
+    if (!suppressEarlierFirings && !firings.isEmpty) {
+      trans.prioritized(
+        target, { trans2 =>
           // Anything sent already in this transaction must be sent now so that
           // there's no order dependency between send and listen.
-          firings.foreach(action.run(trans, _))
-        }
-    })
-    new ListenerImplementation[A](this, action, target)
-  }
-
-  /**
-   * Transform the event's value according to the supplied function.
-   */
-  final def map[B](f: A => B): Stream[B] = {
-    val ev = this
-    val out = new StreamSink[B]() {
-      override def sampleNow() = ev.sampleNow().map(f(_))
-    }
-    val l = listen_(out.node, new TransactionHandler[A]() {
-      override def run(trans: Transaction, a: A) {
-        out.send(trans, f(a))
-      }
-    })
-    out.addCleanup(l)
-  }
-
-  /**
-   * Create a behavior with the specified initial value, that gets updated
-   * by the values coming through the event. The 'current value' of the behavior
-   * is notionally the value as it was 'at the start of the transaction'.
-   * That is, state updates caused by event firings get processed at the end of
-   * the transaction.
-   */
-  final def hold(initValue: A): Cell[A] =
-    Transaction(trans => new Cell[A](initValue, lastFiringOnly(trans)))
-
-  final def holdLazy(initValue: () => A): Cell[A] =
-    Transaction(trans => new LazyCell[A](initValue, lastFiringOnly(trans)))
-
-  /**
-   * Variant of snapshot that throws away the event's value and captures the behavior's.
-   */
-  final def snapshot[B](beh: Cell[B]): Stream[B] = snapshot[B, B](beh, (a, b) => b)
-
-  /**
-   * Sample the behavior at the time of the event firing. Note that the 'current value'
-   * of the behavior that's sampled is the value as at the start of the transaction
-   * before any state changes of the current transaction are applied through 'hold's.
-   */
-  final def snapshot[B, C](b: Cell[B], f: (A, B) => C): Stream[C] = {
-    val ev = this
-    val out = new StreamSink[C]() {
-      override def sampleNow() = ev.sampleNow().map(a => f.apply(a, b.sampleNoTrans()))
-    }
-    val l = listen_(out.node, new TransactionHandler[A]() {
-      def run(trans: Transaction, a: A) {
-        out.send(trans, f(a, b.sampleNoTrans()))
-      }
-    })
-    out.addCleanup(l)
-  }
-
-  /**
-   * Merge two streams of events of the same type.
-   *
-   * In the case where two event occurrences are simultaneous (i.e. both
-   * within the same transaction), both will be delivered in the same
-   * transaction. If the event firings are ordered for some reason, then
-   * their ordering is retained. In many common cases the ordering will
-   * be undefined.
-   */
-  def merge(eb: Stream[A]): Stream[A] = Stream.merge[A](this, eb)
-
-  /**
-   * Push each event occurrence onto a new transaction.
-   */
-  final def delay(): Stream[A] =
-    {
-      val out = new StreamSink[A]()
-      val l = listen_(out.node, new TransactionHandler[A]() {
-        def run(trans: Transaction, a: A) {
-          trans.post(new Runnable() {
-            def run() {
-              val trans = new Transaction()
-              try {
-                out.send(trans, a)
-              } finally {
-                trans.close()
-              }
+          firings.foreach { a =>
+            Transaction.inCallback += 1
+            try { // Don't allow transactions to interfere with Sodium internals.
+              action.run(trans2, a)
+            } catch {
+              case t: Throwable => t.printStackTrace()
+            } finally {
+              Transaction.inCallback -= 1
             }
-          })
-        }
-      })
-      out.addCleanup(l)
-    }
-
-  /**
-   * If there's more than one firing in a single transaction, combine them into
-   * one using the specified combining function.
-   *
-   * If the event firings are ordered, then the first will appear at the left
-   * input of the combining function. In most common cases it's best not to
-   * make any assumptions about the ordering, and the combining function would
-   * ideally be commutative.
-   */
-  final def coalesce(f: (A, A) => A): Stream[A] =
-    Transaction(trans => coalesce(trans, f))
-
-  final def coalesce(trans: Transaction, f: (A, A) => A): Stream[A] =
-    {
-      val ev = this
-      val out = new StreamSink[A]() {
-        override def sampleNow() = {
-          val oi = ev.sampleNow()
-          if (oi.isEmpty) {
-            IndexedSeq()
-          } else {
-            IndexedSeq(oi.reduce(f(_, _)))
           }
         }
-      }
-      val l = listen(out.node, trans, new TransactionHandler[A]() {
-        private var acc: Option[A] = None
-        override def run(trans1: Transaction, a: A) {
-          acc match {
-            case Some(b) =>
-              acc = Some(f(b, a))
-            case None =>
-              trans1.prioritized(out.node, {
-                trans2 =>
-                  out.send(trans2, acc.get)
-                  acc = None
-              })
-              acc = Some(a)
-          }
-        }
-      }, false)
-      out.addCleanup(l)
+      )
     }
+    new ListenerImplementation[A](this, action, node_target)
+  }
 
   /**
-   * Clean up the output by discarding any firing other than the last one.
-   */
+    * Transform the stream's event values according to the supplied function, so the returned
+    * Stream's event values reflect the value of the function applied to the input
+    * Stream's event values.
+    *
+    * @param f Function to apply to convert the values. It may construct FRP logic or use
+    *          [[sodium.Cell.sample():A* Cell.sample()]] in which case it is equivalent to
+    *          [[sodium.Stream.snapshot[B]* Stream.snapshot(Cell)]]ing the
+    *          cell. Apart from this the function must be <em>referentially transparent</em>.
+    */
+  final def map[B](f: A => B): Stream[B] = {
+    val out = new StreamWithSend[B]()
+    val l = listen_(out.node, (trans: Transaction, a: A) => {
+      out.send(trans, f(a))
+    })
+    out.unsafeAddCleanup(l)
+  }
+
+  /**
+    * Transform the stream's event values into the specified constant value.
+    *
+    * @param b Constant value.
+    */
+  final def mapTo[B](b: B): Stream[B] = this.map(a => b)
+
+  /**
+    * Create a [[Cell]] with the specified initial value, that is updated
+    * by this stream's event values.
+    *
+    * There is an implicit delay: State updates caused by event firings don't become
+    * visible as the cell's current value as viewed by [[sodium.Stream.snapshot[B,C]* Stream.snapshot(Cell,(A,B)=>C)]]
+    * until the following transaction. To put this another way,
+    * [[sodium.Stream.snapshot[B,C]* Stream.snapshot(Cell,(A,B)=>C)]] always sees the value of a cell as it was before
+    * any state changes from the current transaction.
+    */
+  final def hold(initValue: A): Cell[A] =
+    Transaction(trans => new Cell[A](Stream.this, initValue))
+
+  /**
+    * A variant of [[sodium.Stream.hold(initValue:A)* hold(A)]] with an initial value captured by
+      [[Cell.sampleLazy()* Cell.sampleLazy()]].
+    */
+  final def holdLazy(initValue: Lazy[A]): Cell[A] =
+    Transaction(_ => new LazyCell[A](this, Some(initValue)))
+
+  /**
+    * Variant of [[sodium.Stream.snapshot[B,C]* snapshot(Cell,(A,B)=>C)]] that captures the cell's value
+    * at the time of the event firing, ignoring the stream's value.
+    */
+  final def snapshot[B](c: Cell[B]): Stream[B] = snapshot[B, B](c, (a, b) => b)
+
+  /**
+    * Return a stream whose events are the result of the combination using the specified
+    * function of the input stream's event value and the value of the cell at that time.
+    *
+    * There is an implicit delay: State updates caused by event firings being held with
+    * [[sodium.Stream.hold(initValue:A)* hold(A)]] don't become visible as the cell's current value until the
+    * following transaction. To put this another way, [[sodium.Stream.snapshot[B,C]* snapshot(Cell,(A,B)=>C)]]
+    * always sees the value of a cell as it was before any state changes from the current
+    * transaction.
+    */
+  final def snapshot[B, C](c: Cell[B], f: (A, B) => C): Stream[C] = {
+    val out = new StreamWithSend[C]()
+    val l = listen_(out.node, (trans: Transaction, a: A) => {
+      out.send(trans, f(a, c.sampleNoTrans()))
+    })
+    out.unsafeAddCleanup(l)
+  }
+
+  /**
+    * Variant of [[sodium.Stream.snapshot[B,C]* snapshot(Cell,(A,B)=>C)]] that captures the values of
+    * two cells.
+    */
+  final def snapshot[B, C, D](cb: Cell[B], cc: Cell[C], fn: (A, B, C) => D): Stream[D] =
+    this.snapshot[B, D](cb, (a: A, b: B) ⇒ fn(a, b, cc.sample()))
+
+  /**
+    * Variant of [[sodium.Stream.snapshot[B,C]* snapshot(Cell,(A,B)=>C)]] that captures the values of
+    * three cells.
+    */
+  final def snapshot[B, C, D, E](cb: Cell[B], cc: Cell[C], cd: Cell[D], fn: (A, B, C, D) => E): Stream[E] =
+    this.snapshot[B, E](cb, (a: A, b: B) ⇒ fn(a, b, cc.sample(), cd.sample()))
+
+  /**
+    * Variant of [[sodium.Stream.snapshot[B,C]* snapshot(Cell,(A,B)=>C)]] that captures the values of
+    * four cells.
+    */
+  final def snapshot[B, C, D, E, F](cb: Cell[B],
+                                    cc: Cell[C],
+                                    cd: Cell[D],
+                                    ce: Cell[E],
+                                    fn: (A, B, C, D, E) => F): Stream[F] =
+    this.snapshot[B, F](cb, (a: A, b: B) ⇒ fn(a, b, cc.sample(), cd.sample(), ce.sample()))
+
+  /**
+    * Variant of [[sodium.Stream.snapshot[B,C]* snapshot(Cell,(A,B)=>C)]] that captures the values of
+    * five cells.
+    */
+  final def snapshot[B, C, D, E, F, G](cb: Cell[B],
+                                       cc: Cell[C],
+                                       cd: Cell[D],
+                                       ce: Cell[E],
+                                       cf: Cell[F],
+                                       fn: (A, B, C, D, E, F) => G): Stream[G] =
+    this.snapshot[B, G](cb, (a: A, b: B) ⇒ fn(a, b, cc.sample(), cd.sample(), ce.sample(), cf.sample()))
+
+  /**
+    * Variant of [[Stream!.merge(s:sodium\.Stream[A],f:(A,A)=>A):sodium\.Stream[A]* merge(Stream,(A,A)=>A)]]
+    * that merges two streams and will drop an event in the simultaneous case.
+    *
+    * In the case where two events are simultaneous (i.e. both
+    * within the same transaction), the event from <em>this</em> will take precedence, and
+    * the event from <em>s</em> will be dropped.
+    * If you want to specify your own combining function,
+    * use [[Stream!.merge(s:sodium\.Stream[A],f:(A,A)=>A):sodium\.Stream[A]* Stream.merge(Stream,(A,A)=>A)]].
+    * s1.orElse(s2) is equivalent to s1.merge(s2, (l, r) -&gt; l).
+    *
+    * The name orElse() is used instead of merge() to make it really clear that care should
+    * be taken, because events can be dropped.
+    */
+  final def orElse(s: Stream[A]): Stream[A] = merge(s, (left, right) => left)
+
+  /**
+    * Merge two streams of the same type into one, so that events on either input appear
+    * on the returned stream.
+    *
+    * If the events are simultaneous (that is, one event from this and one from <em>s</em>
+    * occurring in the same transaction), combine them into one using the specified combining function
+    * so that the returned stream is guaranteed only ever to have one event per transaction.
+    * The event from <em>this</em> will appear at the left input of the combining function, and
+    * the event from <em>s</em> will appear at the right.
+    *
+    * @param f Function to combine the values. It may construct FRP logic or use
+    *          [[sodium.Cell.sample():A* Cell.sample()]].
+    *          Apart from this the function must be <em>referentially transparent</em>.
+    */
+  final def merge(s: Stream[A], f: ((A, A) => A)): Stream[A] = {
+    Transaction(trans => Stream.merge(Stream.this, s).coalesce(trans, f))
+  }
+
+  final def coalesce(trans1: Transaction, f: (A, A) => A): Stream[A] = {
+    val out = new StreamWithSend[A]()
+    val h: TransactionHandler[A] = new CoalesceHandler[A](f, out)
+    val l = listen(out.node, trans1, h, false)
+    out.unsafeAddCleanup(l)
+  }
+
+  /**
+    * Clean up the output by discarding any firing other than the last one.
+    */
   final def lastFiringOnly(trans: Transaction): Stream[A] =
     coalesce(trans, (first, second) => second)
 
   /**
-   * Merge two streams of events of the same type, combining simultaneous
-   * event occurrences.
-   *
-   * In the case where multiple event occurrences are simultaneous (i.e. all
-   * within the same transaction), they are combined using the same logic as
-   * 'coalesce'.
-   */
-  def merge(eb: Stream[A], f: (A, A) => A): Stream[A] =
-    merge(eb).coalesce(f)
-
-  /**
-   * Only keep event occurrences for which the predicate returns true.
-   */
-  def filter(f: A => Boolean): Stream[A] = {
-    val ev = this
-    val out = new StreamSink[A]() {
-      override def sampleNow() = ev.sampleNow().filter(f)
-    }
-    val l = listen_(out.node, new TransactionHandler[A]() {
-      def run(trans: Transaction, a: A) {
-        if (f(a)) out.send(trans, a)
-      }
-    })
-    out.addCleanup(l)
+    * Return a stream that only outputs events for which the predicate returns true.
+    */
+  def filter(predicate: A => Boolean): Stream[A] = {
+    val out = new StreamWithSend[A]()
+    val l = listen_(out.node, (trans: Transaction, a: A) => if (predicate(a)) out.send(trans, a))
+    out.unsafeAddCleanup(l)
   }
 
   /**
-   * Filter out any event occurrences whose value is a Java null pointer.
-   */
-  final def filterNotNull(): Stream[A] = filter(_ != null)
+    * Return a stream that only outputs event occurrences from the input stream
+    * when the specified cell's value is true.
+    */
+  final def gate(c: Cell[Boolean]): Stream[A] =
+    filterOptional(snapshot[Boolean, Option[A]](c, (a, pred) => if (pred) Some(a) else None))
 
   /**
-   * Let event occurrences through only when the behavior's value is True.
-   * Note that the behavior's value is as it was at the start of the transaction,
-   * that is, no state changes from the current transaction are taken into account.
-   */
-  final def gate(bPred: Cell[Boolean]): Stream[A] =
-    filterOption(snapshot[Boolean, Option[A]](bPred, (a, pred) => if (pred) Some(a) else None))
+    * Transform an event with a generalized state loop (a Mealy machine). The function
+    * is passed the input and the old state and returns the new state and output value.
+    *
+    * @param f Function to apply to update the state. It may construct FRP logic or use
+    *          [[sodium.Cell.sample():A* Cell.sample()]] in which case it is equivalent to
+    *          [[sodium.Stream.snapshot[B]* Stream.snapshot(Cell)]]ing the
+    *          cell. Apart from this the function must be <em>referentially transparent</em>.
+    */
+  final def collect[B, S](initState: S, f: (A, S) => (B, S)): Stream[B] = collectLazy(new Lazy[S](initState), f)
 
   /**
-   * Transform an event with a generalized state loop (a mealy machine). The function
-   * is passed the input and the old state and returns the new state and output value.
-   */
-  final def collect[B, S](initState: S, f: (A, S) => (B, S)): Stream[B] =
+    * A variant of [[sodium.Stream.collect[B,S](initState:S,f:(A,S)=>(B,S)):sodium\.Stream[B]* collect(S,(A,S)=>(B,S)]]
+    * that takes an initial state returned by [[Cell.sampleLazy()* Cell.sampleLazy()]].
+    */
+  final def collectLazy[B, S](initState: Lazy[S], f: (A, S) => (B, S)): Stream[B] =
     Transaction(_ => {
       val es = new StreamLoop[S]()
-      val s = es.hold(initState)
+      val s = es.holdLazy(initState)
       val ebs = snapshot(s, f)
       val eb = ebs.map(bs => bs._1)
       val es_out = ebs.map(bs => bs._2)
@@ -238,121 +305,181 @@ class Stream[A] {
     })
 
   /**
-   * Accumulate on input event, outputting the new state each time.
-   */
-  final def accum[S](initState: S, f: (A, S) => S): Cell[S] =
+    * Accumulate on input event, outputting the new state each time.
+    *
+    * @param f Function to apply to update the state. It may construct FRP logic or use
+    *          [[sodium.Cell.sample():A* Cell.sample()]] in which case it is equivalent to
+    *          [[sodium.Stream.snapshot[B]* Stream.snapshot(Cell)]]ing the
+    *          cell. Apart from this the function must be <em>referentially transparent</em>.
+    */
+  final def accum[S](initState: S, f: (A, S) => S): Cell[S] = accumLazy(new Lazy[S](initState), f)
+
+  /**
+    * A variant of [[sodium.Stream.accum[S](initState:S,f:(A,S)=>S):sodium\.Cell[S]* accum(S,(A,S)=>S)]] that takes an
+    *  initial state returned by [[Cell.sampleLazy()* Cell.sampleLazy()]].
+    */
+  final def accumLazy[S](initState: Lazy[S], f: (A, S) => S): Cell[S] =
     Transaction(_ => {
       val es = new StreamLoop[S]()
-      val s = es.hold(initState)
+      val s = es.holdLazy(initState)
       val es_out = snapshot(s, f)
       es.loop(es_out)
-      es_out.hold(initState)
+      es_out.holdLazy(initState)
     })
 
   /**
-   * Throw away all event occurrences except for the first one.
-   */
+    * Return a stream that outputs only one value: the next event occurrence of the
+    * input stream, starting from the transaction in which once() was invoked.
+    */
   final def once(): Stream[A] = {
     // This is a bit long-winded but it's efficient because it deregisters
     // the listener.
     val ev = this
     var la: Option[Listener] = None
-    val out = new StreamSink[A]() {
-      override def sampleNow() = {
-        val oi = ev.sampleNow()
-        if (oi.size > 0) {
-          la.foreach(_.unlisten())
-          la = None
+    val out = new StreamWithSend[A]()
+    la = Some(
+      ev.listen_(
+        out.node,
+        (trans: Transaction, a: A) => {
+          if (la.isDefined) {
+            out.send(trans, a)
+            la.foreach(_.unlisten())
+            la = None
+          }
         }
-        if (oi.size > 0) IndexedSeq(oi.head) else IndexedSeq()
-      }
-    }
-    la = Some(ev.listen_(out.node, new TransactionHandler[A]() {
-      def run(trans: Transaction, a: A) {
-        out.send(trans, a)
-        if (la.isDefined) {
-          la.foreach(_.unlisten())
-          la = None
-        }
-      }
-    }))
-    out.addCleanup(la.get)
+      ))
+    out.unsafeAddCleanup(la.get)
   }
 
-  def addCleanup(cleanup: Listener): Stream[A] = {
+  /**
+    * This is not thread-safe, so one of these two conditions must apply:
+    1. We are within a transaction, since in the current implementation a transaction locks out all other threads.
+    1. The object on which this is being called was created has not yet
+       been returned from the method where it was created, so it can't be shared between threads.
+    */
+  def unsafeAddCleanup(cleanup: Listener): Stream[A] = {
     finalizers += cleanup
     this
   }
 
-  protected override def finalize() {
+  /**
+    * Attach a listener to this stream so that its [[sodium.Listener.unlisten()* Listener.unlisten()]] is invoked
+    * when this stream is garbage collected. Useful for functions that initiate I/O,
+    * returning the result of it through a stream.
+    *
+    * You must use this only with listeners returned by [[listenWeak* listenWeak(A=>Unit)]] so that
+    * things don't get kept alive when they shouldn't.
+    */
+  def addCleanup(cleanup: Listener): Stream[A] =
+    Transaction(trans => {
+      val fsNew: ListBuffer[Listener] = finalizers
+      fsNew += cleanup
+      new Stream[A](node, fsNew, firings)
+    })
+
+  protected override def finalize(): Unit = {
     finalizers.foreach(_.unlisten)
   }
 }
 
 object Stream {
-  final class ListenerImplementation[A](
-    val event: Stream[A],
-    val action: TransactionHandler[A],
-    val target: Node) extends Listener {
 
-    /**
-     * It's essential that we keep the listener alive while the caller holds
-     * the Listener, so that the finalizer doesn't get triggered.
-     */
+  val keepListenersAlive = new mutable.HashSet[Listener]()
 
-    override def unlisten() {
+  /**
+    * It's essential that we keep the listener alive while the caller holds
+    * the Listener, so that the finalizer doesn't get triggered.
+    * It's also essential that we keep the action alive, since the node uses
+    * a weak reference.
+    */
+  final class ListenerImplementation[A](var event: Stream[A], var action: TransactionHandler[A], var target: Target)
+      extends Listener {
+
+    override def unlisten(): Unit = {
       Transaction.listenersLock.synchronized {
-        event.listeners -= action
-        event.node.unlinkTo(target)
+        if (this.event != null) {
+          event.node.unlinkTo(target)
+          event = null
+          action = null
+          target = null
+        }
       }
     }
 
-    override protected def finalize() {
-      unlisten()
+  }
+
+  /**
+    * Merge two streams of events of the same type.
+    *
+    * In the case where two event occurrences are simultaneous (i.e. both
+    * within the same transaction), both will be delivered in the same
+    * transaction. If the event firings are ordered for some reason, then
+    * their ordering is retained. In many common cases the ordering will
+    * be undefined.
+    */
+  private def merge[A](ea: Stream[A], eb: Stream[A]): Stream[A] = {
+    val out = new StreamWithSend[A]()
+    val left = new Node(0)
+    val right = out.node
+    val node_target_ = new Array[Target](1)
+    left.linkTo(null, right, node_target_)
+    val node_target = node_target_(0)
+    val h = new TransactionHandler[A]() {
+      def run(trans: Transaction, a: A): Unit = {
+        out.send(trans, a)
+      }
+    }
+    val l1 = ea.listen_(left, h)
+    val l2 = eb.listen_(right, h)
+    out
+      .unsafeAddCleanup(l1)
+      .unsafeAddCleanup(l2)
+      .unsafeAddCleanup(new Listener() {
+        def unlisten(): Unit = {
+          left.unlinkTo(node_target)
+        }
+      })
+
+  }
+
+  /**
+    * Variant of [[sodium.Stream.orElse(s:sodium\.Stream[A]):sodium\.Stream[A]* orElse(Stream)]]
+    * that merges a collection of streams.
+    */
+  def orElse[A](ss: Iterable[Stream[A]]): Stream[A] = Stream.merge[A](ss, (left: A, right: A) => right)
+
+  /**
+    * Variant of [[Stream!.merge(s:sodium\.Stream[A],f:(A,A)=>A):sodium\.Stream[A]* Stream.merge(Stream,(A,A)=>A)]]
+    * that merges a collection of streams.
+    */
+  def merge[A](ss: Iterable[Stream[A]], f: (A, A) => A): Stream[A] = {
+    val ss_ : Array[Stream[A]] = ss.toArray
+    Stream.merge[A](ss_, 0, ss_.length, f)
+  }
+
+  //TODO this method is recursive but not tailrec
+  private def merge[A](sas: Array[Stream[A]], start: Int, end: Int, f: (A, A) => A): Stream[A] = {
+    val len = end - start
+    len match {
+      case 0 => new Stream[A]()
+      case 1 => sas(start)
+      case 2 => sas(start).merge(sas(start + 1), f)
+      case _ =>
+        val mid = (start + end) / 2
+        Stream.merge[A](sas, start, mid, f).merge(Stream.merge[A](sas, mid, end, f), f)
     }
   }
 
   /**
-   * Merge two streams of events of the same type.
-   *
-   * In the case where two event occurrences are simultaneous (i.e. both
-   * within the same transaction), both will be delivered in the same
-   * transaction. If the event firings are ordered for some reason, then
-   * their ordering is retained. In many common cases the ordering will
-   * be undefined.
-   */
-  private def merge[A](ea: Stream[A], eb: Stream[A]): Stream[A] =
-    {
-      val out = new StreamSink[A]() {
-        override def sampleNow() = ea.sampleNow() ++ eb.sampleNow()
-      }
-      val l1 = ea.listen_(out.node, new TransactionHandler[A]() {
-        def run(trans: Transaction, a: A) {
-          out.send(trans, a)
-        }
-      })
-      val l2 = eb.listen_(out.node, new TransactionHandler[A]() {
-        def run(trans1: Transaction, a: A) {
-          trans1.prioritized(out.node, trans2 => out.send(trans2, a))
-        }
-      })
-      out.addCleanup(l1).addCleanup(l2)
-    }
-
-  /**
-   * Filter the empty values out, and strip the Option wrapper from the present ones.
-   */
-  final def filterOption[A](ev: Stream[Option[A]]): Stream[A] =
-    {
-      val out = new StreamSink[A]() {
-        override def sampleNow() = ev.sampleNow().flatten
-      }
-      val l = ev.listen_(out.node, new TransactionHandler[Option[A]]() {
-        def run(trans: Transaction, oa: Option[A]) {
-          oa.foreach(out.send(trans, _))
-        }
-      })
-      out.addCleanup(l)
-    }
+    * Return a stream that only outputs events that have present
+    * values, removing the scala.Option wrapper, discarding empty values.
+    */
+  def filterOptional[A](ev: Stream[Option[A]]): Stream[A] = {
+    val out = new StreamWithSend[A]()
+    val l = ev.listen_(out.node, (trans: Transaction, oa: Option[A]) => {
+      oa.foreach(out.send(trans, _))
+    })
+    out.unsafeAddCleanup(l)
+  }
 
 }
