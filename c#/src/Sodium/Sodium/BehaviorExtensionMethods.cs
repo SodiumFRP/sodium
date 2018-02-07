@@ -29,7 +29,7 @@ namespace Sodium
                     }
 
                     IListener l1 = bba.Value(trans1).Listen(@out.Node, trans1, H, false);
-                    return @out.UnsafeAttachListener(l1).UnsafeAttachListener(currentListener).HoldLazyInternal(za);
+                    return @out.UnsafeAttachListener(l1).UnsafeAttachListener(currentListener).HoldLazyInternal(trans1, za);
                 },
                 false);
         }
@@ -185,7 +185,7 @@ namespace Sodium
                                 return f(values);
                             })
                         .UnsafeAttachListener(new CompositeListener(listeners))
-                        .HoldLazyInternal(initialValue);
+                        .HoldLazyInternal(trans1, initialValue);
                 },
                 false);
         }
@@ -204,7 +204,7 @@ namespace Sodium
         /// <typeparam name="T">The type of the behaviors.</typeparam>
         /// <param name="b">The collection of behaviors.</param>
         /// <returns>A behavior containing a list of the input behaviors' values.</returns>
-        public static Behavior<IReadOnlyList<T>> Lift<T>(this IReadOnlyCollection<Behavior<T>> b) => b.Lift(v => (IReadOnlyList<T>) v.ToArray());
+        public static Behavior<IReadOnlyList<T>> Lift<T>(this IReadOnlyCollection<Behavior<T>> b) => b.Lift(v => (IReadOnlyList<T>)v.ToArray());
 
         private class FanOutKeepListenersAlive : IKeepListenersAlive
         {

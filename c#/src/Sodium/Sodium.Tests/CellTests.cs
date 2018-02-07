@@ -1,5 +1,4 @@
-﻿using System;
-using System.Collections.Generic;
+﻿using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 
@@ -161,6 +160,19 @@ namespace Sodium.Tests
             r.SwitchC().Listen(@out.Add);
             s.Send(2);
             s.Send(4);
+            CollectionAssert.AreEqual(new[] { 1, 3, 5 }, @out);
+        }
+
+        [Test]
+        public void TestLazyCellCreation()
+        {
+            List<int> @out = new List<int>();
+            StreamSink<int> s = new StreamSink<int>();
+            Cell<Cell<int>> c = Cell.Constant(1).Map(_ => s.Hold(0));
+            s.Send(1);
+            c.SwitchC().Listen(@out.Add);
+            s.Send(3);
+            s.Send(5);
             CollectionAssert.AreEqual(new[] { 1, 3, 5 }, @out);
         }
     }

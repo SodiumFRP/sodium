@@ -375,9 +375,9 @@ namespace Sodium
         /// <param name="initialValue">The lazily initialized initial value of the cell.</param>
         /// <returns>A cell with the specified lazily initialized initial value, that is updated by this stream's values.</returns>
         public Cell<T> HoldLazy(Lazy<T> initialValue) =>
-            new Cell<T>(this.HoldLazyInternal(initialValue));
+            Transaction.Apply(trans => new Cell<T>(this.HoldLazyInternal(trans, initialValue)), false);
 
-        internal Behavior<T> HoldLazyInternal(Lazy<T> initialValue) => new LazyBehavior<T>(this, initialValue);
+        internal Behavior<T> HoldLazyInternal(Transaction trans, Lazy<T> initialValue) => new LazyBehavior<T>(trans, this, initialValue);
 
         /// <summary>
         ///     Return a stream whose events are the values of the cell at the time of the stream event firing.
@@ -789,17 +789,18 @@ namespace Sodium
             Lazy<TState> initialState,
             Func<T, TState, (TReturn ReturnValue, TState State)> f)
         {
-            return Transaction.Run(
-                () =>
+            return Transaction.Apply(
+                trans =>
                 {
                     StreamLoop<TState> es = new StreamLoop<TState>();
-                    Behavior<TState> s = es.HoldLazyInternal(initialState);
+                    Behavior<TState> s = es.HoldLazyInternal(trans, initialState);
                     Stream<(TReturn ReturnValue, TState State)> ebs = this.Snapshot(s, f);
                     Stream<TReturn> eb = ebs.Map(bs => bs.ReturnValue);
                     Stream<TState> esOut = ebs.Map(bs => bs.State);
                     es.Loop(esOut);
                     return eb;
-                });
+                },
+                false);
         }
 
         /// <summary>
@@ -818,15 +819,16 @@ namespace Sodium
 
         public Cell<TReturn> AccumLazy<TReturn>(Lazy<TReturn> initialState, Func<T, TReturn, TReturn> f)
         {
-            return Transaction.Run(
-                () =>
+            return Transaction.Apply(
+                trans =>
                 {
                     StreamLoop<TReturn> es = new StreamLoop<TReturn>();
-                    Behavior<TReturn> s = es.HoldLazyInternal(initialState);
+                    Behavior<TReturn> s = es.HoldLazyInternal(trans, initialState);
                     Stream<TReturn> esOut = this.Snapshot(s, f);
                     es.Loop(esOut);
                     return esOut.HoldLazy(initialState);
-                });
+                },
+                false);
         }
 
         /// <summary>

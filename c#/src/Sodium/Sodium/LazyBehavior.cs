@@ -6,8 +6,18 @@ namespace Sodium
     {
         internal Lazy<T> LazyInitialValue;
 
-        internal LazyBehavior(Stream<T> stream, Lazy<T> lazyInitialValue)
-            : base(stream, default(T)) => this.LazyInitialValue = lazyInitialValue;
+        internal LazyBehavior(Stream<T> stream)
+            : base(stream, default(T))
+        {
+        }
+
+        internal LazyBehavior(Transaction trans, Stream<T> stream, Lazy<T> lazyInitialValue)
+            : base(stream, default(T))
+        {
+            this.LazyInitialValue = lazyInitialValue;
+
+            trans.Sample(this.EnsureValueIsCreated);
+        }
 
         protected override void NotUsingInitialValue()
         {
@@ -18,13 +28,18 @@ namespace Sodium
 
         internal override T SampleNoTransaction()
         {
+            this.EnsureValueIsCreated();
+
+            return this.ValueProperty;
+        }
+
+        private void EnsureValueIsCreated()
+        {
             if (this.UsingInitialValue && this.LazyInitialValue != null)
             {
                 this.ValueProperty = this.LazyInitialValue.Value;
                 this.LazyInitialValue = null;
             }
-
-            return this.ValueProperty;
         }
     }
 }

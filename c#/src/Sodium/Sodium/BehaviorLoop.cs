@@ -16,7 +16,7 @@ namespace Sodium
         }
 
         private BehaviorLoop(StreamLoop<T> streamLoop)
-            : base(streamLoop, null) => this.streamLoop = streamLoop;
+            : base(streamLoop) => this.streamLoop = streamLoop;
 
         /// <summary>
         ///     Resolve the loop to specify what the <see cref="BehaviorLoop{T}" /> was a forward reference to.  This method
