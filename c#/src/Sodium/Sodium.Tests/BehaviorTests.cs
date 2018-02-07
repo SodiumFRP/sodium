@@ -806,72 +806,6 @@ namespace Sodium.Tests
         }
 
         [Test]
-        public void TestSwitchEarlyS()
-        {
-            Ss2 ss1 = new Ss2();
-            BehaviorSink<Ss2> bss = Behavior.CreateSink(ss1);
-            Stream<int> so = bss.Map<Stream<int>>(b => b.S).SwitchEarlyS();
-            List<int> @out = new List<int>();
-            IListener l = so.Listen(@out.Add);
-            Ss2 ss2 = new Ss2();
-            Ss2 ss3 = new Ss2();
-            Ss2 ss4 = new Ss2();
-            ss1.S.Send(0);
-            ss1.S.Send(1);
-            ss1.S.Send(2);
-            bss.Send(ss2);
-            ss1.S.Send(7);
-            ss2.S.Send(3);
-            ss2.S.Send(4);
-            ss3.S.Send(2);
-            bss.Send(ss3);
-            ss3.S.Send(5);
-            ss3.S.Send(6);
-            ss3.S.Send(7);
-            ss4.S.Send(8);
-            bss.Send(ss4);
-            ss4.S.Send(8);
-            ss3.S.Send(2);
-            ss4.S.Send(9);
-            l.Unlisten();
-            CollectionAssert.AreEqual(new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 }, @out);
-        }
-
-        [Test]
-        public void TestSwitchEarlySSimultaneous()
-        {
-            Ss2 ss1 = new Ss2();
-            BehaviorSink<Ss2> bss = Behavior.CreateSink(ss1);
-            Stream<int> so = bss.Map<Stream<int>>(b => b.S).SwitchEarlyS();
-            List<int> @out = new List<int>();
-            IListener l = so.Listen(@out.Add);
-            Ss2 ss2 = new Ss2();
-            Ss2 ss3 = new Ss2();
-            Ss2 ss4 = new Ss2();
-            ss1.S.Send(0);
-            ss1.S.Send(1);
-            ss1.S.Send(2);
-            bss.Send(ss2);
-            ss1.S.Send(7);
-            ss2.S.Send(3);
-            ss2.S.Send(4);
-            ss3.S.Send(2);
-            bss.Send(ss3);
-            ss3.S.Send(5);
-            ss3.S.Send(6);
-            ss3.S.Send(7);
-            Transaction.RunVoid(() =>
-            {
-                ss4.S.Send(8);
-                bss.Send(ss4);
-                ss3.S.Send(2);
-            });
-            ss4.S.Send(9);
-            l.Unlisten();
-            CollectionAssert.AreEqual(new[] { 0, 1, 2, 3, 4, 5, 6, 7, 8, 9 }, @out);
-        }
-
-        [Test]
         public void TestLiftList()
         {
             IReadOnlyList<CellSink<int>> cellSinks = Enumerable.Range(0, 50).Select(_ => Cell.CreateSink(1)).ToArray();
@@ -1059,41 +993,6 @@ namespace Sodium.Tests
         }
 
         [Test]
-        public void SwitchEarlySOnBehaviorLoop()
-        {
-            (Stream<int> b, StreamSink<int> b1, StreamSink<int> b2, BehaviorSink<Stream<int>> s) = Transaction.Run(() =>
-            {
-                BehaviorLoop<Stream<int>> loop = Behavior.CreateLoop<Stream<int>>();
-                StreamSink<int> b1Local = Stream.CreateSink<int>();
-                StreamSink<int> b2Local = Stream.CreateSink<int>();
-                Stream<int> bLocal = loop.SwitchEarlyS();
-                BehaviorSink<Stream<int>> sLocal = Behavior.CreateSink(b1Local.AsStream());
-                loop.Loop(sLocal);
-                return (bLocal, b1Local, b2Local, sLocal);
-            });
-
-            List<int> output = new List<int>();
-            IListener l = b.Listen(output.Add);
-
-            b1.Send(2);
-            b2.Send(12);
-
-            Transaction.RunVoid(() =>
-            {
-                b1.Send(3);
-                b2.Send(13);
-                s.Send(b2);
-            });
-
-            b1.Send(4);
-            b2.Send(14);
-
-            l.Unlisten();
-
-            CollectionAssert.AreEqual(new[] { 2, 13, 14 }, output);
-        }
-
-        [Test]
         public void SwitchCCatchFirst()
         {
             List<int> output = new List<int>();
@@ -1209,45 +1108,6 @@ namespace Sodium.Tests
             l.Unlisten();
 
             CollectionAssert.AreEqual(new[] { 2, 13, 14, 5 }, output);
-        }
-
-        [Test]
-        public void SwitchEarlySCatchFirst()
-        {
-            List<int> output = new List<int>();
-
-            (StreamSink<int> c1, StreamSink<int> c2, BehaviorSink<Stream<int>> s, IListener l) = Transaction.Run(() =>
-            {
-                StreamSink<int> c1Local = Stream.CreateSink<int>();
-                StreamSink<int> c2Local = Stream.CreateSink<int>();
-                BehaviorSink<Stream<int>> sLocal = Behavior.CreateSink(c1Local.AsStream());
-                Stream<int> cLocal = sLocal.SwitchEarlyS();
-
-                c1Local.Send(2);
-                c2Local.Send(12);
-                sLocal.Send(c2Local);
-
-                IListener lLocal = cLocal.Listen(output.Add);
-
-                return (c1Local, c2Local, sLocal, lLocal);
-            });
-
-            c1.Send(3);
-            c2.Send(13);
-
-            Transaction.RunVoid(() =>
-            {
-                c1.Send(4);
-                c2.Send(14);
-                s.Send(c1);
-            });
-
-            c1.Send(5);
-            c2.Send(15);
-
-            l.Unlisten();
-
-            CollectionAssert.AreEqual(new[] { 12, 13, 4, 5 }, output);
         }
 
         [Test]

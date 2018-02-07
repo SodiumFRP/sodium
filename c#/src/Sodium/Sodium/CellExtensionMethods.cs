@@ -34,16 +34,6 @@ namespace Sodium
         public static Stream<T> SwitchS<T>(this Cell<Stream<T>> csa) => csa.Behavior.SwitchS();
 
         /// <summary>
-        ///     Unwrap a stream inside a cell to give a time-varying stream implementation.
-        ///     When the cell changes value, the output stream will fire the simultaneous firing (if one exists) from the
-        ///     stream which the cell will hold at the end of the transaction.
-        /// </summary>
-        /// <typeparam name="T">The type of the stream.</typeparam>
-        /// <param name="csa">The cell containing the stream.</param>
-        /// <returns>The unwrapped stream.</returns>
-        public static Stream<T> SwitchEarlyS<T>(this Cell<Stream<T>> csa) => csa.Behavior.SwitchEarlyS();
-
-        /// <summary>
         ///     Lift a function into an enumerable of cells, so the returned cell always reflects the specified function applied to
         ///     the
         ///     input cells' values.
