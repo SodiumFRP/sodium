@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 
@@ -63,6 +64,87 @@ namespace Sodium.Tests
                 get { return this.currentValue.Value; }
                 private set { this.currentValue = new Lazy<int>(() => value); }
             }
+        }
+
+        [Test]
+        public void TestRunConstruct()
+        {
+            var objects = Transaction.RunConstruct(() =>
+            {
+                IReadOnlyList<TestObject2> o2 = Enumerable.Range(0, 10000).Select(n => new TestObject2(n, n < 1500, Stream.Never<bool>())).ToArray();
+                CellSink<IReadOnlyList<TestObject2>> objectsLocal = Cell.CreateSink(o2);
+
+                return objectsLocal;
+            });
+
+                Transaction.RunConstruct(() =>
+                {
+                    objects.Send(
+                        Enumerable.Range(0, 20000)
+                            .Select(n => new TestObject2(n, n < 500, Stream.Never<bool>()))
+                            .ToArray());
+                    return Unit.Value;
+                });
+        }
+
+        [Test]
+        public void TestRunConstruct2()
+        {
+            var (objectsAndIsSelected, selectAllStream, objects) = Transaction.RunConstruct(() =>
+            {
+                CellLoop<bool?> allSelectedCellLoop = Cell.CreateLoop<bool?>();
+                StreamSink<Unit> toggleAllSelectedStreamLocal = Stream.CreateSink<Unit>();
+                Stream<bool> selectAllStreamLocal = toggleAllSelectedStreamLocal.Snapshot(allSelectedCellLoop).Map(a => a != true);
+
+                IReadOnlyList<TestObject2> o2 = Enumerable.Range(0, 10000).Select(n => new TestObject2(n, n < 1500, selectAllStreamLocal)).ToArray();
+                CellSink<IReadOnlyList<TestObject2>> objectsLocal = Cell.CreateSink(o2);
+
+                var objectsAndIsSelectedLocal = objectsLocal.Map(oo => oo.Select(o => o.IsSelected.Map(s => new { Object = o, IsSelected = s })).Lift()).SwitchC();
+
+                bool defaultValue = o2.Count < 1;
+                Cell<bool?> allSelected =
+                    objectsAndIsSelectedLocal.Map(
+                        oo =>
+                            !oo.Any()
+                                ? defaultValue
+                                : (oo.All(o => o.IsSelected)
+                                    ? true
+                                    : (oo.All(o => !o.IsSelected) ? (bool?)false : null)));
+                allSelectedCellLoop.Loop(allSelected);
+
+                return (objectsAndIsSelectedLocal, selectAllStreamLocal, objectsLocal);
+            });
+
+            List<int> @out = new List<int>();
+            using (Transaction.Run(
+                () => objectsAndIsSelected.Map(oo => oo.Count(o => o.IsSelected))
+                    .Values.Listen(@out.Add)))
+            {
+                Transaction.RunConstruct(() =>
+                {
+                    objects.Send(
+                        Enumerable.Range(0, 20000)
+                            .Select(n => new TestObject2(n, n < 500, selectAllStream))
+                            .ToArray());
+                    return Unit.Value;
+                });
+            }
+
+            CollectionAssert.AreEqual(new[] { 1500, 500 }, @out);
+        }
+
+        private class TestObject2
+        {
+            public TestObject2(int id, bool initialIsSelected, Stream<bool> selectAllStream)
+            {
+                this.Id = id;
+                this.IsSelectedStreamSink = Stream.CreateSink<bool>();
+                this.IsSelected = selectAllStream.OrElse(this.IsSelectedStreamSink).Hold(initialIsSelected);
+            }
+
+            public int Id { get; }
+            public StreamSink<bool> IsSelectedStreamSink { get; }
+            public Cell<bool> IsSelected { get; }
         }
     }
 }
