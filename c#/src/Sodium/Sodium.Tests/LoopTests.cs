@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 using NUnit.Framework;
 
 namespace Sodium.Tests
@@ -8,6 +9,513 @@ namespace Sodium.Tests
     [TestFixture]
     public class LoopTests
     {
+        #region StreamLoop
+
+        [Test]
+        public void ImperativeStreamLoop()
+        {
+            StreamSink<int> s = new StreamSink<int>();
+            Stream<int> result = Transaction.Run(
+                () =>
+                {
+                    StreamLoop<int> l = new StreamLoop<int>();
+                    Stream<int> resultLocal = s.Snapshot(l.Hold(0), (n, o) => n + o);
+                    l.Loop(resultLocal);
+                    return resultLocal;
+                });
+
+            List<int> @out = new List<int>();
+            using (result.Listen(@out.Add))
+            {
+                s.Send(1);
+                s.Send(2);
+                s.Send(3);
+            }
+
+            CollectionAssert.AreEqual(new[] { 1, 3, 6 }, @out);
+        }
+
+        [Test]
+        public void ImperativeStreamLoopFailsWhenLoopedTwice()
+        {
+            InvalidOperationException actual = null;
+
+            try
+            {
+                StreamSink<int> s = new StreamSink<int>();
+                Transaction.RunVoid(
+                    () =>
+                    {
+                        StreamLoop<int> l = new StreamLoop<int>();
+                        Stream<int> resultLocal = s.Snapshot(l.Hold(0), (n, o) => n + o);
+                        l.Loop(resultLocal);
+                        l.Loop(resultLocal);
+                    });
+            }
+            catch (InvalidOperationException e)
+            {
+                actual = e;
+            }
+
+            Assert.IsNotNull(actual);
+            Assert.AreEqual("Loop was looped more than once.", actual.Message);
+        }
+
+        [Test]
+        public void ImperativeStreamLoopFailsWithoutTransaction()
+        {
+            InvalidOperationException actual = null;
+
+            try
+            {
+                // ReSharper disable once ObjectCreationAsStatement
+                new StreamLoop<int>();
+            }
+            catch (InvalidOperationException e)
+            {
+                actual = e;
+            }
+
+            Assert.IsNotNull(actual);
+            Assert.AreEqual("Loop must be created within an explicit transaction.", actual.Message);
+        }
+
+        [Test]
+        public void ImperativeStreamLoopFailsWhenNotLooped()
+        {
+            InvalidOperationException actual = null;
+
+            try
+            {
+                // ReSharper disable once ObjectCreationAsStatement
+                Transaction.RunVoid(() => new StreamLoop<int>());
+            }
+            catch (InvalidOperationException e)
+            {
+                actual = e;
+            }
+
+            Assert.IsNotNull(actual);
+            Assert.AreEqual("Loop was not looped.", actual.Message);
+        }
+
+        [Test]
+        public void ImperativeStreamLoopFailsWhenLoopedInSeparateTransaction()
+        {
+            InvalidOperationException actual = null;
+
+            StreamLoop<int> l = null;
+
+            new Thread(
+                () =>
+                    Transaction.RunConstructVoid(
+                        () =>
+                        {
+                            l = new StreamLoop<int>();
+                            Thread.Sleep(500);
+                        })).Start();
+
+            try
+            {
+                StreamSink<int> s = new StreamSink<int>();
+                Transaction.RunConstructVoid(
+                    () =>
+                    {
+                        Thread.Sleep(250);
+                        Stream<int> resultLocal = s.Snapshot(l.Hold(0), (n, o) => n + o);
+                        l.Loop(resultLocal);
+                    });
+            }
+            catch (InvalidOperationException e)
+            {
+                actual = e;
+            }
+
+            Thread.Sleep(500);
+
+            Assert.IsNotNull(actual);
+            Assert.AreEqual("Loop must be looped in the same transaction that it was created in.", actual.Message);
+        }
+
+        [Test]
+        public void FunctionalStreamLoop()
+        {
+            StreamSink<int> s = new StreamSink<int>();
+            Stream<int> result = Stream.Loop<int>().WithoutCaptures(l => s.Snapshot(l.Hold(0), (n, o) => n + o));
+
+            List<int> @out = new List<int>();
+            using (result.Listen(@out.Add))
+            {
+                s.Send(1);
+                s.Send(2);
+                s.Send(3);
+            }
+
+            CollectionAssert.AreEqual(new[] { 1, 3, 6 }, @out);
+        }
+
+        [Test]
+        public void FunctionalStreamLoopWithCaptures()
+        {
+            StreamSink<int> s = new StreamSink<int>();
+            (Stream<int> result, Stream<int> s2) = Stream.Loop<int>()
+                .WithCaptures(l => (Stream: s.Snapshot(l.Hold(0), (n, o) => n + o), Captures: s.Map(v => 2 * v)));
+
+            List<int> @out = new List<int>();
+            List<int> out2 = new List<int>();
+            using (result.Listen(@out.Add))
+            using (s2.Listen(out2.Add))
+
+            {
+                s.Send(1);
+                s.Send(2);
+                s.Send(3);
+            }
+
+            CollectionAssert.AreEqual(new[] { 1, 3, 6 }, @out);
+            CollectionAssert.AreEqual(new[] { 2, 4, 6 }, out2);
+        }
+
+        #endregion StreamLoop
+
+        #region BehaviorLoop
+
+        [Test]
+        public void ImperativeBehaviorLoop()
+        {
+            BehaviorSink<int> s = new BehaviorSink<int>(0);
+            Behavior<int> result = Transaction.Run(
+                () =>
+                {
+                    BehaviorLoop<int> l = new BehaviorLoop<int>();
+                    Behavior<int> resultLocal = Operational.Updates(s).Snapshot(l, (n, o) => n + o).Hold(0).AsBehavior();
+                    l.Loop(resultLocal);
+                    return resultLocal;
+                });
+
+            List<int> @out = new List<int>();
+            using (Transaction.Run(() => Operational.Value(result).Listen(@out.Add)))
+            {
+                s.Send(1);
+                s.Send(2);
+                s.Send(3);
+            }
+
+            CollectionAssert.AreEqual(new[] { 0, 1, 3, 6 }, @out);
+        }
+
+        [Test]
+        public void ImperativeBehaviorLoopFailsWhenLoopedTwice()
+        {
+            InvalidOperationException actual = null;
+
+            try
+            {
+                BehaviorSink<int> s = new BehaviorSink<int>(0);
+                Transaction.RunVoid(
+                    () =>
+                    {
+                        BehaviorLoop<int> l = new BehaviorLoop<int>();
+                        Behavior<int> resultLocal = Operational.Updates(s).Snapshot(l, (n, o) => n + o).Hold(0).AsBehavior();
+                        l.Loop(resultLocal);
+                        l.Loop(resultLocal);
+                    });
+            }
+            catch (InvalidOperationException e)
+            {
+                actual = e;
+            }
+
+            Assert.IsNotNull(actual);
+            Assert.AreEqual("Loop was looped more than once.", actual.Message);
+        }
+
+        [Test]
+        public void ImperativeBehaviorLoopFailsWithoutTransaction()
+        {
+            InvalidOperationException actual = null;
+
+            try
+            {
+                // ReSharper disable once ObjectCreationAsStatement
+                new BehaviorLoop<int>();
+            }
+            catch (InvalidOperationException e)
+            {
+                actual = e;
+            }
+
+            Assert.IsNotNull(actual);
+            Assert.AreEqual("Loop must be created within an explicit transaction.", actual.Message);
+        }
+
+        [Test]
+        public void ImperativeBehaviorLoopFailsWhenNotLooped()
+        {
+            InvalidOperationException actual = null;
+
+            try
+            {
+                // ReSharper disable once ObjectCreationAsStatement
+                Transaction.RunVoid(() => new BehaviorLoop<int>());
+            }
+            catch (InvalidOperationException e)
+            {
+                actual = e;
+            }
+
+            Assert.IsNotNull(actual);
+            Assert.AreEqual("Loop was not looped.", actual.Message);
+        }
+
+        [Test]
+        public void ImperativeBehaviorLoopFailsWhenLoopedInSeparateTransaction()
+        {
+            InvalidOperationException actual = null;
+
+            BehaviorLoop<int> l = null;
+
+            new Thread(
+                () =>
+                    Transaction.RunConstructVoid(
+                        () =>
+                        {
+                            l = new BehaviorLoop<int>();
+                            Thread.Sleep(500);
+                        })).Start();
+
+            try
+            {
+                BehaviorSink<int> s = new BehaviorSink<int>(0);
+                Transaction.RunConstructVoid(
+                    () =>
+                    {
+                        Thread.Sleep(250);
+                        Behavior<int> resultLocal = Operational.Updates(s).Snapshot(l, (n, o) => n + o).Hold(0).AsBehavior();
+                        l.Loop(resultLocal);
+                    });
+            }
+            catch (InvalidOperationException e)
+            {
+                actual = e;
+            }
+
+            Thread.Sleep(500);
+
+            Assert.IsNotNull(actual);
+            Assert.AreEqual("Loop must be looped in the same transaction that it was created in.", actual.Message);
+        }
+
+        [Test]
+        public void FunctionalBehaviorLoop()
+        {
+            BehaviorSink<int> s = new BehaviorSink<int>(0);
+            Behavior<int> result = Behavior.Loop<int>().WithoutCaptures(l => Operational.Updates(s).Snapshot(l, (n, o) => n + o).Hold(0).AsBehavior());
+
+            List<int> @out = new List<int>();
+            using (Transaction.Run(() => Operational.Value(result).Listen(@out.Add)))
+            {
+                s.Send(1);
+                s.Send(2);
+                s.Send(3);
+            }
+
+            CollectionAssert.AreEqual(new[] { 0, 1, 3, 6 }, @out);
+        }
+
+        [Test]
+        public void FunctionalBehaviorLoopWithCaptures()
+        {
+            BehaviorSink<int> s = new BehaviorSink<int>(0);
+            (Behavior<int> result, Behavior<int> s2) = Behavior.Loop<int>()
+                .WithCaptures(l => (Behavior: Operational.Updates(s).Snapshot(l, (n, o) => n + o).Hold(0).AsBehavior(), Captures: s.Map(v => 2 * v)));
+
+            List<int> @out = new List<int>();
+            List<int> out2 = new List<int>();
+            using (Transaction.Run(() => Operational.Value(result).Listen(@out.Add)))
+            using (Transaction.Run(() => Operational.Value(s2).Listen(out2.Add)))
+
+            {
+                s.Send(1);
+                s.Send(2);
+                s.Send(3);
+            }
+
+            CollectionAssert.AreEqual(new[] { 0, 1, 3, 6 }, @out);
+            CollectionAssert.AreEqual(new[] { 0, 2, 4, 6 }, out2);
+        }
+
+        #endregion BehaviorLoop
+
+        #region CellLoop
+
+        [Test]
+        public void ImperativeCellLoop()
+        {
+            CellSink<int> s = new CellSink<int>(0);
+            Cell<int> result = Transaction.Run(
+                () =>
+                {
+                    CellLoop<int> l = new CellLoop<int>();
+                    Cell<int> resultLocal = s.Updates.Snapshot(l, (n, o) => n + o).Hold(0);
+                    l.Loop(resultLocal);
+                    return resultLocal;
+                });
+
+            List<int> @out = new List<int>();
+            using (Transaction.Run(() => result.Values.Listen(@out.Add)))
+            {
+                s.Send(1);
+                s.Send(2);
+                s.Send(3);
+            }
+
+            CollectionAssert.AreEqual(new[] { 0, 1, 3, 6 }, @out);
+        }
+
+        [Test]
+        public void ImperativeCellLoopFailsWhenLoopedTwice()
+        {
+            InvalidOperationException actual = null;
+
+            try
+            {
+                CellSink<int> s = new CellSink<int>(0);
+                Transaction.RunVoid(
+                    () =>
+                    {
+                        CellLoop<int> l = new CellLoop<int>();
+                        Cell<int> resultLocal = s.Updates.Snapshot(l, (n, o) => n + o).Hold(0);
+                        l.Loop(resultLocal);
+                        l.Loop(resultLocal);
+                    });
+            }
+            catch (InvalidOperationException e)
+            {
+                actual = e;
+            }
+
+            Assert.IsNotNull(actual);
+            Assert.AreEqual("Loop was looped more than once.", actual.Message);
+        }
+
+        [Test]
+        public void ImperativeCellLoopFailsWithoutTransaction()
+        {
+            InvalidOperationException actual = null;
+
+            try
+            {
+                // ReSharper disable once ObjectCreationAsStatement
+                new CellLoop<int>();
+            }
+            catch (InvalidOperationException e)
+            {
+                actual = e;
+            }
+
+            Assert.IsNotNull(actual);
+            Assert.AreEqual("Loop must be created within an explicit transaction.", actual.Message);
+        }
+
+        [Test]
+        public void ImperativeCellLoopFailsWhenNotLooped()
+        {
+            InvalidOperationException actual = null;
+
+            try
+            {
+                // ReSharper disable once ObjectCreationAsStatement
+                Transaction.RunVoid(() => new CellLoop<int>());
+            }
+            catch (InvalidOperationException e)
+            {
+                actual = e;
+            }
+
+            Assert.IsNotNull(actual);
+            Assert.AreEqual("Loop was not looped.", actual.Message);
+        }
+
+        [Test]
+        public void ImperativeCellLoopFailsWhenLoopedInSeparateTransaction()
+        {
+            InvalidOperationException actual = null;
+
+            CellLoop<int> l = null;
+
+            new Thread(
+                () =>
+                    Transaction.RunConstructVoid(
+                        () =>
+                        {
+                            l = new CellLoop<int>();
+                            Thread.Sleep(500);
+                        })).Start();
+
+            try
+            {
+                CellSink<int> s = new CellSink<int>(0);
+                Transaction.RunConstructVoid(
+                    () =>
+                    {
+                        Thread.Sleep(250);
+                        Cell<int> resultLocal = s.Updates.Snapshot(l, (n, o) => n + o).Hold(0);
+                        l.Loop(resultLocal);
+                    });
+            }
+            catch (InvalidOperationException e)
+            {
+                actual = e;
+            }
+
+            Thread.Sleep(500);
+
+            Assert.IsNotNull(actual);
+            Assert.AreEqual("Loop must be looped in the same transaction that it was created in.", actual.Message);
+        }
+
+        [Test]
+        public void FunctionalCellLoop()
+        {
+            CellSink<int> s = new CellSink<int>(0);
+            Cell<int> result = Cell.Loop<int>().WithoutCaptures(l => s.Updates.Snapshot(l, (n, o) => n + o).Hold(0));
+
+            List<int> @out = new List<int>();
+            using (Transaction.Run(() => result.Values.Listen(@out.Add)))
+            {
+                s.Send(1);
+                s.Send(2);
+                s.Send(3);
+            }
+
+            CollectionAssert.AreEqual(new[] { 0, 1, 3, 6 }, @out);
+        }
+
+        [Test]
+        public void FunctionalCellLoopWithCaptures()
+        {
+            CellSink<int> s = new CellSink<int>(0);
+            (Cell<int> result, Cell<int> s2) = Cell.Loop<int>()
+                .WithCaptures(l => (Cell: s.Updates.Snapshot(l, (n, o) => n + o).Hold(0), Captures: s.Map(v => 2 * v)));
+
+            List<int> @out = new List<int>();
+            List<int> out2 = new List<int>();
+            using (Transaction.Run(() => result.Values.Listen(@out.Add)))
+            using (Transaction.Run(() => s2.Values.Listen(out2.Add)))
+
+            {
+                s.Send(1);
+                s.Send(2);
+                s.Send(3);
+            }
+
+            CollectionAssert.AreEqual(new[] { 0, 1, 3, 6 }, @out);
+            CollectionAssert.AreEqual(new[] { 0, 2, 4, 6 }, out2);
+        }
+
+        #endregion CellLoop
+
         /*
          * Desired behavior:
          *     A list of items of type TestObject are held in a cell.  TestObject contains a cell of type int named Output, which is calculated from other values.

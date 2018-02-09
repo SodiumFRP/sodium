@@ -76,6 +76,30 @@ namespace Sodium
         }
 
         /// <summary>
+        ///     Return the current transaction or <code>null</code>.
+        /// </summary>
+        /// <returns>The current transaction or <code>null</code>.</returns>
+        internal static Transaction GetCurrentTransaction()
+        {
+            if (Monitor.TryEnter(TransactionLock))
+            {
+                try
+                {
+                    if (currentTransaction != null)
+                    {
+                        return currentTransaction;
+                    }
+                }
+                finally
+                {
+                    Monitor.Exit(TransactionLock);
+                }
+            }
+
+            return LocalTransaction.Value;
+        }
+
+        /// <summary>
         ///     Execute the specified action inside a single transaction.
         /// </summary>
         /// <param name="action">The action to execute.</param>

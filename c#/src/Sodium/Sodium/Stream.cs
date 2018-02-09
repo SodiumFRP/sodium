@@ -68,14 +68,15 @@ namespace Sodium
         [Pure]
         public (Stream<T> Stream, TCaptures Captures) WithCaptures<TCaptures>(
             Func<LoopedStream<T>, (Stream<T> Stream, TCaptures Captures)> f) =>
-            Transaction.Run(
-                () =>
+            Transaction.Apply(
+                trans =>
                 {
                     LoopedStream<T> loop = new LoopedStream<T>();
                     (Stream<T> Stream, TCaptures Captures) result = f(loop);
-                    loop.Loop(result.Stream);
+                    loop.Loop(trans, result.Stream);
                     return result;
-                });
+                },
+                false);
 
         /// <summary>
         ///     Loop a stream and return the resulting stream.

@@ -89,14 +89,15 @@ namespace Sodium
         [Pure]
         public (Cell<T> Cell, TCaptures Captures) WithCaptures<TCaptures>(
             Func<LoopedCell<T>, (Cell<T> Cell, TCaptures Captures)> f) =>
-            Transaction.Run(
-                () =>
+            Transaction.Apply(
+                trans =>
                 {
                     LoopedCell<T> loop = new LoopedCell<T>();
                     (Cell<T> Cell, TCaptures Captures) result = f(loop);
-                    loop.Loop(result.Cell);
+                    loop.Loop(trans, result.Cell);
                     return result;
-                });
+                },
+                false);
 
         /// <summary>
         ///     Loop a cell and return the resulting cell.

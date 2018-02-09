@@ -77,14 +77,15 @@ namespace Sodium
         [Pure]
         public (Behavior<T> Behavior, TCaptures Captures) WithCaptures<TCaptures>(
             Func<LoopedBehavior<T>, (Behavior<T> Behavior, TCaptures Captures)> f) =>
-            Transaction.Run(
-                () =>
+            Transaction.Apply(
+                trans =>
                 {
                     LoopedBehavior<T> loop = new LoopedBehavior<T>();
                     (Behavior<T> Behavior, TCaptures Captures) result = f(loop);
-                    loop.Loop(result.Behavior);
+                    loop.Loop(trans, result.Behavior);
                     return result;
-                });
+                },
+                false);
 
         /// <summary>
         ///     Loop a behavior and return the resulting behavior.
