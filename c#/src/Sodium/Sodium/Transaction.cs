@@ -49,6 +49,12 @@ namespace Sodium
         ///     Return whether or not there is a current transaction.
         /// </summary>
         /// <returns><code>true</code> if there is a current transaction, <code>false</code> otherwise.</returns>
+        public static bool IsActive() => HasCurrentTransaction();
+
+        /// <summary>
+        ///     Return whether or not there is a current transaction.
+        /// </summary>
+        /// <returns><code>true</code> if there is a current transaction, <code>false</code> otherwise.</returns>
         internal static bool HasCurrentTransaction()
         {
             if (Monitor.TryEnter(TransactionLock))
@@ -236,6 +242,9 @@ namespace Sodium
                     localTransaction = LocalTransaction.Value;
 
                     //if lock was obtained and we have a local transaction, we will use it outside of the critical section
+                    //if we do not have a local transaction at this point, we need to create a transaction
+                    //if a local transaction is created, it must be created after we leave the critical section
+                    //if a regular transaction is created, stay within the critical section to create it
                     if (localTransaction == null)
                     {
                         //if lock was obtained and we do not have either a regular transaction or a local transaction and we are looking to create a regular transaction,
