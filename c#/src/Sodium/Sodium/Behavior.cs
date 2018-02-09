@@ -1,4 +1,5 @@
 ﻿using System;
+using JetBrains.Annotations;
 
 namespace Sodium
 {
@@ -50,6 +51,48 @@ namespace Sodium
         /// </summary>
         /// <typeparam name="T">The type of values in the behavior loop.</typeparam>
         public static BehaviorLoop<T> CreateLoop<T>() => new BehaviorLoop<T>();
+
+        /// <summary>
+        ///     Creates a helper to loop over a behavior for the specified type.
+        /// </summary>
+        /// <typeparam name="T">The type of the behavior to loop.</typeparam>
+        /// <returns>A <see cref="BehaviorLooper{T}"/> which should be used to complete the loop.</returns>
+        [Pure]
+        public static BehaviorLooper<T> Loop<T>() => new BehaviorLooper<T>();
+    }
+
+    /// <summary>
+    ///     A helper to complete a loop over a behavior.
+    /// </summary>
+    /// <typeparam name="T">The type of the behavior being looped.</typeparam>
+    public struct BehaviorLooper<T>
+    {
+        /// <summary>
+        ///     Loop a behavior and return a value tuple containing the resulting behavior and captures.
+        /// </summary>
+        /// <typeparam name="TCaptures">The type of the captures to return.</typeparam>
+        /// <param name="f">A function which takes the behavior loop and returns a value tuple containing the resulting behavior and captures.</param>
+        /// <returns>A value tuple containing the resulting behavior and captures.</returns>
+        [Pure]
+        public (Behavior<T> Behavior, TCaptures Captures) WithCaptures<TCaptures>(
+            Func<LoopedBehavior<T>, (Behavior<T> Behavior, TCaptures Captures)> f) =>
+            Transaction.Run(
+                () =>
+                {
+                    LoopedBehavior<T> loop = new LoopedBehavior<T>();
+                    (Behavior<T> Behavior, TCaptures Captures) result = f(loop);
+                    loop.Loop(result.Behavior);
+                    return result;
+                });
+
+        /// <summary>
+        ///     Loop a behavior and return the resulting behavior.
+        /// </summary>
+        /// <param name="f">A function which takes the behavior loop and returns the resulting behavior.</param>
+        /// <returns>The resulting behavior.</returns>
+        [Pure]
+        public Behavior<T> WithoutCaptures(Func<LoopedBehavior<T>, Behavior<T>> f) =>
+            this.WithCaptures(l => (Behavior: f(l), Captures: Unit.Value)).Behavior;
     }
 
     /// <summary>

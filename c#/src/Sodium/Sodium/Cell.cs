@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using JetBrains.Annotations;
 
 namespace Sodium
 {
@@ -25,13 +26,6 @@ namespace Sodium
         /// <returns>A cell with a lazy constant value.</returns>
         public static Cell<T> ConstantLazy<T>(Lazy<T> value) =>
             new Cell<T>(Stream.Never<T>().HoldLazyInternal(value));
-
-        /// <summary>
-        ///     Creates a cell loop.
-        /// </summary>
-        /// <typeparam name="T">The type of values in the cell loop.</typeparam>
-        /// <returns>The cell loop.</returns>
-        public static CellLoop<T> CreateLoop<T>() => new CellLoop<T>();
 
         /// <summary>
         ///     Construct a writable cell that uses the last value if <see cref="CellSink{T}.Send" /> is called
@@ -63,6 +57,55 @@ namespace Sodium
         /// <typeparam name="T">The type of values in the cell stream sink.</typeparam>
         public static CellStreamSink<T> CreateStreamSink<T>(Func<T, T, T> coalesce) =>
             new CellStreamSink<T>(coalesce);
+
+        /// <summary>
+        ///     Creates a cell loop.
+        /// </summary>
+        /// <typeparam name="T">The type of values in the cell loop.</typeparam>
+        /// <returns>The cell loop.</returns>
+        public static CellLoop<T> CreateLoop<T>() => new CellLoop<T>();
+
+        /// <summary>
+        ///     Creates a helper to loop over a cell for the specified type.
+        /// </summary>
+        /// <typeparam name="T">The type of the cell to loop.</typeparam>
+        /// <returns>A <see cref="CellLooper{T}"/> which should be used to complete the loop.</returns>
+        [Pure]
+        public static CellLooper<T> Loop<T>() => new CellLooper<T>();
+    }
+
+    /// <summary>
+    ///     A helper to complete a loop over a cell.
+    /// </summary>
+    /// <typeparam name="T">The type of the cell being looped.</typeparam>
+    public struct CellLooper<T>
+    {
+        /// <summary>
+        ///     Loop a cell and return a value tuple containing the resulting cell and captures.
+        /// </summary>
+        /// <typeparam name="TCaptures">The type of the captures to return.</typeparam>
+        /// <param name="f">A function which takes the cell loop and returns a value tuple containing the resulting cell and captures.</param>
+        /// <returns>A value tuple containing the resulting cell and captures.</returns>
+        [Pure]
+        public (Cell<T> Cell, TCaptures Captures) WithCaptures<TCaptures>(
+            Func<LoopedCell<T>, (Cell<T> Cell, TCaptures Captures)> f) =>
+            Transaction.Run(
+                () =>
+                {
+                    LoopedCell<T> loop = new LoopedCell<T>();
+                    (Cell<T> Cell, TCaptures Captures) result = f(loop);
+                    loop.Loop(result.Cell);
+                    return result;
+                });
+
+        /// <summary>
+        ///     Loop a cell and return the resulting cell.
+        /// </summary>
+        /// <param name="f">A function which takes the cell loop and returns the resulting cell.</param>
+        /// <returns>The resulting cell.</returns>
+        [Pure]
+        public Cell<T> WithoutCaptures(Func<LoopedCell<T>, Cell<T>> f) =>
+            this.WithCaptures(l => (Cell: f(l), Captures: Unit.Value)).Cell;
     }
 
     /// <summary>

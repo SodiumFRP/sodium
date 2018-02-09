@@ -7,23 +7,8 @@ namespace Sodium
     ///     referenced.
     /// </summary>
     /// <typeparam name="T">The type of values in the cell loop.</typeparam>
-    public class CellLoop<T> : Cell<T>
+    public class CellLoop<T> : LoopedCell<T>
     {
-        private readonly StreamLoop<T> streamLoop;
-        private readonly BehaviorLoop<T> behaviorLoop;
-
-        public CellLoop()
-            : this(new BehaviorLoop<T>())
-        {
-        }
-
-        private CellLoop(BehaviorLoop<T> behaviorLoop)
-            : base(behaviorLoop)
-        {
-            this.streamLoop = new StreamLoop<T>();
-            this.behaviorLoop = behaviorLoop;
-        }
-
         /// <summary>
         ///     Resolve the loop to specify what the <see cref="CellLoop{T}" /> was a forward reference to.  This method
         ///     must be called inside the same transaction as the one in which this <see cref="CellLoop{T}" /> instance was
@@ -32,7 +17,32 @@ namespace Sodium
         ///     <see cref="Transaction.RunVoid(Action)" />.
         /// </summary>
         /// <param name="c">The cell that was forward referenced.</param>
-        public void Loop(Cell<T> c)
+        public new void Loop(Cell<T> c) => base.Loop(c);
+    }
+
+    /// <summary>
+    ///     A forward reference for a <see cref="Cell{T}" /> equivalent to the <see cref="Cell{T}" /> that is
+    ///     referenced.
+    /// </summary>
+    /// <typeparam name="T">The type of values in the cell loop.</typeparam>
+    public class LoopedCell<T> : Cell<T>
+    {
+        private readonly StreamLoop<T> streamLoop;
+        private readonly BehaviorLoop<T> behaviorLoop;
+
+        internal LoopedCell()
+            : this(new BehaviorLoop<T>())
+        {
+        }
+
+        private LoopedCell(BehaviorLoop<T> behaviorLoop)
+            : base(behaviorLoop)
+        {
+            this.streamLoop = new StreamLoop<T>();
+            this.behaviorLoop = behaviorLoop;
+        }
+
+        protected internal void Loop(Cell<T> c)
         {
             this.streamLoop.Loop(c.Updates);
             this.behaviorLoop.Loop(c.Behavior);

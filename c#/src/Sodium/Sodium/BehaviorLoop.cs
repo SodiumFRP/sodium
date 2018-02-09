@@ -6,18 +6,8 @@ namespace Sodium
     ///     A forward reference for a <see cref="Behavior{T}" /> equivalent to the <see cref="Behavior{T}" /> that is referenced.
     /// </summary>
     /// <typeparam name="T">The type of values in the behavior loop.</typeparam>
-    public class BehaviorLoop<T> : LazyBehavior<T>
+    public class BehaviorLoop<T> : LoopedBehavior<T>
     {
-        private readonly StreamLoop<T> streamLoop;
-
-        public BehaviorLoop()
-            : this(new StreamLoop<T>())
-        {
-        }
-
-        private BehaviorLoop(StreamLoop<T> streamLoop)
-            : base(streamLoop, null) => this.streamLoop = streamLoop;
-
         /// <summary>
         ///     Resolve the loop to specify what the <see cref="BehaviorLoop{T}" /> was a forward reference to.  This method
         ///     must be called inside the same transaction as the one in which this <see cref="BehaviorLoop{T}" /> instance was
@@ -26,7 +16,26 @@ namespace Sodium
         ///     <see cref="Transaction.RunVoid(Action)" />.
         /// </summary>
         /// <param name="b">The behavior that was forward referenced.</param>
-        public void Loop(Behavior<T> b)
+        public new void Loop(Behavior<T> b) => base.Loop(b);
+    }
+
+    /// <summary>
+    ///     A forward reference for a <see cref="Behavior{T}" /> equivalent to the <see cref="Behavior{T}" /> that is referenced.
+    /// </summary>
+    /// <typeparam name="T">The type of values in the behavior loop.</typeparam>
+    public class LoopedBehavior<T> : LazyBehavior<T>
+    {
+        private readonly StreamLoop<T> streamLoop;
+
+        internal LoopedBehavior()
+            : this(new StreamLoop<T>())
+        {
+        }
+
+        private LoopedBehavior(StreamLoop<T> streamLoop)
+            : base(streamLoop) => this.streamLoop = streamLoop;
+
+        protected internal void Loop(Behavior<T> b)
         {
             Transaction.Apply(
                 trans =>
