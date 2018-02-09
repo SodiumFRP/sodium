@@ -25,7 +25,7 @@ namespace Sodium
         /// <param name="value">The lazy value of the cell.</param>
         /// <returns>A cell with a lazy constant value.</returns>
         public static Cell<T> ConstantLazy<T>(Lazy<T> value) =>
-            new Cell<T>(Stream.Never<T>().HoldLazyInternal(value));
+            Transaction.Apply(trans => new Cell<T>(Stream.Never<T>().HoldLazyInternal(trans, value)), false);
 
         /// <summary>
         ///     Construct a writable cell that uses the last value if <see cref="CellSink{T}.Send" /> is called

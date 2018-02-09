@@ -207,5 +207,61 @@ namespace Sodium.Tests
 
             Assert.AreEqual(value, 2);
         }
+
+        [Test]
+        public void IsActive()
+        {
+            bool isActive = Transaction.Run(Transaction.IsActive);
+
+            Assert.IsTrue(isActive);
+        }
+
+        [Test]
+        public void IsNotActive()
+        {
+            bool isActive = Transaction.IsActive();
+
+            Assert.IsFalse(isActive);
+        }
+
+        [Test]
+        public void IsNotActiveSeparateThread()
+        {
+            bool? threadIsActive1 = null;
+            bool? threadIsActive2 = null;
+            bool? threadIsActive3 = null;
+            bool? threadIsActive4 = null;
+            bool? threadIsActive5 = null;
+            new Thread(() =>
+            {
+                threadIsActive1 = Transaction.IsActive();
+                Thread.Sleep(500);
+                threadIsActive2 = Transaction.IsActive();
+                Transaction.RunVoid(() =>
+                {
+                    threadIsActive3 = Transaction.IsActive();
+                    Thread.Sleep(500);
+                    threadIsActive4 = Transaction.IsActive();
+                });
+                threadIsActive5 = Transaction.IsActive();
+            }).Start();
+
+            Thread.Sleep(250);
+            bool isActive1 = Transaction.IsActive();
+            Thread.Sleep(500);
+            bool isActive2 = Transaction.IsActive();
+            Thread.Sleep(500);
+            bool isActive3 = Transaction.IsActive();
+
+            Assert.IsFalse(isActive1);
+            Assert.IsFalse(isActive2);
+            Assert.IsFalse(isActive3);
+
+            Assert.IsFalse(threadIsActive1);
+            Assert.IsFalse(threadIsActive2);
+            Assert.IsTrue(threadIsActive3);
+            Assert.IsTrue(threadIsActive4);
+            Assert.IsFalse(threadIsActive5);
+        }
     }
 }

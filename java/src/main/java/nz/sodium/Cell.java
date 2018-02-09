@@ -120,7 +120,7 @@ public class Cell<A> {
         return value;
     }
 
-    final Stream<A> updates(Transaction trans)
+    final Stream<A> updates()
     {
         return str;
     }
@@ -134,7 +134,7 @@ public class Cell<A> {
             }
         });
     	Stream<A> sInitial = sSpark.<A>snapshot(this);
-        return sInitial.merge(updates(trans1), new Lambda2<A,A,A>() {
+        return sInitial.merge(updates(), new Lambda2<A,A,A>() {
             public A apply(A left, A right) { return right; }
         });
     }
@@ -148,7 +148,7 @@ public class Cell<A> {
 	{
 		return Transaction.apply(new Lambda1<Transaction, Cell<B>>() {
 			public Cell<B> apply(Transaction trans) {
-                return updates(trans).map(f).holdLazy(trans, sampleLazy(trans).map(f));
+                return updates().map(f).holdLazy(trans, sampleLazy(trans).map(f));
             }
         });
 	}
@@ -438,7 +438,7 @@ public class Cell<A> {
                     currentListener.unlisten();
             }
         };
-        Listener l1 = bea.updates(trans1).listen(out.node, trans1, h1, false);
+        Listener l1 = bea.updates().listen(out.node, trans1, h1, false);
         return out.unsafeAddCleanup(l1);
 	}
 

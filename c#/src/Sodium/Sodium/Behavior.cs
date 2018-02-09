@@ -22,7 +22,8 @@ namespace Sodium
         /// <typeparam name="T">The type of the value of the behavior.</typeparam>
         /// <param name="value">The lazily computed value of the behavior.</param>
         /// <returns>A behavior with a lazily computed constant value.</returns>
-        public static Behavior<T> ConstantLazy<T>(Lazy<T> value) => Stream.Never<T>().HoldLazyInternal(value);
+        public static Behavior<T> ConstantLazy<T>(Lazy<T> value) =>
+            Transaction.Apply(trans => Stream.Never<T>().HoldLazyInternal(trans, value), false);
 
         /// <summary>
         ///     Creates a writable behavior that uses the last value if <see cref="BehaviorSink{T}.Send" /> is called more than once per
@@ -249,7 +250,7 @@ namespace Sodium
         public Behavior<TResult> Map<TResult>(Func<T, TResult> f)
         {
             return Transaction.Apply(
-                trans => this.Updates(trans).Map(f).HoldLazyInternal(this.SampleLazy(trans).Map(f)),
+                trans => this.Updates(trans).Map(f).HoldLazyInternal(trans, this.SampleLazy(trans).Map(f)),
                 false);
         }
 
@@ -429,6 +430,7 @@ namespace Sodium
                         .UnsafeAttachListener(
                             Listener.Create(inTarget, nodeTarget))
                         .HoldLazyInternal(
+                            trans0,
                             new Lazy<TResult>(() => bf.SampleNoTransaction()(this.SampleNoTransaction())));
                 },
                 false);

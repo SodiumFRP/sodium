@@ -17,11 +17,7 @@ public class Operational {
      */
     public static <A> Stream<A> updates(final Cell<A> c)
     {
-        return Transaction.apply(new Lambda1<Transaction, Stream<A>>() {
-        	public Stream<A> apply(Transaction trans) {
-                return c.updates(trans);
-        	}
-        });
+        return c.updates();
     }
 
     /**

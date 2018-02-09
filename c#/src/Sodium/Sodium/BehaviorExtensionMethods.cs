@@ -29,7 +29,7 @@ namespace Sodium
                     }
 
                     IListener l1 = bba.Value(trans1).Listen(@out.Node, trans1, H, false);
-                    return @out.UnsafeAttachListener(l1).UnsafeAttachListener(currentListener).HoldLazyInternal(za);
+                    return @out.UnsafeAttachListener(l1).UnsafeAttachListener(currentListener).HoldLazyInternal(trans1, za);
                 },
                 false);
         }
@@ -85,56 +85,6 @@ namespace Sodium
         }
 
         /// <summary>
-        ///     Unwrap a stream inside a behavior to give a time-varying stream implementation.
-        ///     When the behavior changes value, the output stream will fire the simultaneous firing (if one exists) from the stream
-        ///     which the behavior will hold at the end of the transaction.
-        /// </summary>
-        /// <typeparam name="T">The type of the stream.</typeparam>
-        /// <param name="bsa">The behavior containing the stream.</param>
-        /// <returns>The unwrapped stream.</returns>
-        public static Stream<T> SwitchEarlyS<T>(this Behavior<Stream<T>> bsa)
-        {
-            return Transaction.Apply(
-                trans1 =>
-                {
-                    Stream<T> @out = new Stream<T>(bsa.KeepListenersAlive);
-                    Node<T> node = new Node<T>();
-                    (bool changed, Node<T>.Target nodeTarget) = node.Link(trans1, (t, v) => { }, @out.Node);
-                    if (changed)
-                    {
-                        trans1.SetNeedsRegenerating();
-                    }
-                    Guid listenerId;
-
-                    void SendIfNodeTargetMatches(Transaction t, (T Value, Guid ListenerId) v, Guid i)
-                    {
-                        if (v.ListenerId == i)
-                        {
-                            @out.Send(t, v.Value);
-                        }
-                    }
-
-                    MutableListener currentListener = new MutableListener();
-
-                    void Handler(Transaction trans2, Stream<T> sa)
-                    {
-                        currentListener.Unlisten();
-
-                        listenerId = Guid.NewGuid();
-                        currentListener.SetListener(
-                            sa.Map(v => (Value: v, ListenerId: listenerId))
-                                .Listen(@out.Node, trans2, (t, v) => SendIfNodeTargetMatches(t, v, listenerId), false));
-                    }
-
-                    IListener l1 = bsa.Value(trans1).Listen(node, trans1, Handler, false);
-                    return @out.UnsafeAttachListener(l1)
-                        .UnsafeAttachListener(currentListener)
-                        .UnsafeAttachListener(Listener.Create(node, nodeTarget));
-                },
-                false);
-        }
-
-        /// <summary>
         ///     Lift a function into an enumerable of behaviors, so the returned behavior always reflects the specified function applied to
         ///     the
         ///     input behaviors' values.
@@ -185,7 +135,7 @@ namespace Sodium
                                 return f(values);
                             })
                         .UnsafeAttachListener(new CompositeListener(listeners))
-                        .HoldLazyInternal(initialValue);
+                        .HoldLazyInternal(trans1, initialValue);
                 },
                 false);
         }
@@ -204,7 +154,7 @@ namespace Sodium
         /// <typeparam name="T">The type of the behaviors.</typeparam>
         /// <param name="b">The collection of behaviors.</param>
         /// <returns>A behavior containing a list of the input behaviors' values.</returns>
-        public static Behavior<IReadOnlyList<T>> Lift<T>(this IReadOnlyCollection<Behavior<T>> b) => b.Lift(v => (IReadOnlyList<T>) v.ToArray());
+        public static Behavior<IReadOnlyList<T>> Lift<T>(this IReadOnlyCollection<Behavior<T>> b) => b.Lift(v => (IReadOnlyList<T>)v.ToArray());
 
         private class FanOutKeepListenersAlive : IKeepListenersAlive
         {
