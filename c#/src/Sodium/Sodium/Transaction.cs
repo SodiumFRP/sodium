@@ -13,12 +13,10 @@ namespace Sodium
     {
         private static readonly ThreadLocal<Transaction> LocalTransaction = new ThreadLocal<Transaction>();
 
-        internal readonly bool IsConstructing;
-
         // Coarse-grained lock that's held during the whole transaction.
         private static readonly object TransactionLock = new object();
 
-        private static Transaction currentTransaction;
+        private bool isElevated;
         internal static int InCallback;
         private static readonly List<Action> OnStartHooks = new List<Action>();
         private static bool runningOnStartHooks;
@@ -28,22 +26,14 @@ namespace Sodium
         private readonly List<Action> lastQueue = new List<Action>();
         private readonly Dictionary<int, Action<Transaction>> postQueue = new Dictionary<int, Action<Transaction>>();
         internal readonly List<Node.Target> TargetsToActivate;
+        internal bool ActivatedTargets;
 
         private readonly SimplePriorityQueue<Entry, long> prioritizedQueue = new SimplePriorityQueue<Entry, long>();
 
         // True if we need to re-generate the priority queue.
         private bool toRegen;
 
-        internal bool ReachedClose;
-
-        internal Transaction(bool isConstructing)
-        {
-            this.IsConstructing = isConstructing;
-            if (isConstructing)
-            {
-                this.TargetsToActivate = new List<Node.Target>();
-            }
-        }
+        internal Transaction() => this.TargetsToActivate = new List<Node.Target>();
 
         /// <summary>
         ///     Return whether or not there is a current transaction.
@@ -55,49 +45,13 @@ namespace Sodium
         ///     Return whether or not there is a current transaction.
         /// </summary>
         /// <returns><code>true</code> if there is a current transaction, <code>false</code> otherwise.</returns>
-        internal static bool HasCurrentTransaction()
-        {
-            if (Monitor.TryEnter(TransactionLock))
-            {
-                try
-                {
-                    if (currentTransaction != null)
-                    {
-                        return true;
-                    }
-                }
-                finally
-                {
-                    Monitor.Exit(TransactionLock);
-                }
-            }
-
-            return LocalTransaction.Value != null;
-        }
+        internal static bool HasCurrentTransaction() => LocalTransaction.Value != null;
 
         /// <summary>
         ///     Return the current transaction or <code>null</code>.
         /// </summary>
         /// <returns>The current transaction or <code>null</code>.</returns>
-        internal static Transaction GetCurrentTransaction()
-        {
-            if (Monitor.TryEnter(TransactionLock))
-            {
-                try
-                {
-                    if (currentTransaction != null)
-                    {
-                        return currentTransaction;
-                    }
-                }
-                finally
-                {
-                    Monitor.Exit(TransactionLock);
-                }
-            }
-
-            return LocalTransaction.Value;
-        }
+        internal static Transaction GetCurrentTransaction() => LocalTransaction.Value;
 
         /// <summary>
         ///     Execute the specified action inside a single transaction.
@@ -107,8 +61,7 @@ namespace Sodium
         ///     In most cases this is not needed, because all primitives will create their own transaction automatically.
         ///     It is useful for running multiple reactive operations atomically.
         /// </remarks>
-        public static void RunVoid(Action action)
-        {
+        public static void RunVoid(Action action) =>
             Apply(
                 _ =>
                 {
@@ -116,7 +69,6 @@ namespace Sodium
                     return Unit.Value;
                 },
                 false);
-        }
 
         /// <summary>
         ///     Execute the specified function inside a single transaction.
@@ -128,55 +80,12 @@ namespace Sodium
         ///     In most cases this is not needed, because all primitives will create their own transaction automatically.
         ///     It is useful for running multiple reactive operations atomically.
         /// </remarks>
-        public static T Run<T>(Func<T> f)
-        {
-            return Apply(_ => f(), false);
-        }
+        public static T Run<T>(Func<T> f) => Apply(_ => f(), false);
 
-        /// <summary>
-        ///     Execute the specified action inside a single transaction.
-        ///     The action should only be used to construct FRP logic and may not close over any other FRP logic.
-        ///     This transaction will not block other transactions from running until it reaches the end of the transaction.
-        /// </summary>
-        /// <param name="action">The action to execute.</param>
-        /// <remarks>
-        ///     This method is most useful for creating FRP logic which must be created within a Transaction (such as in a loop),
-        ///     but which should not block other transactions from running.  A use case for this is if the construction of FRP
-        ///     logic takes
-        ///     a significant amount of time, is being done asynchronously, and may be canceled by another stream event.
-        /// </remarks>
-        public static void RunConstructVoid(Action action)
+        internal static T Apply<T>(Func<Transaction, T> code, bool ensureElevated)
         {
-            Apply(
-                _ =>
-                {
-                    action();
-                    return Unit.Value;
-                },
-                true);
-        }
+            Transaction transaction = LocalTransaction.Value;
 
-        /// <summary>
-        ///     Execute the specified function inside a single transaction.
-        ///     The function should only be used to construct FRP logic and may not close over any other FRP logic.
-        ///     This transaction will not block other transactions from running until it reaches the end of the transaction.
-        /// </summary>
-        /// <typeparam name="T">The type of the value returned.</typeparam>
-        /// <param name="f">The function to execute.</param>
-        /// <returns>The return value of <paramref name="f" />.</returns>
-        /// <remarks>
-        ///     This method is most useful for creating FRP logic which must be created within a Transaction (such as in a loop),
-        ///     but which should not block other transactions from running.  A use case for this is if the construction of FRP
-        ///     logic takes
-        ///     a significant amount of time, is being done asynchronously, and may be canceled by another stream event.
-        /// </remarks>
-        public static T RunConstruct<T>(Func<T> f)
-        {
-            return Apply(_ => f(), true);
-        }
-
-        private static T Apply<T>(Transaction transaction, bool createLocal, Func<Transaction, T> code)
-        {
             T returnValue = default(T);
             Exception exception = null;
             Transaction newTransaction = transaction;
@@ -184,8 +93,14 @@ namespace Sodium
             {
                 if (newTransaction == null)
                 {
-                    newTransaction = createLocal ? new Transaction(true) : Start();
-                    SetCurrentTransaction(newTransaction, createLocal);
+                    newTransaction = new Transaction();
+
+                    LocalTransaction.Value = newTransaction;
+                }
+
+                if (ensureElevated)
+                {
+                    EnsureElevated(newTransaction);
                 }
 
                 returnValue = code(newTransaction);
@@ -199,26 +114,9 @@ namespace Sodium
             {
                 try
                 {
-                    if (transaction == null && newTransaction != null)
+                    if (transaction == null)
                     {
-                        if (createLocal)
-                        {
-                            lock (TransactionLock)
-                            {
-                                RunStartHooks();
-
-                                foreach (Node.Target target in newTransaction.TargetsToActivate)
-                                {
-                                    target.IsActivated = true;
-                                }
-
-                                newTransaction.Close(true);
-                            }
-                        }
-                        else
-                        {
-                            newTransaction.Close(false);
-                        }
+                        newTransaction?.Close();
                     }
                 }
                 catch (Exception e)
@@ -242,88 +140,25 @@ namespace Sodium
             {
                 if (transaction == null)
                 {
-                    SetCurrentTransaction(null, createLocal);
+                    if (newTransaction != null && newTransaction.isElevated)
+                    {
+                        Monitor.Exit(TransactionLock);
+                    }
+
+                    LocalTransaction.Value = null;
                 }
             }
         }
 
-        internal static T Apply<T>(Func<Transaction, T> code, bool createLocal)
+        private static void EnsureElevated(Transaction transaction)
         {
-            Transaction localTransaction = null;
-
-            bool createLocalNow = false;
-            if (Monitor.TryEnter(TransactionLock))
+            if (transaction != null && !transaction.isElevated)
             {
-                try
-                {
-                    //if lock was obtained and we have a regular transaction, use it
-                    if (currentTransaction != null)
-                    {
-                        return Apply(currentTransaction, false, code);
-                    }
+                transaction.isElevated = true;
 
-                    //check if we have a local transaction
-                    localTransaction = LocalTransaction.Value;
+                Monitor.Enter(TransactionLock);
 
-                    //if lock was obtained and we have a local transaction, we will use it outside of the critical section
-                    //if we do not have a local transaction at this point, we need to create a transaction
-                    //if a local transaction is created, it must be created after we leave the critical section
-                    //if a regular transaction is created, stay within the critical section to create it
-                    if (localTransaction == null)
-                    {
-                        //if lock was obtained and we do not have either a regular transaction or a local transaction and we are looking to create a regular transaction,
-                        //create a regular transaction
-                        if (!createLocal)
-                        {
-                            return Apply(null, false, code);
-                        }
-                        //if lock was obtained and we do not have either a regular transaction or a local transaction and we are looking to create a local transaction,
-                        //create a local transaction as soon as we leave the critical section
-                        else
-                        {
-                            createLocalNow = true;
-                        }
-                    }
-                }
-                finally
-                {
-                    Monitor.Exit(TransactionLock);
-                }
-            }
-            //if lock was obtained and we do not have either a regular transaction or a local transaction and we are looking to create a local transaction,
-            //create a local transaction
-            if (createLocalNow)
-            {
-                return Apply(null, true, code);
-            }
-
-            //if lock was not obtained, we still need to check if we have a local transaction
-            //if lock was obtained and we found a local transaction, we can skip this check
-            if (localTransaction == null)
-            {
-                localTransaction = LocalTransaction.Value;
-            }
-
-            //if we have a local transaction, use it
-            if (localTransaction != null)
-            {
-                return Apply(localTransaction, true, code);
-            }
-
-            //if lock was obtained, we will have returned by now
-
-            //if lock was not obtained and we do not have either a regular transaction or a local transaction and we are looking to create a local transaction,
-            //create a local transaction
-            if (createLocal)
-            {
-                return Apply(null, true, code);
-            }
-
-            //if lock was not obtained and we do not have either a regular transaction or a local transaction and we are looking to create a regular transaction,
-            //create a regular transaction inside a critical section
-            lock (TransactionLock)
-            {
-                return Apply(null, false, code);
+                RunStartHooks();
             }
         }
 
@@ -360,13 +195,6 @@ namespace Sodium
                     runningOnStartHooks = false;
                 }
             }
-        }
-
-        private static Transaction Start()
-        {
-            RunStartHooks();
-
-            return new Transaction(false);
         }
 
         internal void Send(Action<Transaction> action)
@@ -459,16 +287,23 @@ namespace Sodium
             }
         }
 
-        internal void Close(bool usingLocal)
+        internal void Close()
         {
+            EnsureElevated(this);
+
+            foreach (Node.Target target in this.TargetsToActivate)
+            {
+                target.IsActivated = true;
+            }
+
+            this.ActivatedTargets = true;
+
             // ReSharper disable once ForCanBeConvertedToForeach
             for (int i = 0; i < this.sendQueue.Count; i++)
             {
                 this.sendQueue[i](this);
             }
             this.sendQueue.Clear();
-
-            this.ReachedClose = true;
 
             do
             {
@@ -503,41 +338,33 @@ namespace Sodium
                 {
                     if (pair.Key < 0)
                     {
-                        SetCurrentTransaction(null, usingLocal);
+                        LocalTransaction.Value = null;
                         pair.Value(null);
                     }
                     else
                     {
-                        Transaction transaction = new Transaction(false);
-                        SetCurrentTransaction(transaction, usingLocal);
+                        Transaction transaction = new Transaction();
+
+                        // this will ensure we don't run start hooks
+                        transaction.isElevated = true;
+
+                        LocalTransaction.Value = transaction;
                         try
                         {
                             pair.Value(transaction);
                         }
                         finally
                         {
-                            transaction.Close(usingLocal);
+                            transaction.Close();
                         }
                     }
                 }
                 finally
                 {
-                    SetCurrentTransaction(this, usingLocal);
+                    LocalTransaction.Value = this;
                 }
             }
             this.postQueue.Clear();
-        }
-
-        private static void SetCurrentTransaction(Transaction transaction, bool usingLocal)
-        {
-            if (usingLocal)
-            {
-                LocalTransaction.Value = transaction;
-            }
-            else
-            {
-                currentTransaction = transaction;
-            }
         }
 
         private class Entry

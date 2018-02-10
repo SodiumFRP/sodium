@@ -190,18 +190,7 @@ namespace Sodium
         ///         current value and any updates without risk of missing any in between.
         ///     </para>
         /// </remarks>
-        public T Sample() => Transaction.Apply(
-            trans =>
-            {
-                if (trans.IsConstructing && !trans.ReachedClose)
-                {
-                    throw new InvalidOperationException(
-                        "A behavior may not be sampled during the construction phase of Transaction.RunConstruct.");
-                }
-
-                return this.SampleNoTransaction();
-            },
-            false);
+        public T Sample() => Transaction.Apply(trans => this.SampleNoTransaction(), true);
 
         /// <summary>
         ///     Sample the current value of the behavior lazily.

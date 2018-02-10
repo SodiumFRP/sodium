@@ -108,7 +108,7 @@ namespace Sodium.Tests
 
             new Thread(
                 () =>
-                    Transaction.RunConstructVoid(
+                    Transaction.RunVoid(
                         () =>
                         {
                             l = new StreamLoop<int>();
@@ -118,7 +118,7 @@ namespace Sodium.Tests
             try
             {
                 StreamSink<int> s = new StreamSink<int>();
-                Transaction.RunConstructVoid(
+                Transaction.RunVoid(
                     () =>
                     {
                         Thread.Sleep(250);
@@ -277,7 +277,7 @@ namespace Sodium.Tests
 
             new Thread(
                 () =>
-                    Transaction.RunConstructVoid(
+                    Transaction.RunVoid(
                         () =>
                         {
                             l = new BehaviorLoop<int>();
@@ -287,7 +287,7 @@ namespace Sodium.Tests
             try
             {
                 BehaviorSink<int> s = new BehaviorSink<int>(0);
-                Transaction.RunConstructVoid(
+                Transaction.RunVoid(
                     () =>
                     {
                         Thread.Sleep(250);
@@ -446,7 +446,7 @@ namespace Sodium.Tests
 
             new Thread(
                 () =>
-                    Transaction.RunConstructVoid(
+                    Transaction.RunVoid(
                         () =>
                         {
                             l = new CellLoop<int>();
@@ -456,7 +456,7 @@ namespace Sodium.Tests
             try
             {
                 CellSink<int> s = new CellSink<int>(0);
-                Transaction.RunConstructVoid(
+                Transaction.RunVoid(
                     () =>
                     {
                         Thread.Sleep(250);

@@ -104,8 +104,15 @@ namespace Sodium
                 this.isAssigned = true;
             }
 
-            this.UnsafeAttachListener(stream.Listen(this.Node, this.Send));
-            stream.KeepListenersAlive.Use(this.KeepListenersAlive);
+            this.AttachListener(stream.Listen(this.Node, this.Send));
+
+            lock (this.KeepListenersAlive)
+            {
+                lock (stream.KeepListenersAlive)
+                {
+                    stream.KeepListenersAlive.Use(this.KeepListenersAlive);
+                }
+            }
         }
 
         /// <summary>

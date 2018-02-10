@@ -102,8 +102,8 @@ namespace Sodium
         internal (bool Changed, Target Target) Link(Transaction trans, Action<Transaction, T> action, Node target)
         {
             bool changed;
-            Target t = new Target(action, target, !trans.IsConstructing || trans.ReachedClose);
-            if (trans.IsConstructing && !trans.ReachedClose)
+            Target t = new Target(action, target, trans.ActivatedTargets);
+            if (!trans.ActivatedTargets)
             {
                 trans.TargetsToActivate.Add(t);
             }

@@ -238,7 +238,7 @@ namespace Sodium.Tests.Performance
         }
 
         private static void SendMore(CellSink<IReadOnlyList<TestObject>> cellSink, Stream<bool> selectAllStream) =>
-            Transaction.RunConstructVoid(() => cellSink.Send(Enumerable.Range(0, 20000).Select(n => new TestObject(n, selectAllStream)).ToArray()));
+            Transaction.RunVoid(() => cellSink.Send(Enumerable.Range(0, 20000).Select(n => new TestObject(n, selectAllStream)).ToArray()));
 
         private class TestObject
         {

@@ -104,6 +104,8 @@ namespace Sodium
         private readonly List<T> firings;
         internal readonly IKeepListenersAlive KeepListenersAlive;
 
+        private readonly object attachListenerLock = new object();
+
         internal Stream()
             : this(new KeepListenersAliveImplementation())
         {
@@ -206,7 +208,10 @@ namespace Sodium
         /// </returns>
         public Stream<T> AttachListener(IListener listener)
         {
-            return Transaction.Run(() => this.UnsafeAttachListener(listener));
+            lock (this.attachListenerLock)
+            {
+                return this.UnsafeAttachListener(listener);
+            }
         }
 
         /// <summary>

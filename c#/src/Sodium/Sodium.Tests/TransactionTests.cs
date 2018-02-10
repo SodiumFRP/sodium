@@ -12,7 +12,7 @@ namespace Sodium.Tests
         public void RunConstruct()
         {
             List<int> @out = new List<int>();
-            (StreamSink<int> s, IListener l) = Transaction.RunConstruct(() =>
+            (StreamSink<int> s, IListener l) = Transaction.Run(() =>
             {
                 StreamSink<int> sink = Stream.CreateSink<int>();
                 sink.Send(4);
@@ -34,7 +34,7 @@ namespace Sodium.Tests
         {
             List<int> @out = new List<int>();
             StreamSink<int> sink = Stream.CreateSink<int>();
-            Task<IListener> t = Task.Run(() => Transaction.RunConstruct(() =>
+            Task<IListener> t = Task.Run(() => Transaction.Run(() =>
             {
                 Thread.Sleep(500);
                 sink.Send(4);
@@ -59,12 +59,11 @@ namespace Sodium.Tests
         {
             List<int> @out = new List<int>();
             StreamSink<int> sink = Stream.CreateSink<int>();
-            Task<IListener> t = Task.Run(() => Transaction.RunConstruct(() =>
+            Task<IListener> t = Task.Run(() => Transaction.Run(() =>
             {
                 Thread.Sleep(500);
                 sink.Send(4);
-                //Stream<int> s = Transaction.RunConstruct(() => sink.Map(v => v * 2));
-                Stream<int> s = sink.Map(v => v * 2);
+                Stream<int> s = Transaction.Run(() => sink.Map(v => v * 2));
                 IListener l2 = s.Listen(@out.Add);
                 Thread.Sleep(500);
                 return l2;
@@ -138,7 +137,7 @@ namespace Sodium.Tests
             {
                 StreamSink<int> s = Stream.CreateSink<int>();
                 s.Send(2);
-                Transaction.RunConstruct(() =>
+                Transaction.Run(() =>
                 {
                     Cell<int> c = s.Hold(1);
                     Transaction.Post(() => value = c.Sample());
@@ -154,7 +153,7 @@ namespace Sodium.Tests
         public void PostInConstructTransaction()
         {
             int value = 0;
-            Transaction.RunConstruct(() =>
+            Transaction.Run(() =>
             {
                 StreamSink<int> s = Stream.CreateSink<int>();
                 s.Send(2);
@@ -171,7 +170,7 @@ namespace Sodium.Tests
         public void PostInNestedConstructTransaction()
         {
             int value = 0;
-            Transaction.RunConstruct(() =>
+            Transaction.Run(() =>
             {
                 StreamSink<int> s = Stream.CreateSink<int>();
                 s.Send(2);
@@ -191,11 +190,11 @@ namespace Sodium.Tests
         public void PostInNestedConstructTransaction2()
         {
             int value = 0;
-            Transaction.RunConstruct(() =>
+            Transaction.Run(() =>
             {
                 StreamSink<int> s = Stream.CreateSink<int>();
                 s.Send(2);
-                Transaction.RunConstruct(() =>
+                Transaction.Run(() =>
                 {
                     Cell<int> c = s.Hold(1);
                     Transaction.Post(() => value = c.Sample());

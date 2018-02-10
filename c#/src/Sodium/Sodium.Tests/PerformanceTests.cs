@@ -69,7 +69,7 @@ namespace Sodium.Tests
         [Test]
         public void TestRunConstruct()
         {
-            var objects = Transaction.RunConstruct(() =>
+            var objects = Transaction.Run(() =>
             {
                 IReadOnlyList<TestObject2> o2 = Enumerable.Range(0, 10000).Select(n => new TestObject2(n, n < 1500, Stream.Never<bool>())).ToArray();
                 CellSink<IReadOnlyList<TestObject2>> objectsLocal = Cell.CreateSink(o2);
@@ -77,7 +77,7 @@ namespace Sodium.Tests
                 return objectsLocal;
             });
 
-                Transaction.RunConstruct(() =>
+                Transaction.Run(() =>
                 {
                     objects.Send(
                         Enumerable.Range(0, 20000)
@@ -90,7 +90,7 @@ namespace Sodium.Tests
         [Test]
         public void TestRunConstruct2()
         {
-            var (objectsAndIsSelected, selectAllStream, objects) = Transaction.RunConstruct(() =>
+            var (objectsAndIsSelected, selectAllStream, objects) = Transaction.Run(() =>
             {
                 CellLoop<bool?> allSelectedCellLoop = Cell.CreateLoop<bool?>();
                 StreamSink<Unit> toggleAllSelectedStreamLocal = Stream.CreateSink<Unit>();
@@ -120,7 +120,7 @@ namespace Sodium.Tests
                 () => objectsAndIsSelected.Map(oo => oo.Count(o => o.IsSelected))
                     .Values.Listen(@out.Add)))
             {
-                Transaction.RunConstruct(() =>
+                Transaction.Run(() =>
                 {
                     objects.Send(
                         Enumerable.Range(0, 20000)
