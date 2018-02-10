@@ -83,8 +83,9 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
              suppressEarlierFirings: Boolean): Listener = {
     val node_target_ = new Array[Target](1)
     Transaction.listenersLock.synchronized {
-      if (node.linkTo(action.asInstanceOf[TransactionHandler[Unit]], target, node_target_))
+      if (node.linkTo(action.asInstanceOf[TransactionHandler[Unit]], target, node_target_)) {
         trans.toRegen = true
+      }
     }
     val node_target = node_target_(0)
     val firings = this.firings.clone() //TODO check if deep clone is needed
@@ -260,7 +261,7 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     * Clean up the output by discarding any firing other than the last one.
     */
   final def lastFiringOnly(trans: Transaction): Stream[A] =
-    coalesce(trans, (first, second) => second)
+    coalesce(trans, (_, second) => second)
 
   /**
     * Return a stream that only outputs events for which the predicate returns true.
@@ -378,7 +379,7 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     })
 
   protected override def finalize(): Unit = {
-    finalizers.foreach(_.unlisten)
+    finalizers.foreach(_.unlisten())
   }
 }
 
@@ -446,7 +447,7 @@ object Stream {
     * Variant of [[sodium.Stream.orElse(s:sodium\.Stream[A]):sodium\.Stream[A]* orElse(Stream)]]
     * that merges a collection of streams.
     */
-  def orElse[A](ss: Iterable[Stream[A]]): Stream[A] = Stream.merge[A](ss, (left: A, right: A) => right)
+  def orElse[A](ss: Iterable[Stream[A]]): Stream[A] = Stream.merge[A](ss, (_: A, right: A) => right)
 
   /**
     * Variant of [[Stream!.merge(s:sodium\.Stream[A],f:(A,A)=>A):sodium\.Stream[A]* Stream.merge(Stream,(A,A)=>A)]]

@@ -18,11 +18,10 @@ abstract class Listener {
     */
   final def append(two: Listener): Listener = {
     val one = this
-    new Listener() {
-      override def unlisten(): Unit = {
+    () =>
+      {
         one.unlisten()
         two.unlisten()
       }
-    }
   }
 }

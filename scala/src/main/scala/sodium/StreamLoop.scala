@@ -7,8 +7,9 @@ class StreamLoop[A] extends StreamWithSend[A] {
 
   var assigned = false
 
-  if (Transaction.getCurrentTransaction() == None)
+  if (Transaction.getCurrentTransaction().isEmpty) {
     throw new RuntimeException("StreamLoop/CellLoop must be used within an explicit transaction")
+  }
 
   /**
     * Resolve the loop to specify what the StreamLoop was a forward reference to. It
@@ -16,11 +17,12 @@ class StreamLoop[A] extends StreamWithSend[A] {
     * This requires you to create an explicit transaction with [[Transaction]].
     */
   def loop(initStream: Stream[A]): Unit = {
-    if (assigned)
+    if (assigned) {
       throw new RuntimeException("StreamLoop looped more than once")
+    }
     assigned = true
-    Transaction(trans => {
-      unsafeAddCleanup(initStream.listen_(this.node, (trans: Transaction, a: A) => {
+    Transaction(_ => {
+      unsafeAddCleanup(initStream.listen_(this.node, (trans, a: A) => {
         StreamLoop.this.send(trans, a)
       }))
     })

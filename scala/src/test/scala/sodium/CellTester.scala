@@ -1,8 +1,7 @@
 package sodium
 
-import org.junit.After
 import org.junit.Assert.assertEquals
-import org.junit.Test
+import org.junit.{After, Test}
 
 import scala.collection.mutable.ListBuffer
 
@@ -19,8 +18,8 @@ class CellTester {
     val e = new StreamSink[Int]()
     val b = e.hold(0)
     val out = new ListBuffer[Int]()
-    val l = Operational.updates(b).listen(out.+=(_))
-    List(2, 9).foreach(e.send(_))
+    val l = Operational.updates(b).listen(out.+=)
+    List(2, 9).foreach(e.send)
     l.unlisten()
     assertEquals(List(2, 9), out)
   }
@@ -30,7 +29,7 @@ class CellTester {
     val b = new CellSink(0)
     val trigger = new StreamSink[Long]()
     val out = new ListBuffer[String]()
-    val l = trigger.snapshot[Int, String](b, (x, y) => x + " " + y).listen(out.+=(_))
+    val l = trigger.snapshot[Int, String](b, (x, y) => x + " " + y).listen(out.+=)
     trigger.send(100L)
     b.send(2)
     trigger.send(200L)
@@ -45,8 +44,8 @@ class CellTester {
   def testValues(): Unit = {
     val b = new CellSink(9)
     val out = new ListBuffer[Int]()
-    val l = b.listen(out.+=(_))
-    List(2, 7).foreach(b.send(_))
+    val l = b.listen(out.+=)
+    List(2, 7).foreach(b.send)
     l.unlisten()
     assertEquals(List(9, 2, 7), out)
   }
@@ -55,7 +54,7 @@ class CellTester {
   def testConstantBehavior(): Unit = {
     val b = new Cell(12)
     val out = new ListBuffer[Int]()
-    val l = b.listen(out.+=(_))
+    val l = b.listen(out.+=)
     l.unlisten()
     assertEquals(List(12), out)
   }
@@ -64,7 +63,7 @@ class CellTester {
   def testMap(): Unit = {
     val b = new CellSink(6)
     val out = new ListBuffer[String]()
-    val l = b.map(x => x.toString()).listen(out.+=(_))
+    val l = b.map(_.toString()).listen(out.+=)
     b.send(8)
     l.unlisten()
     assertEquals(List("6", "8"), out)
@@ -73,9 +72,9 @@ class CellTester {
   def testMapCLateListen(): Unit = {
     val b = new CellSink(6)
     val out = new ListBuffer[String]()
-    val bm = b.map(x => x.toString())
+    val bm = b.map(_.toString())
     b.send(2)
-    val l = bm.listen(out.+=(_))
+    val l = bm.listen(out.+=)
     b.send(8)
     l.unlisten()
     assertEquals(List("2", "8"), out)
@@ -86,7 +85,7 @@ class CellTester {
     val bf = new CellSink[Long => String](b => "1 " + b)
     val ba = new CellSink(5L)
     val out = new ListBuffer[String]()
-    val l = Cell(bf, ba).listen(x => out.+=(x))
+    val l = Cell(bf, ba).listen(out.+=)
     bf.send(b => "12 " + b)
     ba.send(6L)
     l.unlisten()
@@ -98,7 +97,7 @@ class CellTester {
     val a = new CellSink(1)
     val b = new CellSink(5L)
     val out = new ListBuffer[String]()
-    val l = a.lift[Long, String](b, (x, y) => x + " " + y).listen(out.+=(_))
+    val l = a.lift[Long, String](b, (x, y) => x + " " + y).listen(out.+=)
     a.send(12)
     b.send(6L)
     l.unlisten()
@@ -111,7 +110,7 @@ class CellTester {
     val a3 = a.map(x => x * 3)
     val a5 = a.map(x => x * 5)
     val out = new ListBuffer[String]()
-    val l = a3.lift[Int, String](a5, (x, y) => x + " " + y).listen(out.+=(_))
+    val l = a3.lift[Int, String](a5, (x, y) => x + " " + y).listen(out.+=)
     a.send(2)
     l.unlisten()
     assertEquals(List("3 5", "6 10"), out)
@@ -119,7 +118,7 @@ class CellTester {
 
   @Test
   def testLiftFromSimultaneous(): Unit = {
-    val t: ((CellSink[Int], CellSink[Int])) = Transaction(trans => {
+    val t: ((CellSink[Int], CellSink[Int])) = Transaction(_ => {
       val b1 = new CellSink(3)
       val b2 = new CellSink(5)
       b2.send(7)
@@ -140,8 +139,8 @@ class CellTester {
     val e = new StreamSink[Int]()
     val h = e.hold(0)
     val out = new ListBuffer[String]()
-    val l = e.snapshot[Int, String](h, (a, b) => a + " " + b).listen(out.+=(_))
-    List(2, 3).foreach(e.send(_))
+    val l = e.snapshot[Int, String](h, (a, b) => a + " " + b).listen(out.+=)
+    List(2, 3).foreach(e.send)
     l.unlisten()
     assertEquals(List("2 0", "3 2"), out)
   }
@@ -156,19 +155,19 @@ class CellTester {
     val bsw = Stream.filterOptional(esb.map(s => s.sw)).hold(ba)
     val bo = Cell.switchC(bsw)
     val out = new ListBuffer[Character]()
-    val l = bo.listen(out.+=(_))
+    val l = bo.listen(out.+=)
     List(
-      new SB(Some('B'), Some('b'), None),
-      new SB(Some('C'), Some('c'), Some(bb)),
-      new SB(Some('D'), Some('d'), None),
-      new SB(Some('E'), Some('e'), Some(ba)),
-      new SB(Some('F'), Some('f'), None),
-      new SB(None, None, Some(bb)),
-      new SB(None, None, Some(ba)),
-      new SB(Some('G'), Some('g'), Some(bb)),
-      new SB(Some('H'), Some('h'), Some(ba)),
-      new SB(Some('I'), Some('i'), Some(ba))
-    ).foreach(esb.send(_))
+      SB(Some('B'), Some('b'), None),
+      SB(Some('C'), Some('c'), Some(bb)),
+      SB(Some('D'), Some('d'), None),
+      SB(Some('E'), Some('e'), Some(ba)),
+      SB(Some('F'), Some('f'), None),
+      SB(None, None, Some(bb)),
+      SB(None, None, Some(ba)),
+      SB(Some('G'), Some('g'), Some(bb)),
+      SB(Some('H'), Some('h'), Some(ba)),
+      SB(Some('I'), Some('i'), Some(ba))
+    ).foreach(esb.send)
     l.unlisten()
     assertEquals(List('A', 'B', 'c', 'd', 'E', 'F', 'f', 'F', 'g', 'H', 'I'), out)
   }
@@ -181,18 +180,18 @@ class CellTester {
     val bsw = Stream.filterOptional(ese.map(s => s.sw)).hold(ea)
     val out = new ListBuffer[Char]()
     val eo = Cell.switchS(bsw)
-    val l = eo.listen(out.+=(_))
+    val l = eo.listen(out.+=(_)) //IntelliJ highlight error
     List(
-      new SE('A', 'a', None),
-      new SE('B', 'b', None),
-      new SE('C', 'c', Some(eb)),
-      new SE('D', 'd', None),
-      new SE('E', 'e', Some(ea)),
-      new SE('F', 'f', None),
-      new SE('G', 'g', Some(eb)),
-      new SE('H', 'h', Some(ea)),
-      new SE('I', 'i', Some(ea))
-    ).foreach(ese.send(_))
+      SE('A', 'a', None),
+      SE('B', 'b', None),
+      SE('C', 'c', Some(eb)),
+      SE('D', 'd', None),
+      SE('E', 'e', Some(ea)),
+      SE('F', 'f', None),
+      SE('G', 'g', Some(eb)),
+      SE('H', 'h', Some(ea)),
+      SE('I', 'i', Some(ea))
+    ).foreach(ese.send)
     l.unlisten()
     assertEquals(List('A', 'B', 'C', 'd', 'e', 'F', 'G', 'h', 'I'), out)
   }
@@ -203,7 +202,7 @@ class CellTester {
     val css = new CellSink[SS2](ss1)
     val so = Cell.switchS(css.map[Stream[Int]](_.s))
     val out = new ListBuffer[Int]()
-    val l = so.listen(out.+=(_))
+    val l = so.listen(out.+=)
     val ss3 = SS2()
     val ss4 = SS2()
     val ss2 = SS2()
@@ -214,7 +213,7 @@ class CellTester {
     ss3.s.send(2)
     css.send(ss3)
     List(5, 6, 7).foreach(ss3.s.send)
-    Transaction(Unit => {
+    Transaction(_ => {
       ss3.s.send(8)
       css.send(ss4)
       ss4.s.send(2)
@@ -234,8 +233,8 @@ class CellTester {
       sum_out_
     })
     val out = new ListBuffer[Int]()
-    val l = sum_out.listen(out.+=(_))
-    List(2, 3, 1).foreach(sa.send(_))
+    val l = sum_out.listen(out.+=)
+    List(2, 3, 1).foreach(sa.send)
     l.unlisten()
     assertEquals(List(0, 2, 5, 6), out)
     assertEquals(6.toLong, sum_out.sample().toLong)
@@ -246,8 +245,8 @@ class CellTester {
     val sa = new StreamSink[Int]()
     val out = new ListBuffer[Int]()
     val sum = sa.accum[Int](100, (a, s) => a + s)
-    val l = sum.listen(out.+=(_))
-    List(5, 7, 1, 2, 3).foreach(sa.send(_))
+    val l = sum.listen(out.+=)
+    List(5, 7, 1, 2, 3).foreach(sa.send)
     l.unlisten()
     assertEquals(List(100, 105, 112, 113, 115, 118), out)
   }
@@ -260,7 +259,7 @@ class CellTester {
       val b = new CellLoop[String]()
       val eSnap = Operational.value(a).snapshot[String, String](b, (aa, bb) => aa + " " + bb)
       b.loop(new Cell[String]("cheese"))
-      eSnap.listen(out.+=(_))
+      eSnap.listen(out.+=)
     })
 
     l.unlisten()
@@ -276,9 +275,9 @@ class CellTester {
       a.loop(new Cell[String]("cheese"))
       value_
     })
-    val eTick = new StreamSink[Unit]()
-    val l = eTick.snapshot(value).listen(out.+=(_))
-    eTick.send(())
+    val eTick = new StreamSink[Int]()
+    val l = eTick.snapshot(value).listen(out.+=)
+    eTick.send(0)
     l.unlisten()
     assertEquals(List("cheese"), out)
   }
@@ -293,7 +292,7 @@ class CellTester {
       a.loop(new Cell[String]("tea"))
       c_
     })
-    val l = c.listen(out.+=(_))
+    val l = c.listen(out.+=)
     b.send("caddy")
     l.unlisten()
     assertEquals(List("tea kettle", "tea caddy"), out)
@@ -310,8 +309,8 @@ class CellTester {
             Operational.defer(Operational.value(c))
           })
           .hold(new Stream[String]()))
-      .listen(out.+=(_))
-    List(2, 4).foreach(si.send(_))
+      .listen(out.+=)
+    List(2, 4).foreach(si.send)
     l.unlisten()
     assertEquals(List("A2", "A4"), out)
   }
@@ -320,10 +319,10 @@ class CellTester {
 
 object CellTester {
 
-  case class SB(val a: Option[Character], val b: Option[Character], val sw: Option[Cell[Character]])
+  case class SB(a: Option[Character], b: Option[Character], sw: Option[Cell[Character]])
 
-  case class SE(val a: Character, val b: Character, val sw: Option[Stream[Character]])
+  case class SE(a: Character, b: Character, sw: Option[Stream[Character]])
 
-  case class SS2(val s: StreamSink[Int] = new StreamSink[Int]())
+  case class SS2(s: StreamSink[Int] = new StreamSink[Int]())
 
 }

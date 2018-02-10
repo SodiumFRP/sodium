@@ -15,7 +15,7 @@ class TestCommon {
     val s: StreamSink[String] = Transaction(_ => new StreamSink[String])
     val out = ListBuffer[String]()
     val l: Listener = Transaction(_ => {
-      val l_ : Listener = s.listen(out.+=(_))
+      val l_ : Listener = s.listen(out.+=)
       l_
     })
     Transaction(_ => s.send("a"))

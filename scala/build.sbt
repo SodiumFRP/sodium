@@ -1,5 +1,7 @@
 libraryDependencies += "com.novocode" % "junit-interface" % "0.11" % "test->default"
 
+//wartremoverWarnings ++= Warts.unsafe
+
 scalafmtOnCompile in ThisBuild := true
 
 scalacOptions in (Compile, doc) := Seq("-diagrams", "-implicits", "-implicits-show-all")

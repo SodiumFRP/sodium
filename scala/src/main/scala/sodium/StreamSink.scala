@@ -23,7 +23,7 @@ class StreamSink[A](val f: (A, A) => A) extends StreamWithSend[A] {
     */
   def this() =
     this(
-      (left: A, right: A) =>
+      (_: A, _: A) =>
         throw new RuntimeException(
           """send() called more than once per transaction, which isn't allowed. Did you want to combine the events?
             |Then pass a combining function to your StreamSink constructor.""".stripMargin))
@@ -39,8 +39,9 @@ class StreamSink[A](val f: (A, A) => A) extends StreamWithSend[A] {
     */
   def send(a: A): Unit = {
     Transaction(trans => {
-      if (Transaction.inCallback > 0)
+      if (Transaction.inCallback > 0) {
         throw new RuntimeException("You are not allowed to use send() inside a Sodium callback")
+      }
       coalescer.run(trans, a)
     })
   }

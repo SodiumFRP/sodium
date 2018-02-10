@@ -15,7 +15,7 @@ object Operational {
     * The rule with this primitive is that you should only use it in functions
     * that do not allow the caller to detect the cell updates.
     */
-  def updates[A](c: Cell[A]) = Transaction(_ => c.updates())
+  def updates[A](c: Cell[A]): Stream[A] = Transaction(_ => c.updates())
 
   /**
     * A stream that is guaranteed to fire once in the transaction where value() is invoked, giving
@@ -27,7 +27,7 @@ object Operational {
     * The rule with this primitive is that you should only use it in functions
     * that do not allow the caller to detect the cell updates.
     */
-  def value[A](c: Cell[A]) = Transaction(trans => c.value(trans))
+  def value[A](c: Cell[A]): Stream[A] = Transaction(trans => c.value(trans))
 
   /**
     * Push each event onto a new transaction guaranteed to come before the next externally

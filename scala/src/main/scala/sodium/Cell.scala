@@ -44,7 +44,7 @@ class Cell[A](val str: Stream[A], protected var currentValue: Option[A]) {
   /**
     * @return The value including any updates that have happened in this transaction.
     */
-  final def newValue(): A = valueUpdate.getOrElse(sampleNoTrans)
+  final def newValue(): A = valueUpdate.getOrElse(sampleNoTrans())
 
   /**
     * Sample the cell's current value.
@@ -73,14 +73,16 @@ class Cell[A](val str: Stream[A], protected var currentValue: Option[A]) {
     val me = this
     val s = new Cell.LazySample[A](me)
     trans.last(() => {
-      s.value = me.valueUpdate.getOrElse(me.sampleNoTrans)
+      s.value = me.valueUpdate.getOrElse(me.sampleNoTrans())
       s.hasValue = true
       s.cell = null
     })
-    new Lazy[A](
-      () =>
-        if (s.hasValue) s.value
-        else s.cell.sample)
+    new Lazy[A](() =>
+      if (s.hasValue) {
+        s.value
+      } else {
+        s.cell.sample()
+    })
   }
 
   def sampleNoTrans(): A = currentValue.get
@@ -100,7 +102,7 @@ class Cell[A](val str: Stream[A], protected var currentValue: Option[A]) {
     *
     * @param f Function to apply to convert the values. It must be <em>referentially transparent</em>.
     */
-  final def map[B](f: A => B) =
+  final def map[B](f: A => B): Cell[B] =
     Transaction(trans => updates().map(f).holdLazy(sampleLazy(trans).map(f)))
 
   /**
@@ -181,7 +183,7 @@ class Cell[A](val str: Stream[A], protected var currentValue: Option[A]) {
     *               An exception will be thrown, because you are not meant to use this to create
     *               your own primitives.
     */
-  final def listen(action: A => Unit) = Transaction(trans => value(trans).listen(action))
+  final def listen(action: A => Unit): Listener = Transaction(trans => value(trans).listen(action))
 
   /**
     * A variant of [[sodium.Cell.listen(action:A=>Unit):sodium\.Listener* listen(A=>Unit)]] that will deregister
@@ -189,7 +191,7 @@ class Cell[A](val str: Stream[A], protected var currentValue: Option[A]) {
     * [[sodium.Cell.listen(action:A=>Unit):sodium\.Listener* listen(A=>Unit)]], the listener is
     * only deregistered if [[sodium.Listener.unlisten()* Listener.unlisten()]] is called explicitly.
     */
-  final def listenWeak(action: A => Unit) = Transaction(trans => value(trans).listenWeak(action))
+  final def listenWeak(action: A => Unit): Listener = Transaction(trans => value(trans).listenWeak(action))
 
 }
 
@@ -231,8 +233,9 @@ object Cell {
         .listen_(in_target, (trans1: Transaction, f: A => B) => {
           h.f = f
           h.f_present = true
-          if (h.a_present)
+          if (h.a_present) {
             h.run(trans1)
+          }
         })
 
       val l2 = ba
@@ -240,8 +243,9 @@ object Cell {
         .listen_(in_target, (trans1: Transaction, a: A) => {
           h.a = a
           h.a_present = true
-          if (h.f_present)
+          if (h.f_present) {
             h.run(trans1)
+          }
         })
       out
         .lastFiringOnly(trans0)
@@ -261,7 +265,7 @@ object Cell {
     */
   def switchC[A](bba: Cell[Cell[A]]): Cell[A] =
     Transaction(trans0 => {
-      val za = bba.sampleLazy.map((ba: Cell[A]) => ba.sample)
+      val za = bba.sampleLazy().map((ba: Cell[A]) => ba.sample())
 
       val out = new StreamWithSend[A]()
       val h = new TransactionHandler[Cell[A]]() {
@@ -300,12 +304,12 @@ object Cell {
         }
       }
       val h1 = new TransactionHandler[Stream[A]]() {
-        private var currentListener = bea.sampleNoTrans().listen(out.node, trans1, h2, false)
+        private var currentListener = bea.sampleNoTrans().listen(out.node, trans1, h2, suppressEarlierFirings = false)
 
         override def run(trans2: Transaction, ea: Stream[A]): Unit = {
           trans2.last(() => {
             currentListener.unlisten()
-            currentListener = ea.listen(out.node, trans2, h2, true)
+            currentListener = ea.listen(out.node, trans2, h2, suppressEarlierFirings = true)
           })
         }
 
@@ -313,7 +317,7 @@ object Cell {
           currentListener.unlisten()
         }
       }
-      val l1 = bea.updates().listen(out.node, trans1, h1, false)
+      val l1 = bea.updates().listen(out.node, trans1, h1, suppressEarlierFirings = false)
       out.unsafeAddCleanup(l1)
     }
 
