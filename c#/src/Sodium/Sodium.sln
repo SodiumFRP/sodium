@@ -1,10 +1,8 @@
 ﻿
 Microsoft Visual Studio Solution File, Format Version 12.00
-# Visual Studio 14
-VisualStudioVersion = 14.0.25123.0
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2024
 MinimumVisualStudioVersion = 10.0.40219.1
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sodium", "Sodium\Sodium.csproj", "{944A49E8-4F77-4193-91C9-6B9DDD1AB077}"
-EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sodium.Tests", "Sodium.Tests\Sodium.Tests.csproj", "{7D357CFB-BADD-447C-90A1-FD449C69DF81}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sodium.Tests.Memory", "Sodium.Tests.Memory\Sodium.Tests.Memory.csproj", "{26FAB81B-113A-4524-9D02-E229727CEA13}"
@@ -13,16 +11,14 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sodium.Tests.Internal", "So
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sodium.Tests.Performance", "Sodium.Tests.Performance\Sodium.Tests.Performance.csproj", "{29840928-79D0-46E1-A9A1-99F70EE48354}"
 EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sodium", "Sodium\Sodium.csproj", "{DE6484F3-C9BD-45D5-9BF0-67A8FAFB4A45}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
 		Release|Any CPU = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(ProjectConfigurationPlatforms) = postSolution
-		{944A49E8-4F77-4193-91C9-6B9DDD1AB077}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{944A49E8-4F77-4193-91C9-6B9DDD1AB077}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{944A49E8-4F77-4193-91C9-6B9DDD1AB077}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{944A49E8-4F77-4193-91C9-6B9DDD1AB077}.Release|Any CPU.Build.0 = Release|Any CPU
 		{7D357CFB-BADD-447C-90A1-FD449C69DF81}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
 		{7D357CFB-BADD-447C-90A1-FD449C69DF81}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{7D357CFB-BADD-447C-90A1-FD449C69DF81}.Release|Any CPU.ActiveCfg = Release|Any CPU
@@ -39,8 +35,15 @@ Global
 		{29840928-79D0-46E1-A9A1-99F70EE48354}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{29840928-79D0-46E1-A9A1-99F70EE48354}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{29840928-79D0-46E1-A9A1-99F70EE48354}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DE6484F3-C9BD-45D5-9BF0-67A8FAFB4A45}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DE6484F3-C9BD-45D5-9BF0-67A8FAFB4A45}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DE6484F3-C9BD-45D5-9BF0-67A8FAFB4A45}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DE6484F3-C9BD-45D5-9BF0-67A8FAFB4A45}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7690BD60-3A59-4BA2-ABF7-ED00A34FA2A4}
 	EndGlobalSection
 EndGlobal
