@@ -167,7 +167,7 @@ namespace Sodium
                 lock (this.updatesLock)
                 {
                     return this.updates ?? (this.updates = Transaction.Apply(
-                               trans => this.Behavior.Updates(trans).Coalesce(trans, (left, right) => right),
+                               trans => this.Behavior.Updates().Coalesce(trans, (left, right) => right),
                                false));
                 }
             }
@@ -377,7 +377,7 @@ namespace Sodium
         {
             Lazy<T> initA = this.Behavior.SampleLazy();
             Lazy<Maybe<T>> mInitA = initA.Map(Maybe.Some);
-            return Transaction.Apply(trans => this.Behavior.Updates(trans).Calm(mInitA, comparer).HoldLazy(initA), false);
+            return this.Behavior.Updates().Calm(mInitA, comparer).HoldLazy(initA);
         }
     }
 }

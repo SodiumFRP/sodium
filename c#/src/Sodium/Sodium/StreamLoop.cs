@@ -106,12 +106,9 @@ namespace Sodium
 
             this.AttachListener(stream.Listen(this.Node, this.Send));
 
-            lock (this.KeepListenersAlive)
+            lock (stream.KeepListenersAlive)
             {
-                lock (stream.KeepListenersAlive)
-                {
-                    stream.KeepListenersAlive.Use(this.KeepListenersAlive);
-                }
+                stream.KeepListenersAlive.Use(this.KeepListenersAlive);
             }
         }
 

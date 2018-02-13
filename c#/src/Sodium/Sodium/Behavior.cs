@@ -218,14 +218,14 @@ namespace Sodium
 
         internal virtual T SampleNoTransaction() => this.ValueProperty;
 
-        internal Stream<T> Updates(Transaction trans) => this.stream;
+        internal Stream<T> Updates() => this.stream;
 
         internal Stream<T> Value(Transaction trans1)
         {
             Stream<Unit> spark = new Stream<Unit>(this.stream.KeepListenersAlive);
             trans1.Prioritized(spark.Node, trans2 => spark.Send(trans2, Unit.Value));
             Stream<T> initial = spark.Snapshot(this);
-            return initial.Merge(trans1, this.Updates(trans1), (left, right) => right);
+            return initial.Merge(trans1, this.Updates(), (left, right) => right);
         }
 
         /// <summary>
@@ -240,7 +240,7 @@ namespace Sodium
         public Behavior<TResult> Map<TResult>(Func<T, TResult> f)
         {
             return Transaction.Apply(
-                trans => this.Updates(trans).Map(f).HoldLazyInternal(trans, this.SampleLazy(trans).Map(f)),
+                trans => this.Updates().Map(f).HoldLazyInternal(trans, this.SampleLazy(trans).Map(f)),
                 false);
         }
 

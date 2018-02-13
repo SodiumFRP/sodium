@@ -153,15 +153,15 @@ namespace Sodium
                 {
                     innerListener.Unlisten();
 
-                    lock (this.KeepListenersAlive)
+                    // ReSharper disable AccessToModifiedClosure
+                    if (listener != null)
                     {
-                        // ReSharper disable AccessToModifiedClosure
-                        if (listener != null)
+                        lock (this.KeepListenersAlive)
                         {
                             this.KeepListenersAlive.StopKeepingListenerAlive(listener);
                         }
-                        // ReSharper restore AccessToModifiedClosure
                     }
+                    // ReSharper restore AccessToModifiedClosure
                 },
                 innerListener);
 

@@ -90,7 +90,7 @@ namespace Sodium
 
         protected internal void Loop(Transaction trans, Behavior<T> b)
         {
-            this.streamLoop.Loop(trans, b.Updates(trans));
+            this.streamLoop.Loop(trans, b.Updates());
             this.LazyInitialValue = b.SampleLazy(trans);
         }
 

@@ -20,7 +20,7 @@ namespace Sodium
         ///     that do not allow the caller to detect the behavior updates.
         /// </remarks>
         public static Stream<T> Updates<T>(Behavior<T> b) => Transaction.Apply(
-            trans => b.Updates(trans).Coalesce(trans, (left, right) => right),
+            trans => b.Updates().Coalesce(trans, (left, right) => right),
             false);
 
         /// <summary>

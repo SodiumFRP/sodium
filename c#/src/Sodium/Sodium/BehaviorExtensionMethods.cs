@@ -78,7 +78,7 @@ namespace Sodium
                     }
 
                     trans1.Prioritized(new Node<T>(), trans2 => HInitial(trans2, bsa.SampleNoTransaction()));
-                    IListener l1 = bsa.Updates(trans1).Listen(new Node<T>(), trans1, H, false);
+                    IListener l1 = bsa.Updates().Listen(new Node<T>(), trans1, H, false);
                     return @out.UnsafeAttachListener(l1).UnsafeAttachListener(currentListener);
                 },
                 false);
@@ -119,7 +119,7 @@ namespace Sodium
                     Lazy<TResult> initialValue =
                         new Lazy<TResult>(() => f(b.Select(behavior => behavior.SampleNoTransaction()).ToArray()));
                     IReadOnlyList<IListener> listeners = b.Select(
-                            (behavior, i) => behavior.Updates(trans1)
+                            (behavior, i) => behavior.Updates()
                                 .Listen(
                                     @out.Node,
                                     trans1,
