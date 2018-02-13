@@ -58,7 +58,7 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\Sodium\Sodium.csproj">
-      <Project>{944A49E8-4F77-4193-91C9-6B9DDD1AB077}</Project>
+      <Project>{de6484f3-c9bd-45d5-9bf0-67a8fafb4a45}</Project>
       <Name>Sodium</Name>
     </ProjectReference>
   </ItemGroup>

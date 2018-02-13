@@ -54,13 +54,13 @@
     <Compile Include="Properties\AssemblyInfo.cs" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\Sodium\Sodium.csproj">
-      <Project>{944a49e8-4f77-4193-91c9-6b9ddd1ab077}</Project>
-      <Name>Sodium</Name>
-    </ProjectReference>
+    <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <None Include="packages.config" />
+    <ProjectReference Include="..\Sodium\Sodium.csproj">
+      <Project>{de6484f3-c9bd-45d5-9bf0-67a8fafb4a45}</Project>
+      <Name>Sodium</Name>
+    </ProjectReference>
   </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 

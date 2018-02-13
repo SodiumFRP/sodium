@@ -1,113 +1,28 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+<Project Sdk="Microsoft.NET.Sdk">
+
   <PropertyGroup>
-    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
-    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
-    <ProjectGuid>{944A49E8-4F77-4193-91C9-6B9DDD1AB077}</ProjectGuid>
-    <OutputType>Library</OutputType>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
-    <RootNamespace>Sodium</RootNamespace>
-    <AssemblyName>Sodium</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
-    <FileAlignment>512</FileAlignment>
-    <TargetFrameworkProfile />
+    <TargetFrameworks>net45;netstandard1.1;netstandard2.0</TargetFrameworks>
   </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
-    <DebugSymbols>true</DebugSymbols>
-    <DebugType>full</DebugType>
-    <Optimize>false</Optimize>
-    <OutputPath>bin\Debug\</OutputPath>
-    <DefineConstants>DEBUG;TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-    <DocumentationFile>
-    </DocumentationFile>
-  </PropertyGroup>
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
-    <DebugType>pdbonly</DebugType>
-    <Optimize>true</Optimize>
-    <OutputPath>bin\Release\</OutputPath>
-    <DefineConstants>TRACE</DefineConstants>
-    <ErrorReport>prompt</ErrorReport>
-    <WarningLevel>4</WarningLevel>
-  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>SodiumFRP</PackageId>
+    <Authors>SodiumFRP</Authors>
+    <PackageLicenseUrl>http://opensource.org/licenses/MIT</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/SodiumFRP/sodium</PackageProjectUrl>
+    <Version>1.0.0</Version>
+    <PackageVersion>1.0.0</PackageVersion>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <InformationalVersion>1.0.0.0</InformationalVersion>
+    <Company>SodiumFRP</Company>
+    <Product>Sodium FRP for .NET</Product>
+    <Description>Sodium - Functional Reactive Programming (FRP) library for .NET written in C#.</Description>
+  
+</PropertyGroup>
+
   <ItemGroup>
-    <Reference Include="Priority Queue, Version=4.1.1.0, Culture=neutral, processorArchitecture=MSIL">
-      <HintPath>..\packages\OptimizedPriorityQueue.4.1.1\lib\net45\Priority Queue.dll</HintPath>
-    </Reference>
-    <Reference Include="System" />
-    <Reference Include="System.Core" />
-    <Reference Include="System.ValueTuple, Version=4.0.2.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
-      <HintPath>..\packages\System.ValueTuple.4.4.0\lib\netstandard1.0\System.ValueTuple.dll</HintPath>
-    </Reference>
-    <Reference Include="System.Xml.Linq" />
-    <Reference Include="System.Data.DataSetExtensions" />
-    <Reference Include="Microsoft.CSharp" />
-    <Reference Include="System.Data" />
-    <Reference Include="System.Net.Http" />
-    <Reference Include="System.Xml" />
+    <PackageReference Include="OptimizedPriorityQueue" Version="4.1.1" />
+    <PackageReference Include="System.ValueTuple" Version="4.4.0" />
   </ItemGroup>
-  <ItemGroup>
-    <Compile Include="Behavior.cs" />
-    <Compile Include="BehaviorExtensionMethods.cs" />
-    <Compile Include="Cleanup.cs" />
-    <Compile Include="IMaybe.cs" />
-    <Compile Include="UnitExtensionMethods.cs" />
-    <Compile Include="IEither.cs" />
-    <Compile Include="JetBrainsAnnotations.cs" />
-    <Compile Include="CompositeStrongListener.cs" />
-    <Compile Include="CompositeWeakListener.cs" />
-    <Compile Include="Cell.cs" />
-    <Compile Include="CellExtensionMethods.cs" />
-    <Compile Include="CellLoop.cs" />
-    <Compile Include="CellSink.cs" />
-    <Compile Include="CellStreamSink.cs" />
-    <Compile Include="BehaviorSink.cs" />
-    <Compile Include="CoalesceHandler.cs" />
-    <Compile Include="CompositeListener.cs" />
-    <Compile Include="IKeepListenersAlive.cs" />
-    <Compile Include="IListenerWithWeakReference.cs" />
-    <Compile Include="IStrongListener.cs" />
-    <Compile Include="IWeakListener.cs" />
-    <Compile Include="Maybe.cs" />
-    <Compile Include="MaybeExtensionMethods.cs" />
-    <Compile Include="MaybeMonad.cs" />
-    <Compile Include="MutableListener.cs" />
-    <Compile Include="StreamListenerManager.cs" />
-    <Compile Include="StreamExtensionMethods.cs" />
-    <Compile Include="BehaviorLoop.cs" />
-    <Compile Include="LazyBehavior.cs" />
-    <Compile Include="LazyExtensionMethods.cs" />
-    <Compile Include="Listener.cs" />
-    <Compile Include="Stream.cs" />
-    <Compile Include="StreamLoop.cs" />
-    <Compile Include="StreamSink.cs" />
-    <Compile Include="IListener.cs" />
-    <Compile Include="Either.cs" />
-    <Compile Include="Node.cs" />
-    <Compile Include="Operational.cs" />
-    <Compile Include="Properties\AssemblyInfo.cs" />
-    <Compile Include="TaskWithListener.cs" />
-    <Compile Include="Time\ITimerSystem.cs" />
-    <Compile Include="Time\SystemClockTimerSystem.cs" />
-    <Compile Include="Time\ITimer.cs" />
-    <Compile Include="Time\ITimerSystemImplementation.cs" />
-    <Compile Include="Time\SecondsTimerSystem.cs" />
-    <Compile Include="Time\TimerSystem.cs" />
-    <Compile Include="Time\TimerSystemImplementationImplementationBase.cs" />
-    <Compile Include="Transaction.cs" />
-    <Compile Include="Unit.cs" />
-  </ItemGroup>
-  <ItemGroup>
-    <None Include="packages.config" />
-  </ItemGroup>
-  <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
-  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
-       Other similar extension points exist, see Microsoft.Common.targets.
-  <Target Name="BeforeBuild">
-  </Target>
-  <Target Name="AfterBuild">
-  </Target>
-  -->
+
 </Project>
