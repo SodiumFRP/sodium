@@ -16,8 +16,10 @@
     <InformationalVersion>1.0.0.0</InformationalVersion>
     <Company>SodiumFRP</Company>
     <Product>Sodium FRP for .NET</Product>
+    <Title>Sodium FRP for .NET</Title>
     <Description>Sodium - Functional Reactive Programming (FRP) library for .NET written in C#.</Description>
-  
+    <IncludeSource>True</IncludeSource>
+    <IncludeSymbols>True</IncludeSymbols>
 </PropertyGroup>
 
   <ItemGroup>
