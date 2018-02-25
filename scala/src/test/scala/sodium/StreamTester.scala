@@ -148,7 +148,7 @@ class StreamTester {
   @Test
   def testGate(): Unit = {
     val ec = new StreamSink[Char]()
-    val epred = new CellSink(true)
+    val epred = new BehaviorSink(true)
     val out = new ListBuffer[Char]()
     val l = ec.gate(epred).listen(out.+=)
     ec.send('H')

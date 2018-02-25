@@ -8,18 +8,19 @@ import scala.collection.mutable
 object Operational {
 
   /**
-    * A stream that gives the updates/steps for a [[Cell]].
+    * A stream that gives the updates/steps for a [[Behavior]].
     *
     * This is an OPERATIONAL primitive, which is not part of the main Sodium
     * API. It breaks the property of non-detectability of cell steps/updates.
     * The rule with this primitive is that you should only use it in functions
     * that do not allow the caller to detect the cell updates.
     */
-  def updates[A](c: Cell[A]): Stream[A] = Transaction(_ => c.updates())
+  def updates[A](b: Behavior[A]): Stream[A] =
+    Transaction(trans => b.updates().coalesce(trans, (left, right) => right))
 
   /**
     * A stream that is guaranteed to fire once in the transaction where value() is invoked, giving
-    * the current value of the cell, and thereafter behaves like [[updates update(Cell)]],
+    * the current value of the cell, and thereafter behaves like [[updates update(Behavior)]],
     * firing for each update/step of the cell's value.
     *
     * This is an OPERATIONAL primitive, which is not part of the main Sodium
@@ -27,7 +28,7 @@ object Operational {
     * The rule with this primitive is that you should only use it in functions
     * that do not allow the caller to detect the cell updates.
     */
-  def value[A](c: Cell[A]): Stream[A] = Transaction(trans => c.value(trans))
+  def value[A](b: Behavior[A]): Stream[A] = Transaction(trans => b.value(trans))
 
   /**
     * Push each event onto a new transaction guaranteed to come before the next externally

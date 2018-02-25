@@ -1,7 +1,7 @@
 package sodium
 
 /**
-  * A handle for a listener that was registered with [[Cell.listen Cell.listen(A=>Unit)]] or
+  * A handle for a listener that was registered with [[Behavior.listen Behavior.listen(A=>Unit)]] or
   * [[Stream.listen(handler:A=>Unit):sodium\.Listener* Stream.listen(A=>Unit)]].
   */
 abstract class Listener {

@@ -19,7 +19,8 @@ object MemoryTest1 {
     val t = et.hold(0)
     et.map(x => x / 10)
     val changeTens =
-      Stream.filterOptional(et.snapshot[Int, Option[Int]](t, (neu, old) => if (neu.equals(old)) None else Some(neu)))
+      Stream.filterOptional(
+        et.snapshot[Int, Option[Int]](t, (neu: Int, old: Int) => if (neu.equals(old)) None else Some(neu)))
     val oout =
       changeTens.map(tens => t.map(tt => (tens, tt))).hold(t.map(tt => (0, tt)))
     val out = Cell.switchC(oout)

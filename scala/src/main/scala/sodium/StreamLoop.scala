@@ -8,7 +8,7 @@ class StreamLoop[A] extends StreamWithSend[A] {
   var assigned = false
 
   if (Transaction.getCurrentTransaction().isEmpty) {
-    throw new RuntimeException("StreamLoop/CellLoop must be used within an explicit transaction")
+    throw new RuntimeException("StreamLoop/BehaviorLoop must be used within an explicit transaction")
   }
 
   /**

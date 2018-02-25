@@ -24,7 +24,7 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     *
     * @param handler The handler to execute when there's a new value.
     *               You should make no assumptions about what thread you are called on, and the
-    *               handler should not block. You are not allowed to use [[sodium.CellSink.send CellSink.send(A)]]
+    *               handler should not block. You are not allowed to use [[sodium.BehaviorSink.send BehaviorSink.send(A)]]
     *               or [[sodium.StreamSink.send(a:A):Unit* StreamSink.send(A)]] in the handler.
     *               An exception will be thrown, because you are not meant to use this to create
     *               your own primitives.
@@ -116,8 +116,8 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     * Stream's event values.
     *
     * @param f Function to apply to convert the values. It may construct FRP logic or use
-    *          [[sodium.Cell.sample():A* Cell.sample()]] in which case it is equivalent to
-    *          [[sodium.Stream.snapshot[B]* Stream.snapshot(Cell)]]ing the
+    *          [[sodium.Behavior.sample():A* Behavior.sample()]] in which case it is equivalent to
+    *          [[sodium.Stream.snapshot[B]* Stream.snapshot(Behavior)]]ing the
     *          cell. Apart from this the function must be <em>referentially transparent</em>.
     */
   final def map[B](f: A => B): Stream[B] = {
@@ -136,30 +136,59 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
   final def mapTo[B](b: B): Stream[B] = this.map(a => b)
 
   /**
-    * Create a [[Cell]] with the specified initial value, that is updated
+    * Create a [[Behavior]] with the specified initial value, that is updated
     * by this stream's event values.
     *
     * There is an implicit delay: State updates caused by event firings don't become
-    * visible as the cell's current value as viewed by [[sodium.Stream.snapshot[B,C]* Stream.snapshot(Cell,(A,B)=>C)]]
+    * visible as the cell's current value as viewed by [[sodium.Stream.snapshot[B,C]* Stream.snapshot(Behavior,(A,B)=>C)]]
     * until the following transaction. To put this another way,
-    * [[sodium.Stream.snapshot[B,C]* Stream.snapshot(Cell,(A,B)=>C)]] always sees the value of a cell as it was before
+    * [[sodium.Stream.snapshot[B,C]* Stream.snapshot(Behavior,(A,B)=>C)]] always sees the value of a cell as it was before
     * any state changes from the current transaction.
     */
-  final def hold(initValue: A): Cell[A] =
-    Transaction(trans => new Cell[A](Stream.this, initValue))
+  final def hold(initValue: A): Cell[A] = new Cell[A](this.hold_(initValue))
+
+  private def hold_(initValue: A): Behavior[A] =
+    Transaction(trans => new Behavior[A](Stream.this, initValue))
 
   /**
     * A variant of [[sodium.Stream.hold(initValue:A)* hold(A)]] with an initial value captured by
-      [[Cell.sampleLazy()* Cell.sampleLazy()]].
+    * [[Behavior.sampleLazy()* Behavior.sampleLazy()]].
     */
-  final def holdLazy(initValue: Lazy[A]): Cell[A] =
-    Transaction(_ => new LazyCell[A](this, Some(initValue)))
+  //TODO see bellow
+  //def holdLazy(initValue: Lazy[A]): Cell[A] = Transaction(trans => new Cell[A](holdLazy_(trans, initValue)))
+
+  //private[sodium] def holdLazy_(trans: Transaction, initValue: Lazy[A]): Behavior[A] =
+  //  Transaction(_ => new LazyBehavior[A](this, Some(initValue)))
+
+  //TODO replace with the one with transaction
+  def holdLazy(initValue: Lazy[A]): Cell[A] = new Cell[A](holdLazy_(initValue))
+  private[sodium] def holdLazy_(initValue: Lazy[A]): Behavior[A] =
+    new LazyBehavior[A](this, Some(initValue))
+
+  //from C# implementation
+  /**
+    * Return a stream whose events are the values of the cell at the time of the stream event firing.
+    */
+  final def snapshot[B](c: Cell[B]): Stream[B] = snapshot(c.behavior)
+
+  //from C# implementation
+  /**
+    * Return a stream whose events are the values of the behavior at the time of the stream event firing.
+    */
+  final def snapshot[B](b: Behavior[B]): Stream[B] = snapshot(b, (_: Any, a: B) => a)
+
+  //from C# implementation
+  /**
+    * Return a stream whose events are the result of the combination using the specified
+    * function of the input stream's value and the value of the cell at the time of the stream event firing.
+    */
+  final def snapshot[B, C](c: Cell[B], f: (A, B) => C): Stream[C] = snapshot(c.behavior, f)
 
   /**
-    * Variant of [[sodium.Stream.snapshot[B,C]* snapshot(Cell,(A,B)=>C)]] that captures the cell's value
+    * Variant of [[sodium.Stream.snapshot[B,C]* snapshot(Behavior,(A,B)=>C)]] that captures the cell's value
     * at the time of the event firing, ignoring the stream's value.
     */
-  final def snapshot[B](c: Cell[B]): Stream[B] = snapshot[B, B](c, (a, b) => b)
+  //final def snapshot[B](c: Behavior[B]): Stream[B] = snapshot[B, B](c, (a, b) => b)
 
   /**
     * Return a stream whose events are the result of the combination using the specified
@@ -167,11 +196,11 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     *
     * There is an implicit delay: State updates caused by event firings being held with
     * [[sodium.Stream.hold(initValue:A)* hold(A)]] don't become visible as the cell's current value until the
-    * following transaction. To put this another way, [[sodium.Stream.snapshot[B,C]* snapshot(Cell,(A,B)=>C)]]
+    * following transaction. To put this another way, [[sodium.Stream.snapshot[B,C]* snapshot(Behavior,(A,B)=>C)]]
     * always sees the value of a cell as it was before any state changes from the current
     * transaction.
     */
-  final def snapshot[B, C](c: Cell[B], f: (A, B) => C): Stream[C] = {
+  final def snapshot[B, C](c: Behavior[B], f: (A, B) => C): Stream[C] = {
     val out = new StreamWithSend[C]()
     val l = listen_(out.node, (trans: Transaction, a: A) => {
       out.send(trans, f(a, c.sampleNoTrans()))
@@ -180,21 +209,37 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
   }
 
   /**
-    * Variant of [[sodium.Stream.snapshot[B,C]* snapshot(Cell,(A,B)=>C)]] that captures the values of
+    * Variant of [[sodium.Stream.snapshot[B,C]* snapshot(Behavior,(A,B)=>C)]] that captures the values of
     * two cells.
     */
   final def snapshot[B, C, D](cb: Cell[B], cc: Cell[C], fn: (A, B, C) => D): Stream[D] =
-    this.snapshot[B, D](cb, (a: A, b: B) ⇒ fn(a, b, cc.sample()))
+    this.snapshot[B, C, D](cb.behavior, cc.behavior, fn)
+
+  final def snapshot[B, C, D](b1: Behavior[B], b2: Behavior[C], f: (A, B, C) => D): Stream[D] = {
+    val out = new StreamWithSend[D]()
+    val l = listen_(out.node, (trans: Transaction, a: A) => {
+      out.send(trans, f(a, b1.sampleNoTrans(), b2.sampleNoTrans()))
+    })
+    out.unsafeAddCleanup(l)
+  }
 
   /**
-    * Variant of [[sodium.Stream.snapshot[B,C]* snapshot(Cell,(A,B)=>C)]] that captures the values of
+    * Variant of [[sodium.Stream.snapshot[B,C]* snapshot(Behavior,(A,B)=>C)]] that captures the values of
     * three cells.
     */
   final def snapshot[B, C, D, E](cb: Cell[B], cc: Cell[C], cd: Cell[D], fn: (A, B, C, D) => E): Stream[E] =
-    this.snapshot[B, E](cb, (a: A, b: B) ⇒ fn(a, b, cc.sample(), cd.sample()))
+    this.snapshot[B, C, D, E](cb.behavior, cc.behavior, cd.behavior, fn)
+
+  final def snapshot[B, C, D, E](b1: Behavior[B], b2: Behavior[C], b3: Behavior[D], f: (A, B, C, D) => E): Stream[E] = {
+    val out = new StreamWithSend[E]()
+    val l = listen_(out.node, (trans: Transaction, a: A) => {
+      out.send(trans, f(a, b1.sampleNoTrans(), b2.sampleNoTrans(), b3.sampleNoTrans()))
+    })
+    out.unsafeAddCleanup(l)
+  }
 
   /**
-    * Variant of [[sodium.Stream.snapshot[B,C]* snapshot(Cell,(A,B)=>C)]] that captures the values of
+    * Variant of [[sodium.Stream.snapshot[B,C]* snapshot(Behavior,(A,B)=>C)]] that captures the values of
     * four cells.
     */
   final def snapshot[B, C, D, E, F](cb: Cell[B],
@@ -202,17 +247,29 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
                                     cd: Cell[D],
                                     ce: Cell[E],
                                     fn: (A, B, C, D, E) => F): Stream[F] =
-    this.snapshot[B, F](cb, (a: A, b: B) ⇒ fn(a, b, cc.sample(), cd.sample(), ce.sample()))
+    this.snapshot[B, C, D, E, F](cb.behavior, cc.behavior, cd.behavior, ce.behavior, fn)
+
+  final def snapshot[B, C, D, E, F](b1: Behavior[B],
+                                    b2: Behavior[C],
+                                    b3: Behavior[D],
+                                    b4: Behavior[E],
+                                    f: (A, B, C, D, E) => F): Stream[F] = {
+    val out = new StreamWithSend[F]()
+    val l = listen_(out.node, (trans: Transaction, a: A) => {
+      out.send(trans, f(a, b1.sampleNoTrans(), b2.sampleNoTrans(), b3.sampleNoTrans(), b4.sampleNoTrans()))
+    })
+    out.unsafeAddCleanup(l)
+  }
 
   /**
-    * Variant of [[sodium.Stream.snapshot[B,C]* snapshot(Cell,(A,B)=>C)]] that captures the values of
+    * Variant of [[sodium.Stream.snapshot[B,C]* snapshot(Behavior,(A,B)=>C)]] that captures the values of
     * five cells.
     */
-  final def snapshot[B, C, D, E, F, G](cb: Cell[B],
-                                       cc: Cell[C],
-                                       cd: Cell[D],
-                                       ce: Cell[E],
-                                       cf: Cell[F],
+  final def snapshot[B, C, D, E, F, G](cb: Behavior[B],
+                                       cc: Behavior[C],
+                                       cd: Behavior[D],
+                                       ce: Behavior[E],
+                                       cf: Behavior[F],
                                        fn: (A, B, C, D, E, F) => G): Stream[G] =
     this.snapshot[B, G](cb, (a: A, b: B) ⇒ fn(a, b, cc.sample(), cd.sample(), ce.sample(), cf.sample()))
 
@@ -243,7 +300,7 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     * the event from <em>s</em> will appear at the right.
     *
     * @param f Function to combine the values. It may construct FRP logic or use
-    *          [[sodium.Cell.sample():A* Cell.sample()]].
+    *          [[sodium.Behavior.sample():A* Behavior.sample()]].
     *          Apart from this the function must be <em>referentially transparent</em>.
     */
   final def merge(s: Stream[A], f: ((A, A) => A)): Stream[A] = {
@@ -276,28 +333,31 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     * Return a stream that only outputs event occurrences from the input stream
     * when the specified cell's value is true.
     */
-  final def gate(c: Cell[Boolean]): Stream[A] =
-    filterOptional(snapshot[Boolean, Option[A]](c, (a, pred) => if (pred) Some(a) else None))
+  final def gate(c: Behavior[Boolean]): Stream[A] =
+    filterOptional(snapshot[Boolean, Option[A]](c, (a: A, pred: Boolean) => if (pred) Some(a) else None))
+
+  final def gate(c: Cell[Boolean]): Stream[A] = gate(c.behavior)
 
   /**
     * Transform an event with a generalized state loop (a Mealy machine). The function
     * is passed the input and the old state and returns the new state and output value.
     *
     * @param f Function to apply to update the state. It may construct FRP logic or use
-    *          [[sodium.Cell.sample():A* Cell.sample()]] in which case it is equivalent to
-    *          [[sodium.Stream.snapshot[B]* Stream.snapshot(Cell)]]ing the
+    *          [[sodium.Behavior.sample():A* Behavior.sample()]] in which case it is equivalent to
+    *          [[sodium.Stream.snapshot[B]* Stream.snapshot(Behavior)]]ing the
     *          cell. Apart from this the function must be <em>referentially transparent</em>.
     */
   final def collect[B, S](initState: S, f: (A, S) => (B, S)): Stream[B] = collectLazy(new Lazy[S](initState), f)
 
   /**
     * A variant of [[sodium.Stream.collect[B,S](initState:S,f:(A,S)=>(B,S)):sodium\.Stream[B]* collect(S,(A,S)=>(B,S)]]
-    * that takes an initial state returned by [[Cell.sampleLazy()* Cell.sampleLazy()]].
+    * that takes an initial state returned by [[Behavior.sampleLazy()* Behavior.sampleLazy()]].
     */
   final def collectLazy[B, S](initState: Lazy[S], f: (A, S) => (B, S)): Stream[B] =
-    Transaction(_ => {
+    Transaction(trans => {
       val es = new StreamLoop[S]()
-      val s = es.holdLazy(initState)
+      //TODO add transaction
+      val s = es.holdLazy_( /*trans,*/ initState)
       val ebs = snapshot(s, f)
       val eb = ebs.map(bs => bs._1)
       val es_out = ebs.map(bs => bs._2)
@@ -309,20 +369,21 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     * Accumulate on input event, outputting the new state each time.
     *
     * @param f Function to apply to update the state. It may construct FRP logic or use
-    *          [[sodium.Cell.sample():A* Cell.sample()]] in which case it is equivalent to
-    *          [[sodium.Stream.snapshot[B]* Stream.snapshot(Cell)]]ing the
+    *          [[sodium.Behavior.sample():A* Behavior.sample()]] in which case it is equivalent to
+    *          [[sodium.Stream.snapshot[B]* Stream.snapshot(Behavior)]]ing the
     *          cell. Apart from this the function must be <em>referentially transparent</em>.
     */
   final def accum[S](initState: S, f: (A, S) => S): Cell[S] = accumLazy(new Lazy[S](initState), f)
 
   /**
-    * A variant of [[sodium.Stream.accum[S](initState:S,f:(A,S)=>S):sodium\.Cell[S]* accum(S,(A,S)=>S)]] that takes an
-    *  initial state returned by [[Cell.sampleLazy()* Cell.sampleLazy()]].
+    * A variant of [[sodium.Stream.accum[S](initState:S,f:(A,S)=>S):sodium\.Behavior[S]* accum(S,(A,S)=>S)]] that takes an
+    *  initial state returned by [[Behavior.sampleLazy()* Behavior.sampleLazy()]].
     */
   final def accumLazy[S](initState: Lazy[S], f: (A, S) => S): Cell[S] =
-    Transaction(_ => {
+    Transaction(trans => {
       val es = new StreamLoop[S]()
-      val s = es.holdLazy(initState)
+      //TODO add transaction
+      val s = es.holdLazy_( /*trans,*/ initState)
       val es_out = snapshot(s, f)
       es.loop(es_out)
       es_out.holdLazy(initState)
