@@ -160,10 +160,13 @@ object Transaction {
         startIfNecessary()
         code(currentTransaction.get)
       } finally {
-        if (transWas == None) {
-          currentTransaction.foreach(_.close())
+        try {
+          if (transWas.isEmpty) {
+            currentTransaction.foreach(_.close())
+          }
+        } finally {
+          currentTransaction = transWas
         }
-        currentTransaction = transWas
       }
     }
   }
