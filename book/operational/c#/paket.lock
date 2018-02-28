@@ -22,7 +22,7 @@ NUGET
       System.Security.Cryptography.X509Certificates (>= 4.3) - restriction: || (&& (< net45) (>= net46) (>= netstandard1.4) (< netstandard1.5)) (&& (< net45) (>= net46) (>= netstandard1.5) (< netstandard1.6)) (&& (< net45) (>= net46) (>= netstandard1.6) (< netstandard2.0)) (&& (>= net46) (< netstandard1.4)) (&& (>= net46) (>= uap10.0))
       System.Xml.ReaderWriter (>= 4.3) - restriction: || (&& (< net45) (>= net46) (< netstandard1.3)) (&& (< net45) (>= net46) (>= netstandard1.4) (< netstandard1.5)) (&& (< net45) (>= net46) (>= netstandard1.5) (< netstandard1.6)) (&& (< net45) (>= net46) (>= netstandard1.6) (< netstandard2.0)) (&& (< net45) (>= net46) (< portable-net451+win81+wpa81)) (&& (>= net46) (< netstandard1.4)) (&& (>= net46) (< portable-net45+win8+wpa81)) (&& (>= net46) (>= uap10.0))
     OptimizedPriorityQueue (4.1.1)
-    SodiumFRP (3.0.2)
+    SodiumFRP (3.1.1)
       OptimizedPriorityQueue (>= 4.1.1)
       System.ValueTuple (>= 4.4)
     System.AppContext (4.3) - restriction: || (&& (< net45) (>= net46) (>= netstandard1.4) (< netstandard1.5)) (&& (< net45) (>= net46) (>= netstandard1.5) (< netstandard1.6)) (&& (< net45) (>= net46) (>= netstandard1.6) (< netstandard2.0)) (&& (>= net46) (< netstandard1.4)) (&& (>= net46) (>= uap10.0))

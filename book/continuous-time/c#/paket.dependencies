@@ -1,4 +1,4 @@
 source https://api.nuget.org/v3/index.json
 framework >= net46
 
-nuget SodiumFRP 3.0.2
+nuget SodiumFRP 3.1.1
