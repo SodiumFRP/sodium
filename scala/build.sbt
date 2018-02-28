@@ -1,8 +1,12 @@
 libraryDependencies += "com.novocode" % "junit-interface" % "0.11" % "test->default"
 
+//wartremoverWarnings ++= Warts.all
+
 scalafmtOnCompile in ThisBuild := true
 
 scalacOptions in (Compile, doc) := Seq("-diagrams", "-implicits", "-implicits-show-all")
+
+scalacOptions in (Compile, console) --= Seq("-Ywarn-unused:imports", "-Xfatal-warnings")
 
 lazy val root = (project in file(".")).settings(
   name := "sodium",

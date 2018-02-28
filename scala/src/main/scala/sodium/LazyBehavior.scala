@@ -1,6 +1,6 @@
 package sodium
 
-class LazyCell[A](event: Stream[A], _lazyInitValue: Option[Lazy[A]]) extends Cell[A](event, None) {
+class LazyBehavior[A](event: Stream[A], _lazyInitValue: Option[Lazy[A]]) extends Behavior[A](event, None) {
 
   this.lazyInitValue = _lazyInitValue
 

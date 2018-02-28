@@ -38,16 +38,15 @@ final class Transaction {
     * Add an action to run after all last() actions.
     */
   def post_(childIx: Int, action: Transaction => Unit): Unit = {
-    val existing: Transaction => Unit = postQ.getOrElse(childIx, null)
-    val neu = (existing == null) match {
-      case true => action
-      case _ =>
-        trans: Transaction =>
-          {
-            existing(trans)
-            action(trans)
-          }
-    }
+    val neu: Transaction => Unit = postQ
+      .get(childIx)
+      .map { existing => trans: Transaction =>
+        {
+          existing(trans)
+          action(trans)
+        }
+      }
+      .getOrElse(action)
     postQ += (childIx -> neu)
   }
 
@@ -161,10 +160,13 @@ object Transaction {
         startIfNecessary()
         code(currentTransaction.get)
       } finally {
-        if (transWas == None) {
-          currentTransaction.foreach(_.close())
+        try {
+          if (transWas.isEmpty) {
+            currentTransaction.foreach(_.close())
+          }
+        } finally {
+          currentTransaction = transWas
         }
-        currentTransaction = transWas
       }
     }
   }

@@ -84,9 +84,13 @@ public final class Transaction {
                 startIfNecessary();
                 code.run();
             } finally {
-                if (transWas == null)
-                    currentTransaction.close();
-                currentTransaction = transWas;
+                try {
+                    if (transWas == null)
+                        currentTransaction.close();
+                }
+                finally {
+                    currentTransaction = transWas;
+                }
             }
         }
 	}
@@ -108,9 +112,13 @@ public final class Transaction {
                 startIfNecessary();
                 return code.apply();
             } finally {
-                if (transWas == null)
-                    currentTransaction.close();
-                currentTransaction = transWas;
+                try {
+                    if (transWas == null)
+                        currentTransaction.close();
+                }
+                finally {
+                    currentTransaction = transWas;
+                }
             }
         }
 	}
@@ -125,9 +133,13 @@ public final class Transaction {
                 startIfNecessary();
                 code.run(currentTransaction);
             } finally {
-                if (transWas == null)
-                    currentTransaction.close();
-                currentTransaction = transWas;
+                try {
+                    if (transWas == null)
+                        currentTransaction.close();
+                }
+                finally {
+                    currentTransaction = transWas;
+                }
             }
         }
 	}
@@ -155,9 +167,13 @@ public final class Transaction {
                 startIfNecessary();
                 return code.apply(currentTransaction);
             } finally {
-                if (transWas == null)
-                    currentTransaction.close();
-                currentTransaction = transWas;
+                try {
+                    if (transWas == null)
+                        currentTransaction.close();
+                }
+                finally {
+                    currentTransaction = transWas;
+                }
             }
         }
 	}

@@ -6,7 +6,7 @@ import scala.ref.WeakReference
 class Node(private var rank: Long) extends Comparable[Node] {
   import Node._
 
-  val listeners = ListBuffer[Target]()
+  val listeners: ListBuffer[Target] = ListBuffer[Target]()
 
   /**
     * @return true if any changes were made.
@@ -42,7 +42,7 @@ object Node {
   case class Target(final var action: WeakReference[TransactionHandler[Unit]], final var node: Node)
 
   object Target {
-    def apply(action: TransactionHandler[Unit], node: Node) = new Target(new WeakReference(action), node)
+    def apply(action: TransactionHandler[Unit], node: Node): Target = new Target(new WeakReference(action), node)
   }
 
 }
