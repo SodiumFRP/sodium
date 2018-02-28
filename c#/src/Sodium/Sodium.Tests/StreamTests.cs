@@ -23,6 +23,29 @@ namespace Sodium.Tests
         }
 
         [Test]
+        public void TestStreamSendInCallbackThrowsException()
+        {
+            InvalidOperationException actual = null;
+
+            StreamSink<int> s = Stream.CreateSink<int>();
+            StreamSink<int> s2 = Stream.CreateSink<int>();
+            using (s.Listen(s2.Send))
+            {
+                try
+                {
+                    s.Send(5);
+                }
+                catch (InvalidOperationException e)
+                {
+                    actual = e;
+                }
+            }
+
+            Assert.IsNotNull(actual);
+            Assert.AreEqual("Send may not be called inside a Sodium callback.", actual.Message);
+        }
+
+        [Test]
         public void TestMap()
         {
             StreamSink<int> s = Stream.CreateSink<int>();

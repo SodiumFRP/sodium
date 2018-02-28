@@ -41,7 +41,7 @@ namespace Sodium
 
                     return Unit.Value;
                 },
-                false);
+                true);
         }
 
         /// <summary>

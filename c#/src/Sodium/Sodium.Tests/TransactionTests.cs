@@ -43,15 +43,16 @@ namespace Sodium.Tests
                 Thread.Sleep(500);
                 return l2;
             }));
+            await Task.Delay(250);
             sink.Send(5);
-            await Task.Delay(750);
+            await Task.Delay(500);
             sink.Send(6);
             IListener l = await t;
             sink.Send(7);
             l.Unlisten();
             sink.Send(8);
 
-            CollectionAssert.AreEqual(new[] { 8, 14 }, @out);
+            CollectionAssert.AreEqual(new[] { 8, 12, 14 }, @out);
         }
 
         [Test]
@@ -68,15 +69,16 @@ namespace Sodium.Tests
                 Thread.Sleep(500);
                 return l2;
             }));
+            await Task.Delay(250);
             sink.Send(5);
-            await Task.Delay(750);
+            await Task.Delay(500);
             sink.Send(6);
             IListener l = await t;
             sink.Send(7);
             l.Unlisten();
             sink.Send(8);
 
-            CollectionAssert.AreEqual(new[] { 8, 14 }, @out);
+            CollectionAssert.AreEqual(new[] { 8, 12, 14 }, @out);
         }
 
         [Test]
