@@ -77,9 +77,7 @@ namespace Sodium.Tests
 
                 // Ways that the pool is modified.
                 Stream<Func<int, int>> poolAddByInput = addPoolSink.Map<Func<int, int>>(i => x => x + i);
-                StreamSink<Func<int, int>> poolRemoveByUsage = new StreamSink<Func<int, int>>();
-                IStrongListener l =
-                    submitPooledAmount.Listen(i => Transaction.Post(() => poolRemoveByUsage.Send(x => x - i)));
+                Stream<Func<int, int>> poolRemoveByUsage = Operational.Defer(submitPooledAmount.Map<Func<int, int>>(i => x => x - i));
 
                 // The current level of the pool
                 Cell<int> poolLocal = poolAddByInput
@@ -108,7 +106,7 @@ namespace Sodium.Tests
                                 : Maybe.None)
                         .FilterMaybe();
 
-                submitPooledAmount.Loop(inputByAdded.Merge(inputBySatisfaction, Math.Max).AttachListener(l));
+                submitPooledAmount.Loop(inputByAdded.Merge(inputBySatisfaction, Math.Max));
 
                 return (submitPooledAmount, poolLocal);
             });
