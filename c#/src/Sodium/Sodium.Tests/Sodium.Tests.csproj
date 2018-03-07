@@ -55,6 +55,7 @@
     <Compile Include="CommonTests.cs" />
     <Compile Include="DenotationalSemanticsTests.cs" />
     <Compile Include="EitherTests.cs" />
+    <Compile Include="IssueTests.cs" />
     <Compile Include="LoopTests.cs" />
     <Compile Include="MaybeTests.cs" />
     <Compile Include="PerformanceTests.cs" />
