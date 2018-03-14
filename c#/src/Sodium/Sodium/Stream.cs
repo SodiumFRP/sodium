@@ -122,12 +122,12 @@ namespace Sodium
         }
 
         /// <summary>
-        ///     Listen for events/firings on this stream.  The returned <see cref="IListener" /> may be
+        ///     Listen for events/firings on this stream.  The returned <see cref="IStrongListener" /> may be
         ///     disposed to stop listening.  This is an OPERATIONAL mechanism for interfacing between
         ///     the world of I/O and FRP.
         /// </summary>
         /// <param name="handler">The handler to execute for values fired by the stream.</param>
-        /// <returns>An <see cref="IListener" /> which may be disposed to stop listening.</returns>
+        /// <returns>An <see cref="IStrongListener" /> which may be disposed to stop listening.</returns>
         /// <remarks>
         ///     <para>
         ///         No assumptions should be made about what thread the handler is called on and it should not block.
@@ -136,11 +136,11 @@ namespace Sodium
         ///         They will throw an exception because this method is not meant to be used to create new primitives.
         ///     </para>
         ///     <para>
-        ///         If the <see cref="IListener" /> is not disposed, it will continue to listen until this stream is either
+        ///         If the <see cref="IStrongListener" /> is not disposed, it will continue to listen until this stream is either
         ///         disposed or garbage collected.
         ///     </para>
         ///     <para>
-        ///         To ensure this <see cref="IListener" /> is disposed as soon as the stream it is listening to is either
+        ///         To ensure this <see cref="IStrongListener" /> is disposed as soon as the stream it is listening to is either
         ///         disposed, pass the returned listener to this stream's <see cref="AttachListener" /> method.
         ///     </para>
         /// </remarks>
@@ -174,12 +174,12 @@ namespace Sodium
         }
 
         /// <summary>
-        ///     Listen for events/firings on this stream.  The returned <see cref="IListener" /> may be
+        ///     Listen for events/firings on this stream.  The returned <see cref="IWeakListener" /> may be
         ///     disposed to stop listening, or it will automatically stop listening when it is garbage collected.
         ///     This is an OPERATIONAL mechanism for interfacing between the world of I/O and FRP.
         /// </summary>
         /// <param name="handler">The handler to execute for values fired by the stream.</param>
-        /// <returns>An <see cref="IListener" /> which may be disposed to stop listening.</returns>
+        /// <returns>An <see cref="IWeakListener" /> which may be disposed to stop listening.</returns>
         /// <remarks>
         ///     <para>
         ///         No assumptions should be made about what thread the handler is called on and it should not block.
@@ -188,11 +188,11 @@ namespace Sodium
         ///         They will throw an exception because this method is not meant to be used to create new primitives.
         ///     </para>
         ///     <para>
-        ///         If the <see cref="IListener" /> is not disposed, it will continue to listen until this stream is either
+        ///         If the <see cref="IWeakListener" /> is not disposed, it will continue to listen until this stream is either
         ///         disposed or garbage collected or the listener itself is garbage collected.
         ///     </para>
         ///     <para>
-        ///         To ensure this <see cref="IListener" /> is disposed as soon as the stream it is listening to is either
+        ///         To ensure this <see cref="IWeakListener" /> is disposed as soon as the stream it is listening to is either
         ///         disposed, pass the returned listener to this stream's <see cref="AttachListener" /> method.
         ///     </para>
         /// </remarks>
@@ -220,9 +220,9 @@ namespace Sodium
         /// <typeparam name="T">The type of values fired by the stream.</typeparam>
         /// <param name="handler">The handler to execute for values fired by this stream.</param>
         /// <returns></returns>
-        public IListener ListenOnce(Action<T> handler)
+        public IStrongListener ListenOnce(Action<T> handler)
         {
-            IListener listener = null;
+            IStrongListener listener = null;
             listener = this.Listen(
                 a =>
                 {
@@ -299,12 +299,12 @@ namespace Sodium
         }
 
         private TResult ListenOnceAsyncInternal<TResult>(
-            Func<Task<T>, IListener, TResult> generateResult,
+            Func<Task<T>, IStrongListener, TResult> generateResult,
             CancellationToken token)
         {
             TaskCompletionSource<T> tcs = new TaskCompletionSource<T>();
 
-            IListener listener = null;
+            IStrongListener listener = null;
             listener = this.Listen(
                 a =>
                 {
