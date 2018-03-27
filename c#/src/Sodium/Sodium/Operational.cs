@@ -74,7 +74,7 @@ namespace Sodium
                     int childIx = 0;
                     foreach (T a in aa)
                     {
-                        trans.Post(childIx, trans1 => @out.Send(trans1, a));
+                        trans.Split(childIx, trans1 => @out.Send(trans1, a));
                         childIx++;
                     }
                 });

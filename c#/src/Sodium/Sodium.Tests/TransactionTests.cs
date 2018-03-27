@@ -93,7 +93,26 @@ namespace Sodium.Tests
             int value = 0;
             Transaction.Post(() => value = cell.Sample());
 
-            Assert.AreEqual(value, 2);
+            Assert.AreEqual(2, value);
+        }
+
+        [Test]
+        public void NestedPost()
+        {
+            Cell<int> cell = Transaction.Run(() =>
+            {
+                StreamSink<int> s = Stream.CreateSink<int>();
+                s.Send(2);
+                Transaction.Post(() =>
+                {
+                    s.Send(3);
+                    Transaction.Post(() => s.Send(5));
+                });
+                Transaction.Post(() => s.Send(4));
+                return s.Hold(1);
+            });
+
+            Assert.AreEqual(5, cell.Sample());
         }
 
         [Test]
@@ -106,10 +125,10 @@ namespace Sodium.Tests
                 s.Send(2);
                 Cell<int> c = s.Hold(1);
                 Transaction.Post(() => value = c.Sample());
-                Assert.AreEqual(value, 0);
+                Assert.AreEqual(0, value);
             });
 
-            Assert.AreEqual(value, 2);
+            Assert.AreEqual(2, value);
         }
 
         [Test]
@@ -125,10 +144,10 @@ namespace Sodium.Tests
                     Cell<int> c = s.Hold(1);
                     Transaction.Post(() => value = c.Sample());
                 });
-                Assert.AreEqual(value, 0);
+                Assert.AreEqual(0, value);
             });
 
-            Assert.AreEqual(value, 2);
+            Assert.AreEqual(2, value);
         }
 
         [Test]
@@ -145,10 +164,10 @@ namespace Sodium.Tests
                     Transaction.Post(() => value = c.Sample());
                     return Unit.Value;
                 });
-                Assert.AreEqual(value, 0);
+                Assert.AreEqual(0, value);
             });
 
-            Assert.AreEqual(value, 2);
+            Assert.AreEqual(2, value);
         }
 
         [Test]
@@ -161,11 +180,11 @@ namespace Sodium.Tests
                 s.Send(2);
                 Cell<int> c = s.Hold(1);
                 Transaction.Post(() => value = c.Sample());
-                Assert.AreEqual(value, 0);
+                Assert.AreEqual(0, value);
                 return Unit.Value;
             });
 
-            Assert.AreEqual(value, 2);
+            Assert.AreEqual(2, value);
         }
 
         [Test]
@@ -181,11 +200,11 @@ namespace Sodium.Tests
                     Cell<int> c = s.Hold(1);
                     Transaction.Post(() => value = c.Sample());
                 });
-                Assert.AreEqual(value, 0);
+                Assert.AreEqual(0, value);
                 return Unit.Value;
             });
 
-            Assert.AreEqual(value, 2);
+            Assert.AreEqual(2, value);
         }
 
         [Test]
@@ -202,11 +221,11 @@ namespace Sodium.Tests
                     Transaction.Post(() => value = c.Sample());
                     return Unit.Value;
                 });
-                Assert.AreEqual(value, 0);
+                Assert.AreEqual(0, value);
                 return Unit.Value;
             });
 
-            Assert.AreEqual(value, 2);
+            Assert.AreEqual(2, value);
         }
 
         [Test]

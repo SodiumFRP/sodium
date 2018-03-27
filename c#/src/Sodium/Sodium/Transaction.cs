@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 using Priority_Queue;
@@ -23,8 +24,10 @@ namespace Sodium
         private readonly HashSet<Entry> entries = new HashSet<Entry>();
         private readonly List<Action<Transaction>> sendQueue = new List<Action<Transaction>>();
         private List<Action> sampleQueue = new List<Action>();
-        private readonly List<Action> lastQueue = new List<Action>();
-        private readonly Dictionary<int, Action<Transaction>> postQueue = new Dictionary<int, Action<Transaction>>();
+        private readonly Queue<Action> lastQueue = new Queue<Action>();
+        private readonly Queue<Action<Transaction>> postQueue;
+        private Dictionary<int, Action<Transaction>> splitQueue;
+        private readonly bool hasParentTransaction;
         internal readonly List<Node.Target> TargetsToActivate;
         internal bool ActivatedTargets;
 
@@ -33,7 +36,21 @@ namespace Sodium
         // True if we need to re-generate the priority queue.
         private bool toRegen;
 
-        internal Transaction() => this.TargetsToActivate = new List<Node.Target>();
+        internal Transaction()
+            : this(new Queue<Action<Transaction>>(), new Dictionary<int, Action<Transaction>>(), false)
+        {
+        }
+
+        private Transaction(
+            Queue<Action<Transaction>> postQueue,
+            Dictionary<int, Action<Transaction>> splitQueue,
+            bool hasParentTransaction = true)
+        {
+            this.postQueue = postQueue;
+            this.splitQueue = splitQueue;
+            this.hasParentTransaction = hasParentTransaction;
+            this.TargetsToActivate = new List<Node.Target>();
+        }
 
         /// <summary>
         ///     Return whether or not there is a current transaction.
@@ -140,7 +157,7 @@ namespace Sodium
             {
                 if (transaction == null)
                 {
-                    if (newTransaction != null && newTransaction.isElevated)
+                    if (newTransaction != null && newTransaction.isElevated && !newTransaction.hasParentTransaction)
                     {
                         Monitor.Exit(TransactionLock);
                     }
@@ -156,7 +173,10 @@ namespace Sodium
             {
                 transaction.isElevated = true;
 
-                Monitor.Enter(TransactionLock);
+                if (!transaction.hasParentTransaction)
+                {
+                    Monitor.Enter(TransactionLock);
+                }
 
                 RunStartHooks();
             }
@@ -223,7 +243,18 @@ namespace Sodium
         /// <param name="action">The action to run after all prioritized actions.</param>
         internal void Last(Action action)
         {
-            this.lastQueue.Add(action);
+            this.lastQueue.Enqueue(action);
+        }
+
+        /// <summary>
+        ///     Add an action to run after all last actions.
+        /// </summary>
+        /// <param name="action">The action to run after all last actions.</param>
+        internal Unit Post(Action<Transaction> action)
+        {
+            this.postQueue.Enqueue(action);
+
+            return Unit.Value;
         }
 
         /// <summary>
@@ -231,11 +262,11 @@ namespace Sodium
         /// </summary>
         /// <param name="index">The order index in which to run the action.</param>
         /// <param name="action">The action to run after all last actions.</param>
-        internal Unit Post(int index, Action<Transaction> action)
+        internal Unit Split(int index, Action<Transaction> action)
         {
             // If an entry exists already, combine the old one with the new one.
             Action<Transaction> @new;
-            if (this.postQueue.TryGetValue(index, out Action<Transaction> existing))
+            if (this.splitQueue.TryGetValue(index, out Action<Transaction> existing))
             {
                 @new = existing + action;
             }
@@ -244,7 +275,7 @@ namespace Sodium
                 @new = action;
             }
 
-            this.postQueue[index] = @new;
+            this.splitQueue[index] = @new;
 
             return Unit.Value;
         }
@@ -261,7 +292,7 @@ namespace Sodium
         {
             // -1 will mean it runs before anything split/deferred, and will run
             // outside a transaction context.
-            Apply(trans => trans.Post(-1, _ => action()), false);
+            Apply(trans => trans.Post(_ => action()), false);
         }
 
         internal void SetNeedsRegenerating()
@@ -305,7 +336,7 @@ namespace Sodium
             }
             this.sendQueue.Clear();
 
-            do
+            while (this.prioritizedQueue.Count > 0 || this.sampleQueue.Count > 0)
             {
                 while (this.prioritizedQueue.Count > 0)
                 {
@@ -323,48 +354,57 @@ namespace Sodium
                     s();
                 }
             }
-            while (this.prioritizedQueue.Count > 0 || this.sampleQueue.Count > 0);
 
-            // ReSharper disable once ForCanBeConvertedToForeach
-            for (int i = 0; i < this.lastQueue.Count; i++)
+            while (this.lastQueue.Count > 0)
             {
-                this.lastQueue[i]();
+                this.lastQueue.Dequeue()();
             }
-            this.lastQueue.Clear();
 
-            foreach (KeyValuePair<int, Action<Transaction>> pair in this.postQueue)
+            if (!this.hasParentTransaction)
             {
-                try
+                void ExecuteInNewTransaction(Action<Transaction> action, bool runStartHooks)
                 {
-                    if (pair.Key < 0)
+                    try
                     {
-                        LocalTransaction.Value = null;
-                        pair.Value(null);
-                    }
-                    else
-                    {
-                        Transaction transaction = new Transaction();
+                        Transaction transaction = new Transaction(this.postQueue, this.splitQueue);
 
-                        // this will ensure we don't run start hooks
-                        transaction.isElevated = true;
+                        if (!runStartHooks)
+                        {
+                            // this will ensure we don't run start hooks
+                            transaction.isElevated = true;
+                        }
 
                         LocalTransaction.Value = transaction;
                         try
                         {
-                            pair.Value(transaction);
+                            action(transaction);
                         }
                         finally
                         {
                             transaction.Close();
                         }
                     }
+                    finally
+                    {
+                        LocalTransaction.Value = this;
+                    }
                 }
-                finally
+
+                while (this.postQueue.Count > 0 || this.splitQueue.Count > 0)
                 {
-                    LocalTransaction.Value = this;
+                    while (this.postQueue.Count > 0)
+                    {
+                        ExecuteInNewTransaction(this.postQueue.Dequeue(), true);
+                    }
+
+                    Dictionary<int, Action<Transaction>> sq = this.splitQueue;
+                    this.splitQueue = new Dictionary<int, Action<Transaction>>();
+                    foreach (int n in sq.Keys.OrderBy(n => n))
+                    {
+                        ExecuteInNewTransaction(sq[n], false);
+                    }
                 }
             }
-            this.postQueue.Clear();
         }
 
         private class Entry
