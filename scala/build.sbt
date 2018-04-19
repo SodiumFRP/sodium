@@ -12,7 +12,7 @@ lazy val root = (project in file(".")).settings(
   name := "sodium",
   organization := "nz.sodium",
   version := "1.0.0",
-  scalaVersion := "2.12.4",
+  scalaVersion := "2.12.5",
   scalacOptions ++= Seq(
     "-deprecation", // Emit warning and location for usages of deprecated APIs.
     "-encoding",
