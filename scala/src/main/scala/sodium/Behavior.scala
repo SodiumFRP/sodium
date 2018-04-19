@@ -72,7 +72,7 @@ class Behavior[A](val str: Stream[A], protected var currentValue: Option[A]) {
   final def sampleLazy(trans: Transaction): Lazy[A] = {
     val me = this
     val s = new Behavior.LazySample[A](me)
-    trans.last(() => {
+    trans.sample(() => {
       s.value = me.valueUpdate.getOrElse(me.sampleNoTrans())
       s.hasValue = true
       s.cell = null
@@ -103,8 +103,7 @@ class Behavior[A](val str: Stream[A], protected var currentValue: Option[A]) {
     * @param f Function to apply to convert the values. It must be <em>referentially transparent</em>.
     */
   final def map[B](f: A => B): Behavior[B] =
-    //TODO add transaction
-    Transaction(trans => updates().map(f).holdLazy_( /*trans,*/ sampleLazy(trans).map(f)))
+    Transaction(trans => updates().map(f).holdLazy_(trans, sampleLazy(trans).map(f)))
 
   /**
     * Lift a binary function into cells, so the returned Behavior always reflects the specified
@@ -259,8 +258,7 @@ object Behavior {
         .unsafeAddCleanup(() => {
           in_target.unlinkTo(node_target)
         })
-        //TODO add transaction
-        .holdLazy_( /*trans0,*/ new Lazy(() => bf.sampleNoTrans().apply(ba.sampleNoTrans())))
+        .holdLazy_(trans0, new Lazy(() => bf.sampleNoTrans().apply(ba.sampleNoTrans())))
 
     })
 
@@ -292,8 +290,8 @@ object Behavior {
           currentListener.foreach(_.unlisten())
         }
       }
-      val l = bba.value(trans0).listen_(out.node, h)
-      out.lastFiringOnly(trans0).unsafeAddCleanup(l).holdLazy_(za)
+      val l = bba.value(trans0).listen(out.node, trans0, h, false)
+      out.lastFiringOnly(trans0).unsafeAddCleanup(l).holdLazy_(trans0, za)
     })
 
   def switchC[A](bca: Behavior[Cell[A]]): Cell[A] = new Cell[A](Behavior.switchC[A](bca.map(_.behavior)))

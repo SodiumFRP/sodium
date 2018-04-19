@@ -154,16 +154,10 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     * A variant of [[sodium.Stream.hold(initValue:A)* hold(A)]] with an initial value captured by
     * [[Behavior.sampleLazy()* Behavior.sampleLazy()]].
     */
-  //TODO see bellow
-  //def holdLazy(initValue: Lazy[A]): Cell[A] = Transaction(trans => new Cell[A](holdLazy_(trans, initValue)))
+  def holdLazy(initValue: Lazy[A]): Cell[A] = Transaction(trans => new Cell[A](holdLazy_(trans, initValue)))
 
-  //private[sodium] def holdLazy_(trans: Transaction, initValue: Lazy[A]): Behavior[A] =
-  //  Transaction(_ => new LazyBehavior[A](this, Some(initValue)))
-
-  //TODO replace with the one with transaction
-  def holdLazy(initValue: Lazy[A]): Cell[A] = new Cell[A](holdLazy_(initValue))
-  private[sodium] def holdLazy_(initValue: Lazy[A]): Behavior[A] =
-    new LazyBehavior[A](this, Some(initValue))
+  private[sodium] def holdLazy_(trans: Transaction, initValue: Lazy[A]): Behavior[A] =
+    Transaction(_ => new LazyBehavior[A](trans, this, Some(initValue)))
 
   //from C# implementation
   /**
@@ -356,8 +350,7 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
   final def collectLazy[B, S](initState: Lazy[S], f: (A, S) => (B, S)): Stream[B] =
     Transaction(trans => {
       val es = new StreamLoop[S]()
-      //TODO add transaction
-      val s = es.holdLazy_( /*trans,*/ initState)
+      val s = es.holdLazy_(trans, initState)
       val ebs = snapshot(s, f)
       val eb = ebs.map(bs => bs._1)
       val es_out = ebs.map(bs => bs._2)
@@ -382,8 +375,7 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
   final def accumLazy[S](initState: Lazy[S], f: (A, S) => S): Cell[S] =
     Transaction(trans => {
       val es = new StreamLoop[S]()
-      //TODO add transaction
-      val s = es.holdLazy_( /*trans,*/ initState)
+      val s = es.holdLazy_(trans, initState)
       val es_out = snapshot(s, f)
       es.loop(es_out)
       es_out.holdLazy(initState)

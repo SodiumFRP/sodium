@@ -14,5 +14,6 @@ class CoalesceHandler[A](private val f: (A, A) => A, private val out: StreamWith
         })
         acc = Some(a)
     }
+    ()
   }
 }

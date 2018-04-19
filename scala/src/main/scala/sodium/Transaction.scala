@@ -19,12 +19,16 @@ final class Transaction {
   private final val prioritizedQ = new PriorityQueue[Entry]()(EntryOrdering)
   private final val entries = new HashSet[Entry]()
   private final val lastQ = ListBuffer[Runnable]()
+  private final var sampleQ = ListBuffer[Runnable]()
   private val postQ = mutable.TreeMap[Int, Transaction => Unit]()
 
   def prioritized(rank: Node, action: Transaction => Unit): Unit = {
+
     val e = new Entry(rank, action)
+    //TODO is a lock needed as in C# version ?
     prioritizedQ.enqueue(e)
     entries += e
+
   }
 
   /**
@@ -32,6 +36,12 @@ final class Transaction {
     */
   def last(action: Runnable): Unit = {
     lastQ += action
+    ()
+  }
+
+  def sample(action: Runnable): Unit = {
+    sampleQ += action
+    ()
   }
 
   /**
@@ -77,13 +87,16 @@ final class Transaction {
 
     import util.control.Breaks._
     breakable {
-      while (true) {
+      while (prioritizedQ.size > 0) {
         checkRegen()
-        if (prioritizedQ.isEmpty) break
+        if (prioritizedQ.isEmpty && sampleQ.isEmpty) break
         val e = prioritizedQ.dequeue()
         entries.remove(e)
         e.action(this)
       }
+      val sq = sampleQ
+      sampleQ = ListBuffer[Runnable]()
+      for (s <- sq) s
     }
     lastQ.foreach(_.run())
     lastQ.clear()
