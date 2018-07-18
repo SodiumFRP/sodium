@@ -21,7 +21,7 @@ namespace Sodium
         internal static int InCallback;
         private static readonly List<Action> OnStartHooks = new List<Action>();
         private static bool runningOnStartHooks;
-        private readonly HashSet<Entry> entries = new HashSet<Entry>();
+        private List<Entry> entries = new List<Entry>();
         private readonly List<Action<Transaction>> sendQueue = new List<Action<Transaction>>();
         private List<Action> sampleQueue = new List<Action>();
         private readonly Queue<Action> lastQueue = new Queue<Action>();
@@ -310,10 +310,17 @@ namespace Sodium
                 this.prioritizedQueue.Clear();
                 lock (Node.NodeRanksLock)
                 {
+                    List<Entry> newEntries = new List<Entry>(this.entries.Count);
                     foreach (Entry e in this.entries)
                     {
-                        this.prioritizedQueue.Enqueue(e, e.Node.Rank);
+                        if (!e.IsRemoved)
+                        {
+                            newEntries.Add(e);
+                            this.prioritizedQueue.Enqueue(e, e.Node.Rank);
+                        }
                     }
+
+                    this.entries = newEntries;
                 }
             }
         }
@@ -343,7 +350,7 @@ namespace Sodium
                     this.CheckRegen();
 
                     Entry e = this.prioritizedQueue.Dequeue();
-                    this.entries.Remove(e);
+                    e.IsRemoved = true;
                     e.Action(this);
                 }
 
@@ -411,6 +418,7 @@ namespace Sodium
         {
             public readonly Node Node;
             public readonly Action<Transaction> Action;
+            public bool IsRemoved;
 
             public Entry(Node node, Action<Transaction> action)
             {
