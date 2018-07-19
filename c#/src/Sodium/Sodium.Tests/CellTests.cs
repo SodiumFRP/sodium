@@ -1,4 +1,5 @@
-﻿using System.Collections.Generic;
+﻿using System;
+using System.Collections.Generic;
 using System.Linq;
 using NUnit.Framework;
 
@@ -174,6 +175,106 @@ namespace Sodium.Tests
             s.Send(3);
             s.Send(5);
             CollectionAssert.AreEqual(new[] { 1, 3, 5 }, @out);
+        }
+
+        [Test]
+        public void CellValuesWithPrevious()
+        {
+            StreamSink<int> s = new StreamSink<int>();
+            Cell<int> c = s.Hold(0);
+            List<(int Current, Maybe<int> Previous)> @out = new List<(int Current, Maybe<int> Previous)>();
+            using (Transaction.Run(
+                () =>
+                {
+                    Stream<(int Current, Maybe<int> Previous)> r = c.Updates
+                        .Snapshot(c, (n, o) => (Current: n, Previous: Maybe.Some(o)))
+                        .OrElse(
+                            Cell.ConstantLazy(c.SampleLazy()).Values.Map(v => (Current: v, Previous: Maybe<int>.None)));
+                    s.Send(1);
+                    return r.Listen(@out.Add);
+                }))
+            {
+                s.Send(2);
+                s.Send(3);
+                s.Send(4);
+                s.Send(5);
+            }
+
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    (Current: 1, Previous: Maybe.Some(0)),
+                    (Current: 2, Previous: Maybe.Some(1)),
+                    (Current: 3, Previous: Maybe.Some(2)),
+                    (Current: 4, Previous: Maybe.Some(3)),
+                    (Current: 5, Previous: Maybe.Some(4))
+                },
+                @out);
+        }
+
+        [Test]
+        public void TestLoopAndSwitchCError()
+        {
+            InvalidOperationException exception = null;
+            try
+            {
+                Transaction.Run(
+                    () =>
+                        Cell.Loop<int>()
+                            .WithoutCaptures(
+                                l =>
+                                {
+                                    StreamSink<Inner> s = new StreamSink<Inner>();
+                                    Cell<Inner> cc = s.Hold(new Inner(l.SampleLazy()));
+                                    Cell<int> c = cc.Map(o => o.C).SwitchC();
+                                    return c;
+                                }));
+            }
+            catch (InvalidOperationException e)
+            {
+                exception = e;
+            }
+            
+            Assert.IsNotNull(exception);
+            Assert.AreEqual("ValueFactory attempted to access the Value property of this instance.", exception.Message);
+        }
+
+        [Test]
+        public void TestLoopAndSwitchC()
+        {
+            (Cell<int> resultCell, (Cell<Inner> innerCell, StreamSink<Inner> innerStreamSink)) =
+                Transaction.Run(() =>
+                    Cell.Loop<int>()
+                        .WithCaptures(
+                            l =>
+                            {
+                                StreamSink<Inner> s = new StreamSink<Inner>();
+                                Cell<Inner> cc = s.Hold(new Inner(l.SampleLazy()));
+                                Cell<int> c = cc.Map(o => o.C).SwitchC().Values.Hold(3);
+                                return (Cell: c, Captures: (cc, s));
+                            }));
+
+            List<int> @out = new List<int>();
+            using (resultCell.Listen(@out.Add))
+            {
+                innerCell.Sample().S.Send(5);
+                innerStreamSink.Send(new Inner(resultCell.SampleLazy().Map(v => v - 1)));
+                innerCell.Sample().S.Send(7);
+            }
+
+            CollectionAssert.AreEqual(new[] { 3, 5, 4, 7 }, @out);
+        }
+
+        private class Inner
+        {
+            public Inner(Lazy<int> initialValue)
+            {
+                this.S = new StreamSink<int>();
+                this.C = this.S.HoldLazy(initialValue);
+            }
+
+            public StreamSink<int> S { get; }
+            public Cell<int> C { get; }
         }
     }
 }
