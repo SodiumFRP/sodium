@@ -190,6 +190,40 @@ namespace Sodium.Tests
                         .Snapshot(c, (n, o) => (Current: n, Previous: Maybe.Some(o)))
                         .OrElse(
                             Cell.ConstantLazy(c.SampleLazy()).Values.Map(v => (Current: v, Previous: Maybe<int>.None)));
+                    return r.Listen(@out.Add);
+                }))
+            {
+                s.Send(1);
+                s.Send(2);
+                s.Send(3);
+                s.Send(4);
+            }
+
+            CollectionAssert.AreEqual(
+                new[]
+                {
+                    (Current: 0, Previous: Maybe.None),
+                    (Current: 1, Previous: Maybe.Some(0)),
+                    (Current: 2, Previous: Maybe.Some(1)),
+                    (Current: 3, Previous: Maybe.Some(2)),
+                    (Current: 4, Previous: Maybe.Some(3))
+                },
+                @out);
+        }
+
+        [Test]
+        public void CellValuesWithPreviousHavingInitialUpdate()
+        {
+            StreamSink<int> s = new StreamSink<int>();
+            Cell<int> c = s.Hold(0);
+            List<(int Current, Maybe<int> Previous)> @out = new List<(int Current, Maybe<int> Previous)>();
+            using (Transaction.Run(
+                () =>
+                {
+                    Stream<(int Current, Maybe<int> Previous)> r = c.Updates
+                        .Snapshot(c, (n, o) => (Current: n, Previous: Maybe.Some(o)))
+                        .OrElse(
+                            Cell.ConstantLazy(c.SampleLazy()).Values.Map(v => (Current: v, Previous: Maybe<int>.None)));
                     s.Send(1);
                     return r.Listen(@out.Add);
                 }))
