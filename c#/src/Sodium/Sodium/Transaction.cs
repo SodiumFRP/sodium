@@ -80,7 +80,7 @@ namespace Sodium
         /// </remarks>
         public static void RunVoid(Action action) =>
             Apply(
-                _ =>
+                (_, __) =>
                 {
                     action();
                     return Unit.Value;
@@ -97,9 +97,9 @@ namespace Sodium
         ///     In most cases this is not needed, because all primitives will create their own transaction automatically.
         ///     It is useful for running multiple reactive operations atomically.
         /// </remarks>
-        public static T Run<T>(Func<T> f) => Apply(_ => f(), false);
+        public static T Run<T>(Func<T> f) => Apply((_, __) => f(), false);
 
-        internal static T Apply<T>(Func<Transaction, T> code, bool ensureElevated)
+        internal static T Apply<T>(Func<Transaction, bool, T> code, bool ensureElevated)
         {
             Transaction transaction = LocalTransaction.Value;
 
@@ -108,6 +108,7 @@ namespace Sodium
             Transaction newTransaction = transaction;
             try
             {
+                bool createdNewTransaction = newTransaction == null;
                 if (newTransaction == null)
                 {
                     newTransaction = new Transaction();
@@ -120,7 +121,7 @@ namespace Sodium
                     EnsureElevated(newTransaction);
                 }
 
-                returnValue = code(newTransaction);
+                returnValue = code(newTransaction, createdNewTransaction);
             }
             catch (Exception e)
             {
@@ -229,6 +230,7 @@ namespace Sodium
             {
                 this.prioritizedQueue.Enqueue(e, node.Rank);
             }
+
             this.entries.Add(e);
         }
 
@@ -292,7 +294,21 @@ namespace Sodium
         {
             // -1 will mean it runs before anything split/deferred, and will run
             // outside a transaction context.
-            Apply(trans => trans.Post(_ => action()), false);
+            Apply(
+                (trans, createdNewTransaction) =>
+                {
+                    if (createdNewTransaction)
+                    {
+                        action();
+                    }
+                    else
+                    {
+                        trans.Post(_ => action());
+                    }
+
+                    return Unit.Value;
+                },
+                false);
         }
 
         internal void SetNeedsRegenerating()
@@ -341,6 +357,7 @@ namespace Sodium
             {
                 this.sendQueue[i](this);
             }
+
             this.sendQueue.Clear();
 
             while (this.prioritizedQueue.Count > 0 || this.sampleQueue.Count > 0)

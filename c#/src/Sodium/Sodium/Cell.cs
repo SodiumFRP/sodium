@@ -25,7 +25,7 @@ namespace Sodium
         /// <param name="value">The lazy value of the cell.</param>
         /// <returns>A cell with a lazy constant value.</returns>
         public static Cell<T> ConstantLazy<T>(Lazy<T> value) =>
-            Transaction.Apply(trans => new Cell<T>(Stream.Never<T>().HoldLazyInternal(trans, value)), false);
+            Transaction.Apply((trans, _) => new Cell<T>(Stream.Never<T>().HoldLazyInternal(trans, value)), false);
 
         /// <summary>
         ///     Construct a writable cell that uses the last value if <see cref="CellSink{T}.Send" /> is called
@@ -90,7 +90,7 @@ namespace Sodium
         public (Cell<T> Cell, TCaptures Captures) WithCaptures<TCaptures>(
             Func<LoopedCell<T>, (Cell<T> Cell, TCaptures Captures)> f) =>
             Transaction.Apply(
-                trans =>
+                (trans, _) =>
                 {
                     LoopedCell<T> loop = new LoopedCell<T>();
                     (Cell<T> Cell, TCaptures Captures) result = f(loop);
@@ -167,7 +167,7 @@ namespace Sodium
                 lock (this.updatesLock)
                 {
                     return this.updates ?? (this.updates = Transaction.Apply(
-                               trans => this.Behavior.Updates().Coalesce(trans, (left, right) => right),
+                               (trans, _) => this.Behavior.Updates().Coalesce(trans, (left, right) => right),
                                false));
                 }
             }
@@ -180,7 +180,7 @@ namespace Sodium
         /// </summary>
         public virtual Stream<T> Values
         {
-            get { return Transaction.Apply(trans => this.Behavior.Value(trans), false); }
+            get { return Transaction.Apply((trans, _) => this.Behavior.Value(trans), false); }
         }
 
         /// <summary>
@@ -214,7 +214,7 @@ namespace Sodium
         ///     </para>
         /// </remarks>
         public IStrongListener Listen(Action<T> handler) => Transaction.Apply(
-            trans => this.Behavior.Value(trans).Listen(handler),
+            (trans, _) => this.Behavior.Value(trans).Listen(handler),
             false);
 
         /// <summary>
@@ -237,7 +237,7 @@ namespace Sodium
         ///     </para>
         /// </remarks>
         public IWeakListener ListenWeak(Action<T> handler) => Transaction.Apply(
-            trans => this.Behavior.Value(trans).ListenWeak(handler),
+            (trans, _) => this.Behavior.Value(trans).ListenWeak(handler),
             false);
 
         /// <summary>

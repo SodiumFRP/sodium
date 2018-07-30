@@ -30,7 +30,7 @@ namespace Sodium
         public void Send(T a)
         {
             Transaction.Apply(
-                trans =>
+                (trans, _) =>
                 {
                     if (Transaction.InCallback > 0)
                     {

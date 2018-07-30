@@ -20,7 +20,7 @@ namespace Sodium
         ///     that do not allow the caller to detect the behavior updates.
         /// </remarks>
         public static Stream<T> Updates<T>(Behavior<T> b) => Transaction.Apply(
-            trans => b.Updates().Coalesce(trans, (left, right) => right),
+            (trans, _) => b.Updates().Coalesce(trans, (left, right) => right),
             false);
 
         /// <summary>
@@ -36,7 +36,7 @@ namespace Sodium
         ///     The rule with this primitive is that you should only use it in functions
         ///     that do not allow the caller to detect the behavior updates.
         /// </remarks>
-        public static Stream<T> Value<T>(Behavior<T> b) => Transaction.Apply(b.Value, false);
+        public static Stream<T> Value<T>(Behavior<T> b) => Transaction.Apply((trans, _) => b.Value(trans), false);
 
         /// <summary>
         ///     Push each stream event onto a new transaction guaranteed to come before the next externally

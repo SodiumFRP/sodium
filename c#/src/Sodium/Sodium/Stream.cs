@@ -69,7 +69,7 @@ namespace Sodium
         public (Stream<T> Stream, TCaptures Captures) WithCaptures<TCaptures>(
             Func<LoopedStream<T>, (Stream<T> Stream, TCaptures Captures)> f) =>
             Transaction.Apply(
-                trans =>
+                (trans, _) =>
                 {
                     LoopedStream<T> loop = new LoopedStream<T>();
                     (Stream<T> Stream, TCaptures Captures) result = f(loop);
@@ -326,7 +326,7 @@ namespace Sodium
         }
 
         internal IWeakListener Listen(Node target, Action<Transaction, T> action) => Transaction.Apply(
-            trans1 => this.Listen(target, trans1, action, false),
+            (trans1, _) => this.Listen(target, trans1, action, false),
             false);
 
         internal IWeakListener Listen(
@@ -340,6 +340,7 @@ namespace Sodium
             {
                 trans.SetNeedsRegenerating();
             }
+
             // ReSharper disable once LocalVariableHidesMember
             List<T> firings = this.firings.ToList();
             if (!suppressEarlierFirings && firings.Count > 0)
@@ -366,6 +367,7 @@ namespace Sodium
                         }
                     });
             }
+
             return new ListenerImplementation(this, action, nodeTarget);
         }
 
@@ -424,9 +426,10 @@ namespace Sodium
         /// <param name="initialValue">The lazily initialized initial value of the cell.</param>
         /// <returns>A cell with the specified lazily initialized initial value, that is updated by this stream's values.</returns>
         public Cell<T> HoldLazy(Lazy<T> initialValue) =>
-            Transaction.Apply(trans => new Cell<T>(this.HoldLazyInternal(trans, initialValue)), false);
+            Transaction.Apply((trans, _) => new Cell<T>(this.HoldLazyInternal(trans, initialValue)), false);
 
-        internal Behavior<T> HoldLazyInternal(Transaction trans, Lazy<T> initialValue) => new LazyBehavior<T>(trans, this, initialValue);
+        internal Behavior<T> HoldLazyInternal(Transaction trans, Lazy<T> initialValue) =>
+            new LazyBehavior<T>(trans, this, initialValue);
 
         /// <summary>
         ///     Return a stream whose events are the values of the cell at the time of the stream event firing.
@@ -676,6 +679,7 @@ namespace Sodium
             {
                 trans.SetNeedsRegenerating();
             }
+
             Action<Transaction, T> h = @out.Send;
             IListener l1 = this.Listen(left, h);
             IListener l2 = s.Listen(right, h);
@@ -707,7 +711,7 @@ namespace Sodium
         /// </remarks>
         public Stream<T> Merge(Stream<T> s, Func<T, T, T> f)
         {
-            return Transaction.Apply(trans => this.Merge(trans, s, f), false);
+            return Transaction.Apply((trans, _) => this.Merge(trans, s, f), false);
         }
 
         internal Stream<T> Merge(Transaction trans, Stream<T> s, Func<T, T, T> f) =>
@@ -839,7 +843,7 @@ namespace Sodium
             Func<T, TState, (TReturn ReturnValue, TState State)> f)
         {
             return Transaction.Apply(
-                trans =>
+                (trans, _) =>
                 {
                     StreamLoop<TState> es = new StreamLoop<TState>();
                     Behavior<TState> s = es.HoldLazyInternal(trans, initialState);
@@ -869,7 +873,7 @@ namespace Sodium
         public Cell<TReturn> AccumLazy<TReturn>(Lazy<TReturn> initialState, Func<T, TReturn, TReturn> f)
         {
             return Transaction.Apply(
-                trans =>
+                (trans, _) =>
                 {
                     StreamLoop<TReturn> es = new StreamLoop<TReturn>();
                     Behavior<TReturn> s = es.HoldLazyInternal(trans, initialState);
@@ -931,6 +935,7 @@ namespace Sodium
             {
                 trans.Last(this.firings.Clear);
             }
+
             this.firings.Add(a);
 
             foreach (Node<T>.Target target in this.Node.GetListenersCopy())

@@ -44,7 +44,7 @@ namespace Sodium
         /// <param name="b">The behavior that was forward referenced.</param>
         public void Loop(Behavior<T> b) =>
             Transaction.Apply(
-                trans =>
+                (trans, _) =>
                 {
                     lock (this.isLoopedLock)
                     {
@@ -60,7 +60,8 @@ namespace Sodium
                     {
                         this.transaction = null;
 
-                        throw new InvalidOperationException("Loop must be looped in the same transaction that it was created in.");
+                        throw new InvalidOperationException(
+                            "Loop must be looped in the same transaction that it was created in.");
                     }
 
                     this.transaction = null;

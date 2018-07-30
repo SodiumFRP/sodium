@@ -45,7 +45,7 @@ namespace Sodium
         /// <param name="c">The cell that was forward referenced.</param>
         public void Loop(Cell<T> c) =>
             Transaction.Apply(
-                trans =>
+                (trans, _) =>
                 {
                     lock (this.isLoopedLock)
                     {
@@ -61,7 +61,8 @@ namespace Sodium
                     {
                         this.transaction = null;
 
-                        throw new InvalidOperationException("Loop must be looped in the same transaction that it was created in.");
+                        throw new InvalidOperationException(
+                            "Loop must be looped in the same transaction that it was created in.");
                     }
 
                     this.transaction = null;

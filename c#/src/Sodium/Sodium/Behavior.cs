@@ -23,7 +23,7 @@ namespace Sodium
         /// <param name="value">The lazily computed value of the behavior.</param>
         /// <returns>A behavior with a lazily computed constant value.</returns>
         public static Behavior<T> ConstantLazy<T>(Lazy<T> value) =>
-            Transaction.Apply(trans => Stream.Never<T>().HoldLazyInternal(trans, value), false);
+            Transaction.Apply((trans, _) => Stream.Never<T>().HoldLazyInternal(trans, value), false);
 
         /// <summary>
         ///     Creates a writable behavior that uses the last value if <see cref="BehaviorSink{T}.Send" /> is called more than once per
@@ -78,7 +78,7 @@ namespace Sodium
         public (Behavior<T> Behavior, TCaptures Captures) WithCaptures<TCaptures>(
             Func<LoopedBehavior<T>, (Behavior<T> Behavior, TCaptures Captures)> f) =>
             Transaction.Apply(
-                trans =>
+                (trans, _) =>
                 {
                     LoopedBehavior<T> loop = new LoopedBehavior<T>();
                     (Behavior<T> Behavior, TCaptures Captures) result = f(loop);
@@ -128,7 +128,7 @@ namespace Sodium
             this.UsingInitialValue = true;
 
             this.streamListener = Transaction.Apply(
-                trans1 =>
+                (trans1, _) =>
                     this.stream.Listen(
                         Node<T>.Null,
                         trans1,
@@ -190,7 +190,7 @@ namespace Sodium
         ///         current value and any updates without risk of missing any in between.
         ///     </para>
         /// </remarks>
-        public T Sample() => Transaction.Apply(trans => this.SampleNoTransaction(), true);
+        public T Sample() => Transaction.Apply((trans, _) => this.SampleNoTransaction(), true);
 
         /// <summary>
         ///     Sample the current value of the behavior lazily.
@@ -201,7 +201,7 @@ namespace Sodium
         ///     when the behavior loop has not yet been looped.  It should be used in any code that is general
         ///     enough that it may be passed a <see cref="BehaviorLoop{T}" />.  See <see cref="Stream{T}.HoldLazy(Lazy{T})" />.
         /// </remarks>
-        public Lazy<T> SampleLazy() => Transaction.Apply(this.SampleLazy, false);
+        public Lazy<T> SampleLazy() => Transaction.Apply((trans, _) => this.SampleLazy(trans), false);
 
         internal Lazy<T> SampleLazy(Transaction trans)
         {
@@ -240,7 +240,7 @@ namespace Sodium
         public Behavior<TResult> Map<TResult>(Func<T, TResult> f)
         {
             return Transaction.Apply(
-                trans => this.Updates().Map(f).HoldLazyInternal(trans, this.SampleLazy(trans).Map(f)),
+                (trans, _) => this.Updates().Map(f).HoldLazyInternal(trans, this.SampleLazy(trans).Map(f)),
                 false);
         }
 
@@ -368,7 +368,7 @@ namespace Sodium
         public Behavior<TResult> Apply<TResult>(Behavior<Func<T, TResult>> bf)
         {
             return Transaction.Apply(
-                trans0 =>
+                (trans0, _) =>
                 {
                     Stream<TResult> @out = new Stream<TResult>(this.stream.KeepListenersAlive);
 

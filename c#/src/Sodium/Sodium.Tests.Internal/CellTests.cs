@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 using NUnit.Framework;
 
 namespace Sodium.Tests.Internal
@@ -13,7 +12,7 @@ namespace Sodium.Tests.Internal
         {
             bool calledBack = false;
             Transaction.Apply(
-                trans =>
+                (trans, _) =>
                 {
                     trans.Prioritized(Node<Unit>.Null, trans2 => calledBack = true);
                     return Unit.Value;
@@ -26,16 +25,16 @@ namespace Sodium.Tests.Internal
         public void TestRegen()
         {
             List<int> @out = new List<int>();
-            
+
             Transaction.Apply(
-                trans =>
+                (trans, _) =>
                 {
                     void SetNeedsRegeneratingAndPrioritized(Action action)
                     {
                         trans.SetNeedsRegenerating();
-                        trans.Prioritized(new Node<Unit>(), _ => action());
+                        trans.Prioritized(new Node<Unit>(), __ => action());
                     }
-                    
+
                     SetNeedsRegeneratingAndPrioritized(() => @out.Add(1));
                     SetNeedsRegeneratingAndPrioritized(() => SetNeedsRegeneratingAndPrioritized(() => @out.Add(4)));
                     SetNeedsRegeneratingAndPrioritized(() => @out.Add(2));

@@ -15,7 +15,7 @@ namespace Sodium
         public static Behavior<T> SwitchC<T>(this Behavior<Behavior<T>> bba)
         {
             return Transaction.Apply(
-                trans1 =>
+                (trans1, _) =>
                 {
                     Lazy<T> za = bba.SampleLazy().Map(ba => ba.Sample());
                     Stream<T> @out = new Stream<T>(bba.KeepListenersAlive);
@@ -29,7 +29,9 @@ namespace Sodium
                     }
 
                     IListener l1 = bba.Value(trans1).Listen(@out.Node, trans1, H, false);
-                    return @out.UnsafeAttachListener(l1).UnsafeAttachListener(currentListener).HoldLazyInternal(trans1, za);
+                    return @out.UnsafeAttachListener(l1)
+                        .UnsafeAttachListener(currentListener)
+                        .HoldLazyInternal(trans1, za);
                 },
                 false);
         }
@@ -54,7 +56,7 @@ namespace Sodium
         public static Stream<T> SwitchS<T>(this Behavior<Stream<T>> bsa)
         {
             return Transaction.Apply(
-                trans1 =>
+                (trans1, _) =>
                 {
                     Stream<T> @out = new Stream<T>(bsa.KeepListenersAlive);
                     MutableListener currentListener = new MutableListener();
@@ -94,7 +96,9 @@ namespace Sodium
         /// <param name="b">The enumerable of behaviors.</param>
         /// <param name="f">The binary function to lift into the behaviors.</param>
         /// <returns>A behavior containing values resulting from the function applied to the input behaviors' values.</returns>
-        public static Behavior<TResult> Lift<T, TResult>(this IEnumerable<Behavior<T>> b, Func<IReadOnlyList<T>, TResult> f) =>
+        public static Behavior<TResult> Lift<T, TResult>(
+            this IEnumerable<Behavior<T>> b,
+            Func<IReadOnlyList<T>, TResult> f) =>
             b.ToArray().Lift(f);
 
         /// <summary>
@@ -112,7 +116,7 @@ namespace Sodium
             Func<IReadOnlyList<T>, TResult> f)
         {
             return Transaction.Apply(
-                trans1 =>
+                (trans1, _) =>
                 {
                     Stream<Action<T[]>> @out = new Stream<Action<T[]>>(
                         new FanOutKeepListenersAlive(b.Select(behavior => behavior.KeepListenersAlive)));
@@ -154,7 +158,8 @@ namespace Sodium
         /// <typeparam name="T">The type of the behaviors.</typeparam>
         /// <param name="b">The collection of behaviors.</param>
         /// <returns>A behavior containing a list of the input behaviors' values.</returns>
-        public static Behavior<IReadOnlyList<T>> Lift<T>(this IReadOnlyCollection<Behavior<T>> b) => b.Lift(v => (IReadOnlyList<T>)v.ToArray());
+        public static Behavior<IReadOnlyList<T>> Lift<T>(this IReadOnlyCollection<Behavior<T>> b) =>
+            b.Lift(v => (IReadOnlyList<T>) v.ToArray());
 
         private class FanOutKeepListenersAlive : IKeepListenersAlive
         {
