@@ -57,6 +57,7 @@
     <Compile Include="EitherTests.cs" />
     <Compile Include="IssueTests.cs" />
     <Compile Include="LoopTests.cs" />
+    <Compile Include="MaybeExtensionMethodsTests.cs" />
     <Compile Include="MaybeTests.cs" />
     <Compile Include="PerformanceTests.cs" />
     <Compile Include="StreamTests.cs" />
