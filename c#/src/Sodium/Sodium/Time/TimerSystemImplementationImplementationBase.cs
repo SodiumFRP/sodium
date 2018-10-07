@@ -151,6 +151,7 @@ namespace Sodium.Time
 
             public void Dispose()
             {
+                this.Cancel();
             }
         }
     }

@@ -377,7 +377,7 @@ namespace Sodium
         {
             Lazy<T> initA = this.Behavior.SampleLazy();
             Lazy<Maybe<T>> mInitA = initA.Map(Maybe.Some);
-            return this.Behavior.Updates().Calm(mInitA, comparer).HoldLazy(initA);
+            return this.Updates.Calm(mInitA, comparer).HoldLazy(initA);
         }
     }
 }

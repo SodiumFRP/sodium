@@ -159,7 +159,7 @@ namespace Sodium
         /// <param name="b">The collection of behaviors.</param>
         /// <returns>A behavior containing a list of the input behaviors' values.</returns>
         public static Behavior<IReadOnlyList<T>> Lift<T>(this IReadOnlyCollection<Behavior<T>> b) =>
-            b.Lift(v => (IReadOnlyList<T>) v.ToArray());
+            b.Lift(v => v);
 
         private class FanOutKeepListenersAlive : IKeepListenersAlive
         {

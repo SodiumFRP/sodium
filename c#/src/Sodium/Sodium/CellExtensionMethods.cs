@@ -20,8 +20,7 @@ namespace Sodium
         /// <typeparam name="T">The type of the cell.</typeparam>
         /// <param name="cca">The cell containing another cell.</param>
         /// <returns>The unwrapped cell.</returns>
-        public static Cell<T> SwitchC<T>(this Cell<Cell<T>> cca) =>
-            new Cell<T>(cca.Behavior.Map(c => c.Behavior).SwitchC());
+        public static Cell<T> SwitchC<T>(this Cell<Cell<T>> cca) => cca.Behavior.SwitchC();
 
         /// <summary>
         ///     Unwrap a stream inside a cell to give a time-varying stream implementation.

@@ -223,14 +223,29 @@ namespace Sodium
         public IStrongListener ListenOnce(Action<T> handler)
         {
             IStrongListener listener = null;
+            bool unlistenEarly = false;
             listener = this.Listen(
                 a =>
                 {
                     // ReSharper disable once AccessToModifiedClosure
-                    listener?.Unlisten();
+                    if (listener == null)
+                    {
+                        unlistenEarly = true;
+                    }
+                    else
+                    {
+                        // ReSharper disable once AccessToModifiedClosure
+                        listener.Unlisten();
+                        listener = null;
+                    }
 
                     handler(a);
                 });
+            if (unlistenEarly)
+            {
+                listener.Unlisten();
+                listener = null;
+            }
             return listener;
         }
 
@@ -305,14 +320,29 @@ namespace Sodium
             TaskCompletionSource<T> tcs = new TaskCompletionSource<T>();
 
             IStrongListener listener = null;
+            bool unlistenEarly = false;
             listener = this.Listen(
                 a =>
                 {
                     // ReSharper disable once AccessToModifiedClosure
-                    listener?.Unlisten();
+                    if (listener == null)
+                    {
+                        unlistenEarly = true;
+                    }
+                    else
+                    {
+                        // ReSharper disable once AccessToModifiedClosure
+                        listener.Unlisten();
+                        listener = null;
+                    }
 
                     tcs.TrySetResult(a);
                 });
+            if (unlistenEarly)
+            {
+                listener.Unlisten();
+                listener = null;
+            }
 
             token.Register(
                 () =>
@@ -897,23 +927,38 @@ namespace Sodium
             // This is a bit long-winded but it's efficient because it unregisters
             // the listener.
             Stream<T> @out = new Stream<T>(this.KeepListenersAlive);
-            IListener l = null;
-            l = this.Listen(
+            IListener listener = null;
+            bool unlistenEarly = false;
+            listener = this.Listen(
                 @out.Node,
                 (trans, a) =>
                 {
                     // ReSharper disable AccessToModifiedClosure
-                    if (l != null)
+                    if (listener != null)
                     {
                         @out.Send(trans, a);
 
-                        l?.Unlisten();
-
-                        l = null;
+                        // ReSharper disable once AccessToModifiedClosure
+                        if (listener == null)
+                        {
+                            unlistenEarly = true;
+                        }
+                        else
+                        {
+                            // ReSharper disable once AccessToModifiedClosure
+                            listener.Unlisten();
+                            listener = null;
+                        }
                     }
                     // ReSharper restore AccessToModifiedClosure
                 });
-            return @out.UnsafeAttachListener(l);
+            if (unlistenEarly)
+            {
+                listener.Unlisten();
+                listener = null;
+            }
+
+            return @out.UnsafeAttachListener(listener);
         }
 
         // This is not thread-safe, so one of these two conditions must apply:

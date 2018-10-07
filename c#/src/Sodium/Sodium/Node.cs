@@ -78,7 +78,7 @@ namespace Sodium
         public static readonly Node<T> Null = new Node<T>(long.MaxValue);
 
         private HashSet<Target> listeners = new HashSet<Target>();
-        private long listenersCapacity;
+        private int listenersCapacity;
 
         internal Node()
         {

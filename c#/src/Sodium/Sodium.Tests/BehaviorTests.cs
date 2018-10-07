@@ -80,39 +80,39 @@ namespace Sodium.Tests
         [Test]
         public void TestListenOnce()
         {
-            BehaviorSink<int> b = Behavior.CreateSink(9);
+            CellSink<int> c = Cell.CreateSink(9);
             List<int> @out = new List<int>();
-            IListener l = Transaction.Run(() => Operational.Value(b).ListenOnce(@out.Add));
-            b.Send(2);
-            b.Send(7);
+            IListener l = Transaction.Run(() => c.Values.ListenOnce(@out.Add));
+            c.Send(2);
+            c.Send(7);
             l.Unlisten();
             CollectionAssert.AreEqual(new[] { 9 }, @out);
         }
 
         [Test]
+        public void TestListenOnceUpdates()
+        {
+            CellSink<int> c = Cell.CreateSink(9);
+            List<int> @out = new List<int>();
+            IListener l = Transaction.Run(() => c.Updates.ListenOnce(@out.Add));
+            c.Send(2);
+            c.Send(7);
+            l.Unlisten();
+            CollectionAssert.AreEqual(new[] { 2 }, @out);
+        }
+
+        [Test]
         public async Task TestListenOnceAsync()
         {
-            BehaviorSink<int> b = Behavior.CreateSink(9);
-            int result = await Transaction.Run(() => Operational.Value(b).ListenOnceAsync());
-            b.Send(2);
-            b.Send(7);
+            CellSink<int> c = Cell.CreateSink(9);
+            int result = await Transaction.Run(() => c.Values.ListenOnceAsync());
+            c.Send(2);
+            c.Send(7);
             Assert.AreEqual(9, result);
         }
 
         [Test]
         public void TestUpdates()
-        {
-            BehaviorSink<int> b = Behavior.CreateSink(9);
-            List<int> @out = new List<int>();
-            IListener l = Operational.Updates(b).Listen(@out.Add);
-            b.Send(2);
-            b.Send(7);
-            l.Unlisten();
-            CollectionAssert.AreEqual(new[] { 2, 7 }, @out);
-        }
-
-        [Test]
-        public void TestCellUpdates()
         {
             CellSink<int> c = Cell.CreateSink(9);
             List<int> @out = new List<int>();
@@ -124,13 +124,13 @@ namespace Sodium.Tests
         }
 
         [Test]
-        public void TestValue()
+        public void TestValues()
         {
-            BehaviorSink<int> b = Behavior.CreateSink(9);
+            CellSink<int> c = Cell.CreateSink(9);
             List<int> @out = new List<int>();
-            IListener l = Transaction.Run(() => Operational.Value(b).Listen(@out.Add));
-            b.Send(2);
-            b.Send(7);
+            IListener l = Transaction.Run(() => c.Values.Listen(@out.Add));
+            c.Send(2);
+            c.Send(7);
             l.Unlisten();
             CollectionAssert.AreEqual(new[] { 9, 2, 7 }, @out);
         }
@@ -184,7 +184,8 @@ namespace Sodium.Tests
             {
                 CellLoop<IReadOnlyList<TestObject>> listCellLoop = new CellLoop<IReadOnlyList<TestObject>>();
                 Cell<IReadOnlyList<TestObject>> listCellLocal =
-                    addItemStreamSink.OrElse(s.Map(v => (Number1: v, Number2: v))).Map<Func<IReadOnlyList<TestObject>, IReadOnlyList<TestObject>>>(o => c => c.Concat(new[] { new TestObject(o.Number1, o.Number2) }).ToArray())
+                    addItemStreamSink.OrElse(s.Map(v => (Number1: v, Number2: v)))
+                        .Map<Func<IReadOnlyList<TestObject>, IReadOnlyList<TestObject>>>(o => c => c.Concat(new[] { new TestObject(o.Number1, o.Number2) }).ToArray())
                         .Merge(removeItemsStreamSink.Map<Func<IReadOnlyList<TestObject>, IReadOnlyList<TestObject>>>(o => c => c.Except(o).ToArray()), (f, g) => c => g(f(c)))
                         .Snapshot(listCellLoop, (f, c) => f(c))
                         .Hold(new TestObject[0]);
@@ -256,7 +257,7 @@ namespace Sodium.Tests
                 Assert.AreEqual(expected[i].Length, @out[i].Count);
                 for (int j = 0; j < expected[i].Length; j++)
                 {
-                    Assert.AreEqual(@out[i][j], expected[i][j]);
+                    Assert.AreEqual(expected[i][j], @out[i][j]);
                 }
             }
         }
@@ -371,7 +372,7 @@ namespace Sodium.Tests
         }
 
         [Test]
-        public void TestDiscreteCellValuesNoTransaction()
+        public void TestCellValuesNoTransaction()
         {
             CellSink<int> c = Cell.CreateSink(9);
             List<int> @out = new List<int>();
