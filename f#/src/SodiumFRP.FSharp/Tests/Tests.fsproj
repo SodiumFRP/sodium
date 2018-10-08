@@ -7,6 +7,8 @@
   </PropertyGroup>
 
   <ItemGroup>
+    <Compile Include="CommonTests.fs" />
+    <Compile Include="DenotationalSemanticsTests.fs" />
     <Compile Include="TestUtils.fs" />
     <Compile Include="BehaviorTests.fs" />
     <Compile Include="CellTests.fs" />
