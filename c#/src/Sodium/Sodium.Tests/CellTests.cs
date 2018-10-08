@@ -158,9 +158,10 @@ namespace Sodium.Tests
             CellSink<int> s = new CellSink<int>(0);
             Cell<Cell<int>> c = Cell.Constant(Cell.Constant(1));
             Cell<Cell<int>> r = c.Map(c2 => c2.Lift(s, (v1, v2) => v1 + v2));
-            r.SwitchC().Listen(@out.Add);
+            IListener l = r.SwitchC().Listen(@out.Add);
             s.Send(2);
             s.Send(4);
+            l.Unlisten();
             CollectionAssert.AreEqual(new[] { 1, 3, 5 }, @out);
         }
 
@@ -171,9 +172,10 @@ namespace Sodium.Tests
             StreamSink<int> s = new StreamSink<int>();
             Cell<Cell<int>> c = Cell.Constant(1).Map(_ => s.Hold(0));
             s.Send(1);
-            c.SwitchC().Listen(@out.Add);
+            IListener l = c.SwitchC().Listen(@out.Add);
             s.Send(3);
             s.Send(5);
+            l.Unlisten();
             CollectionAssert.AreEqual(new[] { 1, 3, 5 }, @out);
         }
 
@@ -252,17 +254,16 @@ namespace Sodium.Tests
             InvalidOperationException exception = null;
             try
             {
-                Transaction.Run(
-                    () =>
-                        Cell.Loop<int>()
-                            .WithoutCaptures(
-                                l =>
-                                {
-                                    StreamSink<Inner> s = new StreamSink<Inner>();
-                                    Cell<Inner> cc = s.Hold(new Inner(l.SampleLazy()));
-                                    Cell<int> c = cc.Map(o => o.C).SwitchC();
-                                    return c;
-                                }));
+                Cell.Loop<int>()
+                    // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
+                    .WithoutCaptures(
+                        l =>
+                        {
+                            StreamSink<Inner> s = new StreamSink<Inner>();
+                            Cell<Inner> cc = s.Hold(new Inner(l.SampleLazy()));
+                            Cell<int> c = cc.Map(o => o.C).SwitchC();
+                            return c;
+                        });
             }
             catch (InvalidOperationException e)
             {
@@ -277,16 +278,15 @@ namespace Sodium.Tests
         public void TestLoopAndSwitchC()
         {
             (Cell<int> resultCell, (Cell<Inner> innerCell, StreamSink<Inner> innerStreamSink)) =
-                Transaction.Run(() =>
-                    Cell.Loop<int>()
-                        .WithCaptures(
-                            l =>
-                            {
-                                StreamSink<Inner> s = new StreamSink<Inner>();
-                                Cell<Inner> cc = s.Hold(new Inner(l.SampleLazy()));
-                                Cell<int> c = cc.Map(o => o.C).SwitchC().Values.Hold(3);
-                                return (Cell: c, Captures: (cc, s));
-                            }));
+                Cell.Loop<int>()
+                    .WithCaptures(
+                        l =>
+                        {
+                            StreamSink<Inner> s = new StreamSink<Inner>();
+                            Cell<Inner> cc = s.Hold(new Inner(l.SampleLazy()));
+                            Cell<int> c = cc.Map(o => o.C).SwitchC().Values.Hold(3);
+                            return (Cell: c, Captures: (cc, s));
+                        });
 
             List<int> @out = new List<int>();
             using (resultCell.Listen(@out.Add))

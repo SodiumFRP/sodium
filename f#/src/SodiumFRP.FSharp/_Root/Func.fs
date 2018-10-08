@@ -6,7 +6,7 @@ type Override<'T> = | NoOverride | Override of ('T -> 'T)
 
 let createVirtual f = function | NoOverride -> f | Override o -> o f
 
-let flip f x y = f y x
+let inline internal flip f x y = f y x
 
 type private CombineDelegate<'a> = delegate of 'a -> unit
 let combine<'a> x y =

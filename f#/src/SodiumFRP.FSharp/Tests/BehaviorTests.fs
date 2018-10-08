@@ -27,7 +27,7 @@ type private Sc = { a : char option; b : char option; sw : Cell<char> option }
 type private Sc2 = { c : CellSink<int> }
 type private Ss = { a : char; b : char; sw : Stream<char> option }
 type private Ss2 = { s : StreamSink<int> }
-type private Test (initialValue : int) = member val Value = sinkC initialValue
+type private Test (initialValue : int) = member val Value = sinkB initialValue
 
 [<TestFixture>]
 type Tests() =
@@ -165,17 +165,17 @@ type Tests() =
         let l = listCell |> mapC (fun c -> c |> Seq.map (fun o -> (o.Number1Cell, o.Number2Cell) |> lift2C (fun x y -> x, y)) |> liftAllC id) |> switchC |> listenC out.Add
         addItemStreamSink |> sendS (5, 2)
         addItemStreamSink |> sendS (9, 2)
-        (listCell |> sampleC |> Func.flip Array.get 0).Remove ()
+        (listCell |> sampleC |> (fun o -> o.[0])).Remove ()
         addItemStreamSink |> sendS (2, 9)
-        (listCell |> sampleC |> Func.flip Array.get 1).ChangeNumber1 9
+        (listCell |> sampleC |> (fun o -> o.[1])).ChangeNumber1 9
         addItemStreamSink |> sendS (9, 9)
         s |> sendS 5
         s |> sendS 9
         runT (fun () ->
             addItemStreamSink |> sendS (5, 5)
             s |> sendS 5)
-        (listCell |> sampleC |> Func.flip Array.get 8).ChangeNumber2 9
-        (listCell |> sampleC |> Func.flip Array.get 8).ChangeNumber1 9
+        (listCell |> sampleC |> (fun o -> o.[8])).ChangeNumber2 9
+        (listCell |> sampleC |> (fun o -> o.[8])).ChangeNumber1 9
         l |> unlistenL
         l2 |> unlistenL
         l3 |> unlistenL
@@ -238,9 +238,7 @@ type Tests() =
                 | :? AggregateException as e ->
                     e.InnerExceptions |> Seq.tryFind (fun e -> e.Message = "A dependency cycle was detected.")
                 | e -> Some e
-        match actual with
-            | Some e -> Assert.AreEqual ("A dependency cycle was detected.", e.Message)
-            | None -> Assert.Fail "Exception was null."
+        actual |> assertExceptionExists (fun e -> Assert.AreEqual ("A dependency cycle was detected.", e.Message))
 
     [<Test>]
     member __.``Test CellLoop SwitchS``() =
@@ -586,10 +584,10 @@ type Tests() =
         CollectionAssert.AreEqual(['A';'B';'C';'d';'e';'F';'G';'h';'I'], out)
 
     [<Test>]
-    member __.``Test Switch For Stream Simultaneous``() =
+    member __.``Test SwitchS Simultaneous``() =
         let ss1 = { s = sinkS () }
-        let css = sinkC ss1
-        let so = css |> mapC (fun b -> b.s) |> switchS
+        let css = sinkB ss1
+        let so = css |> mapB (fun b -> b.s) |> switchSB
         let out = List<_>()
         let l = so |> listenS out.Add
         let ss2 = { s = sinkS () }
@@ -598,18 +596,18 @@ type Tests() =
         ss1.s |> sendS 0
         ss1.s |> sendS 1
         ss1.s |> sendS 2
-        css |> sendC ss2
+        css |> sendB ss2
         ss1.s |> sendS 7
         ss2.s |> sendS 3
         ss2.s |> sendS 4
         ss3.s |> sendS 2
-        css |> sendC ss3
+        css |> sendB ss3
         ss3.s |> sendS 5
         ss3.s |> sendS 6
         ss3.s |> sendS 7
         runT (fun () ->
             ss3.s |> sendS 8
-            css |> sendC ss4
+            css |> sendB ss4
             ss4.s |> sendS 2)
         ss4.s |> sendS 9
         l |> unlistenL
@@ -760,11 +758,11 @@ type Tests() =
         let (c1, c2, s, l) = runT (fun () ->
             let c1 = sinkC 1
             let c2 = sinkC 11
-            let s = sinkC (c1 :> Cell<_>)
-            let c = s |> switchC
+            let s = sinkB (c1 :> Cell<_>)
+            let c = s |> switchCB
             c1 |> sendC 2
             c2 |> sendC 12
-            s |> sendC (upcast c2)
+            s |> sendB (upcast c2)
             let l = c |> listenC out.Add
             (c1, c2, s, l))
         c1 |> sendC 3
@@ -772,7 +770,7 @@ type Tests() =
         runT (fun () ->
             c1 |> sendC 4
             c2 |> sendC 14
-            s |> sendC (upcast c1))
+            s |> sendB (upcast c1))
         c1 |> sendC 5
         c2 |> sendC 15
         l |> unlistenL
@@ -827,24 +825,24 @@ type Tests() =
         CollectionAssert.AreEqual([2;13;14;5], out)
 
     [<Test>]
-    member __.``Test Lift In SwitchS``() =
+    member __.``Test Lift In SwitchC``() =
         let list1 = [|Test(0);Test(1);Test(2);Test(3);Test(4)|]
         let list2 = [|Test(5);Test(6);Test(7);Test(8);Test(9)|]
-        let v = sinkC list1
-        let c = v |> mapC ((Seq.map (fun o -> o.Value)) >> liftAllC id) |> switchC
+        let v = sinkB list1
+        let c = v |> mapB ((Seq.map (fun o -> o.Value)) >> liftAllB id) |> switchBB
         let streamOutput = List<_>()
-        let l = c |> updatesC |> listenS streamOutput.Add
+        let l = c |> Operational.updates |> listenS streamOutput.Add
         let cellOutput = List<_>()
-        let l2 = runT (fun () -> c |> valuesC |> listenS cellOutput.Add)
-        list1.[2].Value |> sendC 12
-        list2.[1].Value |> sendC 16
-        list1.[4].Value |> sendC 14
+        let l2 = runT (fun () -> c |> Operational.value |> listenS cellOutput.Add)
+        list1.[2].Value |> sendB 12
+        list2.[1].Value |> sendB 16
+        list1.[4].Value |> sendB 14
         runT (fun () ->
-            list2.[2].Value |> sendC 17
-            list1.[0].Value |> sendC 10
-            v |> sendC list2)
-        list1.[3].Value |> sendC 13
-        list2.[3].Value |> sendC 18
+            list2.[2].Value |> sendB 17
+            list1.[0].Value |> sendB 10
+            v |> sendB list2)
+        list1.[3].Value |> sendB 13
+        list2.[3].Value |> sendB 18
         l2 |> unlistenL
         l |> unlistenL
         Assert.AreEqual (4, streamOutput.Count)
@@ -863,21 +861,21 @@ type Tests() =
     member __.``Test Map With SwitchC``() =
         let list1 = [|Test(0);Test(1);Test(2);Test(3);Test(4)|]
         let list2 = [|Test(5);Test(6);Test(7);Test(8);Test(9)|]
-        let v = sinkC list1
-        let c = v |> mapC ((Seq.map (fun o -> o.Value)) >> liftAllC id) |> mapC id |> switchC
+        let v = sinkB list1
+        let c = v |> mapB ((Seq.map (fun o -> o.Value)) >> liftAllB id) |> mapB id |> switchBB
         let streamOutput = List<_>()
-        let l = c |> updatesC |> listenS streamOutput.Add
+        let l = c |> Operational.updates |> listenS streamOutput.Add
         let cellOutput = List<_>()
-        let l2 = runT (fun () -> c |> valuesC |> listenS cellOutput.Add)
-        list1.[2].Value |> sendC 12
-        list2.[1].Value |> sendC 16
-        list1.[4].Value |> sendC 14
+        let l2 = runT (fun () -> c |> Operational.value |> listenS cellOutput.Add)
+        list1.[2].Value |> sendB 12
+        list2.[1].Value |> sendB 16
+        list1.[4].Value |> sendB 14
         runT (fun () ->
-            list2.[2].Value |> sendC 17
-            list1.[0].Value |> sendC 10
-            v |> sendC list2)
-        list1.[3].Value |> sendC 13
-        list2.[3].Value |> sendC 18
+            list2.[2].Value |> sendB 17
+            list1.[0].Value |> sendB 10
+            v |> sendB list2)
+        list1.[3].Value |> sendB 13
+        list2.[3].Value |> sendB 18
         l2 |> unlistenL
         l |> unlistenL
         Assert.AreEqual (4, streamOutput.Count)
