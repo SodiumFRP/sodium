@@ -12,7 +12,7 @@ let split stream =
     let listener =
         stream
             |> Stream.listenN
-                out.Node
+                (Node<_> ())
                 (fun transaction aa ->
                     let mutable childIndex = 0
                     for a in aa do
@@ -20,4 +20,4 @@ let split stream =
                         childIndex <- childIndex + 1)
     out |> Stream.ual listener
 
-let defer stream = split (stream |> Stream.map (fun v -> [v]))
+let defer stream = split (stream |> Stream.map (fun v -> [|v|]))

@@ -51,6 +51,7 @@
         <e p="CellTests.fs" t="Include" />
         <e p="CommonTests.fs" t="Include" />
         <e p="DenotationalSemanticsTests.fs" t="Include" />
+        <e p="IssueTests.fs" t="Include" />
         <e p="obj" t="ExcludeRecursive" />
         <e p="Tests.fsproj" t="IncludeRecursive" />
         <e p="TestUtils.fs" t="Include" />
