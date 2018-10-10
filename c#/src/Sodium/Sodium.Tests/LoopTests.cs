@@ -482,7 +482,7 @@ namespace Sodium.Tests
             Cell<int> result = Cell.Loop<int>().WithoutCaptures(l => s.Updates.Snapshot(l, (n, o) => n + o).Hold(0));
 
             List<int> @out = new List<int>();
-            using (Transaction.Run(() => result.Values.Listen(@out.Add)))
+            using (Transaction.Run(() => result.Listen(@out.Add)))
             {
                 s.Send(1);
                 s.Send(2);
@@ -501,8 +501,8 @@ namespace Sodium.Tests
 
             List<int> @out = new List<int>();
             List<int> out2 = new List<int>();
-            using (Transaction.Run(() => result.Values.Listen(@out.Add)))
-            using (Transaction.Run(() => s2.Values.Listen(out2.Add)))
+            using (Transaction.Run(() => result.Listen(@out.Add)))
+            using (Transaction.Run(() => s2.Listen(out2.Add)))
 
             {
                 s.Send(1);
@@ -590,8 +590,7 @@ namespace Sodium.Tests
 
             /*
              * Switch over the sum of the Output cell value streams in the list.
-             * This won't work both because we miss the first Values stream event when the list changes and also because would need to recurse to keep the list correct when the sum is very low (only one item can be added per transaction).
-             * The current implementation throws an exception stating that a dependency cycle was detected, and I think this is the correct behavior.
+             * This won't work both because we miss the first Values stream event when the list changes and also because we would need to recurse to keep the list correct when the sum is very low (only one item can be added per transaction).
              */
             [Test]
             public void TestSwitchSValuesLoop()
@@ -681,7 +680,7 @@ namespace Sodium.Tests
                 {
                     CellLoop<IReadOnlyList<TestObject>> cellLoop = new CellLoop<IReadOnlyList<TestObject>>();
                     Cell<IReadOnlyList<TestObject>> cellLocal = streamSink
-                        .OrElse(Operational.Defer(cellLoop.Map(oo => oo.Select(o => o.Output).Lift(vv => vv.Sum())).SwitchCWithDeferredValues()).Filter(sum => sum < 50).Snapshot(cellLoop, (_, items) => (IReadOnlyList<TestObject>)items.Concat(new[] { new TestObject() }).ToArray()))
+                        .OrElse(cellLoop.Map(oo => oo.Select(o => o.Output).Lift(vv => vv.Sum())).SwitchCWithDeferredValues().Filter(sum => sum < 50).Snapshot(cellLoop, (_, items) => (IReadOnlyList<TestObject>)items.Concat(new[] { new TestObject() }).ToArray()))
                         .Hold(Enumerable.Range(1, 10).Select(_ => new TestObject()).ToArray());
                     cellLoop.Loop(cellLocal);
                     return cellLocal;

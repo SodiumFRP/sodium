@@ -632,23 +632,23 @@ type Tests() =
 
     [<Test>]
     member __.``Test Lift Loop List``() =
-        let (c, s) = runT (fun () ->
-            let (_, (c, s)) = loopC (fun c1 ->
+        let struct (c, s) = runT (fun () ->
+            let struct (_, (c, s)) = loopC (fun c1 ->
                 let s1 = sinkC 1
-                let (_, (c, s)) = loopC (fun c2 ->
+                let struct (_, (c, s)) = loopC (fun c2 ->
                     let s2 = sinkC 1
-                    let (_, (c, s)) = loopC (fun c3 ->
+                    let struct (_, (c, s)) = loopC (fun c3 ->
                         let s3 = sinkC 1
-                        let (_, (c, s)) = loopC (fun c4 ->
+                        let struct (_, (c, s)) = loopC (fun c4 ->
                             let s4 = sinkC 1
-                            let (_, (c, s)) = loopC (fun c5 ->
+                            let struct (_, (c, s)) = loopC (fun c5 ->
                                 let s5 = sinkC 1
-                                (s5, ([|c1;c2;c3;c4;c5|] |> liftAllC Seq.sum, s5)))
-                            (s4, (c, [|s;s4|])))
-                        (s3, (c, s |> Array.append [|s3|])))
-                    (s2, (c, s |> Array.append [|s2|])))
-                (s1, (c, s |> Array.append [|s1|])))
-            (c, s))
+                                struct (s5, ([|c1;c2;c3;c4;c5|] |> liftAllC Seq.sum, s5)))
+                            struct (s4, (c, [|s;s4|])))
+                        struct (s3, (c, s |> Array.append [|s3|])))
+                    struct (s2, (c, s |> Array.append [|s2|])))
+                struct (s1, (c, s |> Array.append [|s1|])))
+            struct (c, s))
         let out = List<_>()
         let l = c |> listenC out.Add
         s.[2] |> sendC 5
@@ -712,12 +712,12 @@ type Tests() =
 
     [<Test>]
     member __.``SwitchC On CellLoop``() =
-        let (_, (c, c1, c2, s)) = loopC (fun cl ->
+        let struct (_, (c, c1, c2, s)) = loopC (fun cl ->
             let c1 = sinkC 1
             let c2 = sinkC 11
             let c = cl |> switchC
             let s = sinkC (c1 :> Cell<_>)
-            (s, (c, c1, c2, s)))
+            struct (s, (c, c1, c2, s)))
         let out = List<_>()
         let l = c |> listenC out.Add
         c1 |> sendC 2
@@ -733,12 +733,12 @@ type Tests() =
 
     [<Test>]
     member __.``SwitchS On BehaviorLoop``() =
-        let (_, (b, b1, b2, s)) = loopB (fun bl ->
+        let struct (_, (b, b1, b2, s)) = loopB (fun bl ->
             let b1 = sinkS<int> ()
             let b2 = sinkS<int> ()
             let b = bl |> switchSB
             let s = sinkB (b1 :> Stream<_>)
-            (s, (b, b1, b2, s)))
+            struct (s, (b, b1, b2, s)))
         let out = List<_>()
         let l = b |> listenS out.Add
         b1 |> sendS 2

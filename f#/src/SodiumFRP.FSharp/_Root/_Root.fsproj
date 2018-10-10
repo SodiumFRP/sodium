@@ -30,6 +30,7 @@
 
   <ItemGroup>
     <Compile Include="AssemblyInfo.fs" />
+    <Compile Include="Prelude.fs" />
     <Compile Include="Lazy.fs" />
     <Compile Include="Func.fs" />
     <Compile Include="Option.fs" />

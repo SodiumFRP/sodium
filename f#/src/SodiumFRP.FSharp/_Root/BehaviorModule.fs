@@ -24,13 +24,13 @@ let loop f =
     Transaction.Apply
         (fun transaction _ ->
             let l = BehaviorLoop ()
-            let (s, r) = f l
+            let struct (s, r) = f l
             l.Loop transaction s
-            (s, r))
+            struct (s, r))
         false
 
 let loopWithNoCaptures f =
-    let (l, _) = loop (fun s -> (f s, ()))
+    let struct (l, _) = loop (fun s -> struct (f s, ()))
     l
 
 let private snt (behavior : Behavior<_>) = behavior.SampleNoTransaction ()

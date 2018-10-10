@@ -22,6 +22,7 @@ namespace Sodium.Tests
                 return l;
             });
             int[] values = obj.Select(v => v.CurrentValue).ToArray();
+            CollectionAssert.AreEqual(Enumerable.Range(1, 5000).Select(_ => 0), values);
         }
 
         private class TestObject

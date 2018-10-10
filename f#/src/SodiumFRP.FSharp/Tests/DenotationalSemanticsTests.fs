@@ -8,8 +8,6 @@ open SodiumFRP.FSharp.Sodium
 [<TestFixture>]
 type Tests() =
     
-    let flip f x y = f y x
-    
     let runSimulationWithSimultaneousFirings listen firings =
         let maxKey =
             match firings with

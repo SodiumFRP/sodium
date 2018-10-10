@@ -33,6 +33,7 @@
         <e p="obj" t="ExcludeRecursive" />
         <e p="Operational.fs" t="Include" />
         <e p="Option.fs" t="Include" />
+        <e p="Prelude.fs" t="Include" />
         <e p="Sodium.fs" t="Include" />
         <e p="Stream.fs" t="Include" />
         <e p="StreamListenerManager.fs" t="Include" />
@@ -52,7 +53,10 @@
         <e p="CommonTests.fs" t="Include" />
         <e p="DenotationalSemanticsTests.fs" t="Include" />
         <e p="IssueTests.fs" t="Include" />
+        <e p="LoopTests.fs" t="Include" />
         <e p="obj" t="ExcludeRecursive" />
+        <e p="PerformanceTests.fs" t="Include" />
+        <e p="PerformanceTests2.fs" t="Include" />
         <e p="Tests.fsproj" t="IncludeRecursive" />
         <e p="TestUtils.fs" t="Include" />
       </e>

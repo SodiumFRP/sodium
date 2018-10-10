@@ -2,7 +2,6 @@ module SodiumFRP.FSharp.Cell
 
 open System.Collections.Generic
 open SodiumFRP.FSharp
-open SodiumFRP.FSharp
 
 let constant value = Cell(Behavior.constant value)
 let constantLazy value : Cell<_> = Cell(Behavior.constantLazy value)
@@ -11,13 +10,13 @@ let loop f =
     Transaction.Apply
         (fun transaction _ ->
             let l = CellLoop ()
-            let (s, r) = f l
+            let struct (s, r) = f l
             l.Loop transaction s
-            (s, r))
+            struct (s, r))
         false
 
 let loopWithNoCaptures f =
-    let (l, _) = loop (fun s -> (f s, ()))
+    let struct (l, _) = loop (fun s -> struct (f s, ()))
     l
 
 let private beh (cell : Cell<_>) = cell.Behavior

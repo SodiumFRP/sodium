@@ -1,8 +1,10 @@
 namespace SodiumFRP.FSharp.Tests
 
 [<AutoOpen>]
-module Utils =
+module internal Utils =
     open NUnit.Framework
+    
+    let inline flip f x y = f y x
 
     let assertExists notExistsMessage onExists = function
     | Some o -> onExists o

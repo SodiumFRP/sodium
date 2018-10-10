@@ -23,10 +23,10 @@ type Tests() =
 
     [<Test>]
     member __.``Test Loop``() =
-        let (_, (c, s)) = loopC (fun cl ->
+        let struct (_, (c, s)) = loopC (fun cl ->
             let c = cl |> mapC ((*) 5)
             let s = sinkCS<int> ()
-            (s |> holdS 3, (c, s)))
+            struct (s |> holdS 3, (c, s)))
         let output1 = List<_>()
         let output2 = List<_>()
         let l = c |> listenC output1.Add
@@ -184,11 +184,11 @@ type Tests() =
 
     [<Test>]
     member __.``Test Loop And SwitchC``() =
-        let (resultCell, (innerCell, innerStreamSink)) =
+        let struct (resultCell, (innerCell, innerStreamSink)) =
             loopC (fun c ->
                 let s = sinkS ()
                 let cc = s |> holdS (Inner.create (c |> sampleLazyC))
-                (cc |> mapC (fun o -> o.c) |> switchC |> valuesC |> holdS 3, (cc, s)))
+                struct (cc |> mapC (fun o -> o.c) |> switchC |> valuesC |> holdS 3, (cc, s)))
         let out = List<_>()
         (
             use _l = resultCell |> listenC out.Add

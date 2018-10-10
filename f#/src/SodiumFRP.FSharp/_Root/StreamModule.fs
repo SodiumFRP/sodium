@@ -16,13 +16,13 @@ let loop f =
     Transaction.Apply
         (fun transaction _ ->
             let l = StreamLoop ()
-            let (s, r) = f l
+            let struct (s, r) = f l
             l.Loop transaction s
-            (s, r))
+            struct (s, r))
         false
 
 let loopWithNoCaptures f =
-    let (l, _) = loop (fun s -> (f s, ()))
+    let struct (l, _) = loop (fun s -> struct  (f s, ()))
     l
 
 let internal listenT target transaction action suppressEarlierFirings (stream : Stream<_>) =
@@ -214,23 +214,23 @@ let filterOption stream =
 let gateB behavior stream = stream |> snapshotB behavior (fun a v -> if v then Some a else None) |> filterOption
 let gate cell stream = stream |> gateB (cell |> beh)
 
-let collectLazy initialState (f : 'a -> 'TState -> 'b * 'TState) stream =
+let collectLazy initialState (f : 'a -> 'TState -> struct ('b * 'TState)) stream =
     loop (fun stateLoop ->
         let s = stateLoop |> holdLazy initialState
         let both = stream |> snapshot s f
-        (both |> map (fun x -> snd x), both |> map (fun x -> fst x))) |> snd
+        struct (both |> map (fun x -> sndS x), both |> map (fun x -> fstS x))) |> sndS
     
-let collect initialState (f : 'a -> 'TState -> 'b * 'TState) stream = collectLazy (lazy initialState) f stream
+let collect initialState (f : 'a -> 'TState -> struct ('b * 'TState)) stream = collectLazy (lazy initialState) f stream
 
 let internal calmInternal initialValue compare stream =
     stream |> collectLazy
         initialValue
         (fun a lastA ->
             if (match lastA with | None -> false | Some v -> compare v a)
-            then (None, lastA)
+            then struct (None, lastA)
             else
                 let oa = Some a
-                (oa, oa)) |> filterOption
+                struct (oa, oa)) |> filterOption
 
 let calmWithCompare compare stream = stream |> calmInternal (lazy None) compare
 
