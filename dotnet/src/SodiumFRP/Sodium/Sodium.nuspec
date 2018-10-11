@@ -1,0 +1,14 @@
+<?xml version="1.0"?>
+<package xmlns="http://schemas.microsoft.com/packaging/2010/07/nuspec.xsd">
+  <metadata>
+    <id>SodiumFRP</id>
+    <version>$version$</version>
+    <title>Sodium FRP for .NET</title>
+    <authors>SodiumFRP</authors>
+    <owners>SodiumFRP</owners>
+    <licenseUrl>http://opensource.org/licenses/MIT</licenseUrl>
+    <projectUrl>https://github.com/SodiumFRP/sodium</projectUrl>
+    <requireLicenseAcceptance>false</requireLicenseAcceptance>
+    <description>Sodium - Functional Reactive Programming (FRP) library for .NET written in C#.</description>
+  </metadata>
+</package>

@@ -23,6 +23,6 @@ type BehaviorLoop<'T> =
         let setLazyInitialValue lazyInitialValue = valuePropertyOrLazyInitialValue <- LazyInitialValue lazyInitialValue
         { inherit Behavior<_>(streamLoop, setValueProperty, sampleNoTransaction); streamLoop = streamLoop; setLazyInitialValue = setLazyInitialValue }
     
-    member this.Loop transaction (behavior : Behavior<'T>) =
+    member internal this.Loop transaction (behavior : Behavior<'T>) =
         this.streamLoop.Loop transaction <| behavior.Updates ()
         this.setLazyInitialValue <| behavior.SampleLazy transaction

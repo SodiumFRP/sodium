@@ -87,7 +87,7 @@ type Stream<'T> =
         let l = this.ListenT out.Node transaction h false 
         out.UnsafeAttachListener l
     
-    static member createCoalesceHandler f (out : Stream<'T>) =
+    static member internal createCoalesceHandler f (out : Stream<'T>) =
         let mutable accum = None
         
         let getAccum () =
