@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 
 namespace SodiumFRP
 {
@@ -13,6 +14,7 @@ namespace SodiumFRP
         /// <typeparam name="T">The type of the cell sink.</typeparam>
         /// <param name="c">The cell sink.</param>
         /// <param name="a">The value to send.</param>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static void Send<T>(this CellSink<T> c, T a) => c.SendImpl(a);
 
         /// <summary>

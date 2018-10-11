@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
 
 namespace SodiumFRP
@@ -13,6 +14,7 @@ namespace SodiumFRP
         /// </summary>
         /// <typeparam name="T">The type of the values that would be fired by the stream if it did fire values.</typeparam>
         /// <returns>A stream that never fires.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<T> Never<T>() => StreamInternal.NeverImpl<T>();
 
         /// <summary>
@@ -20,6 +22,7 @@ namespace SodiumFRP
         ///     transaction.
         /// </summary>
         /// <typeparam name="T">The type of values fired by the stream sink.</typeparam>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static StreamSink<T> CreateSink<T>() => StreamInternal.CreateSinkImpl<T>();
 
         /// <summary>
@@ -32,6 +35,7 @@ namespace SodiumFRP
         ///     transaction.
         /// </param>
         /// <typeparam name="T">The type of values fired by the stream sink.</typeparam>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static StreamSink<T> CreateSink<T>(Func<T, T, T> coalesce) => StreamInternal.CreateSinkImpl(coalesce);
 
         /// <summary>
@@ -62,6 +66,7 @@ namespace SodiumFRP
         /// <param name="f">A function which takes the stream loop and returns a value tuple containing the resulting stream and captures.</param>
         /// <returns>A value tuple containing the resulting stream and captures.</returns>
         [Pure]
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public (Stream<T> Stream, TCaptures Captures) WithCaptures<TCaptures>(
             Func<LoopedStream<T>, (Stream<T> Stream, TCaptures Captures)> f) =>
             TransactionInternal.Apply(

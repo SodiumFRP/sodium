@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 
 namespace SodiumFRP
 {
@@ -11,6 +12,7 @@ namespace SodiumFRP
         ///     Return whether or not there is a current transaction.
         /// </summary>
         /// <returns><code>true</code> if there is a current transaction, <code>false</code> otherwise.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static bool IsActive() => TransactionInternal.HasCurrentTransaction();
 
         /// <summary>
@@ -21,6 +23,7 @@ namespace SodiumFRP
         ///     In most cases this is not needed, because all primitives will create their own transaction automatically.
         ///     It is useful for running multiple reactive operations atomically.
         /// </remarks>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static void RunVoid(Action action) =>
             TransactionInternal.RunImpl(
                 () =>
@@ -39,6 +42,7 @@ namespace SodiumFRP
         ///     In most cases this is not needed, because all primitives will create their own transaction automatically.
         ///     It is useful for running multiple reactive operations atomically.
         /// </remarks>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static T Run<T>(Func<T> f) => TransactionInternal.RunImpl(f);
 
         /// <summary>
@@ -49,6 +53,7 @@ namespace SodiumFRP
         ///     The action may start transactions itself, which will not cause the hooks to execute recursively.
         ///     The main use case of this is for the implementation of a time/alarm system.
         /// </remarks>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static void OnStart(Action action) => TransactionInternal.OnStartImpl(action);
 
         /// <summary>
@@ -59,6 +64,7 @@ namespace SodiumFRP
         ///     The action to run after the current transaction is closed
         ///     or immediately if there is no current transaction.
         /// </param>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static void Post(Action action) => TransactionInternal.PostImpl(action);
     }
 }

@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
 
 namespace SodiumFRP
@@ -14,6 +15,7 @@ namespace SodiumFRP
         /// <typeparam name="T">The type of the value of the cell.</typeparam>
         /// <param name="value">The value of the cell.</param>
         /// <returns>A cell with a constant value.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Cell<T> Constant<T>(T value) => CellInternal.ConstantImpl(value);
 
         /// <summary>
@@ -22,6 +24,7 @@ namespace SodiumFRP
         /// <typeparam name="T">The type of the value of the cell.</typeparam>
         /// <param name="value">The lazy value of the cell.</param>
         /// <returns>A cell with a lazy constant value.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Cell<T> ConstantLazy<T>(Lazy<T> value) => CellInternal.ConstantLazyImpl(value);
 
         /// <summary>
@@ -30,6 +33,7 @@ namespace SodiumFRP
         /// </summary>
         /// <typeparam name="T">The type of the value in the cell sink.</typeparam>
         /// <param name="initialValue">The initial value of the cell.</param>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static CellSink<T> CreateSink<T>(T initialValue) => CellInternal.CreateSinkImpl(initialValue);
 
         /// <summary>
@@ -43,8 +47,9 @@ namespace SodiumFRP
         ///     Function to combine values when <see cref="CellSinkExtensionMethods.Send{T}(CellSink{T}, T)" /> is called more
         ///     than once per transaction.
         /// </param>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static CellSink<T> CreateSink<T>(T initialValue, Func<T, T, T> coalesce) =>
-            new CellSink<T>(initialValue, coalesce);
+            CellInternal.CreateSinkImpl(initialValue, coalesce);
 
         /// <summary>
         ///     Construct a writable cell stream sink that uses the last value if <see cref="CellSinkExtensionMethods.Send{T}" />
@@ -53,6 +58,7 @@ namespace SodiumFRP
         ///     <see cref="StreamExtensionMethods.Hold{T}(Stream{T}, T)" />.
         /// </summary>
         /// <typeparam name="T">The type of the value in the cell stream sink.</typeparam>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static CellStreamSink<T> CreateStreamSink<T>() => CellInternal.CreateStreamSinkImpl<T>();
 
         /// <summary>
@@ -67,8 +73,9 @@ namespace SodiumFRP
         ///     Function to combine values when <see cref="StreamSinkExtensionMethods.Send{T}(StreamSink{T}, T)" /> is called more
         ///     than once per transaction.
         /// </param>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static CellStreamSink<T> CreateStreamSink<T>(Func<T, T, T> coalesce) =>
-            new CellStreamSink<T>(coalesce);
+            CellInternal.CreateStreamSinkImpl(coalesce);
 
         /// <summary>
         ///     Creates a cell loop.
@@ -99,6 +106,7 @@ namespace SodiumFRP
         /// <param name="f">A function which takes the cell loop and returns a value tuple containing the resulting cell and captures.</param>
         /// <returns>A value tuple containing the resulting cell and captures.</returns>
         [Pure]
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public (Cell<T> Cell, TCaptures Captures) WithCaptures<TCaptures>(
             Func<LoopedCell<T>, (Cell<T> Cell, TCaptures Captures)> f) =>
             TransactionInternal.Apply(

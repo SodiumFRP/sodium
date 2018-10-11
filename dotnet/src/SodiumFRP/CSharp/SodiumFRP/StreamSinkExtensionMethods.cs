@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 
 namespace SodiumFRP
 {
@@ -13,6 +14,7 @@ namespace SodiumFRP
         /// <typeparam name="T">The type of the stream sink.</typeparam>
         /// <param name="s">The stream sink.</param>
         /// <param name="a">The value to send.</param>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static void Send<T>(this StreamSink<T> s, T a) => s.SendImpl(a);
 
         /// <summary>

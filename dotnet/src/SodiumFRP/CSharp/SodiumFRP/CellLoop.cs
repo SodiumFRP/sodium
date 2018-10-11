@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 
 namespace SodiumFRP
 {
@@ -14,6 +15,7 @@ namespace SodiumFRP
         private readonly object isLoopedLock = new object();
         private bool isLooped;
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public CellLoop()
         {
             this.transaction = TransactionInternal.GetCurrentTransaction();
@@ -43,6 +45,7 @@ namespace SodiumFRP
         ///     <see cref="Transaction.RunVoid(Action)" />.
         /// </summary>
         /// <param name="c">The cell that was forward referenced.</param>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void Loop(Cell<T> c) =>
             TransactionInternal.Apply(
                 (trans, _) =>

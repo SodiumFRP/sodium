@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 using System.Threading;
 using System.Threading.Tasks;
 
@@ -32,6 +33,7 @@ namespace SodiumFRP
         ///         disposed, pass the returned listener to this stream's <see cref="AttachListener{T}" /> method.
         ///     </para>
         /// </remarks>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static IStrongListener Listen<T>(this Stream<T> s, Action<T> handler) => s.ListenImpl(handler);
 
         /// <summary>
@@ -59,6 +61,7 @@ namespace SodiumFRP
         ///         disposed, pass the returned listener to this stream's <see cref="AttachListener{T}" /> method.
         ///     </para>
         /// </remarks>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static IWeakListener ListenWeak<T>(this Stream<T> s, Action<T> handler) => s.ListenWeakImpl(handler);
 
         /// <summary>
@@ -71,6 +74,7 @@ namespace SodiumFRP
         ///     A new stream equivalent to this stream which will garbage collect <paramref name="listener" /> when it is
         ///     garbage collected.
         /// </returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<T> AttachListener<T>(this Stream<T> s, IListener listener) =>
             s.AttachListenerImpl(listener);
 
@@ -81,6 +85,7 @@ namespace SodiumFRP
         /// <param name="s">The stream.</param>
         /// <param name="handler">The handler to execute for values fired by this stream.</param>
         /// <returns></returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static IStrongListener ListenOnce<T>(this Stream<T> s, Action<T> handler) => s.ListenOnceImpl(handler);
 
         /// <summary>
@@ -204,6 +209,7 @@ namespace SodiumFRP
         ///     Other than this, the function must be a pure function.
         /// </param>
         /// <returns>A stream which fires values transformed by <paramref name="f" /> for each value fired by this stream.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<TResult> Map<T, TResult>(this Stream<T> s, Func<T, TResult> f) => s.MapImpl(f);
 
         /// <summary>
@@ -216,6 +222,7 @@ namespace SodiumFRP
         ///     The constant value to return from this mapping.
         /// </param>
         /// <returns>A stream which fires the constant value for each value fired by this stream.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<TResult> MapTo<T, TResult>(this Stream<T> s, TResult value) => s.MapToImpl(value);
 
         /// <summary>
@@ -234,6 +241,7 @@ namespace SodiumFRP
         ///     it was before
         ///     any state changes from the current transaction.
         /// </remarks>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Cell<T> Hold<T>(this Stream<T> s, T initialValue) => s.HoldImpl(initialValue);
 
         /// <summary>
@@ -243,6 +251,7 @@ namespace SodiumFRP
         /// <param name="s">The stream.</param>
         /// <param name="initialValue">The lazily initialized initial value of the cell.</param>
         /// <returns>A cell with the specified lazily initialized initial value, that is updated by this stream's values.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Cell<T> HoldLazy<T>(this Stream<T> s, Lazy<T> initialValue) => s.HoldLazyImpl(initialValue);
 
         /// <summary>
@@ -253,6 +262,7 @@ namespace SodiumFRP
         /// <param name="s">The stream.</param>
         /// <param name="c">The cell to combine with.</param>
         /// <returns>A stream whose events are the values of the cell at the time of the stream event firing.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<TResult> Snapshot<T, TResult>(this Stream<T> s, Cell<TResult> c) => s.SnapshotImpl(c);
 
         /// <summary>
@@ -263,6 +273,7 @@ namespace SodiumFRP
         /// <param name="s">The stream.</param>
         /// <param name="b">The behavior to combine with.</param>
         /// <returns>A stream whose events are the values of the behavior at the time of the stream event firing.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<TResult> Snapshot<T, TResult>(this Stream<T> s, Behavior<TResult> b) => s.SnapshotImpl(b);
 
         /// <summary>
@@ -279,6 +290,7 @@ namespace SodiumFRP
         ///     A stream whose events are the result of the combination using the specified function of the input stream's
         ///     value and the value of the cell at the time of the stream event firing.
         /// </returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<TResult> Snapshot<T, T1, TResult>(this Stream<T> s, Cell<T1> c, Func<T, T1, TResult> f) =>
             s.SnapshotImpl(c, f);
 
@@ -296,6 +308,7 @@ namespace SodiumFRP
         ///     A stream whose events are the result of the combination using the specified function of the input stream's
         ///     value and the value of the behavior at the time of the stream event firing.
         /// </returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<TResult> Snapshot<T, T1, TResult>(
             this Stream<T> s,
             Behavior<T1> b,
@@ -317,6 +330,7 @@ namespace SodiumFRP
         ///     A stream whose events are the result of the combination using the specified function of the input stream's
         ///     value and the value of the cells at the time of the stream event firing.
         /// </returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<TResult> Snapshot<T, T1, T2, TResult>(
             this Stream<T> s,
             Cell<T1> c1,
@@ -339,6 +353,7 @@ namespace SodiumFRP
         ///     A stream whose events are the result of the combination using the specified function of the input stream's
         ///     value and the value of the behaviors at the time of the stream event firing.
         /// </returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<TResult> Snapshot<T, T1, T2, TResult>(
             this Stream<T> s,
             Behavior<T1> b1,
@@ -363,6 +378,7 @@ namespace SodiumFRP
         ///     A stream whose events are the result of the combination using the specified function of the input stream's
         ///     value and the value of the cells at the time of the stream event firing.
         /// </returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<TResult> Snapshot<T, T1, T2, T3, TResult>(
             this Stream<T> s,
             Cell<T1> c1,
@@ -388,6 +404,7 @@ namespace SodiumFRP
         ///     A stream whose events are the result of the combination using the specified function of the input stream's
         ///     value and the value of the behaviors at the time of the stream event firing.
         /// </returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<TResult> Snapshot<T, T1, T2, T3, TResult>(
             this Stream<T> s,
             Behavior<T1> b1,
@@ -415,6 +432,7 @@ namespace SodiumFRP
         ///     A stream whose events are the result of the combination using the specified function of the input stream's
         ///     value and the value of the cells at the time of the stream event firing.
         /// </returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<TResult> Snapshot<T, T1, T2, T3, T4, TResult>(
             this Stream<T> s,
             Cell<T1> c1,
@@ -443,6 +461,7 @@ namespace SodiumFRP
         ///     A stream whose events are the result of the combination using the specified function of the input stream's
         ///     value and the value of the behaviors at the time of the stream event firing.
         /// </returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<TResult> Snapshot<T, T1, T2, T3, T4, TResult>(
             this Stream<T> s,
             Behavior<T1> b1,
@@ -474,6 +493,7 @@ namespace SodiumFRP
         ///         be dropped.
         ///     </para>
         /// </remarks>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<T> OrElse<T>(this Stream<T> s, Stream<T> s2) => s.OrElseImpl(s2);
 
         /// <summary>
@@ -499,6 +519,7 @@ namespace SodiumFRP
         ///     The event from this stream will appear at the left input of the combining function, and
         ///     the event from <paramref name="s2" /> will appear at the right.
         /// </remarks>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<T> Merge<T>(this Stream<T> s, Stream<T> s2, Func<T, T, T> f) => s.MergeImpl(s2, f);
 
         /// <summary>
@@ -508,6 +529,7 @@ namespace SodiumFRP
         /// <param name="s">The stream.</param>
         /// <param name="predicate">The predicate used to filter the stream.</param>
         /// <returns>A stream that only outputs events for which the predicate returns <code>true</code>.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<T> Filter<T>(this Stream<T> s, Func<T, bool> predicate) => s.FilterImpl(predicate);
 
         /// <summary>
@@ -518,6 +540,7 @@ namespace SodiumFRP
         /// <param name="s">The stream.</param>
         /// <param name="c">The cell that acts as a gate.</param>
         /// <returns>A stream that only outputs events from the input stream when the specified cell's value is <code>true</code>.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<T> Gate<T>(this Stream<T> s, Cell<bool> c) => s.GateImpl(c);
 
         /// <summary>
@@ -528,6 +551,7 @@ namespace SodiumFRP
         /// <param name="s">The stream.</param>
         /// <param name="b">The behavior that acts as a gate.</param>
         /// <returns>A stream that only outputs events from the input stream when the specified behavior's value is <code>true</code>.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<T> Gate<T>(this Stream<T> s, Behavior<bool> b) => s.GateImpl(b);
 
         /// <summary>
@@ -536,6 +560,7 @@ namespace SodiumFRP
         /// <typeparam name="T">The type of the stream.</typeparam>
         /// <param name="s">The stream.</param>
         /// <returns>A stream that only outputs events which have a different value than the previous event.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<T> Calm<T>(this Stream<T> s) => s.CalmImpl(EqualityComparer<T>.Default.Equals);
 
         /// <summary>
@@ -545,6 +570,7 @@ namespace SodiumFRP
         /// <param name="s">The stream.</param>
         /// <param name="comparer">The equality comparer to use to determine if two items are equal.</param>
         /// <returns>A stream that only outputs events which have a different value than the previous event.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<T> Calm<T>(this Stream<T> s, IEqualityComparer<T> comparer) => s.CalmImpl(comparer.Equals);
 
         /// <summary>
@@ -554,6 +580,7 @@ namespace SodiumFRP
         /// <param name="s">The stream.</param>
         /// <param name="areEqual">The function to use to determine if two items are equal.</param>
         /// <returns>A stream that only outputs events which have a different value than the previous event.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<T> Calm<T>(this Stream<T> s, Func<T, T, bool> areEqual) => s.CalmImpl(areEqual);
 
         /// <summary>
@@ -571,6 +598,7 @@ namespace SodiumFRP
         ///     <see cref="Snapshot{T, TReturn}(Stream{T}, Cell{TReturn})" />.  Apart from this, the function must be pure.
         /// </param>
         /// <returns>A stream resulting from the transformation of this stream by the Mealy machine.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<TReturn> Collect<T, TState, TReturn>(
             this Stream<T> s,
             TState initialState,
@@ -591,6 +619,7 @@ namespace SodiumFRP
         ///     <see cref="Snapshot{T, TReturn}(Stream{T}, Cell{TReturn})" />.  Apart from this, the function must be pure.
         /// </param>
         /// <returns>A stream resulting from the transformation of this stream by the Mealy machine.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<TReturn> CollectLazy<T, TState, TReturn>(
             this Stream<T> s,
             Lazy<TState> initialState,
@@ -609,6 +638,7 @@ namespace SodiumFRP
         ///     <see cref="Snapshot{T, TReturn}(Stream{T}, Cell{TReturn})" />.  Apart from this, the function must be pure.
         /// </param>
         /// <returns>A cell holding the accumulated state of this stream.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Cell<TReturn> Accum<T, TReturn>(
             this Stream<T> s,
             TReturn initialState,
@@ -627,6 +657,7 @@ namespace SodiumFRP
         ///     <see cref="Snapshot{T, TReturn}(Stream{T}, Cell{TReturn})" />.  Apart from this, the function must be pure.
         /// </param>
         /// <returns>A cell holding the accumulated state of this stream.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Cell<TReturn> AccumLazy<T, TReturn>(
             this Stream<T> s,
             Lazy<TReturn> initialState,
@@ -642,6 +673,7 @@ namespace SodiumFRP
         ///     A stream that outputs only one value: the next event of the input stream starting from the transaction in
         ///     which this method was invoked.
         /// </returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<T> Once<T>(this Stream<T> s) => s.OnceImpl();
 
         /// <summary>
@@ -653,6 +685,7 @@ namespace SodiumFRP
         ///     A stream that is the result of merging the collection of streams and dropping the stream's value specified
         ///     earlier in the collection in the simultaneous case.
         /// </returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<T> OrElse<T>(this IEnumerable<Stream<T>> s) => s.OrElseImpl<T, Stream<T>>();
 
         /// <summary>
@@ -675,6 +708,7 @@ namespace SodiumFRP
         ///     The event from the stream earlier in the collection will appear at the left input of the combining function, and
         ///     the event from the stream later in the collection will appear at the right.
         /// </remarks>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<T> Merge<T>(this IEnumerable<Stream<T>> s, Func<T, T, T> f) => s.MergeImpl(f);
 
         /// <summary>
@@ -686,6 +720,7 @@ namespace SodiumFRP
         ///     A stream that only outputs events that have values, removing the <see cref="Maybe{T}" /> wrapper, and
         ///     discarding <see cref="Maybe.None" /> values.
         /// </returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<T> FilterMaybe<T>(this Stream<Maybe<T>> s) =>
             s.FilterMaybeImpl<T, Maybe<T>>((m, a) => m.MatchSome(a));
     }

@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace SodiumFRP
 {
@@ -31,6 +32,7 @@ namespace SodiumFRP
         ///         current value and any updates without risk of missing any in between.
         ///     </para>
         /// </remarks>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static T Sample<T>(this Cell<T> c) => c.SampleImpl();
 
         /// <summary>
@@ -44,6 +46,7 @@ namespace SodiumFRP
         ///     when the cell loop has not yet been looped.  It should be used in any code that is general
         ///     enough that it may be passed a <see cref="CellLoop{T}" />.  See <see cref="StreamExtensionMethods.HoldLazy{T}(Stream{T}, Lazy{T})" />.
         /// </remarks>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Lazy<T> SampleLazy<T>(this Cell<T> c) => c.SampleLazyImpl();
 
         /// <summary>
@@ -54,6 +57,7 @@ namespace SodiumFRP
         /// <returns>
         ///     The stream of discrete updates to this cell.
         /// </returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<T> Updates<T>(this Cell<T> c) => c.UpdatesImpl;
 
         /// <summary>
@@ -69,6 +73,7 @@ namespace SodiumFRP
         ///     during the transaction in which it was obtained.
         ///     To observe the first value, this property must be accessed and used within the same explicit transaction.
         /// </remarks>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<T> Values<T>(this Cell<T> c) => c.ValuesImpl;
 
         /// <summary>
@@ -77,6 +82,7 @@ namespace SodiumFRP
         /// <typeparam name="T">The type of the cell.</typeparam>
         /// <param name="c">The cell.</param>
         /// <returns>A reference to this <see cref="Cell{T}" /> as a <see cref="Behavior{T}" />.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Behavior<T> AsBehavior<T>(this Cell<T> c) => c.BehaviorImpl;
 
         /// <summary>
@@ -100,6 +106,7 @@ namespace SodiumFRP
         ///         disposed or garbage collected.
         ///     </para>
         /// </remarks>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static IStrongListener Listen<T>(this Cell<T> c, Action<T> handler) => c.ListenImpl(handler);
 
         /// <summary>
@@ -123,6 +130,7 @@ namespace SodiumFRP
         ///         disposed or garbage collected or the listener itself is garbage collected.
         ///     </para>
         /// </remarks>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static IWeakListener ListenWeak<T>(this Cell<T> c, Action<T> handler) => c.ListenWeakImpl(handler);
 
         /// <summary>
@@ -136,6 +144,7 @@ namespace SodiumFRP
         ///     Function to apply to convert the values.  It must be a pure function.
         /// </param>
         /// <returns>A cell which fires values transformed by <paramref name="f" /> for each value fired by this cell.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Cell<TResult> Map<T, TResult>(this Cell<T> c, Func<T, TResult> f) => c.MapImpl(f);
 
         /// <summary>
@@ -149,6 +158,7 @@ namespace SodiumFRP
         /// <param name="c2">The second cell.</param>
         /// <param name="f">The binary function to lift into the cells.</param>
         /// <returns>A cell containing values resulting from the binary function applied to the input cells' values.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Cell<TResult> Lift<T, T2, TResult>(this Cell<T> c, Cell<T2> c2, Func<T, T2, TResult> f) =>
             c.LiftImpl(c2, f);
 
@@ -165,6 +175,7 @@ namespace SodiumFRP
         /// <param name="c3">The third cell.</param>
         /// <param name="f">The binary function to lift into the cells.</param>
         /// <returns>A cell containing values resulting from the ternary function applied to the input cells' values.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Cell<TResult> Lift<T, T2, T3, TResult>(
             this Cell<T> c,
             Cell<T2> c2,
@@ -186,6 +197,7 @@ namespace SodiumFRP
         /// <param name="c4">The fourth cell.</param>
         /// <param name="f">The binary function to lift into the cells.</param>
         /// <returns>A cell containing values resulting from the quaternary function applied to the input cells' values.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Cell<TResult> Lift<T, T2, T3, T4, TResult>(
             this Cell<T> c,
             Cell<T2> c2,
@@ -210,6 +222,7 @@ namespace SodiumFRP
         /// <param name="c5">The fifth cell.</param>
         /// <param name="f">The binary function to lift into the cells.</param>
         /// <returns>A cell containing values resulting from the 5-argument function applied to the input cells' values.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Cell<TResult> Lift<T, T2, T3, T4, T5, TResult>(
             this Cell<T> c,
             Cell<T2> c2,
@@ -237,6 +250,7 @@ namespace SodiumFRP
         /// <param name="c6">The sixth cell.</param>
         /// <param name="f">The binary function to lift into the cells.</param>
         /// <returns>A cell containing values resulting from the 6-argument function applied to the input cells' values.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Cell<TResult> Lift<T, T2, T3, T4, T5, T6, TResult>(
             this Cell<T> c,
             Cell<T2> c2,
@@ -257,6 +271,7 @@ namespace SodiumFRP
         ///     A cell whose value is the result of applying the current function in cell <paramref name="cf" /> to this
         ///     cell's current value.
         /// </returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Cell<TResult> Apply<T, TResult>(this Cell<T> c, Cell<Func<T, TResult>> cf) => c.ApplyImpl(cf);
 
         /// <summary>
@@ -265,6 +280,7 @@ namespace SodiumFRP
         /// <typeparam name="T">The type of the cell.</typeparam>
         /// <param name="c">The cell.</param>
         /// <returns>A cell whose stream only receives events which have a different value than the previous event.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Cell<T> Calm<T>(this Cell<T> c) => c.CalmImpl(EqualityComparer<T>.Default.Equals);
 
         /// <summary>
@@ -274,6 +290,7 @@ namespace SodiumFRP
         /// <param name="c">The cell.</param>
         /// <param name="comparer">The equality comparer to use to determine if two items are equal.</param>
         /// <returns>A cell whose stream only receives events which have a different value than the previous event.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Cell<T> Calm<T>(this Cell<T> c, IEqualityComparer<T> comparer) => c.CalmImpl(comparer.Equals);
 
         /// <summary>
@@ -283,6 +300,7 @@ namespace SodiumFRP
         /// <param name="c">The cell.</param>
         /// <param name="areEqual">The function to use to determine if two items are equal.</param>
         /// <returns>A cell whose stream only receives events which have a different value than the previous event.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Cell<T> Calm<T>(this Cell<T> c, Func<T, T, bool> areEqual) => c.CalmImpl(areEqual);
 
         /// <summary>
@@ -291,6 +309,7 @@ namespace SodiumFRP
         /// <typeparam name="T">The type of the behavior.</typeparam>
         /// <param name="cba">The cell containing a behavior.</param>
         /// <returns>The unwrapped behavior.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Behavior<T> SwitchB<T>(this Cell<Behavior<T>> cba) => cba.SwitchBImpl<T, Behavior<T>>();
 
         /// <summary>
@@ -299,6 +318,7 @@ namespace SodiumFRP
         /// <typeparam name="T">The type of the cell.</typeparam>
         /// <param name="cca">The cell containing another cell.</param>
         /// <returns>The unwrapped cell.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Cell<T> SwitchC<T>(this Cell<Cell<T>> cca) => cca.SwitchCImpl<T, Cell<T>>();
 
         /// <summary>
@@ -309,6 +329,7 @@ namespace SodiumFRP
         /// <typeparam name="T">The type of the stream.</typeparam>
         /// <param name="csa">The cell containing the stream.</param>
         /// <returns>The unwrapped stream.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<T> SwitchS<T>(this Cell<Stream<T>> csa) => csa.SwitchSImpl<T, Stream<T>>();
 
         /// <summary>
@@ -321,6 +342,7 @@ namespace SodiumFRP
         /// <param name="c">The enumerable of cells.</param>
         /// <param name="f">The binary function to lift into the cells.</param>
         /// <returns>A cell containing values resulting from the function applied to the input cells' values.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Cell<TResult> Lift<T, TResult>(
             this IEnumerable<Cell<T>> c,
             Func<IReadOnlyList<T>, TResult> f) => c.LiftCellsImpl(f);
@@ -335,6 +357,7 @@ namespace SodiumFRP
         /// <param name="c">The collection of cells.</param>
         /// <param name="f">The binary function to lift into the cells.</param>
         /// <returns>A cell containing values resulting from the function applied to the input cells' values.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Cell<TResult> Lift<T, TResult>(
             this IReadOnlyCollection<Cell<T>> c,
             Func<IReadOnlyList<T>, TResult> f) => c.LiftCellsImpl(f);
@@ -345,6 +368,7 @@ namespace SodiumFRP
         /// <typeparam name="T">The type of the cells.</typeparam>
         /// <param name="c">The enumerable of cells.</param>
         /// <returns>A cell containing a list of the input cells' values.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Cell<IReadOnlyList<T>> Lift<T>(this IEnumerable<Cell<T>> c) =>
             c.LiftCellsImpl<T, Cell<T>, IReadOnlyList<T>>(v => v);
 
@@ -354,6 +378,7 @@ namespace SodiumFRP
         /// <typeparam name="T">The type of the cells.</typeparam>
         /// <param name="c">The collection of cells.</param>
         /// <returns>A cell containing a list of the input cells' values.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Cell<IReadOnlyList<T>> Lift<T>(this IReadOnlyCollection<Cell<T>> c) =>
             c.LiftCellsImpl<T, Cell<T>, IReadOnlyList<T>>(v => v);
     }

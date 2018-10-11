@@ -1,4 +1,5 @@
 using System;
+using System.Runtime.CompilerServices;
 
 namespace SodiumFRP
 {
@@ -13,6 +14,7 @@ namespace SodiumFRP
         private readonly object isLoopedLock = new object();
         private bool isLooped;
 
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public BehaviorLoop()
         {
             this.transaction = TransactionInternal.GetCurrentTransaction();
@@ -42,6 +44,7 @@ namespace SodiumFRP
         ///     <see cref="Transaction.RunVoid(Action)" />.
         /// </summary>
         /// <param name="b">The behavior that was forward referenced.</param>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public void Loop(Behavior<T> b) =>
             TransactionInternal.Apply(
                 (trans, _) =>

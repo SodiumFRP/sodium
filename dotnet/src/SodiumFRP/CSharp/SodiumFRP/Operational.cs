@@ -1,4 +1,5 @@
 ﻿using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace SodiumFRP
 {
@@ -19,6 +20,7 @@ namespace SodiumFRP
         ///     The rule with this primitive is that you should only use it in functions
         ///     that do not allow the caller to detect the behavior updates.
         /// </remarks>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<T> Updates<T>(Behavior<T> b) => OperationalInternal.UpdatesImpl(b);
 
         /// <summary>
@@ -34,6 +36,7 @@ namespace SodiumFRP
         ///     The rule with this primitive is that you should only use it in functions
         ///     that do not allow the caller to detect the behavior updates.
         /// </remarks>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<T> Value<T>(Behavior<T> b) => OperationalInternal.ValueImpl(b);
 
         /// <summary>
@@ -44,6 +47,7 @@ namespace SodiumFRP
         /// <typeparam name="T">The type of the stream to defer.</typeparam>
         /// <param name="s">The stream to defer.</param>
         /// <returns>A stream firing the deferred event firings.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<T> Defer<T>(Stream<T> s) => OperationalInternal.DeferImpl(s);
 
         /// <summary>
@@ -58,6 +62,7 @@ namespace SodiumFRP
         /// <typeparam name="TCollection">The collection type of the stream to split.</typeparam>
         /// <param name="s">The stream to split.</param>
         /// <returns>A stream firing the split event firings.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<T> Split<T, TCollection>(Stream<TCollection> s)
             where TCollection : IEnumerable<T> =>
             OperationalInternal.SplitImpl<T, TCollection>(s);

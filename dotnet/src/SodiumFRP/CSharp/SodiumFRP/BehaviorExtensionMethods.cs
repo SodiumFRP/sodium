@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Runtime.CompilerServices;
 
 namespace SodiumFRP
 {
@@ -27,6 +28,7 @@ namespace SodiumFRP
         ///         current value and any updates without risk of missing any in between.
         ///     </para>
         /// </remarks>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static T Sample<T>(this Behavior<T> b) => b.SampleImpl();
 
         /// <summary>
@@ -40,6 +42,7 @@ namespace SodiumFRP
         ///     when the behavior loop has not yet been looped.  It should be used in any code that is general
         ///     enough that it may be passed a <see cref="BehaviorLoop{T}" />.  See <see cref="StreamExtensionMethods.HoldLazy{T}(Stream{T}, Lazy{T})" />.
         /// </remarks>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Lazy<T> SampleLazy<T>(this Behavior<T> b) => b.SampleLazyImpl();
 
         /// <summary>
@@ -53,6 +56,7 @@ namespace SodiumFRP
         ///     Function to apply to convert the values.  It must be a pure function.
         /// </param>
         /// <returns>An behavior which fires values transformed by <paramref name="f" /> for each value fired by this behavior.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Behavior<TResult> Map<T, TResult>(this Behavior<T> b, Func<T, TResult> f) =>
             b.MapImpl(f);
 
@@ -67,6 +71,7 @@ namespace SodiumFRP
         /// <param name="b2">The second behavior.</param>
         /// <param name="f">The binary function to lift into the behaviors.</param>
         /// <returns>A behavior containing values resulting from the binary function applied to the input behaviors' values.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Behavior<TResult> Lift<T, T2, TResult>(this Behavior<T> b, Behavior<T2> b2, Func<T, T2, TResult> f) =>
             b.LiftImpl(b2, f);
 
@@ -83,6 +88,7 @@ namespace SodiumFRP
         /// <param name="b3">The third behavior.</param>
         /// <param name="f">The binary function to lift into the behaviors.</param>
         /// <returns>A behavior containing values resulting from the ternary function applied to the input behaviors' values.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Behavior<TResult> Lift<T, T2, T3, TResult>(
             this Behavior<T> b,
             Behavior<T2> b2,
@@ -104,6 +110,7 @@ namespace SodiumFRP
         /// <param name="b4">The fourth behavior.</param>
         /// <param name="f">The binary function to lift into the behaviors.</param>
         /// <returns>A behavior containing values resulting from the quaternary function applied to the input behaviors' values.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Behavior<TResult> Lift<T, T2, T3, T4, TResult>(
             this Behavior<T> b,
             Behavior<T2> b2,
@@ -128,6 +135,7 @@ namespace SodiumFRP
         /// <param name="b5">The fifth behavior.</param>
         /// <param name="f">The binary function to lift into the behaviors.</param>
         /// <returns>A behavior containing values resulting from the 5-argument function applied to the input behaviors' values.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Behavior<TResult> Lift<T, T2, T3, T4, T5, TResult>(
             this Behavior<T> b,
             Behavior<T2> b2,
@@ -155,6 +163,7 @@ namespace SodiumFRP
         /// <param name="b6">The sixth behavior.</param>
         /// <param name="f">The binary function to lift into the behaviors.</param>
         /// <returns>A behavior containing values resulting from the 6-argument function applied to the input behaviors' values.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Behavior<TResult> Lift<T, T2, T3, T4, T5, T6, TResult>(
             this Behavior<T> b,
             Behavior<T2> b2,
@@ -175,6 +184,7 @@ namespace SodiumFRP
         ///     A behavior whose value is the result of applying the current function in behavior <paramref name="bf" /> to this
         ///     behavior's current value.
         /// </returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Behavior<TResult> Apply<T, TResult>(this Behavior<T> b, Behavior<Func<T, TResult>> bf) =>
             b.ApplyImpl(bf);
 
@@ -184,6 +194,7 @@ namespace SodiumFRP
         /// <typeparam name="T">The type of the behavior.</typeparam>
         /// <param name="bba">The behavior containing another behavior.</param>
         /// <returns>The unwrapped behavior.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Behavior<T> SwitchB<T>(this Behavior<Behavior<T>> bba) => bba.SwitchBImpl<T, Behavior<T>>();
 
         /// <summary>
@@ -192,6 +203,7 @@ namespace SodiumFRP
         /// <typeparam name="T">The type of the cell.</typeparam>
         /// <param name="bca">The behavior containing a cell.</param>
         /// <returns>The unwrapped cell.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Cell<T> SwitchC<T>(this Behavior<Cell<T>> bca) => bca.SwitchCImpl<T, Cell<T>>();
 
         /// <summary>
@@ -202,6 +214,7 @@ namespace SodiumFRP
         /// <typeparam name="T">The type of the stream.</typeparam>
         /// <param name="bsa">The behavior containing the stream.</param>
         /// <returns>The unwrapped stream.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Stream<T> SwitchS<T>(this Behavior<Stream<T>> bsa) => bsa.SwitchSImpl<T, Stream<T>>();
 
         /// <summary>
@@ -214,6 +227,7 @@ namespace SodiumFRP
         /// <param name="b">The enumerable of behaviors.</param>
         /// <param name="f">The binary function to lift into the behaviors.</param>
         /// <returns>A behavior containing values resulting from the function applied to the input behaviors' values.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Behavior<TResult> Lift<T, TResult>(
             this IEnumerable<Behavior<T>> b,
             Func<IReadOnlyList<T>, TResult> f) =>
@@ -229,6 +243,7 @@ namespace SodiumFRP
         /// <param name="b">The collection of behaviors.</param>
         /// <param name="f">The binary function to lift into the behaviors.</param>
         /// <returns>A behavior containing values resulting from the function applied to the input behaviors' values.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Behavior<TResult> Lift<T, TResult>(
             this IReadOnlyCollection<Behavior<T>> b,
             Func<IReadOnlyList<T>, TResult> f) => b.LiftBehaviorsImpl(f);
@@ -239,6 +254,7 @@ namespace SodiumFRP
         /// <typeparam name="T">The type of the behaviors.</typeparam>
         /// <param name="b">The enumerable of behaviors.</param>
         /// <returns>A behavior containing a list of the input behaviors' values.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Behavior<IReadOnlyList<T>> Lift<T>(this IEnumerable<Behavior<T>> b) =>
             b.LiftBehaviorsImpl<T, Behavior<T>, IReadOnlyList<T>>(v => v);
 
@@ -248,6 +264,7 @@ namespace SodiumFRP
         /// <typeparam name="T">The type of the behaviors.</typeparam>
         /// <param name="b">The collection of behaviors.</param>
         /// <returns>A behavior containing a list of the input behaviors' values.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Behavior<IReadOnlyList<T>> Lift<T>(this IReadOnlyCollection<Behavior<T>> b) =>
             b.LiftBehaviorsImpl<T, Behavior<T>, IReadOnlyList<T>>(v => v);
     }

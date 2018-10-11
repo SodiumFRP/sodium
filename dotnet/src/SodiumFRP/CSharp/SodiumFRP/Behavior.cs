@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Runtime.CompilerServices;
 using JetBrains.Annotations;
 
 namespace SodiumFRP
@@ -14,6 +15,7 @@ namespace SodiumFRP
         /// <typeparam name="T">The type of the value of the behavior.</typeparam>
         /// <param name="value">The value of the behavior.</param>
         /// <returns>A behavior with a constant value.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Behavior<T> Constant<T>(T value) => BehaviorInternal.ConstantImpl(value);
 
         /// <summary>
@@ -22,6 +24,7 @@ namespace SodiumFRP
         /// <typeparam name="T">The type of the value of the behavior.</typeparam>
         /// <param name="value">The lazily computed value of the behavior.</param>
         /// <returns>A behavior with a lazily computed constant value.</returns>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static Behavior<T> ConstantLazy<T>(Lazy<T> value) => BehaviorInternal.ConstantLazyImpl(value);
 
         /// <summary>
@@ -30,6 +33,7 @@ namespace SodiumFRP
         /// </summary>
         /// <param name="initialValue">The initial value of the behavior.</param>
         /// <typeparam name="T">The type of values in the behavior sink.</typeparam>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static BehaviorSink<T> CreateSink<T>(T initialValue) => BehaviorInternal.CreateSinkImpl(initialValue);
 
         /// <summary>
@@ -43,6 +47,7 @@ namespace SodiumFRP
         ///     transaction.
         /// </param>
         /// <typeparam name="T">The type of values in the behavior sink.</typeparam>
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public static BehaviorSink<T> CreateSink<T>(T initialValue, Func<T, T, T> coalesce) => BehaviorInternal.CreateSinkImpl(initialValue, coalesce);
 
         /// <summary>
@@ -73,6 +78,7 @@ namespace SodiumFRP
         /// <param name="f">A function which takes the behavior loop and returns a value tuple containing the resulting behavior and captures.</param>
         /// <returns>A value tuple containing the resulting behavior and captures.</returns>
         [Pure]
+        [MethodImpl(MethodImplOptions.NoInlining)]
         public (Behavior<T> Behavior, TCaptures Captures) WithCaptures<TCaptures>(
             Func<LoopedBehavior<T>, (Behavior<T> Behavior, TCaptures Captures)> f) =>
             TransactionInternal.Apply(
