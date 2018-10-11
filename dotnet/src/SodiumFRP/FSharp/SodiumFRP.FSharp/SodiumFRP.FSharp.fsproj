@@ -19,7 +19,7 @@
     <Company>SodiumFRP</Company>
     <Product>Sodium FRP for F#</Product>
     <Title>Sodium FRP for F#</Title>
-    <Description>Sodium - Functional Reactive Programming (FRP) library for .NET written in F#.</Description>
+    <Description>Sodium - Functional Reactive Programming (FRP) library for F#.</Description>
     <IncludeSource>True</IncludeSource>
     <IncludeSymbols>True</IncludeSymbols>
   </PropertyGroup>
