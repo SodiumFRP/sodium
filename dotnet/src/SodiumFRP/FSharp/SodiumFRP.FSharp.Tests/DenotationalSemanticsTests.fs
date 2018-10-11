@@ -1,12 +1,11 @@
-module SodiumFRP.FSharp.Tests.``Denotational Semantics``
+module SodiumFRP.Tests.``Denotational Semantics``
 
 open System.Collections.Generic
 open NUnit.Framework
-open SodiumFRP.FSharp
-open SodiumFRP.FSharp.Sodium
+open SodiumFRP
 
 [<TestFixture>]
-type Tests() =
+type ``Denotational Semantics Tests``() =
     
     let runSimulationWithSimultaneousFirings listen firings =
         let maxKey =

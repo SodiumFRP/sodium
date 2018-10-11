@@ -9,4 +9,4 @@ type CellLoop<'T> =
         let behaviorLoop = BehaviorLoop<_> ()
         { inherit Cell<_> (behaviorLoop); behaviorLoop = behaviorLoop }
     
-    member this.Loop transaction (cell : Cell<'T>) = this.behaviorLoop.Loop transaction cell.Behavior
+    member internal this.Loop transaction (cell : Cell<'T>) = this.behaviorLoop.Loop transaction cell.Behavior
