@@ -58,8 +58,8 @@ namespace SodiumFRP
 
         internal static IListener CreateFromAction(Action unlisten) => new ActionListener(unlisten);
 
-        internal static IListener CreateCompositeImpl(IReadOnlyList<IListener> listeners) =>
-            new CompositeListener<IListener>(listeners);
+        internal static IListener CreateCompositeImpl<T>(IReadOnlyList<T> listeners) where T : IListener =>
+            new CompositeListener<T>(listeners);
 
         internal static IWeakListener CreateWeakCompositeImpl(IReadOnlyList<IWeakListener> listeners) =>
             new CompositeWeakListener(listeners);

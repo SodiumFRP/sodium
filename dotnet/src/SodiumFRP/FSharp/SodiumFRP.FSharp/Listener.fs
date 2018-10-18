@@ -19,6 +19,8 @@ let fromWeakList listeners = ListenerInternal.CreateWeakCompositeImpl listeners
 let fromStrongList listeners = ListenerInternal.CreateStrongCompositeImpl listeners
 
 let fromSeq listeners = List.ofSeq listeners |> fromList
+let fromWeakSeq listeners = List.ofSeq listeners |> fromWeakList
+let fromStrongSeq listeners = List.ofSeq listeners |> fromStrongList
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
 let append l1 l2 = ListenerInternal.AppendImpl (l1, l2)
