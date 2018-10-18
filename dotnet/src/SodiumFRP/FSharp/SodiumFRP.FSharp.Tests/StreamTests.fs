@@ -21,13 +21,68 @@ type ``Stream Tests``() =
         CollectionAssert.AreEqual([5], out)
 
     [<Test>]
-    member __.``Test Send In Callback Throws Exception``() =
+    member __.``Test Stream Send In Callback Throws Exception``() =
         let s = sinkS ()
         let s2 = sinkS ()
         let actual = (
             use _let = s |> listenS (s2 |> flip sendS)
             try
                 s |> sendS 5
+                None
+            with
+                | :? InvalidOperationException as e -> Some e
+        )
+        actual |> assertExceptionExists (fun e -> Assert.AreEqual ("Send may not be called inside a Sodium callback.", e.Message))
+
+    [<Test>]
+    member __.``Test Stream Send In Map Throws Exception``() =
+        let s = sinkS ()
+        let s2 = sinkS ()
+        let actual = (
+            use _let = s |> mapS (s2 |> flip sendS) |> listenS id
+            try
+                s |> sendS 5
+                None
+            with
+                | :? InvalidOperationException as e -> Some e
+        )
+        actual |> assertExceptionExists (fun e -> Assert.AreEqual ("Send may not be called inside a Sodium callback.", e.Message))
+
+    [<Test>]
+    member __.``Test Stream Send In Cell Map Throws Exception``() =
+        let c = constantC 5
+        let s2 = sinkS ()
+        let actual = (
+            try
+                use _let = c |> mapC (s2 |> flip sendS) |> listenC id
+                None
+            with
+                | :? InvalidOperationException as e -> Some e
+        )
+        actual |> assertExceptionExists (fun e -> Assert.AreEqual ("Send may not be called inside a Sodium callback.", e.Message))
+
+    [<Test>]
+    member __.``Test Stream Send In Cell Lift Throws Exception``() =
+        let c = constantC 5
+        let c2 = constantC 7
+        let s2 = sinkS ()
+        let actual = (
+            try
+                use _let = (c, c2) |> lift2C (fun _ _ -> s2 |> sendS 5) |> listenC id
+                None
+            with
+                | :? InvalidOperationException as e -> Some e
+        )
+        actual |> assertExceptionExists (fun e -> Assert.AreEqual ("Send may not be called inside a Sodium callback.", e.Message))
+
+    [<Test>]
+    member __.``Test Stream Send In Cell Apply Throws Exception``() =
+        let c = constantC 5
+        let s2 = sinkS ()
+        let c2 = constantC (fun _ -> s2 |> sendS 5)
+        let actual = (
+            try
+                use _let = c |> applyC c2 |> listenC id
                 None
             with
                 | :? InvalidOperationException as e -> Some e

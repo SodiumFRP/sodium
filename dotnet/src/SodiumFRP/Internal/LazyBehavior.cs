@@ -14,9 +14,24 @@ namespace SodiumFRP
         internal LazyBehavior(TransactionInternal trans, Stream<T> stream, Lazy<T> lazyInitialValue)
             : base(stream, default(T))
         {
-            this.LazyInitialValue = lazyInitialValue;
+            this.LazyInitialValue = new Lazy<T>(() => GuardAgainstSend(lazyInitialValue));
 
             trans.Sample(this.EnsureValueIsCreated);
+        }
+
+        private static T GuardAgainstSend(Lazy<T> v)
+        {
+            TransactionInternal.InCallback++;
+            try
+            {
+                // Don't allow transactions to interfere with Sodium
+                // internals.
+                return v.Value;
+            }
+            finally
+            {
+                TransactionInternal.InCallback--;
+            }
         }
 
         protected override void NotUsingInitialValue()
