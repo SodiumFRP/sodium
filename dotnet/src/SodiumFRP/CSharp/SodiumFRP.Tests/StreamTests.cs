@@ -194,37 +194,36 @@ namespace SodiumFRP.Tests
             StreamSink<int> s2 = Stream.CreateSink<int>((_, r) => r);
             List<int> @out = new List<int>();
             IListener l = s2.OrElse(s1).Listen(@out.Add);
-            Transaction.RunVoid(
-                () =>
-                {
-                    s1.Send(7);
-                    s2.Send(60);
-                });
-            Transaction.RunVoid(() => { s1.Send(9); });
-            Transaction.RunVoid(
-                () =>
-                {
-                    s1.Send(7);
-                    s1.Send(60);
-                    s2.Send(8);
-                    s2.Send(90);
-                });
-            Transaction.RunVoid(
-                () =>
-                {
-                    s2.Send(8);
-                    s2.Send(90);
-                    s1.Send(7);
-                    s1.Send(60);
-                });
-            Transaction.RunVoid(
-                () =>
-                {
-                    s2.Send(8);
-                    s1.Send(7);
-                    s2.Send(90);
-                    s1.Send(60);
-                });
+            Transaction.RunVoid(() =>
+            {
+                s1.Send(7);
+                s2.Send(60);
+            });
+            Transaction.RunVoid(() =>
+            {
+                s1.Send(9);
+            });
+            Transaction.RunVoid(() =>
+            {
+                s1.Send(7);
+                s1.Send(60);
+                s2.Send(8);
+                s2.Send(90);
+            });
+            Transaction.RunVoid(() =>
+            {
+                s2.Send(8);
+                s2.Send(90);
+                s1.Send(7);
+                s1.Send(60);
+            });
+            Transaction.RunVoid(() =>
+            {
+                s2.Send(8);
+                s1.Send(7);
+                s2.Send(90);
+                s1.Send(60);
+            });
             l.Unlisten();
             CollectionAssert.AreEqual(new[] { 60, 9, 90, 90, 90 }, @out);
         }
@@ -288,13 +287,15 @@ namespace SodiumFRP.Tests
             StreamSink<int> s = Stream.CreateSink<int>((x, y) => x + y);
             List<int> @out = new List<int>();
             IListener l = s.Listen(@out.Add);
-            Transaction.RunVoid(() => { s.Send(2); });
-            Transaction.RunVoid(
-                () =>
-                {
-                    s.Send(8);
-                    s.Send(40);
-                });
+            Transaction.RunVoid(() =>
+            {
+                s.Send(2);
+            });
+            Transaction.RunVoid(() =>
+            {
+                s.Send(8);
+                s.Send(40);
+            });
             l.Unlisten();
             CollectionAssert.AreEqual(new[] { 2, 48 }, @out.ToArray());
         }
@@ -305,24 +306,22 @@ namespace SodiumFRP.Tests
             StreamSink<int> s = Stream.CreateSink<int>((x, y) => x + y);
             List<int> @out = new List<int>();
             IListener l = s.Listen(@out.Add);
-            Transaction.RunVoid(
-                () =>
-                {
-                    s.Send(1);
-                    s.Send(2);
-                    s.Send(3);
-                    s.Send(4);
-                    s.Send(5);
-                });
-            Transaction.RunVoid(
-                () =>
-                {
-                    s.Send(6);
-                    s.Send(7);
-                    s.Send(8);
-                    s.Send(9);
-                    s.Send(10);
-                });
+            Transaction.RunVoid(() =>
+            {
+                s.Send(1);
+                s.Send(2);
+                s.Send(3);
+                s.Send(4);
+                s.Send(5);
+            });
+            Transaction.RunVoid(() =>
+            {
+                s.Send(6);
+                s.Send(7);
+                s.Send(8);
+                s.Send(9);
+                s.Send(10);
+            });
             l.Unlisten();
             CollectionAssert.AreEqual(new[] { 15, 40 }, @out.ToArray());
         }
@@ -359,15 +358,14 @@ namespace SodiumFRP.Tests
         public void TestLoopStream()
         {
             StreamSink<int> sa = Stream.CreateSink<int>();
-            (StreamLoop<int> sb, Stream<int> sb2, Stream<int> sc) = Transaction.Run(
-                () =>
-                {
-                    StreamLoop<int> sbLocal = Stream.CreateLoop<int>();
-                    Stream<int> scLocal = sa.Map(x => x % 10).Merge(sbLocal, (x, y) => x * y);
-                    Stream<int> sbOut = sa.Map(x => x / 10).Filter(x => x != 0);
-                    sbLocal.Loop(sbOut);
-                    return (sbLocal, sbOut, scLocal);
-                });
+            (StreamLoop<int> sb, Stream<int> sb2, Stream<int> sc) = Transaction.Run(() =>
+            {
+                StreamLoop<int> sbLocal = Stream.CreateLoop<int>();
+                Stream<int> scLocal = sa.Map(x => x % 10).Merge(sbLocal, (x, y) => x * y);
+                Stream<int> sbOut = sa.Map(x => x / 10).Filter(x => x != 0);
+                sbLocal.Loop(sbOut);
+                return (sbLocal, sbOut, scLocal);
+            });
             List<int> @out = new List<int>();
             List<int> out2 = new List<int>();
             List<int> out3 = new List<int>();
@@ -388,15 +386,14 @@ namespace SodiumFRP.Tests
         public void TestLoopCell()
         {
             CellSink<int> ca = Cell.CreateSink(22);
-            (CellLoop<int> cb, Cell<int> cb2, Cell<int> cc) = Transaction.Run(
-                () =>
-                {
-                    CellLoop<int> cbLocal = Cell.CreateLoop<int>();
-                    Cell<int> ccLocal = ca.Map(x => x % 10).Lift(cbLocal, (x, y) => x * y);
-                    Cell<int> cbOut = ca.Map(x => x / 10);
-                    cbLocal.Loop(cbOut);
-                    return (cbLocal, cbOut, ccLocal);
-                });
+            (CellLoop<int> cb, Cell<int> cb2, Cell<int> cc) = Transaction.Run(() =>
+            {
+                CellLoop<int> cbLocal = Cell.CreateLoop<int>();
+                Cell<int> ccLocal = ca.Map(x => x % 10).Lift(cbLocal, (x, y) => x * y);
+                Cell<int> cbOut = ca.Map(x => x / 10);
+                cbLocal.Loop(cbOut);
+                return (cbLocal, cbOut, ccLocal);
+            });
             List<int> @out = new List<int>();
             List<int> out2 = new List<int>();
             List<int> out3 = new List<int>();
@@ -506,13 +503,11 @@ namespace SodiumFRP.Tests
         {
             StreamSink<int> sa = Stream.CreateSink<int>();
             List<int> @out = new List<int>();
-            Stream<int> sum = sa.Collect(
-                (Value: 100, Test: true),
-                (a, s) =>
-                {
-                    int outputValue = s.Value + (s.Test ? a * 3 : a);
-                    return (ReturnValue: outputValue, State: (Value: outputValue, Test: outputValue % 2 == 0));
-                });
+            Stream<int> sum = sa.Collect((Value: 100, Test: true), (a, s) =>
+            {
+                int outputValue = s.Value + (s.Test ? a * 3 : a);
+                return (ReturnValue: outputValue, State: (Value: outputValue, Test: outputValue % 2 == 0));
+            });
             IListener l = sum.Listen(@out.Add);
             sa.Send(5);
             sa.Send(7);
@@ -601,7 +596,7 @@ namespace SodiumFRP.Tests
 
             List<int> @out = new List<int>();
 
-            ((Action) (() =>
+            ((Action)(() =>
             {
                 // ReSharper disable once UnusedVariable
                 IWeakListener l = s.ListenWeak(@out.Add);
@@ -624,11 +619,11 @@ namespace SodiumFRP.Tests
 
             List<int> @out = new List<int>();
 
-            ((Action) (() =>
+            ((Action)(() =>
             {
                 Stream<int> s2 = s.Map(v => v + 1);
 
-                ((Action) (() =>
+                ((Action)(() =>
                 {
                     // ReSharper disable once UnusedVariable
                     IWeakListener l = s2.ListenWeak(@out.Add);
@@ -639,7 +634,7 @@ namespace SodiumFRP.Tests
 
                 GC.Collect(0, GCCollectionMode.Forced);
 
-                ((Action) (() =>
+                ((Action)(() =>
                 {
                     // ReSharper disable once UnusedVariable
                     IWeakListener l = s2.ListenWeak(@out.Add);
@@ -664,7 +659,7 @@ namespace SodiumFRP.Tests
 
             List<int> @out = new List<int>();
 
-            ((Action) (() =>
+            ((Action)(() =>
             {
                 // ReSharper disable once UnusedVariable
                 IStrongListener l = s.Listen(@out.Add);
@@ -689,7 +684,7 @@ namespace SodiumFRP.Tests
 
             List<int> @out = new List<int>();
 
-            ((Action) (() =>
+            ((Action)(() =>
             {
                 // ReSharper disable once UnusedVariable
                 IWeakListener l = s.ListenWeak(@out.Add);
@@ -714,7 +709,7 @@ namespace SodiumFRP.Tests
 
             List<int> @out = new List<int>();
 
-            ((Action) (() =>
+            ((Action)(() =>
             {
                 // ReSharper disable once UnusedVariable
                 IStrongListener l = s.Listen(@out.Add);
@@ -742,7 +737,7 @@ namespace SodiumFRP.Tests
 
             List<int> @out = new List<int>();
 
-            ((Action) (() =>
+            ((Action)(() =>
             {
                 // ReSharper disable once UnusedVariable
                 IWeakListener l = s.ListenWeak(@out.Add);
@@ -780,14 +775,13 @@ namespace SodiumFRP.Tests
         public async Task TestListenOnceAsync()
         {
             StreamSink<char> s = Stream.CreateSink<char>();
-            new Thread(
-                () =>
-                {
-                    Thread.Sleep(250);
-                    s.Send('A');
-                    s.Send('B');
-                    s.Send('C');
-                }).Start();
+            new Thread(() =>
+            {
+                Thread.Sleep(250);
+                s.Send('A');
+                s.Send('B');
+                s.Send('C');
+            }).Start();
             char r = await s.ListenOnceAsync();
             Assert.AreEqual('A', r);
         }
@@ -796,14 +790,13 @@ namespace SodiumFRP.Tests
         public async Task TestListenOnceAsyncWithCleanup()
         {
             StreamSink<char> s = Stream.CreateSink<char>();
-            new Thread(
-                () =>
-                {
-                    Thread.Sleep(250);
-                    s.Send('A');
-                    s.Send('B');
-                    s.Send('C');
-                }).Start();
+            new Thread(() =>
+            {
+                Thread.Sleep(250);
+                s.Send('A');
+                s.Send('B');
+                s.Send('C');
+            }).Start();
             TaskWithListener<char> t = s.ListenOnceAsync();
             GC.Collect(0, GCCollectionMode.Forced);
             char r = await t;
@@ -854,8 +847,7 @@ namespace SodiumFRP.Tests
             char r = ' ';
             void SetResult(char v) => r = v;
             StreamSink<char> s = Stream.CreateSink<char>();
-            TaskWithListener t = s.ListenOnceAsync(
-                t2 => t2.ContinueWith(t3 => SetResult(t3.Result), TaskContinuationOptions.ExecuteSynchronously));
+            TaskWithListener t = s.ListenOnceAsync(t2 => t2.ContinueWith(t3 => SetResult(t3.Result), TaskContinuationOptions.ExecuteSynchronously));
             GC.Collect(0, GCCollectionMode.Forced);
             s.Send('A');
             s.Send('B');
@@ -869,8 +861,7 @@ namespace SodiumFRP.Tests
         {
             char r = ' ';
             StreamSink<char> s = Stream.CreateSink<char>();
-            TaskWithListener t = s.ListenOnceAsync(
-                t2 => t2.ContinueWith(t3 => r = t3.Result, TaskContinuationOptions.ExecuteSynchronously));
+            TaskWithListener t = s.ListenOnceAsync(t2 => t2.ContinueWith(t3 => r = t3.Result, TaskContinuationOptions.ExecuteSynchronously));
             GC.Collect(0, GCCollectionMode.Forced);
             s.Send('A');
             s.Send('B');
@@ -885,32 +876,25 @@ namespace SodiumFRP.Tests
             CellSink<int> a = Cell.CreateSink(1);
             Cell<int> a1 = a.Map(x => x + 1);
             Cell<int> a2 = a.Map(x => x * 2);
-            (List<int> results, CellLoop<int> called, IListener l) = Transaction.Run(
-                () =>
-                {
-                    Cell<int> result = a1.Lift(a2, (x, y) => x + y);
-                    Stream<Unit> incrementStream = result.Values().MapTo(Unit.Value);
-                    StreamSink<Unit> decrementStream = Stream.CreateSink<Unit>();
-                    CellLoop<int> calledLoop = Cell.CreateLoop<int>();
-                    calledLoop.Loop(
-                        incrementStream.MapTo(1)
-                            .Merge(decrementStream.MapTo(-1), (x, y) => x + y)
-                            .Snapshot(calledLoop, (u, c) => c + u)
-                            .Hold(0));
-                    List<int> r = new List<int>();
-                    IListener lLocal = result.Listen(
-                        v =>
-                        {
-                            Task.Run(
-                                async () =>
-                                {
-                                    await Task.Delay(900);
-                                    r.Add(v);
-                                    decrementStream.Send(Unit.Value);
-                                });
-                        });
-                    return (r, calledLoop, lLocal);
-                });
+            (List<int> results, CellLoop<int> called, IListener l) = Transaction.Run(() =>
+             {
+                 Cell<int> result = a1.Lift(a2, (x, y) => x + y);
+                 Stream<Unit> incrementStream = result.Values().MapTo(Unit.Value);
+                 StreamSink<Unit> decrementStream = Stream.CreateSink<Unit>();
+                 CellLoop<int> calledLoop = Cell.CreateLoop<int>();
+                 calledLoop.Loop(incrementStream.MapTo(1).Merge(decrementStream.MapTo(-1), (x, y) => x + y).Snapshot(calledLoop, (u, c) => c + u).Hold(0));
+                 List<int> r = new List<int>();
+                 IListener lLocal = result.Listen(v =>
+                 {
+                     Task.Run(async () =>
+                     {
+                         await Task.Delay(900);
+                         r.Add(v);
+                         decrementStream.Send(Unit.Value);
+                     });
+                 });
+                 return (r, calledLoop, lLocal);
+             });
             // ReSharper disable once UnusedVariable
             List<int> calledResults = new List<int>();
             IListener l2 = called.Listen(calledResults.Add);
@@ -929,15 +913,14 @@ namespace SodiumFRP.Tests
         public void TestStreamLoop()
         {
             StreamSink<int> streamSink = Stream.CreateSink<int>();
-            Stream<int> s = Transaction.Run(
-                () =>
-                {
-                    StreamLoop<int> sl = new StreamLoop<int>();
-                    Cell<int> c = sl.Map(v => v + 2).Hold(0);
-                    Stream<int> s2 = streamSink.Snapshot(c, (x, y) => x + y);
-                    sl.Loop(s2);
-                    return s2;
-                });
+            Stream<int> s = Transaction.Run(() =>
+            {
+                StreamLoop<int> sl = new StreamLoop<int>();
+                Cell<int> c = sl.Map(v => v + 2).Hold(0);
+                Stream<int> s2 = streamSink.Snapshot(c, (x, y) => x + y);
+                sl.Loop(s2);
+                return s2;
+            });
             List<int> @out = new List<int>();
             IListener l = s.Listen(@out.Add);
             streamSink.Send(3);
@@ -953,15 +936,13 @@ namespace SodiumFRP.Tests
         public void TestStreamLoopDefer()
         {
             StreamSink<int> streamSink = Stream.CreateSink<int>();
-            Stream<int> stream = Transaction.Run(
-                () =>
-                {
-                    StreamLoop<int> streamLoop = new StreamLoop<int>();
-                    Stream<int> streamLocal =
-                        Operational.Defer(streamSink.OrElse(streamLoop).Filter(v => v < 5).Map(v => v + 1));
-                    streamLoop.Loop(streamLocal);
-                    return streamLocal;
-                });
+            Stream<int> stream = Transaction.Run(() =>
+            {
+                StreamLoop<int> streamLoop = new StreamLoop<int>();
+                Stream<int> streamLocal = Operational.Defer(streamSink.OrElse(streamLoop).Filter(v => v < 5).Map(v => v + 1));
+                streamLoop.Loop(streamLocal);
+                return streamLocal;
+            });
             List<int> @out = new List<int>();
             IListener l = stream.Listen(@out.Add);
             streamSink.Send(2);
