@@ -5,7 +5,7 @@
   </PropertyGroup>
 
   <PropertyGroup>
-    <PackageId>SodiumFRP.Internal</PackageId>
+    <PackageId>SodiumFRP.Core</PackageId>
     <Authors>SodiumFRP</Authors>
     <PackageLicenseUrl>http://opensource.org/licenses/MIT</PackageLicenseUrl>
     <PackageProjectUrl>https://github.com/SodiumFRP/sodium</PackageProjectUrl>
@@ -15,18 +15,18 @@
     <FileVersion>1.0.0.0</FileVersion>
     <InformationalVersion>1.0.0.0</InformationalVersion>
     <Company>SodiumFRP</Company>
-    <Product>Sodium FRP Internal for .NET</Product>
-    <Title>Sodium FRP Internal for .NET</Title>
-    <Description>Sodium - Functional Reactive Programming (FRP) library for .NET internal library.</Description>
+    <Product>Sodium FRP Core for .NET</Product>
+    <Title>Sodium FRP Core for .NET</Title>
+    <Description>Sodium - Functional Reactive Programming (FRP) library for .NET core library.</Description>
     <IncludeSource>True</IncludeSource>
     <IncludeSymbols>True</IncludeSymbols>
-    <AssemblyName>SodiumFRP.Internal</AssemblyName>
+    <AssemblyName>SodiumFRP.Core</AssemblyName>
     <RootNamespace>SodiumFRP</RootNamespace>
 </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="OptimizedPriorityQueue" Version="4.1.1" />
-    <PackageReference Include="System.ValueTuple" Version="4.5.0" />
+    <PackageReference Include="System.ValueTuple" Version="4.4.0" />
   </ItemGroup>
 
 </Project>

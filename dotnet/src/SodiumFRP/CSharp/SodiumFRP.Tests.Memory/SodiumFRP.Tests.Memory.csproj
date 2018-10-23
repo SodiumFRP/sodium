@@ -60,9 +60,9 @@
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\Internal\Internal.csproj">
+    <ProjectReference Include="..\..\Core\Core.csproj">
       <Project>{91d33bdc-137e-4eb0-a1ab-ba1ecd482724}</Project>
-      <Name>Internal</Name>
+      <Name>Core</Name>
     </ProjectReference>
     <ProjectReference Include="..\SodiumFRP\SodiumFRP.csproj">
       <Project>{46718ca6-6910-4809-b985-809513ba2eae}</Project>
