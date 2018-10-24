@@ -6,6 +6,7 @@ Reactive Programming efforts, as well as a lot of personal experience. Enjoy.
 Status:
   C++ - complete, but the memory management is not quite right yet - in separate sodium-cxx repository
   C# - complete
+  F# - complete
   Java - complete
   Kotlin - complete - in separate sodium-kotlin repository
   Scala - complete
