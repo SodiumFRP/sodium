@@ -1,5 +1,5 @@
 ﻿open System
-open Sodium
+open SodiumFRP
 
 type Example = { name : string; run : unit -> unit }
 
@@ -8,52 +8,52 @@ let main _ =
     let calm () =
         let calmInternal init sA =
             let getState a lastA =
-                let oa = Option.Some a
-                if oa = lastA then (Option.None, lastA) else (oa, oa)
-            sA |> Stream.collectLazy getState init |> Stream.filterOption
+                let oa = Some a
+                if oa = lastA then struct (None, lastA) else struct (oa, oa)
+            sA |> collectLazyS init getState |> filterOptionS
 
         let calm a =
-            let initA = a |> Cell.sampleLazy
-            let oInitA = initA |> Lazy.map Option.Some
-            a |> Operational.updates |> calmInternal oInitA |> Stream.holdLazy initA
+            let initA = a |> sampleLazyC
+            let oInitA = initA |> Lazy.map Some
+            a |> updatesC |> calmInternal oInitA |> holdLazyS initA
 
-        let sa = Cell.sink 1
-        use _l = sa |> calm |> Cell.listen (printfn "%i")
-        sa.Send 1
-        sa.Send 2
-        sa.Send 2
-        sa.Send 4
-        sa.Send 4
-        sa.Send 1
+        let sa = sinkC 1
+        use _l = sa |> calm |> listenC (printfn "%i")
+        sa |> sendC 1
+        sa |> sendC 2
+        sa |> sendC 2
+        sa |> sendC 4
+        sa |> sendC 4
+        sa |> sendC 1
 
     let pause () =
         let pausableClock sPause sResume clock =
-            let pauseTime = sPause |> Stream.snapshotAndTakeCell clock |> Stream.map Option.Some |> Stream.orElse (sResume |> Stream.mapTo Option.None) |> Stream.hold Option.None
+            let pauseTime = (sPause |> snapshotAndTakeC clock |> mapS Some, sResume |> mapToS None) |> orElseS |> holdS None
             let getLostTime (total : float) =
-                let tPause = match pauseTime |> Cell.sample with | None -> 0.0 | Some v -> v
-                let now = clock |> Cell.sample
+                let tPause = match pauseTime |> sampleC with | None -> 0.0 | Some v -> v
+                let now = clock |> sampleC
                 total + (now - tPause)
             let getLostTime' _ total = getLostTime total
-            let lostTime = sResume |> Stream.accum getLostTime' 0.0
+            let lostTime = sResume |> accumS 0.0 getLostTime'
             let getClock pauseTime clock lostTime = (match pauseTime with | None -> clock | Some v -> v) - lostTime
-            Cell.lift3 getClock pauseTime clock lostTime
+            (pauseTime, clock, lostTime) |> lift3C getClock
 
-        let mainClock = Cell.sink 0.0
-        let sPause = Stream.sink ()
-        let sResume = Stream.sink ()
+        let mainClock = sinkC 0.0
+        let sPause = sinkS ()
+        let sResume = sinkS ()
         let gameClock = pausableClock sPause sResume mainClock
 
         let getOutput mainClock gameClock = sprintf "main=%f game=%f" mainClock gameClock
-        use _l = Cell.lift2 getOutput mainClock gameClock |> Cell.listen (printfn "%s")
-        mainClock.Send 1.0
-        mainClock.Send 2.0
-        mainClock.Send 3.0
-        sPause.Send ()
-        mainClock.Send 4.0
-        mainClock.Send 5.0
-        mainClock.Send 6.0
-        sResume.Send ()
-        mainClock.Send 7.0
+        use _l = (mainClock, gameClock) |> lift2C getOutput |> listenC (printfn "%s")
+        mainClock |> sendC 1.0
+        mainClock |> sendC 2.0
+        mainClock |> sendC 3.0
+        sPause |> sendS ()
+        mainClock |> sendC 4.0
+        mainClock |> sendC 5.0
+        mainClock |> sendC 6.0
+        sResume |> sendS ()
+        mainClock |> sendC 7.0
 
     let calmExample = { name = "Calm"; run = calm }
     let pauseExample = { name = "Pause"; run = pause }

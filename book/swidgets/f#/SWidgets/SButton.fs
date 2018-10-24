@@ -2,20 +2,20 @@
 
 open System
 open System.Windows.Controls
-open Sodium
+open SodiumFRP
 open SWidgets.DispatcherExtensionMethods
 
-type SButton(enabled : bool Cell) as this =
+type SButton(enabled) as this =
     inherit Button()
     let init () =
-        let sClicked = Stream.sink ()
-        this.Click.Subscribe (fun _ -> sClicked.Send ()) |> ignore
-        Transaction.Post(fun () -> this.IsEnabled <- enabled |> Cell.sample)
-        let listener = (enabled |> Operational.updates |> Stream.listen (fun e -> this.Dispatcher.InvokeIfNecessary (fun () -> this.IsEnabled <- e)))
+        let sClicked = sinkS ()
+        this.Click.Subscribe (fun _ -> sClicked |> sendS ()) |> ignore
+        postT (fun () -> this.IsEnabled <- enabled |> sampleC)
+        let listener = (enabled |> updatesC |> listenS (fun e -> this.Dispatcher.InvokeIfNecessary (fun () -> this.IsEnabled <- e)))
         sClicked, listener
     let sClicked, listener = init ()
 
-    new() = new SButton(Cell.constant true)
+    new() = new SButton(constantC true)
 
     member val SClicked = sClicked
 

@@ -2,27 +2,29 @@
 
 open System.Windows
 open FsXaml
-open Sodium
+open SodiumFRP
 open SWidgets
 
-type MainView = XAML<"MainWindow.xaml", true>
+type MainWindowBase = XAML<"MainWindow.xaml">
 
-type MainViewController() = 
-    inherit WindowViewController<MainView>()
-
-    override __.OnLoaded view =
-        Cell.loopWithNoCaptures (fun value ->
-            let lblValue = new SLabel(value |> Cell.map string)
-            let plus = new SButton(Content = "+", Width = 25.0, Margin = Thickness(5.0, 0.0, 0.0, 0.0))
-            let minus = new SButton(Content = "-", Width = 25.0, Margin = Thickness(5.0, 0.0, 0.0, 0.0))
-
-            view.Container.Children.Add(lblValue) |> ignore
-            view.Container.Children.Add(plus) |> ignore
-            view.Container.Children.Add(minus) |> ignore
-
-            let sPlusDelta = plus.SClicked |> Stream.mapTo 1
-            let sMinusDelta = minus.SClicked |> Stream.mapTo -1
-            let sDelta = sPlusDelta |> Stream.orElse sMinusDelta
-            let sUpdate = sDelta |> Stream.snapshot (+) value
-
-            sUpdate |> Stream.hold 0) |> ignore
+type MainWindow = 
+    inherit MainWindowBase
+    
+    new () as this =
+        { inherit MainWindowBase }
+        then
+            loopWithNoCapturesC (fun value ->
+                let lblValue = new SLabel(value |> Cell.map string)
+                let plus = new SButton(Content = "+", Width = 25.0, Margin = Thickness(5.0, 0.0, 0.0, 0.0))
+                let minus = new SButton(Content = "-", Width = 25.0, Margin = Thickness(5.0, 0.0, 0.0, 0.0))
+    
+                this.Container.Children.Add(lblValue) |> ignore
+                this.Container.Children.Add(plus) |> ignore
+                this.Container.Children.Add(minus) |> ignore
+    
+                let sPlusDelta = plus.SClicked |> Stream.mapTo 1
+                let sMinusDelta = minus.SClicked |> Stream.mapTo -1
+                let sDelta = (sPlusDelta, sMinusDelta) |> orElseS
+                let sUpdate = sDelta |> snapshotC value (+)
+    
+                sUpdate |> Stream.hold 0) |> ignore

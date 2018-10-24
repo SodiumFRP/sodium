@@ -1,7 +1,7 @@
 ﻿namespace PetrolPump
 
 open System.Windows.Threading
-open Sodium
+open SodiumFRP
 
 module Formatters =
     let formatPrice price maxDigits =
@@ -15,14 +15,14 @@ module Formatters =
 
     let formatSaleCost cost = sprintf "%0.2f" cost
     let formatSaleQuantity quantity = sprintf "%0.2f" quantity
-    let formatPresetAmount = formatSaleCost
+    let formatPresetAmount presetAmount = formatSaleCost (float presetAmount)
 
 module Cell =
     open System.Collections.Generic
 
     let changes cell =
         let areEqual n o = if EqualityComparer<_>.Default.Equals(o, n) then Option.None else Option.Some(n)
-        cell |> Operational.value |> Stream.snapshot areEqual cell |> Stream.filterOption
+        cell |> valuesC |> snapshotC cell areEqual |> filterOptionS
 
 module DispatcherExtensionMethods =
     type Dispatcher with

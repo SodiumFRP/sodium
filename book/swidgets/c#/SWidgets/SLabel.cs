@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Windows.Controls;
-using Sodium;
+using SodiumFRP;
 
 namespace SWidgets
 {
@@ -18,7 +18,7 @@ namespace SWidgets
 
             // ReSharper disable once UseObjectOrCollectionInitializer
             List<IListener> listeners = new List<IListener>();
-            listeners.Add(text.Updates.Listen(setText));
+            listeners.Add(text.Updates().Listen(setText));
 
             this.listeners = listeners;
         }

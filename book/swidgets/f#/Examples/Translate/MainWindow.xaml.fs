@@ -1,21 +1,23 @@
 ﻿namespace Translate
 
 open FsXaml
-open Sodium
+open SodiumFRP
 open SWidgets
 open System.Text.RegularExpressions
 
-type MainView = XAML<"MainWindow.xaml", true>
+type MainWindowBase = XAML<"MainWindow.xaml">
 
-type MainViewController() = 
-    inherit WindowViewController<MainView>()
-
-    override __.OnLoaded view =
-        let english = new STextBox("I like FRP", Width = 150.0)
-        view.TextBoxPlaceholder.Children.Add(english) |> ignore
-
-        let makeLatin (s : string) = Regex.Replace(s.Trim(), " |$", "us ")
-        let sLatin = view.TranslateButton.SClicked |> Stream.snapshot (fun _ t -> makeLatin t) english.Text
-        let latin = sLatin |> Stream.hold ""
-        let lblLatin = new SLabel(latin)
-        view.TextPlaceholder.Children.Add(lblLatin) |> ignore
+type MainWindow = 
+    inherit MainWindowBase
+    
+    new () as this =
+        { inherit MainWindowBase () }
+        then
+            let english = new STextBox("I like FRP", Width = 150.0)
+            this.TextBoxPlaceholder.Children.Add(english) |> ignore
+    
+            let makeLatin (s : string) = Regex.Replace(s.Trim(), " |$", "us ")
+            let sLatin = this.TranslateButton.SClicked |> snapshotAndTakeC english.Text |> mapS makeLatin
+            let latin = sLatin |> holdS ""
+            let lblLatin = new SLabel(latin)
+            this.TextPlaceholder.Children.Add(lblLatin) |> ignore

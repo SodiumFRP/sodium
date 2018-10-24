@@ -1,6 +1,6 @@
 using System;
 using System.Windows.Controls;
-using Sodium;
+using SodiumFRP;
 
 namespace Shift2
 {
@@ -8,10 +8,10 @@ namespace Shift2
     {
         private readonly IListener listener;
 
-        private readonly StreamSink<MouseEvtWithElement> sMouseDown = new StreamSink<MouseEvtWithElement>();
-        private readonly StreamSink<MouseEvt> sMouseMove = new StreamSink<MouseEvt>();
-        private readonly StreamSink<MouseEvt> sMouseUp = new StreamSink<MouseEvt>();
-        private readonly StreamSink<bool> sShift = new StreamSink<bool>();
+        private readonly StreamSink<MouseEvtWithElement> sMouseDown = Stream.CreateSink<MouseEvtWithElement>();
+        private readonly StreamSink<MouseEvt> sMouseMove = Stream.CreateSink<MouseEvt>();
+        private readonly StreamSink<MouseEvt> sMouseUp = Stream.CreateSink<MouseEvt>();
+        private readonly StreamSink<bool> sShift = Stream.CreateSink<bool>();
 
         public Frp(Action<string> addMessage)
         {
@@ -24,9 +24,9 @@ namespace Shift2
                 Cell<Maybe<Tuple<MouseEvt, bool>>> mouseMoveAndAxisLock = dragInfo.Map(md => md.Match(
                     d => this.sMouseMove.Hold(d.Me).Lift(axisLock, Tuple.Create).Map(Maybe.Some),
                     () => Cell.Constant(Maybe<Tuple<MouseEvt, bool>>.None))).SwitchC();
-                IListener listener1 = dragInfo.Values.FilterMaybe().Listen(d => addMessage("FRP dragging " + d.Me.Element.Name));
+                IListener listener1 = dragInfo.Values().FilterMaybe().Listen(d => addMessage("FRP dragging " + d.Me.Element.Name));
                 IListener listener2 = mouseMoveAndAxisLock
-                    .Values
+                    .Values()
                     .FilterMaybe()
                     .Snapshot(dragInfo, (ma, md) => md.Match(d => Maybe.Some(new Reposition(d, ma.Item1, ma.Item2)), () => Maybe.None))
                     .FilterMaybe()
@@ -35,7 +35,7 @@ namespace Shift2
                         Canvas.SetLeft(p.Polygon, p.Left);
                         Canvas.SetTop(p.Polygon, p.Top);
                     });
-                return new CompositeListener(new[] { listener1, listener2 });
+                return Listener.CreateComposite(new[] { listener1, listener2 });
             });
         }
 

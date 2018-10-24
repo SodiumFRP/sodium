@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Windows.Controls;
-using Sodium;
+using SodiumFRP;
 
 namespace SWidgets
 {
@@ -43,7 +43,7 @@ namespace SWidgets
 
             List<IListener> listeners = new List<IListener>();
 
-            StreamSink<int> sDecrement = new StreamSink<int>();
+            StreamSink<int> sDecrement = Stream.CreateSink<int>();
             Cell<bool> allow = setSelectedItem.Map(_ => 1).OrElse(sDecrement).Accum(0, (b, d) => b + d).Map(b => b == 0);
 
             Maybe<T> GetSelectedItem()
@@ -52,7 +52,7 @@ namespace SWidgets
                 return sel == null ? Maybe.None : Maybe.Some((T)sel);
             }
 
-            StreamSink<Maybe<T>> sUserSelectedItem = new StreamSink<Maybe<T>>();
+            StreamSink<Maybe<T>> sUserSelectedItem = Stream.CreateSink<Maybe<T>>();
             this.SUserSelectedItem = sUserSelectedItem;
             this.SelectedItem = sUserSelectedItem.Gate(allow).OrElse(setSelectedItem).Hold(initSelectedItem);
 

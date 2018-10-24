@@ -1,6 +1,6 @@
 ﻿using System.Windows.Controls;
 using Fridgets;
-using Sodium;
+using SodiumFRP;
 
 namespace Button
 {

@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 using System.Windows.Controls;
-using Sodium;
+using SodiumFRP;
 
 namespace PetrolPump
 {
@@ -8,7 +8,7 @@ namespace PetrolPump
     {
         public SButton()
         {
-            StreamSink<Unit> sClickedSink = new StreamSink<Unit>();
+            StreamSink<Unit> sClickedSink = Stream.CreateSink<Unit>();
             this.SClicked = sClickedSink;
             this.Click += async (sender, args) => await Task.Run(() => sClickedSink.Send(Unit.Value));
         }

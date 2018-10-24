@@ -1,6 +1,6 @@
 ﻿using System.Linq;
 using System.Windows;
-using Sodium;
+using SodiumFRP;
 using SWidgets;
 
 namespace Reverse

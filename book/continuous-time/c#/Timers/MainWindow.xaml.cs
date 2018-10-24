@@ -1,8 +1,8 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Windows.Controls;
-using Sodium;
-using Sodium.Time;
+using SodiumFRP;
+using SodiumFRP.Time;
 
 namespace Timers
 {
@@ -16,13 +16,13 @@ namespace Timers
             {
                 ITimerSystem<DateTime> sys = new SystemClockTimerSystem(e => this.Dispatcher.Invoke(() => { throw e; }));
                 Behavior<DateTime> time = sys.Time;
-                StreamSink<Unit> sMain = new StreamSink<Unit>();
+                StreamSink<Unit> sMain = Stream.CreateSink<Unit>();
                 IListener l = Transaction.Run(() =>
                 {
                     DateTime t0 = time.Sample();
                     IListener l1 = Periodic(sys, TimeSpan.FromSeconds(1)).Listen(t => this.AddMessage(t - t0 + " timer"));
                     IListener l2 = sMain.Snapshot(time).Listen(t => this.AddMessage(t - t0 + " main"));
-                    return new CompositeListener(new[] { l1, l2 });
+                    return Listener.CreateComposite(new[] { l1, l2 });
                 });
                 for (int i = 0; i < 5; i++)
                 {

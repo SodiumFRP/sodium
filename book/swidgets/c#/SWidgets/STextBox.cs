@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Windows.Controls;
-using Sodium;
+using SodiumFRP;
 
 namespace SWidgets
 {
@@ -30,10 +30,10 @@ namespace SWidgets
 
             List<IListener> listeners = new List<IListener>();
 
-            StreamSink<int> sDecrement = new StreamSink<int>();
+            StreamSink<int> sDecrement = Stream.CreateSink<int>();
             Cell<bool> allow = setText.Map(_ => 1).OrElse(sDecrement).Accum(0, (b, d) => b + d).Map(b => b == 0);
 
-            StreamSink<string> sUserChanges = new StreamSink<string>();
+            StreamSink<string> sUserChanges = Stream.CreateSink<string>();
             this.SUserChanges = sUserChanges;
             this.Text = sUserChanges.Gate(allow).OrElse(setText).Hold(initText);
 
@@ -59,7 +59,7 @@ namespace SWidgets
                 });
             }));
 
-            listeners.Add(enabled.Updates.Listen(e => this.Dispatcher.InvokeIfNecessary(() => this.IsEnabled = e)));
+            listeners.Add(enabled.Updates().Listen(e => this.Dispatcher.InvokeIfNecessary(() => this.IsEnabled = e)));
 
             this.disposeListeners = () =>
             {

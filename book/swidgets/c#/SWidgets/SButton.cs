@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Windows.Controls;
-using Sodium;
+using SodiumFRP;
 
 namespace SWidgets
 {
@@ -16,7 +16,7 @@ namespace SWidgets
 
         public SButton(Cell<bool> enabled)
         {
-            StreamSink<Unit> sClickedSink = new StreamSink<Unit>();
+            StreamSink<Unit> sClickedSink = Stream.CreateSink<Unit>();
             this.SClicked = sClickedSink;
             this.Click += (sender, args) => sClickedSink.Send(Unit.Value);
 
@@ -25,7 +25,7 @@ namespace SWidgets
 
             // ReSharper disable once UseObjectOrCollectionInitializer
             List<IListener> listeners = new List<IListener>();
-            listeners.Add(enabled.Updates.Listen(e => this.Dispatcher.InvokeIfNecessary(() => this.IsEnabled = e)));
+            listeners.Add(enabled.Updates().Listen(e => this.Dispatcher.InvokeIfNecessary(() => this.IsEnabled = e)));
             this.listeners = listeners;
         }
 

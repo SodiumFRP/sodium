@@ -1,12 +1,12 @@
 ﻿namespace Fridgets
 
 open System.Windows
-open Sodium
+open SodiumFRP
 
-type Output = { drawable : DrawableDelegate Cell; desiredSize : Size Cell; sChangeFocus : int64 Stream }
+type Output = { drawable : Cell<DrawableDelegate>; desiredSize : Cell<Size>; sChangeFocus : Stream<int64> }
 
 type IFridget =
-    abstract member Reify : size : Size option Cell -> sMouse : MouseEvent Stream -> sKey : KeyEvent Stream -> focus : int64 Cell -> idSupply : Supply.T -> Output
+    abstract member Reify : size : Cell<Size option> -> sMouse : Stream<MouseEvent> -> sKey : Stream<KeyEvent> -> focus : Cell<int64> -> idSupply : Supply.T -> Output
 
 module Fridget =
     let reify (fridget : IFridget) size sMouse sKey focus idSupply =

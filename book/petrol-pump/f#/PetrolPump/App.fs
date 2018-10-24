@@ -7,8 +7,10 @@ type App = XAML<"App.xaml">
 [<STAThread>]
 [<EntryPoint>]
 let main _ =
-    let app = App().Root
+    let app = App()
     app.Startup.Subscribe (fun _ ->
         TaskScheduler.UnobservedTaskException.Subscribe (fun args ->
-            if not args.Observed then raise args.Exception) |> ignore) |> ignore
-    app.Run()
+            if not args.Observed then
+                System.Windows.MessageBox.Show (args.Exception.Message, "An unhandled exception occurred.") |> ignore
+                raise args.Exception) |> ignore) |> ignore
+    new PetrolPump.PetrolPumpWindow () |> app.Run

@@ -3,20 +3,20 @@
 open System.Windows.Controls
 open Fridgets
 open FsXaml
-open Sodium
+open SodiumFRP
 
-type MainView = XAML<"MainWindow.xaml", true>
+type MainWindowBase = XAML<"MainWindow.xaml">
 
-type MainViewController() =
-    inherit WindowViewController<MainView>()
+type MainWindow() =
+    inherit MainWindowBase()
 
-    override __.OnLoaded view =
+    override this.OnLoaded (_, _) =
         
         let addMessage message =
-            view.StackPanel.Children.Add(TextBlock(Text = message)) |> ignore
-            view.ScrollViewer.ScrollToBottom()
+            this.StackPanel.Children.Add(TextBlock(Text = message)) |> ignore
+            this.ScrollViewer.ScrollToBottom()
 
-        view.Container.Children.Add(Transaction.Run (fun () ->
-            let b = FrButton.create (Cell.constant "OK")
-            let l = FrButton.sClicked b |> Stream.listen (fun _ -> addMessage "clicked!")
-            new FrView(view.Root, b, l))) |> ignore
+        this.Container.Children.Add(runT (fun () ->
+            let b = FrButton.create (constantC "OK")
+            let l = FrButton.sClicked b |> listenS (fun _ -> addMessage "clicked!")
+            new FrView(this, b, l))) |> ignore

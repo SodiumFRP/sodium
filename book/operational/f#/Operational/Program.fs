@@ -1,73 +1,75 @@
 ﻿open System
-open Sodium
+open SodiumFRP
 
 type Example = { name : string; run : unit -> unit }
 
 [<EntryPoint>]
 let main _ =
+    let flip f x y = f y x
+
     let cell () =
-        let x = Cell.sink 0
-        use _l = x |> Cell.listen (printfn "%i")
-        x.Send 10
-        x.Send 20
-        x.Send 30
+        let x = sinkC 0
+        use _l = x |> listenC (printfn "%i")
+        x |> sendC 10
+        x |> sendC 20
+        x |> sendC 30
 
     let sameTransaction () =
-        let sX = Stream.sink ()
-        let sXPlus1 = sX |> Stream.map ((+) 1)
-        use _l = Transaction.Run (fun () ->
-            sX.Send 1
-            sXPlus1 |> Stream.listen (printfn "%i"))
-        sX.Send 2
-        sX.Send 3
+        let sX = sinkS ()
+        let sXPlus1 = sX |> mapS ((+) 1)
+        use _l = runT (fun () ->
+            sX |> sendS 1
+            sXPlus1 |> listenS (printfn "%i"))
+        sX |> sendS 2
+        sX |> sendS 3
 
     let sendInCallback () =
-        let sX = Stream.sink ()
-        let sY = Stream.sink ()
+        let sX = sinkS ()
+        let sY = sinkS ()
         use _l =
-            Listener.fromSeq
+            Listener.fromStrongList
                 [
-                    sX |> Stream.listen sY.Send
-                    sY |> Stream.listen (printfn "%i")
+                    sX |> listenS (sY |> flip sendS)
+                    sY |> listenS (printfn "%i")
                 ]
-        sX.Send 1
-        sX.Send 2
-        sX.Send 3
+        sX |> sendS 1
+        sX |> sendS 2
+        sX |> sendS 3
 
     let split () =
-        let ``as`` = Stream.sink ()
-        use _l = ``as`` |> Operational.split |> Stream.accum (+) 0 |> Operational.updates |> Stream.listen (printfn "%i")
-        ``as``.Send [ 100; 15; 60 ]
-        ``as``.Send [ 1; 5 ]
+        let ``as`` = sinkS ()
+        use _l = ``as`` |> Operational.split |> accumS 0 (+) |> updatesC |> listenS (printfn "%i")
+        ``as`` |> sendS [ 100; 15; 60 ]
+        ``as`` |> sendS [ 1; 5 ]
 
     let stream () =
-        let sX = Stream.sink ()
-        let sXPlus1 = sX |> Stream.map ((+) 1)
-        use _l = sXPlus1 |> Stream.listen (printfn "%i")
-        sX.Send 1
-        sX.Send 2
-        sX.Send 3
+        let sX = sinkS ()
+        let sXPlus1 = sX |> mapS ((+) 1)
+        use _l = sXPlus1 |> listenS (printfn "%i")
+        sX |> sendS 1
+        sX |> sendS 2
+        sX |> sendS 3
 
     let updates () =
-        let x = Cell.sink 0
-        x.Send 1
-        use _l = x |> Operational.updates |> Stream.listen (printfn "%i")
-        x.Send 2
-        x.Send 3
+        let x = sinkC 0
+        x |> sendC 1
+        use _l = x |> updatesC |> listenS (printfn "%i")
+        x |> sendC 2
+        x |> sendC 3
 
     let value1 () =
-        let x = Cell.sink 0
-        x.Send 1
-        use _l = x |> Operational.value |> Stream.listen (printfn "%i")
-        x.Send 2
-        x.Send 3
+        let x = sinkC 0
+        x |> sendC 1
+        use _l = x |> valuesC |> listenS (printfn "%i")
+        x |> sendC 2
+        x |> sendC 3
 
     let value2 () =
-        let x = Cell.sink 0
-        x.Send 1
-        use _l = Transaction.Run (fun () -> x |> Operational.value |> Stream.listen (printfn "%i"))
-        x.Send 2
-        x.Send 3
+        let x = sinkC 0
+        x |> sendC 1
+        use _l = runT (fun () -> x |> valuesC |> listenS (printfn "%i"))
+        x |> sendC 2
+        x |> sendC 3
 
     let cellExample = { name = "Cell"; run = cell }
     let sameTransactionExample = { name = "Same Transaction"; run = sameTransaction }

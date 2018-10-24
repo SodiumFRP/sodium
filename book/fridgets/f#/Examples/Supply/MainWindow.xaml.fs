@@ -4,16 +4,16 @@ open System.Windows.Controls
 open Fridgets
 open FsXaml
 
-type MainView = XAML<"MainWindow.xaml", true>
+type MainWindowBase = XAML<"MainWindow.xaml">
 
-type MainViewController() =
-    inherit WindowViewController<MainView>()
+type MainWindow() =
+    inherit MainWindowBase()
 
-    override __.OnLoaded view =
+    override this.OnLoaded (_, _) =
         
         let addMessage message =
-            view.StackPanel.Children.Add(TextBlock(Text = message)) |> ignore
-            view.ScrollViewer.ScrollToBottom()
+            this.StackPanel.Children.Add(TextBlock(Text = message)) |> ignore
+            this.ScrollViewer.ScrollToBottom()
 
         let a = Supply.create ()
         let b = Supply.child1 a

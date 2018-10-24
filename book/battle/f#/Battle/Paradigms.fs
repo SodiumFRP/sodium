@@ -6,7 +6,7 @@ open System.Threading
 open System.Windows.Threading
 open System.Windows.Controls
 open Battle.DoubleExtensionMethods
-open Sodium
+open SodiumFRP
 
 type IParadigm =
     inherit IDisposable
@@ -119,33 +119,36 @@ type Classic(addMessage : string -> unit) =
         member __.Dispose() = ()
         
 type Frp(addMessage : string -> unit) =
-    let sMouseDown = Stream.sink ()
-    let sMouseMove = Stream.sink ()
-    let sMouseUp = Stream.sink ()
+    let sMouseDown = sinkS ()
+    let sMouseMove = sinkS ()
+    let sMouseUp = sinkS ()
 
-    let listener = Transaction.Run (fun () ->
-        let dragInfo = sMouseDown |> Stream.map (fun me ->
-            Option.Some { me = me; originalLeft = Double.zeroIfNaN (Canvas.GetLeft(me.element.polygon)); originalTop = Double.zeroIfNaN (Canvas.GetTop(me.element.polygon)) }) |>
-                        Stream.orElse (sMouseUp |> Stream.mapTo Option.None) |> Stream.hold Option.None
+    let listener = runT (fun () ->
+        let dragInfo =
+            (
+                sMouseDown |> mapS (fun me ->
+                    Option.Some { me = me; originalLeft = Double.zeroIfNaN (Canvas.GetLeft(me.element.polygon)); originalTop = Double.zeroIfNaN (Canvas.GetTop(me.element.polygon)) }),
+                sMouseUp |> mapToS Option.None
+            ) |> orElseS |> holdS Option.None
         let getMouseMoveIfDragging = function
-            | None -> Stream.never ()
+            | None -> neverS ()
             | Some _ -> sMouseMove :> Stream<_>
-        let mouseMoveWhileDragging = dragInfo |> Cell.map getMouseMoveIfDragging |> Cell.switchS
-        let listener1 = dragInfo |> Operational.value |> Stream.filterOption |> Stream.listen (fun d -> addMessage (sprintf "FRP dragging %s" d.me.element.name))
+        let mouseMoveWhileDragging = dragInfo |> mapC getMouseMoveIfDragging |> switchS
+        let listener1 = dragInfo |> valuesC |> filterOptionS |> listenS (fun d -> addMessage (sprintf "FRP dragging %s" d.me.element.name))
         let getRepositionIfDragging me od =
             match od with
                 | None -> Option.None
                 | Some d -> Option.Some (Reposition(d, me))
-        let listener2 = mouseMoveWhileDragging |> Stream.snapshot getRepositionIfDragging dragInfo |> Stream.filterOption |>
-                        Stream.listen (fun p ->
+        let listener2 = mouseMoveWhileDragging |> snapshotC dragInfo getRepositionIfDragging |> filterOptionS |>
+                        listenS (fun p ->
                             Canvas.SetLeft(p.Polygon, p.Left)
                             Canvas.SetTop(p.Polygon, p.Top))
         Listener.fromSeq [ listener1; listener2 ])
 
     interface IParadigm with
-        member __.HandleMouseDown me = sMouseDown.Send me
-        member __.HandleMouseMove me = sMouseMove.Send me
-        member __.HandleMouseUp me = sMouseUp.Send me
+        member __.HandleMouseDown me = sMouseDown |> sendS me
+        member __.HandleMouseMove me = sMouseMove |> sendS me
+        member __.HandleMouseUp me = sMouseUp |> sendS me
 
     interface IDisposable with
-        member __.Dispose() = listener.Unlisten()
+        member __.Dispose() = listener |> unlistenL

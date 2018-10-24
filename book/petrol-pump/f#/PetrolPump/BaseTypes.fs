@@ -1,5 +1,7 @@
 ﻿namespace PetrolPump
 
+open SodiumFRP
+
 type UpDown = Up | Down
 
 type Fuel = One | Two | Three

@@ -2,7 +2,7 @@
 using System.Collections.Generic;
 using System.Threading;
 using System.Threading.Tasks;
-using Sodium;
+using SodiumFRP;
 
 namespace Tasks
 {
@@ -60,7 +60,7 @@ namespace Tasks
             {
                 Console.WriteLine("*** test 1");
                 {
-                    StreamSink<string> s1 = new StreamSink<string>();
+                    StreamSink<string> s1 = Stream.CreateSink<string>();
                     TaskWithListener t1 = s1.ListenOnceAsync(t => t.ContinueWith(t2 => Console.WriteLine(t2.Result), TaskContinuationOptions.ExecuteSynchronously));
                     s1.Send("Early");
                     await Task.Delay(500);
@@ -73,7 +73,7 @@ namespace Tasks
 
                 Console.WriteLine("*** test 2");
                 {
-                    StreamSink<string> s1 = new StreamSink<string>();
+                    StreamSink<string> s1 = Stream.CreateSink<string>();
                     TaskWithListener<string> t1 = s1.ListenOnceAsync();
                     s1.Send("Late");
                     await Task.Delay(500);
@@ -92,7 +92,7 @@ namespace Tasks
             {
                 Console.WriteLine("*** test");
                 {
-                    StreamSink<string> s1 = new StreamSink<string>();
+                    StreamSink<string> s1 = Stream.CreateSink<string>();
                     TaskWithListener<string> t1 = s1.ListenOnceAsync();
 
                     new Thread(() =>
@@ -113,8 +113,8 @@ namespace Tasks
             {
                 Console.WriteLine("*** Simple test");
                 {
-                    StreamSink<string> sa = new StreamSink<string>();
-                    StreamSink<string> sb = new StreamSink<string>();
+                    StreamSink<string> sa = Stream.CreateSink<string>();
+                    StreamSink<string> sb = Stream.CreateSink<string>();
                     TaskWithListener<string> ta = sa.ListenOnceAsync();
                     TaskWithListener<string> tb = sb.ListenOnceAsync();
                     sa.Send("Hello");
@@ -126,8 +126,8 @@ namespace Tasks
 
                 Console.WriteLine("*** Simultaneous case");
                 {
-                    StreamSink<string> sa = new StreamSink<string>();
-                    StreamSink<string> sb = new StreamSink<string>();
+                    StreamSink<string> sa = Stream.CreateSink<string>();
+                    StreamSink<string> sb = Stream.CreateSink<string>();
                     TaskWithListener<string> ta = sa.ListenOnceAsync();
                     TaskWithListener<string> tb = sb.ListenOnceAsync();
                     Transaction.RunVoid(() =>
@@ -148,8 +148,8 @@ namespace Tasks
             {
                 Console.WriteLine("*** Simple test");
                 {
-                    StreamSink<string> sa = new StreamSink<string>();
-                    StreamSink<string> sb = new StreamSink<string>();
+                    StreamSink<string> sa = Stream.CreateSink<string>();
+                    StreamSink<string> sb = Stream.CreateSink<string>();
                     TaskWithListener<string> ta = sa.ListenOnceAsync();
                     TaskWithListener<string> tb = sb.ListenOnceAsync();
 
@@ -166,8 +166,8 @@ namespace Tasks
 
                 Console.WriteLine("*** Simultaneous case");
                 {
-                    StreamSink<string> sa = new StreamSink<string>();
-                    StreamSink<string> sb = new StreamSink<string>();
+                    StreamSink<string> sa = Stream.CreateSink<string>();
+                    StreamSink<string> sb = Stream.CreateSink<string>();
                     TaskWithListener<string> ta = sa.ListenOnceAsync();
                     TaskWithListener<string> tb = sb.ListenOnceAsync();
 

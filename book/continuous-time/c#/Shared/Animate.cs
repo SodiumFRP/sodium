@@ -2,14 +2,14 @@
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
-using Sodium;
+using SodiumFRP;
 
 namespace Shared
 {
     public class Animate : UIElement
     {
         private readonly Task<Renderer> renderer;
-        private readonly CellSink<bool> isStarted = new CellSink<bool>(false);
+        private readonly CellSink<bool> isStarted = Cell.CreateSink(false);
 
         public Animate(AnimationDelegate animation, Size size)
         {
@@ -52,7 +52,7 @@ namespace Shared
                 this.drawable = drawable;
                 this.size = size;
 
-                Transaction.RunVoid(() => isStarted.Values.Filter(s => s).ListenOnce(_ => timerSystem.AddAnimation(animation)));
+                Transaction.RunVoid(() => isStarted.Values().Filter(s => s).ListenOnce(_ => timerSystem.AddAnimation(animation)));
             }
 
             public void Render(DrawingContext drawingContext)

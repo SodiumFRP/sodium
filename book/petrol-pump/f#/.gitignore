@@ -49,6 +49,8 @@ x64/
 build/
 [Bb]in/
 [Oo]bj/
+.vs/
+.idea/
 
 # MSTest test Results
 [Tt]est[Rr]esult*/
@@ -215,3 +217,5 @@ pip-log.txt
 .mr.developer.cfg
 
 /packages/
+paket.local
+paket-files/

@@ -2,16 +2,16 @@
 
 open System
 open System.Windows.Controls
-open Sodium
+open SodiumFRP
 open SWidgets.DispatcherExtensionMethods
 
-type SLabel(text : string Cell) as this =
+type SLabel(text : Cell<string>) as this =
     inherit TextBlock()
 
     let init () =
         let setText t = this.Dispatcher.InvokeIfNecessary (fun () -> this.Text <- t)
-        Transaction.Post (fun () -> setText (text |> Cell.sample))
-        let listener = text |> Operational.updates |> Stream.listen setText
+        postT (fun () -> setText (text |> sampleC))
+        let listener = text |> updatesC |> listenS setText
         listener
 
     let listener = init ()

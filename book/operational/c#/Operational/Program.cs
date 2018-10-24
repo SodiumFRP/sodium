@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using Sodium;
+using SodiumFRP;
 
 namespace Operational
 {
@@ -10,14 +10,14 @@ namespace Operational
         {
             Dictionary<char, IExample> actions = new Dictionary<char, IExample>
             {
-                { 'a', new Cell() },
-                { 'b', new SameTransaction() },
-                { 'c', new SendInCallback() },
-                { 'd', new Split() },
-                { 'e', new Stream() },
-                { 'f', new Updates() },
-                { 'g', new Value1() },
-                { 'h', new Value2() }
+                { 'a', new CellExample() },
+                { 'b', new SameTransactionExample() },
+                { 'c', new SendInCallbackExample() },
+                { 'd', new SplitExample() },
+                { 'e', new StreamExample() },
+                { 'f', new UpdatesExample() },
+                { 'g', new Value1Example() },
+                { 'h', new Value2Example() }
             };
 
             foreach (KeyValuePair<char, IExample> p in actions)
@@ -48,13 +48,13 @@ namespace Operational
             void Run();
         }
 
-        private class Cell : IExample
+        private class CellExample : IExample
         {
             public string Name { get; } = "Cell";
 
             public void Run()
             {
-                CellSink<int> x = new CellSink<int>(0);
+                CellSink<int> x = Cell.CreateSink(0);
                 IListener l = x.Listen(Console.WriteLine);
                 x.Send(10);
                 x.Send(20);
@@ -63,13 +63,13 @@ namespace Operational
             }
         }
 
-        private class SameTransaction : IExample
+        private class SameTransactionExample : IExample
         {
             public string Name { get; } = "Same Transaction";
 
             public void Run()
             {
-                StreamSink<int> sX = new StreamSink<int>();
+                StreamSink<int> sX = Stream.CreateSink<int>();
                 Stream<int> sXPlus1 = sX.Map(x => x + 1);
                 IListener l = Transaction.Run(() =>
                 {
@@ -82,17 +82,17 @@ namespace Operational
             }
         }
 
-        private class SendInCallback : IExample
+        private class SendInCallbackExample : IExample
         {
             public string Name { get; } = "Send In Callback";
 
             public void Run()
             {
-                StreamSink<int> sX = new StreamSink<int>();
-                StreamSink<int> sY = new StreamSink<int>();
+                StreamSink<int> sX = Stream.CreateSink<int>();
+                StreamSink<int> sY = Stream.CreateSink<int>();
                 // Should throw an exception because you're not allowed to use Send() inside
                 // a callback.
-                IListener l = new CompositeListener(new[]
+                IListener l = Listener.CreateComposite(new[]
                 {
                     sX.Listen(x => sY.Send(x)),
                     sY.Listen(Console.WriteLine)
@@ -104,27 +104,27 @@ namespace Operational
             }
         }
 
-        private class Split : IExample
+        private class SplitExample : IExample
         {
             public string Name { get; } = "Split";
 
             public void Run()
             {
-                StreamSink<IReadOnlyList<int>> @as = new StreamSink<IReadOnlyList<int>>();
-                IListener l = Sodium.Operational.Split<int, IReadOnlyList<int>>(@as).Accum(0, (a, b) => a + b).Updates.Listen(Console.WriteLine);
+                StreamSink<IReadOnlyList<int>> @as = Stream.CreateSink<IReadOnlyList<int>>();
+                IListener l = SodiumFRP.Operational.Split<int, IReadOnlyList<int>>(@as).Accum(0, (a, b) => a + b).Updates().Listen(Console.WriteLine);
                 @as.Send(new[] { 100, 15, 60 });
                 @as.Send(new[] { 1, 5 });
                 l.Unlisten();
             }
         }
 
-        private class Stream : IExample
+        private class StreamExample : IExample
         {
             public string Name { get; } = "Stream";
 
             public void Run()
             {
-                StreamSink<int> sX = new StreamSink<int>();
+                StreamSink<int> sX = Stream.CreateSink<int>();
                 Stream<int> sXPlus1 = sX.Map(x => x + 1);
                 IListener l = sXPlus1.Listen(Console.WriteLine);
                 sX.Send(1);
@@ -134,45 +134,45 @@ namespace Operational
             }
         }
 
-        private class Updates : IExample
+        private class UpdatesExample : IExample
         {
             public string Name { get; } = "Updates";
 
             public void Run()
             {
-                CellSink<int> x = new CellSink<int>(0);
+                CellSink<int> x = Cell.CreateSink(0);
                 x.Send(1);
-                IListener l = x.Updates.Listen(Console.WriteLine);
+                IListener l = x.Updates().Listen(Console.WriteLine);
                 x.Send(2);
                 x.Send(3);
                 l.Unlisten();
             }
         }
 
-        private class Value1 : IExample
+        private class Value1Example : IExample
         {
             public string Name { get; } = "Value 1";
 
             public void Run()
             {
-                CellSink<int> x = new CellSink<int>(0);
+                CellSink<int> x = Cell.CreateSink(0);
                 x.Send(1);
-                IListener l = x.Values.Listen(Console.WriteLine);
+                IListener l = x.Values().Listen(Console.WriteLine);
                 x.Send(2);
                 x.Send(3);
                 l.Unlisten();
             }
         }
 
-        private class Value2 : IExample
+        private class Value2Example : IExample
         {
             public string Name { get; } = "Value 2";
 
             public void Run()
             {
-                CellSink<int> x = new CellSink<int>(0);
+                CellSink<int> x = Cell.CreateSink(0);
                 x.Send(1);
-                IListener l = Transaction.Run(() => x.Values.Listen(Console.WriteLine));
+                IListener l = Transaction.Run(() => x.Values().Listen(Console.WriteLine));
                 x.Send(2);
                 x.Send(3);
                 l.Unlisten();

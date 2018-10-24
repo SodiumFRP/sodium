@@ -1,5 +1,5 @@
 ﻿using System;
-using Sodium;
+using SodiumFRP;
 
 namespace Shared
 {
@@ -65,7 +65,7 @@ namespace Shared
 
         public static Cell<Signal> Integrate(Cell<Signal> sig, double initial)
         {
-            Stream<Signal> sSig = sig.Updates;
+            Stream<Signal> sSig = sig.Updates();
             return sSig.Accum(sig.Sample().Integrate(initial), (n, o) => n.Integrate(o.ValueAt(n.T0)));
         }
     }

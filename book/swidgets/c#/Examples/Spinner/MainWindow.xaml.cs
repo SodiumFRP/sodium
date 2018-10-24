@@ -1,5 +1,5 @@
 ﻿using System.Windows;
-using Sodium;
+using SodiumFRP;
 using SWidgets;
 
 namespace Spinner

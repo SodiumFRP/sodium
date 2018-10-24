@@ -5,35 +5,35 @@ open System.Collections.Concurrent
 open System.Threading.Tasks
 open System.Windows
 open System.Windows.Media
-open Sodium
-open Sodium.Time
+open SodiumFRP
+open SodiumFRP.Time
 
-type private Renderer(timerSystem : CompositionTargetSecondsTimerSystem, drawable : DrawableDelegate Cell, size : Size, animation : Animate, isStarted : bool Cell) =
+type private Renderer(timerSystem : CompositionTargetSecondsTimerSystem, drawable : Behavior<DrawableDelegate>, size : Size, animation : Animate, isStarted : bool Cell) =
     do
-        Transaction.Run (fun() -> isStarted |> Operational.value |> Stream.filter id |> Stream.listenOnce (fun _ -> timerSystem.AddAnimation animation) |> ignore)
+        runT (fun() -> isStarted |> valuesC |> filterS id |> listenOnceS (fun _ -> timerSystem.AddAnimation animation) |> ignore)
 
     member __.Render(drawingContext : DrawingContext) =
-        DrawableDelegate.invoke (drawable |> Cell.sample) drawingContext size.Height (Point(0.0, 0.0)) 1.0
+        DrawableDelegate.invoke (drawable |> sampleB) drawingContext size.Height (Point(0.0, 0.0)) 1.0
 
 and Animate(animation : AnimationDelegate, size : Size) as this =
     inherit UIElement()
 
-    let isStarted = Cell.sink false
+    let isStarted = sinkC false
 
     let init () =
         let tcs = TaskCompletionSource<Renderer>()
         let renderer = tcs.Task
-        let mutable renderingSubscription = Option<IDisposable>.None
-        renderingSubscription <- Option.Some (CompositionTarget.Rendering.Subscribe (fun args ->
+        let mutable renderingSubscription : IDisposable option = None
+        renderingSubscription <- Some (CompositionTarget.Rendering.Subscribe (fun args ->
             let timerSystem = CompositionTargetSecondsTimerSystem.Create (args :?> RenderingEventArgs).RenderingTime.TotalSeconds (fun e -> this.Dispatcher.Invoke (fun () -> raise e))
             let extents = Point(size.Width / 2.0, size.Height / 2.0)
-            let drawable = Transaction.Run (fun () -> Shapes.translate (AnimationDelegate.invoke animation timerSystem extents) (Cell.constant extents))
+            let drawable = runT (fun () -> Shapes.translate (AnimationDelegate.invoke animation timerSystem extents) (constantB extents))
             tcs.SetResult(Renderer(timerSystem, drawable, size, this, isStarted))
             match renderingSubscription with
                 | None -> ()
                 | Some s ->
                     s.Dispose()
-                    renderingSubscription <- Option.None))
+                    renderingSubscription <- None))
         renderer
 
     let renderer = init ()
@@ -42,7 +42,7 @@ and Animate(animation : AnimationDelegate, size : Size) as this =
         base.OnRender(drawingContext)
         if renderer.IsCompleted then renderer.Result.Render(drawingContext)
 
-    member __.Start() = isStarted.Send true
+    member __.Start() = isStarted |> sendC true
 
 and private CompositionTargetSecondsTimerSystemImplementation(startTime : float) =
     inherit TimerSystemImplementationImplementationBase<float>()

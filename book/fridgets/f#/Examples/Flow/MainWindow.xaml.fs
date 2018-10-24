@@ -3,23 +3,23 @@
 open System.Windows.Controls
 open Fridgets
 open FsXaml
-open Sodium
+open SodiumFRP
 
-type MainView = XAML<"MainWindow.xaml", true>
+type MainWindowBase = XAML<"MainWindow.xaml">
 
-type MainViewController() =
-    inherit WindowViewController<MainView>()
+type MainWindow() =
+    inherit MainWindowBase()
 
-    override __.OnLoaded view =
+    override this.OnLoaded (_, _) =
         
         let addMessage message =
-            view.StackPanel.Children.Add(TextBlock(Text = message)) |> ignore
-            view.ScrollViewer.ScrollToBottom()
+            this.StackPanel.Children.Add(TextBlock(Text = message)) |> ignore
+            this.ScrollViewer.ScrollToBottom()
 
-        view.Container.Children.Add(Transaction.Run (fun () ->
-            let ok = FrButton.create (Cell.constant "OK")
-            let cancel = FrButton.create (Cell.constant "Cancel")
+        this.Container.Children.Add(runT (fun () ->
+            let ok = FrButton.create (constantC "OK")
+            let cancel = FrButton.create (constantC "Cancel")
             let dialog = FrFlow.create Orientation.Horizontal [ok;cancel]
-            let lOk = FrButton.sClicked ok |> Stream.listen (fun _ -> addMessage "OK")
-            let lCancel = FrButton.sClicked cancel |> Stream.listen (fun _ -> addMessage "Cancel")
-            new FrView(view.Root, dialog, Listener.fromSeq [lOk;lCancel]))) |> ignore
+            let lOk = FrButton.sClicked ok |> listenS (fun _ -> addMessage "OK")
+            let lCancel = FrButton.sClicked cancel |> listenS (fun _ -> addMessage "Cancel")
+            new FrView(this, dialog, Listener.fromSeq [lOk;lCancel]))) |> ignore

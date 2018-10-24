@@ -3,28 +3,28 @@
 open System.Windows.Controls
 open Fridgets
 open FsXaml
-open Sodium
+open SodiumFRP
 
-type MainView = XAML<"MainWindow.xaml", true>
+type MainWindowBase = XAML<"MainWindow.xaml">
 
-type MainViewController() =
-    inherit WindowViewController<MainView>()
+type MainWindow() =
+    inherit MainWindowBase()
 
-    override __.OnLoaded view =
+    override this.OnLoaded (_, _) =
         
         let addMessage message =
-            view.StackPanel.Children.Add(TextBlock(Text = message)) |> ignore
-            view.ScrollViewer.ScrollToBottom()
+            this.StackPanel.Children.Add(TextBlock(Text = message)) |> ignore
+            this.ScrollViewer.ScrollToBottom()
 
-        view.Container.Children.Add(Transaction.Run (fun () ->
+        this.Container.Children.Add(runT (fun () ->
             let firstName = FrTextField.create "Joe"
             let lastName = FrTextField.create "Bloggs"
-            let ok = FrButton.create (Cell.constant "OK")
-            let cancel = FrButton.create (Cell.constant "Cancel")
+            let ok = FrButton.create (constantC "OK")
+            let cancel = FrButton.create (constantC "Cancel")
             let buttonPanel = FrFlow.create Orientation.Horizontal [ok;cancel]
             let dialog = FrFlow.create Orientation.Vertical [buttonPanel :> IFridget;firstName :> IFridget;lastName :> IFridget]
             let getFullName firstName lastName = firstName + " " + lastName
             let getFullName' _ firstName lastName = getFullName firstName lastName
-            let lOk = FrButton.sClicked ok |> Stream.snapshot2 getFullName' (FrTextField.text firstName) (FrTextField.text lastName) |> Stream.listen (fun n -> addMessage (sprintf "OK: %s" n))
-            let lCancel = FrButton.sClicked cancel |> Stream.listen (fun _ -> addMessage "Cancel")
-            new FrView(view.Root, dialog, Listener.fromSeq [lOk;lCancel]))) |> ignore
+            let lOk = FrButton.sClicked ok |> snapshot2C (FrTextField.text firstName) (FrTextField.text lastName) getFullName' |> listenS (fun n -> addMessage (sprintf "OK: %s" n))
+            let lCancel = FrButton.sClicked cancel |> listenS (fun _ -> addMessage "Cancel")
+            new FrView(this, dialog, Listener.fromSeq [lOk;lCancel]))) |> ignore

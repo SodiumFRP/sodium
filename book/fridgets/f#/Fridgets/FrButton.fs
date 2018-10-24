@@ -3,12 +3,12 @@
 open System.Windows
 open System.Windows.Input
 open System.Windows.Media
-open Sodium
+open SodiumFRP
 
 type FrButton =
     private {
-        reify : Size option Cell -> MouseEvent Stream -> KeyEvent Stream -> int64 Cell -> Supply.T -> Output
-        sClicked : unit Stream
+        reify : Cell<Size option> -> Stream<MouseEvent> -> Stream<KeyEvent> -> Cell<int64> -> Supply.T -> Output
+        sClicked : Stream<unit>
     }
     interface IFridget with
         member this.Reify size sMouse sKey focus idSupply = this.reify size sMouse sKey focus idSupply
@@ -16,42 +16,42 @@ type FrButton =
 [<CompilationRepresentationAttribute(CompilationRepresentationFlags.ModuleSuffix)>]
 module FrButton =
     let create label =
-        let sClicked = Cell.sink (Stream.never ())
+        let sClicked = sinkC <| neverS ()
         let reify size sMouse _ _ _ =
 
             let getPressed (e : MouseEvent) size =
                 match size with
-                    | None -> Option.None
+                    | None -> None
                     | Some (size : Size) ->
                         match e.args with
                             | :? MouseButtonEventArgs as b ->
                                 let p = e.getPosition ()
                                 if b.ChangedButton = MouseButton.Left && b.ButtonState = MouseButtonState.Pressed && p.X >= 2.0 && p.X < size.Width - 2.0 && p.Y >= 2.0 && p.Y < size.Height - 2.0
-                                then Option.Some ()
-                                else Option.None
-                            | _ -> Option.None
-            let sPressed = sMouse |> Stream.snapshot getPressed size |> Stream.filterOption
+                                then Some ()
+                                else None
+                            | _ -> None
+            let sPressed = sMouse |> snapshotC size getPressed |> filterOptionS
 
             let getReleased (e : MouseEvent) size =
                 match size with
-                    | None -> Option.None
+                    | None -> None
                     | Some (_ : Size) ->
                         match e.args with
                             | :? MouseButtonEventArgs as b ->
                                 if b.ChangedButton = MouseButton.Left && b.ButtonState = MouseButtonState.Released
-                                then Option.Some ()
-                                else Option.None
-                            | _ -> Option.None
-            let sReleased = sMouse |> Stream.snapshot getReleased size |> Stream.filterOption
+                                then Some ()
+                                else None
+                            | _ -> None
+            let sReleased = sMouse |> snapshotC size getReleased |> filterOptionS
 
-            let pressed = sPressed |> Stream.mapTo true |> Stream.orElse (sReleased |> Stream.mapTo false) |> Stream.hold false
-            sClicked.Send (sReleased |> Stream.gate pressed)
+            let pressed = (sPressed |> mapToS true, sReleased |> mapToS false) |> orElseS |> holdS false
+            sClicked |> sendC (sReleased |> gateC pressed)
 
             let typeface = Typeface(FontFamily("Helvetica"), FontStyles.Normal, FontWeights.Normal, FontStretches.Normal)
             let getDesiredSize label =
                 let labelSize = FontUtilities.measureString label typeface 13.0
                 Size(labelSize.Width + 14.0, labelSize.Height + 10.0)
-            let desiredSize = label |> Cell.map getDesiredSize
+            let desiredSize = label |> mapC getDesiredSize
 
             let getDrawable label size pressed =
                 DrawableDelegate (fun d ->
@@ -63,14 +63,14 @@ module FrButton =
                             d.DrawText(t, Point((size.Width - t.Width) / 2.0, (size.Height - t.Height) / 2.0)))
 
             {
-                drawable = Cell.lift3 getDrawable label size pressed
+                drawable = (label, size, pressed) |> lift3C getDrawable
                 desiredSize = desiredSize
-                sChangeFocus = Stream.never ()
+                sChangeFocus = neverS ()
             }
         
         {
             reify = reify
-            sClicked = sClicked |> Cell.switchS
+            sClicked = sClicked |> switchS
         }
 
     let sClicked b = b.sClicked

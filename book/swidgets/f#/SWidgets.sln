@@ -33,6 +33,11 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Spinner", "Examples\Spinner
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Translate", "Examples\Translate\Translate.fsproj", "{723CA538-540A-49B1-9CDE-32CD7A056BEC}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".paket", ".paket", "{49155E38-D6AF-4347-A744-EA1414EC33AD}"
+ProjectSection(SolutionItems) = preProject
+	paket.dependencies = paket.dependencies
+EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

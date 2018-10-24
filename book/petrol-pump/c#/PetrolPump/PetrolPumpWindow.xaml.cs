@@ -15,8 +15,8 @@ using PetrolPump.Chapter4.Section6;
 using PetrolPump.Chapter4.Section7;
 using PetrolPump.Chapter4.Section8;
 using PetrolPump.Chapter4.Section9;
-using Sodium;
-using Stream = System.IO.Stream;
+using SodiumFRP;
+using Stream = SodiumFRP.Stream;
 
 namespace PetrolPump
 {
@@ -296,7 +296,7 @@ namespace PetrolPump
                 STextField textPrice3 = new STextField("1.499") {Width = 100};
                 petrolPump.Price3Placeholder.Children.Add(textPrice3);
 
-                Func<string, double> parseDoubleSafe = s =>
+                double ParseDoubleSafe(string s)
                 {
                     double n;
                     if (double.TryParse(s, out n))
@@ -305,9 +305,9 @@ namespace PetrolPump
                     }
 
                     return 0.0;
-                };
+                }
 
-                StreamSink<Key> sKey = new StreamSink<Key>();
+                StreamSink<Key> sKey = Stream.CreateSink<Key>();
                 Dictionary<Key, FrameworkElement> containersByKey = new Dictionary<Key, FrameworkElement>
                 {
                     {Key.One, petrolPump.Keypad1Button},
@@ -338,18 +338,18 @@ namespace PetrolPump
                 CellLoop<UpDown> nozzle3 = new CellLoop<UpDown>();
 
                 Cell<double> calibration = Cell.Constant(0.001);
-                Cell<double> price1 = textPrice1.Text.Map(parseDoubleSafe);
-                Cell<double> price2 = textPrice2.Text.Map(parseDoubleSafe);
-                Cell<double> price3 = textPrice3.Text.Map(parseDoubleSafe);
-                CellSink<Stream<Unit>> csClearSale = new CellSink<Stream<Unit>>(Sodium.Stream.Never<Unit>());
+                Cell<double> price2 = textPrice2.Text.Map(ParseDoubleSafe);
+                Cell<double> price3 = textPrice3.Text.Map(ParseDoubleSafe);
+                Cell<double> price1 = textPrice1.Text.Map(ParseDoubleSafe);
+                CellSink<Stream<Unit>> csClearSale = Cell.CreateSink(Stream.Never<Unit>());
                 Stream<Unit> sClearSale = csClearSale.SwitchS();
 
-                StreamSink<int> sFuelPulses = new StreamSink<int>();
+                StreamSink<int> sFuelPulses = Stream.CreateSink<int>();
                 Cell<Outputs> outputs = logic.SelectedItem.Map(
                     pump => pump.Create(new Inputs(
-                        nozzle1.Updates,
-                        nozzle2.Updates,
-                        nozzle3.Updates,
+                        nozzle1.Updates(),
+                        nozzle2.Updates(),
+                        nozzle3.Updates(),
                         sKey,
                         sFuelPulses,
                         calibration,
@@ -481,7 +481,7 @@ namespace PetrolPump
 
                 foreach (KeyValuePair<CellLoop<UpDown>, Image> nozzle in nozzles)
                 {
-                    StreamSink<Unit> nozzleClicks = new StreamSink<Unit>();
+                    StreamSink<Unit> nozzleClicks = Stream.CreateSink<Unit>();
                     nozzle.Value.MouseDown += async (sender, args) =>
                     {
                         if (args.LeftButton == MouseButtonState.Pressed)
@@ -553,7 +553,7 @@ namespace PetrolPump
                 }
             }
 
-            private static Stream GetResourceStream(string path)
+            private static System.IO.Stream GetResourceStream(string path)
             {
                 StreamResourceInfo r = Application.GetResourceStream(new Uri(path, UriKind.Relative));
 

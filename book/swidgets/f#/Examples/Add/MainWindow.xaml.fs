@@ -1,26 +1,27 @@
 ﻿namespace Add
 
 open System
-open FSharpx.Functional.Prelude
 open FsXaml
-open Sodium
+open SodiumFRP
 open SWidgets
 
-type MainView = XAML<"MainWindow.xaml", true>
+type MainWindowBase = XAML<"MainWindow.xaml">
 
-type MainViewController() = 
-    inherit WindowViewController<MainView>()
-
-    override __.OnLoaded view =
-        let txtA = new STextBox("5", Width = 100.0)
-        let txtB = new STextBox("10", Width = 100.0)
-
-        let parseIntOrZero n = match Int32.parse n with | None -> 0 | Some n -> n
-        let a = txtA.Text |> Cell.map parseIntOrZero
-        let b = txtB.Text |> Cell.map parseIntOrZero
-        let sum = Cell.lift2 (+) a b
-        let lblSum = new SLabel(sum |> Cell.map string)
-
-        view.Container.Children.Add(txtA) |> ignore
-        view.Container.Children.Add(txtB) |> ignore
-        view.Container.Children.Add(lblSum) |> ignore
+type MainWindow =
+    inherit MainWindowBase
+    
+    new () as this =
+        { inherit MainWindowBase () }
+        then
+            let txtA = new STextBox("5", Width = 100.0)
+            let txtB = new STextBox("10", Width = 100.0)
+    
+            let parseIntOrZero n = match Int32.TryParse n with | false, _ -> 0 | true, n -> n
+            let a = txtA.Text |> mapC parseIntOrZero
+            let b = txtB.Text |> mapC parseIntOrZero
+            let sum = (a, b) |> lift2C (+)
+            let lblSum = new SLabel(sum |> mapC string)
+    
+            this.Container.Children.Add(txtA) |> ignore
+            this.Container.Children.Add(txtB) |> ignore
+            this.Container.Children.Add(lblSum) |> ignore

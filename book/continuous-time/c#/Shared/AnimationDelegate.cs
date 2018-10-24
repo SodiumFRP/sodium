@@ -1,6 +1,6 @@
 using System.Windows;
-using Sodium;
-using Sodium.Time;
+using SodiumFRP;
+using SodiumFRP.Time;
 
 namespace Shared
 {

@@ -25,7 +25,7 @@ let private getImpl l v s alloc =
             match v with
                 | None ->
                     let v = alloc()
-                    (v, (fun () -> s (Option.Some v)))
+                    (v, (fun () -> s (Some v)))
                 | Some v -> (v, id)
         action ()
         v)
@@ -33,11 +33,11 @@ let private getImpl l v s alloc =
 let create () =
     {
         impl = Impl()
-        id' = Option.None
+        id' = None
         idLock = obj()
-        child1 = Option.None
+        child1 = None
         child1Lock = obj()
-        child2 = Option.None
+        child2 = None
         child2Lock = obj()
     }
 

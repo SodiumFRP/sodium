@@ -1,0 +1,5 @@
+source https://api.nuget.org/v3/index.json
+framework >= net46
+
+nuget FsXaml.Wpf 3.1.6
+nuget SodiumFRP.FSharp 4.0.5

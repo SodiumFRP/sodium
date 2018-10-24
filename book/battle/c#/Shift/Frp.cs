@@ -1,6 +1,6 @@
 using System;
 using System.Windows.Controls;
-using Sodium;
+using SodiumFRP;
 
 namespace Shift
 {
@@ -8,10 +8,10 @@ namespace Shift
     {
         private readonly IListener listener;
 
-        private readonly StreamSink<MouseEvtWithElement> sMouseDown = new StreamSink<MouseEvtWithElement>();
-        private readonly StreamSink<MouseEvt> sMouseMove = new StreamSink<MouseEvt>();
-        private readonly StreamSink<MouseEvt> sMouseUp = new StreamSink<MouseEvt>();
-        private readonly StreamSink<bool> sShift = new StreamSink<bool>();
+        private readonly StreamSink<MouseEvtWithElement> sMouseDown = Stream.CreateSink<MouseEvtWithElement>();
+        private readonly StreamSink<MouseEvt> sMouseMove = Stream.CreateSink<MouseEvt>();
+        private readonly StreamSink<MouseEvt> sMouseUp = Stream.CreateSink<MouseEvt>();
+        private readonly StreamSink<bool> sShift = Stream.CreateSink<bool>();
 
         public Frp(Action<string> addMessage)
         {
@@ -22,7 +22,7 @@ namespace Shift
                         .OrElse(this.sMouseUp.Map(_ => Maybe<DragInfo>.None)).Hold(Maybe.None);
                 Cell<bool> axisLock = this.sShift.Hold(false);
                 Stream<MouseEvt> mouseMoveWhileDragging = dragInfo.Map(md => md.Match(d => this.sMouseMove, Stream.Never<MouseEvt>)).SwitchS();
-                IListener listener1 = dragInfo.Updates.FilterMaybe().Listen(d => addMessage("FRP dragging " + d.Me.Element.Name));
+                IListener listener1 = dragInfo.Updates().FilterMaybe().Listen(d => addMessage("FRP dragging " + d.Me.Element.Name));
                 IListener listener2 = mouseMoveWhileDragging
                     .Snapshot(dragInfo, axisLock, (me, md, a) => md.Match(d => Maybe.Some(new Reposition(d, me, a)), () => Maybe.None))
                     .FilterMaybe()
@@ -31,7 +31,7 @@ namespace Shift
                         Canvas.SetLeft(p.Polygon, p.Left);
                         Canvas.SetTop(p.Polygon, p.Top);
                     });
-                return new CompositeListener(new[] { listener1, listener2 });
+                return Listener.CreateComposite(new[] { listener1, listener2 });
             });
         }
 

@@ -3,17 +3,16 @@
 open System
 open System.Windows
 open System.Windows.Controls
-open FSharpx.Functional.Prelude
-open Sodium
+open SodiumFRP
 
 type SSpinner private(initialValue : int) as this =
     inherit Grid()
 
-    let loopSetValue sSetValue =
-        let textField = new STextBox(sSetValue |> Stream.map string, string initialValue)
+    let struct (_, value) = loopS (fun sSetValue ->
+        let textField = new STextBox(sSetValue |> mapS string, string initialValue)
         textField.VerticalContentAlignment <- VerticalAlignment.Center
-        let parseIntOrZero n = match Int32.parse n with | None -> 0 | Some n -> n
-        let value = textField.Text |> Cell.map parseIntOrZero
+        let parseIntOrZero n = match Int32.TryParse n with | false, _ -> 0 | true, n -> n
+        let value = textField.Text |> mapC parseIntOrZero
 
         let plus = new SButton(Content = "+", Width = 25.0)
         let minus = new SButton(Content = "-", Width = 25.0)
@@ -36,15 +35,13 @@ type SSpinner private(initialValue : int) as this =
         Grid.SetColumn(minus, 1)
         this.Children.Add(minus) |> ignore
 
-        let sPlusDelta = plus.SClicked |> Stream.mapTo 1
-        let sMinusDelta = minus.SClicked |> Stream.mapTo -1
-        let sDelta = sPlusDelta |> Stream.orElse sMinusDelta
-        let sSetValue = sDelta |> Stream.snapshot (+) value
+        let sPlusDelta = plus.SClicked |> mapToS 1
+        let sMinusDelta = minus.SClicked |> mapToS -1
+        let sDelta = (sPlusDelta, sMinusDelta) |> orElseS
+        let sSetValue = sDelta |> snapshotC value (+)
 
-        sSetValue, value
-
-    let _, value = Stream.loop loopSetValue
+        struct (sSetValue, value))
 
     member val Value = value
 
-    static member create initialValue = Transaction.Run (fun () -> SSpinner(initialValue))
+    static member create initialValue = runT (fun () -> SSpinner(initialValue))

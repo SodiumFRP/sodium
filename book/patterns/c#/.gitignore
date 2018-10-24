@@ -217,7 +217,5 @@ pip-log.txt
 .mr.developer.cfg
 
 /packages/
-.paket/paket.exe
-.paket/paket.restore.targets
 paket.local
 paket-files/

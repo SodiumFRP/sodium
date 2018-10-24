@@ -2,7 +2,7 @@
 using System.Windows;
 using System.Windows.Media;
 using Shared;
-using Sodium;
+using SodiumFRP;
 
 namespace Cross
 {

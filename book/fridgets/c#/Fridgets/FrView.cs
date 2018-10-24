@@ -3,7 +3,7 @@ using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
 using System.Windows.Media;
-using Sodium;
+using SodiumFRP;
 
 namespace Fridgets
 {
@@ -14,12 +14,12 @@ namespace Fridgets
 
         public FrView(Window window, Fridget fr, IListener l)
         {
-            StreamSink<MouseEvent> sMouse = new StreamSink<MouseEvent>();
-            StreamSink<KeyEvent> sKey = new StreamSink<KeyEvent>();
+            StreamSink<MouseEvent> sMouse = Stream.CreateSink<MouseEvent>();
+            StreamSink<KeyEvent> sKey = Stream.CreateSink<KeyEvent>();
             this.MouseDown += (sender, args) => sMouse.Send(new MouseEvent(args, () => args.GetPosition(this)));
             this.MouseUp += (sender, args) => sMouse.Send(new MouseEvent(args, () => args.GetPosition(this)));
             this.MouseMove += (sender, args) => sMouse.Send(new MouseEvent(args, () => args.GetPosition(this)));
-            CellSink<Maybe<Size>> size = new CellSink<Maybe<Size>>(Maybe.None);
+            CellSink<Maybe<Size>> size = Cell.CreateSink(Maybe<Size>.None);
             this.SizeChanged += (sender, args) => size.Send(Maybe.Some(args.NewSize));
             window.KeyDown += (sender, args) =>
             {
@@ -34,7 +34,7 @@ namespace Fridgets
             Fridget.Output fo = fr.Reify(size, sMouse, sKey, focus, new Supply());
             focus.Loop(fo.SChangeFocus.Hold(-1));
             this.drawable = fo.Drawable;
-            this.l = new CompositeListener(new[] { l, this.drawable.Updates.Listen(d => this.InvalidateVisual()) });
+            this.l = Listener.CreateComposite(new[] { l, this.drawable.Updates().Listen(d => this.InvalidateVisual()) });
         }
 
         protected override void OnRender(DrawingContext dc)

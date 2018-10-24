@@ -1,18 +1,20 @@
 ﻿namespace ClearField
 
 open FsXaml
-open Sodium
+open SodiumFRP
 open SWidgets
 
-type MainView = XAML<"MainWindow.xaml", true>
+type MainWindowBase = XAML<"MainWindow.xaml">
 
-type MainViewController() = 
-    inherit WindowViewController<MainView>()
-
-    override __.OnLoaded view =
-        let clear = new SButton(Content = "Clear", Width = 75.0)
-        let sClearIt = clear.SClicked |> Stream.mapTo ""
-        let text = new STextBox(sClearIt, "Hello", Width = 100.0)
-
-        view.Container.Children.Add(text) |> ignore
-        view.Container.Children.Add(clear) |> ignore
+type MainWindow = 
+    inherit MainWindowBase
+    
+    new () as this =
+        { inherit MainWindowBase () }
+        then
+            let clear = new SButton(Content = "Clear", Width = 75.0)
+            let sClearIt = clear.SClicked |> mapToS ""
+            let text = new STextBox(sClearIt, "Hello", Width = 100.0)
+    
+            this.Container.Children.Add(text) |> ignore
+            this.Container.Children.Add(clear) |> ignore

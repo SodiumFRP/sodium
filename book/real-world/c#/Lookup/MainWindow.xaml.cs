@@ -4,8 +4,9 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
-using Sodium;
+using SodiumFRP;
 using SWidgets;
+using Stream = SodiumFRP.Stream;
 
 namespace Lookup
 {
@@ -26,7 +27,7 @@ namespace Lookup
                 Cell<string> definition = sDefinition.Hold(string.Empty);
                 Cell<string> output = definition.Lift(ib.Busy, (def, bsy) => bsy ? "Looking up..." : def);
                 enabled.Loop(ib.Busy.Map(b => !b));
-                STextBox outputArea = new STextBox(output.Values, string.Empty, enabled) { TextWrapping = TextWrapping.Wrap, AcceptsReturn = true };
+                STextBox outputArea = new STextBox(output.Values(), string.Empty, enabled) { TextWrapping = TextWrapping.Wrap, AcceptsReturn = true };
                 this.TextBoxPlaceholder.Child = word;
                 this.ButtonPlaceholder.Child = button;
                 this.OutputPlaceholder.Child = outputArea;
@@ -35,7 +36,7 @@ namespace Lookup
 
         public static Stream<Maybe<string>> Lookup(Stream<string> sWord)
         {
-            StreamSink<Maybe<string>> sDefinition = new StreamSink<Maybe<string>>();
+            StreamSink<Maybe<string>> sDefinition = Stream.CreateSink<Maybe<string>>();
             IListener listener = sWord.Listen(wrd =>
             {
                 Task.Run(() =>

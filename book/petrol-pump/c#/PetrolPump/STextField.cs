@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 using System.Windows.Controls;
-using Sodium;
+using SodiumFRP;
 
 namespace PetrolPump
 {
@@ -9,7 +9,7 @@ namespace PetrolPump
         public STextField(string initialText)
         {
             base.Text = initialText;
-            CellSink<string> text = new CellSink<string>(initialText);
+            CellSink<string> text = Cell.CreateSink(initialText);
             this.TextChanged += async (sender, args) =>
             {
                 string t = base.Text;

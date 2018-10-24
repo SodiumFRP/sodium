@@ -1,7 +1,7 @@
 ﻿using System.Windows;
 using System.Windows.Input;
 using System.Windows.Media;
-using Sodium;
+using SodiumFRP;
 
 namespace Fridgets
 {

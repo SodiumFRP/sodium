@@ -1,5 +1,5 @@
 ﻿using System.Text.RegularExpressions;
-using Sodium;
+using SodiumFRP;
 using SWidgets;
 
 namespace Translate

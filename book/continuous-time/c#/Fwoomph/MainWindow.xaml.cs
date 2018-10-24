@@ -1,7 +1,7 @@
 ﻿using System;
 using System.Windows.Media;
 using Shared;
-using Sodium;
+using SodiumFRP;
 
 namespace Fwoomph
 {

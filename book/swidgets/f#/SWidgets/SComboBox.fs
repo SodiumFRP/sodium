@@ -2,12 +2,12 @@
 
 open System
 open System.Windows.Controls
-open Sodium
+open SodiumFRP
 
-type SComboBox<'T>(setSelectedItem : 'T option Stream, initSelectedItem : 'T option, items : 'T seq) as this =
+type SComboBox<'T>(setSelectedItem : Stream<'T option>, initSelectedItem : 'T option, items : 'T seq) as this =
     inherit ComboBox()
 
-    let mutable selectionChangedEventHandler = Option<IDisposable>.None
+    let mutable selectionChangedEventHandler : IDisposable option = None
 
     let getObjectFromSelectedItem m =
         (match m with
@@ -15,23 +15,23 @@ type SComboBox<'T>(setSelectedItem : 'T option Stream, initSelectedItem : 'T opt
             | Some v -> box v)
 
     let init () =
-        let sDecrement = Stream.sink ()
-        let allow = setSelectedItem |> Stream.mapTo 1 |> Stream.orElse sDecrement |> Stream.accum (+) 0 |> Cell.map ((=) 0)
+        let sDecrement = sinkS ()
+        let allow = (setSelectedItem |> mapToS 1, sDecrement) |> orElseS |> accumS 0 (+) |> mapC ((=) 0)
         let getSelectedItem () =
             let sel = this.BaseSelectedItem
-            if sel = null then Option.None else match (box sel) with | :? 'T as s -> Option.Some s | _ -> Option.None
-        let sUserSelectedItem = Stream.sink ()
-        let selectedItem = sUserSelectedItem |> Stream.gate allow |> Stream.orElse setSelectedItem |> Stream.hold initSelectedItem
+            if sel = null then None else match (box sel) with | :? 'T as s -> Some s | _ -> None
+        let sUserSelectedItem = sinkS ()
+        let selectedItem = (sUserSelectedItem |> Stream.gate allow, setSelectedItem) |> orElseS |> holdS initSelectedItem
         let subscribe () = 
             this.SelectionChanged.Subscribe (fun _ ->
                 let selectedItem = getSelectedItem ()
-                this.Dispatcher.InvokeAsync(fun () -> sUserSelectedItem.Send selectedItem) |> ignore)
+                this.Dispatcher.InvokeAsync(fun () -> sUserSelectedItem |> sendS selectedItem) |> ignore)
         let listener = setSelectedItem |> Stream.listen (fun o ->
             this.Dispatcher.InvokeAsync(fun () ->
                 match selectionChangedEventHandler with | None -> () | Some h -> h.Dispose()
                 this.BaseSelectedItem <- getObjectFromSelectedItem o
                 selectionChangedEventHandler <- Option.Some (subscribe ())
-                sDecrement.Send -1) |> ignore)
+                sDecrement |> sendS -1) |> ignore)
         sUserSelectedItem, selectedItem, subscribe, (fun () -> listener.Unlisten ())
 
     let sUserSelectedItem, selectedItem, subscribe, disposeListener = init ()

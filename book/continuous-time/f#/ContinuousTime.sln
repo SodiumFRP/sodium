@@ -13,6 +13,11 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Fwoomph", "Fwoomph\Fwoomph.
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Timers", "Timers\Timers.fsproj", "{43FE6B44-5B14-4B22-A518-806DAE156581}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".paket", ".paket", "{BE243A54-26E2-49E6-B0D6-A4C3BDA637B9}"
+ProjectSection(SolutionItems) = preProject
+	paket.dependencies = paket.dependencies
+EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

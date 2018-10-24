@@ -15,6 +15,11 @@ Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "Supply", "Examples\Supply\S
 EndProject
 Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "TextField", "Examples\TextField\TextField.fsproj", "{3509CBDE-DF8B-4CF9-B9B5-6BD49E020463}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".paket", ".paket", "{0A92C61F-53F5-434D-82A9-E9BC3D859D4B}"
+ProjectSection(SolutionItems) = preProject
+	paket.dependencies = paket.dependencies
+EndProjectSection
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU

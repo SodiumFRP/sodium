@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Windows.Controls;
 using Fridgets;
-using Sodium;
+using SodiumFRP;
 
 namespace TextField
 {
@@ -23,7 +23,7 @@ namespace TextField
                 Fridget dialog = new FrFlow(Orientation.Vertical, fridgets);
                 IListener lOk = ok.SClicked.Snapshot(firstName.Text, lastName.Text, (_, f, l) => f + " " + l).Listen(n => this.AddMessage("OK: " + n));
                 IListener lCancel = cancel.SClicked.Listen(_ => this.AddMessage("Cancel"));
-                return new FrView(this, dialog, new CompositeListener(new[] { lOk, lCancel }));
+                return new FrView(this, dialog, Listener.CreateComposite(new[] { lOk, lCancel }));
             }));
         }
 

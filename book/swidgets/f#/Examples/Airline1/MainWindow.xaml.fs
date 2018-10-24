@@ -1,20 +1,22 @@
 ﻿namespace Airline1
 
 open FsXaml
-open Sodium
+open SodiumFRP
 open SWidgets
 
-type MainView = XAML<"MainWindow.xaml", true>
+type MainWindowBase = XAML<"MainWindow.xaml">
 
-type MainViewController() = 
-    inherit WindowViewController<MainView>()
-
-    override __.OnLoaded view =
-        let dep = new SDateField()
-        let ret = new SDateField()
-        let valid = Cell.lift2 (<=) dep.SelectedDate ret.SelectedDate
-        let ok = new SButton(valid, Content = "OK", Width = 75.0)
-
-        view.DeparturePlaceholder.Children.Add(dep) |> ignore
-        view.ReturnPlaceholder.Children.Add(ret) |> ignore
-        view.ButtonPlaceholder.Children.Add(ok) |> ignore
+type MainWindow =
+    inherit MainWindowBase
+    
+    new () as this =
+        { inherit MainWindowBase () }
+        then
+            let dep = new SDateField()
+            let ret = new SDateField()
+            let valid = (dep.SelectedDate, ret.SelectedDate) |> lift2C (<=)
+            let ok = new SButton(valid, Content = "OK", Width = 75.0)
+    
+            this.DeparturePlaceholder.Children.Add(dep) |> ignore
+            this.ReturnPlaceholder.Children.Add(ret) |> ignore
+            this.ButtonPlaceholder.Children.Add(ok) |> ignore

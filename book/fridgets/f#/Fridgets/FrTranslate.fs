@@ -2,11 +2,11 @@
 
 open System.Windows
 open System.Windows.Media
-open Sodium
+open SodiumFRP
 
 type FrTranslate =
     private {
-        reify : Size option Cell -> MouseEvent Stream -> KeyEvent Stream -> int64 Cell -> Supply.T -> Output
+        reify : Cell<Size option> -> Stream<MouseEvent> -> Stream<KeyEvent> -> Cell<int64> -> Supply.T -> Output
     }
     interface IFridget with
         member this.Reify size sMouse sKey focus idSupply = this.reify size sMouse sKey focus idSupply
@@ -21,7 +21,7 @@ module FrTranslate =
                     let p = sMouse.getPosition ()
                     Point(p.X - offset.X, p.Y - offset.Y)
                 { args = sMouse.args; getPosition = getPosition }
-            let sMouse = sMouse |> Stream.snapshot offsetMouseEvent offset
+            let sMouse = sMouse |> snapshotC offset offsetMouseEvent
 
             let fo = Fridget.reify fridget size sMouse sKey focus idSupply
 
@@ -32,7 +32,7 @@ module FrTranslate =
                     d.Pop())
 
             {
-                drawable = Cell.lift2 offsetDrawable fo.drawable offset
+                drawable = (fo.drawable, offset) |> lift2C offsetDrawable
                 desiredSize = fo.desiredSize
                 sChangeFocus = fo.sChangeFocus
             }
