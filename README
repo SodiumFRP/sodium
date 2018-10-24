@@ -5,8 +5,8 @@ Reactive Programming efforts, as well as a lot of personal experience. Enjoy.
 
 Status:
   C++ - complete, but the memory management is not quite right yet - in separate sodium-cxx repository
-  C# - complete
-  F# - complete
+  C# - complete (source in dotnet folder, binaries in SodiumFRP NuGet package)
+  F# - complete (source in dotnet folder, binaries in SodiumFRP.FSharp NuGet package)
   Java - complete
   Kotlin - complete - in separate sodium-kotlin repository
   Scala - complete
