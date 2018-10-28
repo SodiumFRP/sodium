@@ -3,7 +3,7 @@ package sodium
 import scala.collection.mutable.ListBuffer
 import scala.ref.WeakReference
 
-class Node(private var rank: Long) extends Comparable[Node] {
+class Node(private var rank: Long = 0) extends Comparable[Node] {
   import Node._
 
   val listeners: ListBuffer[Target] = ListBuffer[Target]()

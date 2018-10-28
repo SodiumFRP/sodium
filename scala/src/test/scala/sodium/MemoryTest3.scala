@@ -18,10 +18,10 @@ object MemoryTest3 {
     val et = new StreamSink[Int]()
     val t = et.hold(0)
     val eChange = new StreamSink[Int]()
-    val oout = eChange.map(x => t).hold(t)
+    val oout = eChange.map(_ => t).hold(t)
     val out = Cell.switchC(oout)
     val l = out.listen(tt => {
-      //println(tt)
+      println(tt)
     })
     var i = 0
     while (i < 1000000000) {

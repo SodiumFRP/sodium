@@ -16,7 +16,7 @@ object Operational {
     * that do not allow the caller to detect the cell updates.
     */
   def updates[A](b: Behavior[A]): Stream[A] =
-    Transaction(trans => b.updates().coalesce(trans, (left, right) => right))
+    Transaction(trans => b.updates().coalesce(trans, (_, right) => right))
 
   /**
     * A stream that is guaranteed to fire once in the transaction where value() is invoked, giving

@@ -39,7 +39,7 @@ class Cell[A](val behavior: Behavior[A]) {
     */
   final def sampleLazy(): Lazy[A] = behavior.sampleLazy()
 
-  final def updates(): Stream[A] = Transaction(trans => behavior.updates().coalesce(trans, (l, r) => r))
+  final def updates(): Stream[A] = Transaction(trans => behavior.updates().coalesce(trans, (_, r) => r))
 
   final def values() = Transaction(trans => behavior.value(trans))
 

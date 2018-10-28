@@ -25,7 +25,7 @@ object MemoryTest1 {
       changeTens.map(tens => t.map(tt => (tens, tt))).hold(t.map(tt => (0, tt)))
     val out = Cell.switchC(oout)
     val l = out.listen(tu => {
-      //println(s"${tu._1},${tu._2}")
+      println(s"${tu._1},${tu._2}")
     })
     var i = 0
     while (i < 1000000000) {

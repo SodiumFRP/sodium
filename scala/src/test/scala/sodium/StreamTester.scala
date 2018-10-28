@@ -63,8 +63,8 @@ class StreamTester {
 
   @Test
   def testMergeSimultaneous(): Unit = {
-    val s1 = new StreamSink[Int]((l, r) => r)
-    val s2 = new StreamSink[Int]((l, r) => r)
+    val s1 = new StreamSink[Int]((_, r) => r)
+    val s2 = new StreamSink[Int]((_, r) => r)
     val out = new ListBuffer[Int]()
     val l = s2.orElse(s1).listen(out.+=)
     Transaction(_ => {

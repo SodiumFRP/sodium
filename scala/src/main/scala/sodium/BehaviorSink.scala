@@ -18,7 +18,7 @@ final class BehaviorSink[A](initValue: A, f: (A, A) => A) extends Behavior[A](ne
   def this(initValue: A) =
     this(
       initValue,
-      (left: A, right: A) =>
+      (_: A, _: A) =>
         throw new RuntimeException(
           """send() called more than once per transaction, which isn't allowed. Did you want to combine the events?
         |Then pass a combining function to your StreamSink constructor.""".stripMargin)

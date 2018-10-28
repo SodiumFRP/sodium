@@ -184,11 +184,6 @@ object Transaction {
     }
   }
 
-  //not needed in Scala
-  //def run(f: Transaction => Unit): Unit = {
-  //  apply(t => f(t))
-  //}
-
   /**
     * Execute the specified code after the current transaction is closed,
     * or immediately if there is no current transaction.
@@ -196,7 +191,7 @@ object Transaction {
   def post(action: Runnable): Unit = {
     // -1 will mean it runs before anything split/deferred, and will run
     // outside a transaction context.
-    Transaction(trans => trans.post_(-1, trans1 => action.run()))
+    Transaction(trans => trans.post_(-1, _ => action.run()))
   }
 
   private def startIfNecessary(): Unit = {

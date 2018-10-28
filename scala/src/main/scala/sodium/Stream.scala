@@ -73,7 +73,7 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     * when they shouldn't.
     */
   final def listenWeak(action: A => Unit): Listener =
-    listen_(Node.NullNode, (trans2: Transaction, a: A) => {
+    listen_(Node.NullNode, (_: Transaction, a: A) => {
       action(a)
     })
 
@@ -133,7 +133,7 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     *
     * @param b Constant value.
     */
-  final def mapTo[B](b: B): Stream[B] = this.map(a => b)
+  final def mapTo[B](b: B): Stream[B] = this.map(_ => b)
 
   /**
     * Create a [[Behavior]] with the specified initial value, that is updated
@@ -148,7 +148,7 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
   final def hold(initValue: A): Cell[A] = new Cell[A](this.hold_(initValue))
 
   private def hold_(initValue: A): Behavior[A] =
-    Transaction(trans => new Behavior[A](Stream.this, initValue))
+    Transaction(_ => new Behavior[A](Stream.this, initValue))
 
   /**
     * A variant of [[sodium.Stream.hold(initValue:A)* hold(A)]] with an initial value captured by
@@ -281,7 +281,7 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     * The name orElse() is used instead of merge() to make it really clear that care should
     * be taken, because events can be dropped.
     */
-  final def orElse(s: Stream[A]): Stream[A] = merge(s, (left, right) => left)
+  final def orElse(s: Stream[A]): Stream[A] = merge(s, (left, _) => left)
 
   /**
     * Merge two streams of the same type into one, so that events on either input appear
@@ -425,7 +425,7 @@ class Stream[A] private (val node: Node, val finalizers: ListBuffer[Listener], v
     * things don't get kept alive when they shouldn't.
     */
   def addCleanup(cleanup: Listener): Stream[A] =
-    Transaction(trans => {
+    Transaction(_ => {
       val fsNew: ListBuffer[Listener] = finalizers
       fsNew += cleanup
       new Stream[A](node, fsNew, firings)

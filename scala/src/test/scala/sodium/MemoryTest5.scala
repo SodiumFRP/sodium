@@ -18,7 +18,7 @@ object MemoryTest5 {
     val eChange = new StreamSink[Int]()
     val out = eChange.hold(0)
     val l = out.listen(tt => {
-      //println(tt)
+      println(tt)
     })
     var i = 0
     while (i < 1000000000) {
