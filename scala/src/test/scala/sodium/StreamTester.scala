@@ -203,4 +203,37 @@ class StreamTester {
     assertEquals(List('C', 'B', 'A'), out)
   }
 
+  @Test
+  def testStreamLoop(): Unit = {
+    val ss = new StreamSink[Int]()
+    val s = Transaction(_ => {
+      val sl = new StreamLoop[Int]()
+      val c = sl.map(v => v + 2).hold(0)
+      val s2 = ss.snapshot(c, (x: Int, y: Int) => x + y)
+      sl.loop(s2)
+      s2
+    })
+    val out = new ListBuffer[Int]()
+    val l = s.listen(out.+=)
+    List(3, 4, 7, 8).foreach(ss.send(_))
+    l.unlisten()
+    assertEquals(List(3, 9, 18, 28), out)
+  }
+
+  @Test
+  def testStreamLoopDefer(): Unit = {
+    val ss = new StreamSink[Int]()
+    val s = Transaction(_ => {
+      val sl = new StreamLoop[Int]()
+      val streamLocal = Operational.defer(ss.orElse(sl).filter(v => v < 5).map(v => v + 1))
+      sl.loop(streamLocal)
+      sl
+    })
+    val out = new ListBuffer[Int]()
+    val l = s.listen(out.+=)
+    ss.send(2)
+    l.unlisten()
+    assertEquals(List(3, 4, 5), out)
+  }
+
 }
