@@ -14,7 +14,7 @@ Status:
 
   Haskell - deprecated in favour of Heinrich Apfelmus's Reactive Banana
   Embedded-C - just an experiment
-  Rust - got nowhere with it yet
+  Rust - complete - in separate sodium-rust repository
 
 Got a question about how to use Sodium? Go to Sodium user forum:
   http://sodium.nz/
