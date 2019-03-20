@@ -1,14 +1,19 @@
+function formula(x, x1, x2, y, y1, y2) {
+  return ( ( y1 < y  &&  y2 >= y ) || ( y2 < y  &&  y1 >= y ) ) && ( x1 + ( y - y1 ) / ( y2 - y1 ) * ( x2 - x1 ) < x );
+}
+
 function insidePolygon(pos, poly) {
-    var x = pos.x, y = pos.y, coords = poly.coords, inside = false;
-    var v = coords[coords.length-1], x1 = v.x, y1 = v.y;
-    for( var i = -1;  v = coords[++i]; ) {
-        var x2 = v.x, y2 = v.y;
-        if( ( y1 < y  &&  y2 >= y ) || ( y2 < y  &&  y1 >= y ) )
-            if ( x1 + ( y - y1 ) / ( y2 - y1 ) * ( x2 - x1 ) < x )
-                inside = ! inside;
-        x1 = x2, y1 = y2;
-    }
-    return inside;
+  var coords = poly.coords;
+  var x = pos.x;
+  var y = pos.y;
+  return coords.reduce((isInside, currentPos, index) => {
+    var xy1 = coords[index - 1] || coords[coords.length - 1];
+    var y1 = xy1.y
+    var x1 = xy1.x;
+    var y2 = currentPos.y;
+    var x2 = currentPos.x;
+    return formula(x, x1, x2, y, y1, y2) ? !isInside : isInside;
+  }, false);
 }
 var shapes = [
     { id: "cat", coords: [{ x:55, y:90 },{x:67,y:54},{x:72,y:89},
