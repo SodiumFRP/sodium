@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net45;netstandard1.1;netstandard2.0</TargetFrameworks>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>Sodium.Functional</PackageId>
+    <Authors>SodiumFRP</Authors>
+    <PackageLicenseUrl>http://opensource.org/licenses/MIT</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/SodiumFRP/sodium</PackageProjectUrl>
+    <Version>1.0.0</Version>
+    <PackageVersion>1.0.0</PackageVersion>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <InformationalVersion>1.0.0.0</InformationalVersion>
+    <Company>SodiumFRP</Company>
+    <Product>Sodium Functional for C#</Product>
+    <Title>Sodium Functional for C#</Title>
+    <Description>Sodium Functional - Functional constructs for C#.</Description>
+    <IncludeSource>True</IncludeSource>
+    <IncludeSymbols>True</IncludeSymbols>
+    <AssemblyName>Sodium.Functional</AssemblyName>
+    <RootNamespace>Sodium.Functional</RootNamespace>
+  </PropertyGroup>
+
+</Project>

@@ -1,0 +1,32 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFrameworks>net45</TargetFrameworks>
+    <AssemblyName>Sodium.FSharp.Frp.Tests</AssemblyName>
+    <RootNamespace>Sodium.Frp.Tests</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="TestUtils.fs" />
+    <Compile Include="BehaviorTests.fs" />
+    <Compile Include="CellTests.fs" />
+    <Compile Include="DenotationalSemanticsTests.fs" />
+    <Compile Include="CommonTests.fs" />
+    <Compile Include="IssueTests.fs" />
+    <Compile Include="LoopTests.fs" />
+    <Compile Include="PerformanceTests.fs" />
+    <Compile Include="StreamTests.fs" />
+    <Compile Include="TransactionTests.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.9.0" />
+    <PackageReference Include="NUnit" Version="3.11.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="3.10.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\Sodium.FSharp.Frp\Sodium.FSharp.Frp.fsproj" />
+  </ItemGroup>
+
+</Project>

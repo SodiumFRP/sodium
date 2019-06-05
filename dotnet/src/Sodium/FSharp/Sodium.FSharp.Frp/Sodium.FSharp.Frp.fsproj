@@ -1,0 +1,53 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyName>Sodium.FSharp.Frp</AssemblyName>
+    <RootNamespace>Sodium.Frp</RootNamespace>
+    <TargetFrameworks>net45;netstandard1.6;netstandard2.0</TargetFrameworks>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>SodiumFRP.FSharp</PackageId>
+    <Authors>SodiumFRP</Authors>
+    <PackageLicenseUrl>http://opensource.org/licenses/MIT</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/SodiumFRP/sodium</PackageProjectUrl>
+    <Version>1.0.0</Version>
+    <PackageVersion>1.0.0</PackageVersion>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <InformationalVersion>1.0.0.0</InformationalVersion>
+    <Company>SodiumFRP</Company>
+    <Product>Sodium FRP for F#</Product>
+    <Title>Sodium FRP for F#</Title>
+    <Description>Sodium - Functional Reactive Programming (FRP) library for F#.</Description>
+    <IncludeSource>True</IncludeSource>
+    <IncludeSymbols>True</IncludeSymbols>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="OptimizedPriorityQueue" Version="4.1.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="Utils.fs" />
+    <Compile Include="Transaction.fs" />
+    <Compile Include="Listener.fs" />
+    <Compile Include="MutableListener.fs" />
+    <Compile Include="StreamSink.fs" />
+    <Compile Include="Cleanup.fs" />
+    <Compile Include="BehaviorSink.fs" />
+    <Compile Include="CellStreamSink.fs" />
+    <Compile Include="CellSink.fs" />
+    <Compile Include="Behavior.fs" />
+    <Compile Include="Cell.fs" />
+    <Compile Include="Stream.fs" />
+    <Compile Include="Operational.fs" />
+    <Compile Include="Time.fs" />
+    <Compile Include="Sodium.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Sodium.Core.Frp\Sodium.Core.Frp.csproj" />
+  </ItemGroup>
+
+</Project>

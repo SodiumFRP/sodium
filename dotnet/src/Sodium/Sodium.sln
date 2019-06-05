@@ -1,0 +1,94 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio 15
+VisualStudioVersion = 15.0.27130.2024
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "CSharp", "CSharp", "{5E6368AC-C57D-4CD7-9E05-977D467D3C8F}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "FSharp", "FSharp", "{A8026ED4-4A83-4F61-ADEB-D109310BB58A}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sodium.Core.Frp", "Sodium.Core.Frp\Sodium.Core.Frp.csproj", "{91D33BDC-137E-4EB0-A1AB-BA1ECD482724}"
+EndProject
+Project("{9A19103F-16F7-4668-BE54-9A1E7A4F7556}") = "Sodium.Frp", "CSharp\Sodium.Frp\Sodium.Frp.csproj", "{46718CA6-6910-4809-B985-809513BA2EAE}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sodium.Frp.Tests", "CSharp\Sodium.Frp.Tests\Sodium.Frp.Tests.csproj", "{87E7EAF1-4715-47DF-BEDF-4C2246CF9A8A}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Sodium.FSharp.Frp", "FSharp\Sodium.FSharp.Frp\Sodium.FSharp.Frp.fsproj", "{0D8C04E5-8B17-41B4-A6DC-2483D5AEE950}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Sodium.FSharp.Frp.Tests", "FSharp\Sodium.FSharp.Frp.Tests\Sodium.FSharp.Frp.Tests.fsproj", "{67741E78-89AB-479A-8FE6-F955952D9FFD}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sodium.Frp.Tests.Internal", "CSharp\Sodium.Frp.Tests.Internal\Sodium.Frp.Tests.Internal.csproj", "{DE916699-767E-4836-AC54-14F9D4044C62}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sodium.Frp.Tests.Memory", "CSharp\Sodium.Frp.Tests.Memory\Sodium.Frp.Tests.Memory.csproj", "{BE093EDF-E632-4DFA-AFF8-4AFCB483952B}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sodium.Frp.Tests.Performance", "CSharp\Sodium.Frp.Tests.Performance\Sodium.Frp.Tests.Performance.csproj", "{6F9448F5-2D6D-41E8-A0C1-B31F27866279}"
+EndProject
+Project("{6EC3EE1D-3C4E-46DD-8F32-0CC8E7565705}") = "Sodium.FSharp.Frp.Tests.Internal", "FSharp\Sodium.FSharp.Frp.Tests.Internal\Sodium.FSharp.Frp.Tests.Internal.fsproj", "{91F03887-FC3A-48F9-A9BB-72FB144FE3D2}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sodium.Functional", "CSharp\Sodium.Functional\Sodium.Functional.csproj", "{944F41A5-DA36-42B9-8768-589CA64D77CD}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{91D33BDC-137E-4EB0-A1AB-BA1ECD482724}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{91D33BDC-137E-4EB0-A1AB-BA1ECD482724}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{91D33BDC-137E-4EB0-A1AB-BA1ECD482724}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{91D33BDC-137E-4EB0-A1AB-BA1ECD482724}.Release|Any CPU.Build.0 = Release|Any CPU
+		{46718CA6-6910-4809-B985-809513BA2EAE}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{46718CA6-6910-4809-B985-809513BA2EAE}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{46718CA6-6910-4809-B985-809513BA2EAE}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{46718CA6-6910-4809-B985-809513BA2EAE}.Release|Any CPU.Build.0 = Release|Any CPU
+		{87E7EAF1-4715-47DF-BEDF-4C2246CF9A8A}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{87E7EAF1-4715-47DF-BEDF-4C2246CF9A8A}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{87E7EAF1-4715-47DF-BEDF-4C2246CF9A8A}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{87E7EAF1-4715-47DF-BEDF-4C2246CF9A8A}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0D8C04E5-8B17-41B4-A6DC-2483D5AEE950}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{0D8C04E5-8B17-41B4-A6DC-2483D5AEE950}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{0D8C04E5-8B17-41B4-A6DC-2483D5AEE950}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{0D8C04E5-8B17-41B4-A6DC-2483D5AEE950}.Release|Any CPU.Build.0 = Release|Any CPU
+		{67741E78-89AB-479A-8FE6-F955952D9FFD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{67741E78-89AB-479A-8FE6-F955952D9FFD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{67741E78-89AB-479A-8FE6-F955952D9FFD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{67741E78-89AB-479A-8FE6-F955952D9FFD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{DE916699-767E-4836-AC54-14F9D4044C62}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{DE916699-767E-4836-AC54-14F9D4044C62}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{DE916699-767E-4836-AC54-14F9D4044C62}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{DE916699-767E-4836-AC54-14F9D4044C62}.Release|Any CPU.Build.0 = Release|Any CPU
+		{BE093EDF-E632-4DFA-AFF8-4AFCB483952B}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{BE093EDF-E632-4DFA-AFF8-4AFCB483952B}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{BE093EDF-E632-4DFA-AFF8-4AFCB483952B}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{BE093EDF-E632-4DFA-AFF8-4AFCB483952B}.Release|Any CPU.Build.0 = Release|Any CPU
+		{6F9448F5-2D6D-41E8-A0C1-B31F27866279}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{6F9448F5-2D6D-41E8-A0C1-B31F27866279}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{6F9448F5-2D6D-41E8-A0C1-B31F27866279}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{6F9448F5-2D6D-41E8-A0C1-B31F27866279}.Release|Any CPU.Build.0 = Release|Any CPU
+		{91F03887-FC3A-48F9-A9BB-72FB144FE3D2}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{91F03887-FC3A-48F9-A9BB-72FB144FE3D2}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{91F03887-FC3A-48F9-A9BB-72FB144FE3D2}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{91F03887-FC3A-48F9-A9BB-72FB144FE3D2}.Release|Any CPU.Build.0 = Release|Any CPU
+		{944F41A5-DA36-42B9-8768-589CA64D77CD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{944F41A5-DA36-42B9-8768-589CA64D77CD}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{944F41A5-DA36-42B9-8768-589CA64D77CD}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{944F41A5-DA36-42B9-8768-589CA64D77CD}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(NestedProjects) = preSolution
+		{46718CA6-6910-4809-B985-809513BA2EAE} = {5E6368AC-C57D-4CD7-9E05-977D467D3C8F}
+		{87E7EAF1-4715-47DF-BEDF-4C2246CF9A8A} = {5E6368AC-C57D-4CD7-9E05-977D467D3C8F}
+		{0D8C04E5-8B17-41B4-A6DC-2483D5AEE950} = {A8026ED4-4A83-4F61-ADEB-D109310BB58A}
+		{67741E78-89AB-479A-8FE6-F955952D9FFD} = {A8026ED4-4A83-4F61-ADEB-D109310BB58A}
+		{DE916699-767E-4836-AC54-14F9D4044C62} = {5E6368AC-C57D-4CD7-9E05-977D467D3C8F}
+		{BE093EDF-E632-4DFA-AFF8-4AFCB483952B} = {5E6368AC-C57D-4CD7-9E05-977D467D3C8F}
+		{6F9448F5-2D6D-41E8-A0C1-B31F27866279} = {5E6368AC-C57D-4CD7-9E05-977D467D3C8F}
+		{91F03887-FC3A-48F9-A9BB-72FB144FE3D2} = {A8026ED4-4A83-4F61-ADEB-D109310BB58A}
+		{944F41A5-DA36-42B9-8768-589CA64D77CD} = {5E6368AC-C57D-4CD7-9E05-977D467D3C8F}
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {7690BD60-3A59-4BA2-ABF7-ED00A34FA2A4}
+	EndGlobalSection
+EndGlobal
