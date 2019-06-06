@@ -4,7 +4,7 @@ type Signal = { t0 : float; a : float; b : float; c : float }
 
 [<CompilationRepresentationAttribute(CompilationRepresentationFlags.ModuleSuffix)>]
 module Signal =
-    open SodiumFRP
+    open Sodium.Frp
 
     let quantum = 0.000001
 

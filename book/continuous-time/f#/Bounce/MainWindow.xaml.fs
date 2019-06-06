@@ -1,12 +1,11 @@
 ﻿namespace Bounce
 
-open System
 open System.Windows
 open System.Windows.Media
 open FsXaml
 open Shared
-open SodiumFRP
-open SodiumFRP.Time
+open Sodium.Frp
+open Sodium.Frp.Time
 
 type MainWindowBase = XAML<"MainWindow.xaml">
 

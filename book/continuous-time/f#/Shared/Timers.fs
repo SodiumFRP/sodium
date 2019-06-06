@@ -5,8 +5,8 @@ open System.Collections.Concurrent
 open System.Threading.Tasks
 open System.Windows
 open System.Windows.Media
-open SodiumFRP
-open SodiumFRP.Time
+open Sodium.Frp
+open Sodium.Frp.Time
 
 type private Renderer(timerSystem : CompositionTargetSecondsTimerSystem, drawable : Behavior<DrawableDelegate>, size : Size, animation : Animate, isStarted : bool Cell) =
     do

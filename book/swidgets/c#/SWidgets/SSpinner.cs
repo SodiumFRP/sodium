@@ -1,6 +1,6 @@
 ﻿using System.Windows;
 using System.Windows.Controls;
-using SodiumFRP;
+using Sodium.Frp;
 
 namespace SWidgets
 {

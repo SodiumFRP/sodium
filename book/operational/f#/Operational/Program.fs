@@ -1,5 +1,5 @@
 ﻿open System
-open SodiumFRP
+open Sodium.Frp
 
 type Example = { name : string; run : unit -> unit }
 

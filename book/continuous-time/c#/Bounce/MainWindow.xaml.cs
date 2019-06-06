@@ -1,8 +1,8 @@
 ﻿using System.Windows;
 using System.Windows.Media;
 using Shared;
-using SodiumFRP;
-using SodiumFRP.Time;
+using Sodium.Frp;
+using Sodium.Frp.Time;
 
 namespace Bounce
 {

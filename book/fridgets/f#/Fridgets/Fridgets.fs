@@ -1,7 +1,7 @@
 ﻿namespace Fridgets
 
 open System.Windows
-open SodiumFRP
+open Sodium.Frp
 
 type Output = { drawable : Cell<DrawableDelegate>; desiredSize : Cell<Size>; sChangeFocus : Stream<int64> }
 

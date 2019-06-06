@@ -1,5 +1,6 @@
 ﻿using System;
-using SodiumFRP;
+using Sodium.Frp;
+using Sodium.Functional;
 
 namespace Shared
 {

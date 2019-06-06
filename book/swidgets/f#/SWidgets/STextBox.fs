@@ -2,7 +2,7 @@
 
 open System
 open System.Windows.Controls
-open SodiumFRP
+open Sodium.Frp
 open SWidgets.DispatcherExtensionMethods
 
 type STextBox(setText : Stream<string>, initText : string, enabled : Cell<bool>) as this =

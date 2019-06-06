@@ -4,7 +4,7 @@ open System
 open System.Windows
 open System.Windows.Controls
 open System.Windows.Input
-open SodiumFRP
+open Sodium.Frp
 
 type FrView(window : Window, fr : IFridget, l : IListener) as this =
     inherit Canvas()

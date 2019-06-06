@@ -15,8 +15,9 @@ using PetrolPump.Chapter4.Section6;
 using PetrolPump.Chapter4.Section7;
 using PetrolPump.Chapter4.Section8;
 using PetrolPump.Chapter4.Section9;
-using SodiumFRP;
-using Stream = SodiumFRP.Stream;
+using Sodium.Frp;
+using Sodium.Functional;
+using Stream = Sodium.Frp.Stream;
 
 namespace PetrolPump
 {

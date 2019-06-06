@@ -1,7 +1,7 @@
 ﻿namespace Translate
 
 open FsXaml
-open SodiumFRP
+open Sodium.Frp
 open SWidgets
 open System.Text.RegularExpressions
 

@@ -1,7 +1,8 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Windows.Controls;
-using SodiumFRP;
+using Sodium.Frp;
+using Sodium.Functional;
 
 namespace SWidgets
 {

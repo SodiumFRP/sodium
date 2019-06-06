@@ -3,7 +3,7 @@
 open System.Windows.Media
 open FsXaml
 open Shared
-open SodiumFRP
+open Sodium.Frp
 
 type MainWindowBase = XAML<"MainWindow.xaml">
 

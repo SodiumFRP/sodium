@@ -3,8 +3,8 @@
 open System
 open System.Windows.Controls
 open FsXaml
-open SodiumFRP
-open SodiumFRP.Time
+open Sodium.Frp
+open Sodium.Frp.Time
 
 type MainWindowBase = XAML<"MainWindow.xaml">
 

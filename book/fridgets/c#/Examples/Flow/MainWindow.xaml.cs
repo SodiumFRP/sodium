@@ -1,7 +1,7 @@
 ﻿using System.Collections.Generic;
 using System.Windows.Controls;
 using Fridgets;
-using SodiumFRP;
+using Sodium.Frp;
 
 namespace Flow
 {

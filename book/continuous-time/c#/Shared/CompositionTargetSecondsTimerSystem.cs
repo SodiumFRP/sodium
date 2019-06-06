@@ -1,7 +1,7 @@
 using System;
 using System.Collections.Concurrent;
 using System.Windows.Media;
-using SodiumFRP.Time;
+using Sodium.Frp.Time;
 
 namespace Shared
 {

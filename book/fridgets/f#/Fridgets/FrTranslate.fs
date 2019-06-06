@@ -2,7 +2,7 @@
 
 open System.Windows
 open System.Windows.Media
-open SodiumFRP
+open Sodium.Frp
 
 type FrTranslate =
     private {

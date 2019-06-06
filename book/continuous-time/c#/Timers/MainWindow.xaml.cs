@@ -1,8 +1,9 @@
 ﻿using System;
 using System.Threading.Tasks;
 using System.Windows.Controls;
-using SodiumFRP;
-using SodiumFRP.Time;
+using Sodium.Frp;
+using Sodium.Frp.Time;
+using Sodium.Functional;
 
 namespace Timers
 {

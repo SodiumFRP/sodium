@@ -1,5 +1,5 @@
 ﻿using System;
-using SodiumFRP;
+using Sodium.Functional;
 
 namespace Fridgets
 {

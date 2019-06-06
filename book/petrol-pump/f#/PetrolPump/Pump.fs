@@ -1,6 +1,6 @@
 ﻿namespace PetrolPump
 
-open SodiumFRP
+open Sodium.Frp
 
 type Sale =
     {
@@ -55,7 +55,6 @@ type IPump =
     abstract member Create : Inputs -> Outputs
 
 module Chapter4 =
-    open SodiumFRP
     
     let accumulate sClearAccumulator sPulses calibration =
         let total = loopWithNoCapturesC (fun total ->

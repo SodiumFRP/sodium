@@ -2,7 +2,7 @@ namespace PetrolPump.Controls
 
 open System.Collections
 open System.Windows.Controls
-open SodiumFRP
+open Sodium.Frp
 
 type SButton() as this =
     inherit Button()

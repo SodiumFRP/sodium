@@ -1,6 +1,6 @@
 ﻿namespace PetrolPump
 
-open SodiumFRP
+open Sodium.Frp
 
 type UpDown = Up | Down
 

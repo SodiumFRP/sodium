@@ -2,7 +2,7 @@
 using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Media;
-using SodiumFRP;
+using Sodium.Frp;
 
 namespace Shared
 {

@@ -1,6 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
-using SodiumFRP;
+using Sodium.Frp;
 
 namespace Operational
 {
@@ -111,7 +111,7 @@ namespace Operational
             public void Run()
             {
                 StreamSink<IReadOnlyList<int>> @as = Stream.CreateSink<IReadOnlyList<int>>();
-                IListener l = SodiumFRP.Operational.Split<int, IReadOnlyList<int>>(@as).Accum(0, (a, b) => a + b).Updates().Listen(Console.WriteLine);
+                IListener l = Sodium.Frp.Operational.Split<int, IReadOnlyList<int>>(@as).Accum(0, (a, b) => a + b).Updates().Listen(Console.WriteLine);
                 @as.Send(new[] { 100, 15, 60 });
                 @as.Send(new[] { 1, 5 });
                 l.Unlisten();

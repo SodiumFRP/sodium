@@ -1,7 +1,7 @@
 ﻿namespace PetrolPump
 
 open System.Windows.Threading
-open SodiumFRP
+open Sodium.Frp
 
 module Formatters =
     let formatPrice price maxDigits =

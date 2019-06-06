@@ -1,6 +1,6 @@
 ﻿using System.Threading.Tasks;
 using System.Windows.Controls;
-using SodiumFRP;
+using Sodium.Frp;
 
 namespace PetrolPump
 {

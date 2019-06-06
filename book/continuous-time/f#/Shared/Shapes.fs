@@ -2,7 +2,7 @@
 
 open System.Windows
 open System.Windows.Media
-open SodiumFRP
+open Sodium.Frp
 
 let circle color = constantB (DrawableDelegate (fun d h o s ->
     let radius = s

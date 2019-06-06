@@ -2,7 +2,7 @@
 
 open System
 open System.Windows.Controls
-open SodiumFRP
+open Sodium.Frp
 open SWidgets.MaybeBuilder
 
 type SDateField() as this =

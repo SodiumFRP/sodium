@@ -2,7 +2,7 @@
 
 open System.Windows
 open System.Windows.Controls
-open SodiumFRP
+open Sodium.Frp
 
 type FrFlow =
     private {

@@ -4,7 +4,7 @@ open System
 open System.Linq
 open System.Windows
 open FsXaml
-open SodiumFRP
+open Sodium.Frp
 open SWidgets
 
 type MainWindowBase = XAML<"MainWindow.xaml">

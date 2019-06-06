@@ -3,7 +3,7 @@
 open System
 open System.Windows.Controls
 open FsXaml
-open SodiumFRP
+open Sodium.Frp
 open SWidgets
 
 type MainWindowBase = XAML<"MainWindow.xaml">

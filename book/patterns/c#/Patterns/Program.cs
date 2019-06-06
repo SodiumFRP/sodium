@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
-using SodiumFRP;
+using Sodium.Frp;
+using Sodium.Functional;
 
 namespace Patterns
 {

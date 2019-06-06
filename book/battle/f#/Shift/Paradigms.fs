@@ -6,7 +6,7 @@ open System.Threading
 open System.Windows.Threading
 open System.Windows.Controls
 open Shift.DoubleExtensionMethods
-open SodiumFRP
+open Sodium.Frp
 
 type IParadigm =
     inherit IDisposable

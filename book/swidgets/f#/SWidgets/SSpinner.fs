@@ -3,7 +3,7 @@
 open System
 open System.Windows
 open System.Windows.Controls
-open SodiumFRP
+open Sodium.Frp
 
 type SSpinner private(initialValue : int) as this =
     inherit Grid()

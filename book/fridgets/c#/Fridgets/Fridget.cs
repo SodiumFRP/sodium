@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Windows;
-using SodiumFRP;
+using Sodium.Frp;
+using Sodium.Functional;
 
 namespace Fridgets
 {

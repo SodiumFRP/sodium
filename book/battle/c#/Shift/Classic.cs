@@ -1,6 +1,6 @@
 using System;
 using System.Windows.Controls;
-using SodiumFRP;
+using Sodium.Functional;
 
 namespace Shift
 {

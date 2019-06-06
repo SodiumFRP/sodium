@@ -4,9 +4,10 @@ using System.Net.Sockets;
 using System.Text;
 using System.Threading.Tasks;
 using System.Windows;
-using SodiumFRP;
+using Sodium.Frp;
+using Sodium.Functional;
 using SWidgets;
-using Stream = SodiumFRP.Stream;
+using Stream = Sodium.Frp.Stream;
 
 namespace Lookup
 {

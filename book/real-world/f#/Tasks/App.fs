@@ -2,7 +2,7 @@ module Tasks.App
 
 open System
 open System.Threading
-open SodiumFRP
+open Sodium.Frp
 
 type IExample =
     abstract Name : string

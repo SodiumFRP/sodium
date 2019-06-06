@@ -7,15 +7,11 @@ open System.Threading
 open System.Threading.Tasks
 open System.Windows
 open System.Windows.Controls
-open System.Windows.Controls
-open System.Windows.Controls
 open System.Windows.Input
-open System.Windows.Media
 open System.Windows.Media.Imaging
 open FsXaml
-open SodiumFRP
-open SodiumFRP.Time
 open PetrolPump.Controls
+open Sodium.Frp
 open Chapter4.Section11
 open Chapter4.Section4
 open Chapter4.Section6
@@ -162,10 +158,11 @@ type PetrolPumpWindow =
                         (Key.Zero, this.Keypad0Button);
                         (PetrolPump.Key.Clear, this.KeypadClearButton)
                     |]
+            let startAsVoidTask (a : Async<unit>) : Task = upcast (a |> Async.StartAsTask)
             for (key, container) in Map.toSeq containersByKey do
                 let mouseDownHandler sender (args : MouseButtonEventArgs) =
                     if args.LeftButton = MouseButtonState.Pressed then
-                        async { sKey |> sendS key } |> Async.StartAsVoidTask |> ignore
+                        async { sKey |> sendS key } |> startAsVoidTask |> ignore
                 container.MouseDown.AddHandler (MouseButtonEventHandler mouseDownHandler)
             let calibration = constantC 0.001
             let price2 = textPrice2.Text |> mapC parseDoubleSafe
@@ -182,7 +179,7 @@ type PetrolPumpWindow =
                 let nozzleClicks = sinkS ()
                 let mouseDownHandler sender (args : MouseButtonEventArgs) =
                     if args.LeftButton = MouseButtonState.Pressed then
-                        async { nozzleClicks |> sendS () } |> Async.StartAsVoidTask |> ignore
+                        async { nozzleClicks |> sendS () } |> startAsVoidTask |> ignore
                 nozzleImage.MouseDown.AddHandler (MouseButtonEventHandler mouseDownHandler)
                 nozzleClicks |> snapshotAndTakeC nozzleLoop |> mapS (fun n -> match n with | Down -> Up | Up -> Down) |> holdS Down
             let struct (_, (sSaleComplete, delivery)) = loopC (fun nozzle1 ->

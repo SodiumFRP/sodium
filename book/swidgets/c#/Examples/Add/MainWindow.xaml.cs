@@ -1,4 +1,4 @@
-﻿using SodiumFRP;
+﻿using Sodium.Frp;
 using SWidgets;
 
 namespace Add

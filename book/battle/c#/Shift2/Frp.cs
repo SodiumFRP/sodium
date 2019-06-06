@@ -1,6 +1,7 @@
 using System;
 using System.Windows.Controls;
-using SodiumFRP;
+using Sodium.Functional;
+using Sodium.Frp;
 
 namespace Shift2
 {

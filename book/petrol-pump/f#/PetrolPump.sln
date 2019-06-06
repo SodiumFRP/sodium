@@ -10,7 +10,7 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = ".paket", ".paket", "{51B07B
 		paket.dependencies = paket.dependencies
 	EndProjectSection
 EndProject
-Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "PetrolPump.Controls", "PetrolPump.Controls\PetrolPump.Controls.fsproj", "{378CD715-79CC-4F09-ACD3-26D85C0281FD}"
+Project("{F2A71F9B-5D33-465A-A702-920D77279786}") = "PetrolPump.Controls", "PetrolPump.Controls\PetrolPump.Controls.fsproj", "{56927C9C-AC91-42AB-9A9E-4CA51CEC0E9F}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
@@ -22,10 +22,10 @@ Global
 		{F835CE63-49A7-48FE-B35E-6F25F7053C25}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{F835CE63-49A7-48FE-B35E-6F25F7053C25}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{F835CE63-49A7-48FE-B35E-6F25F7053C25}.Release|Any CPU.Build.0 = Release|Any CPU
-		{378CD715-79CC-4F09-ACD3-26D85C0281FD}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
-		{378CD715-79CC-4F09-ACD3-26D85C0281FD}.Debug|Any CPU.Build.0 = Debug|Any CPU
-		{378CD715-79CC-4F09-ACD3-26D85C0281FD}.Release|Any CPU.ActiveCfg = Release|Any CPU
-		{378CD715-79CC-4F09-ACD3-26D85C0281FD}.Release|Any CPU.Build.0 = Release|Any CPU
+		{56927C9C-AC91-42AB-9A9E-4CA51CEC0E9F}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{56927C9C-AC91-42AB-9A9E-4CA51CEC0E9F}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{56927C9C-AC91-42AB-9A9E-4CA51CEC0E9F}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{56927C9C-AC91-42AB-9A9E-4CA51CEC0E9F}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE

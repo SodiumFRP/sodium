@@ -2,7 +2,7 @@
 using PetrolPump.Chapter4.Section7;
 using PetrolPump.Chapter4.Section8;
 using PetrolPump.Chapter4.Section9;
-using SodiumFRP;
+using Sodium.Frp;
 
 namespace PetrolPump.Chapter4.Section11
 {

@@ -1,7 +1,9 @@
 ﻿open System
-open SodiumFRP
+open Sodium.Frp
 
 type Example = { name : string; run : unit -> unit }
+
+let mapL f (l : Lazy<_>) = lazy f l.Value
 
 [<EntryPoint>]
 let main _ =
@@ -14,7 +16,7 @@ let main _ =
 
         let calm a =
             let initA = a |> sampleLazyC
-            let oInitA = initA |> Lazy.map Some
+            let oInitA = initA |> mapL Some
             a |> updatesC |> calmInternal oInitA |> holdLazyS initA
 
         let sa = sinkC 1

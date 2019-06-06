@@ -4,9 +4,8 @@ open System.IO
 open System.Net.Sockets
 open System.Text
 open System.Windows
-open System.Windows.Controls
 open FsXaml
-open SodiumFRP
+open Sodium.Frp
 open SWidgets
 
 type internal IsBusy<'T, 'TResult> (action : Stream<'T> -> Stream<'TResult>, sIn) =

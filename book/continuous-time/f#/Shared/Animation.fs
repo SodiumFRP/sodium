@@ -2,8 +2,8 @@
 
 open System.Windows
 open System.Windows.Media
-open SodiumFRP
-open SodiumFRP.Time
+open Sodium.Frp
+open Sodium.Frp.Time
 
 type Height = double
 type Origin = Point

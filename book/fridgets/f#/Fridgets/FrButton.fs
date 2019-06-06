@@ -3,7 +3,7 @@
 open System.Windows
 open System.Windows.Input
 open System.Windows.Media
-open SodiumFRP
+open Sodium.Frp
 
 type FrButton =
     private {

@@ -2,7 +2,7 @@
 
 open System
 open System.Windows.Controls
-open SodiumFRP
+open Sodium.Frp
 
 type SComboBox<'T>(setSelectedItem : Stream<'T option>, initSelectedItem : 'T option, items : 'T seq) as this =
     inherit ComboBox()

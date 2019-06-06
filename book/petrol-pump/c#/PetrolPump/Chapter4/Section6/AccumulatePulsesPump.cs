@@ -1,5 +1,6 @@
 ﻿using PetrolPump.Chapter4.Section4;
-using SodiumFRP;
+using Sodium.Frp;
+using Sodium.Functional;
 
 namespace PetrolPump.Chapter4.Section6
 {
