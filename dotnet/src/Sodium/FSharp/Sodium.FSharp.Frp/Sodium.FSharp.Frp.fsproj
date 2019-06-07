@@ -32,7 +32,6 @@
     <Compile Include="Utils.fs" />
     <Compile Include="Transaction.fs" />
     <Compile Include="Listener.fs" />
-    <Compile Include="MutableListener.fs" />
     <Compile Include="StreamSink.fs" />
     <Compile Include="Cleanup.fs" />
     <Compile Include="BehaviorSink.fs" />

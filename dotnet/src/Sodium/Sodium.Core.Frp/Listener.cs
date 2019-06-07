@@ -49,7 +49,9 @@ namespace Sodium.Frp
 
     internal static class ListenerInternal
     {
-        internal static readonly IListener EmptyImpl = new ActionListener(() => { });
+        internal static readonly IListener EmptyImpl = EmptyListener.Instance;
+        internal static readonly IWeakListener EmptyWeakImpl = EmptyListener.Instance;
+        internal static readonly IStrongListener EmptyStrongImpl = EmptyListener.Instance;
 
         internal static IListener CreateFromNodeAndTarget<T>(Node<T> node, Node<T>.Target target) =>
             new ActionListener(() => node.Unlink(target));
@@ -65,13 +67,24 @@ namespace Sodium.Frp
         internal static IStrongListener CreateStrongCompositeImpl(IReadOnlyList<IStrongListener> listeners) =>
             new CompositeStrongListener(listeners);
 
-        internal static IListener AppendImpl(IListener listener1, IListener listener2) =>
-            new ActionListener(
-                () =>
-                {
-                    listener1?.Unlisten();
-                    listener2?.Unlisten();
-                });
+        private class EmptyListener : IStrongListener, IWeakListener, IListenerWithWeakReference
+        {
+            public static readonly EmptyListener Instance = new EmptyListener();
+
+            private EmptyListener()
+            {
+            }
+
+            public void Unlisten()
+            {
+            }
+
+            public IListenerWithWeakReference GetListenerWithWeakReference() => this;
+
+            public void Dispose()
+            {
+            }
+        }
 
         /// <summary>
         ///     A listener which runs the specified action when it is disposed.

@@ -7,6 +7,8 @@ let inline onStartT a = Transaction.onStart a
 let inline postT a = Transaction.post a
 
 let inline unlistenL listener = Listener.unlisten listener
+let inline unlistenWeakL listener = WeakListener.unlisten listener
+let inline unlistenStrongL listener = StrongListener.unlisten listener
 
 let inline neverS<'a> () = Stream.never<'a> ()
 let inline sinkS<'a> () = StreamSink.create<'a> ()
