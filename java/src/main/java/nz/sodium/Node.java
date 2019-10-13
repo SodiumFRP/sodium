@@ -48,6 +48,7 @@ class Node implements Comparable<Node> {
 		rank = limit + 1;
 		for (Target l : listeners)
 			l.node.ensureBiggerThan(rank, visited);
+		visited.remove(this);
 		return true;
 	}
 
