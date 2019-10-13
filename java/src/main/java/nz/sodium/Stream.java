@@ -91,7 +91,7 @@ public class Stream<A> {
 	}
 
     /**
-     * A variant of {@link listen(Handler)} that handles the first event and then
+     * A variant of {@link #listen(Handler)} that handles the first event and then
      * automatically deregisters itself. This is useful for implementing things that
      * work like promises.
      */
@@ -115,8 +115,8 @@ public class Stream<A> {
 	}
 
     /**
-     * A variant of {@link listen(Handler)} that will deregister the listener automatically
-     * if the listener is garbage collected. With {@link listen(Handler)}, the listener is
+     * A variant of {@link #listen(Handler)} that will deregister the listener automatically
+     * if the listener is garbage collected. With {@link #listen(Handler)}, the listener is
      * only deregistered if {@link Listener#unlisten()} is called explicitly.
      * <P>
      * This method should be used for listeners that are to be passed to {@link Stream#addCleanup(Listener)}
@@ -213,7 +213,7 @@ public class Stream<A> {
 	}
 
 	/**
-	 * A variant of {@link hold(Object)} with an initial value captured by {@link Cell#sampleLazy()}.
+	 * A variant of {@link #hold(Object)} with an initial value captured by {@link Cell#sampleLazy()}.
 	 */
 	public final Cell<A> holdLazy(final Lazy<A> initValue) {
 		return Transaction.apply(new Lambda1<Transaction, Cell<A>>() {
@@ -228,7 +228,7 @@ public class Stream<A> {
 	}
 
 	/**
-	 * Variant of {@link snapshot(Cell, Lambda2)} that captures the cell's value
+	 * Variant of {@link #snapshot(Cell, Lambda2)} that captures the cell's value
 	 * at the time of the event firing, ignoring the stream's value.
 	 */
 	public final <B> Stream<B> snapshot(Cell<B> c)
@@ -263,7 +263,7 @@ public class Stream<A> {
 	}
 
 	/**
-	 * Variant of {@link snapshot(Cell, Lambda2)} that captures the values of
+	 * Variant of {@link #snapshot(Cell, Lambda2)} that captures the values of
 	 * two cells.
      */
 	public final <B,C,D> Stream<D> snapshot(final Cell<B> cb, final Cell<C> cc, final Lambda3<A,B,C,D> fn)
@@ -276,7 +276,7 @@ public class Stream<A> {
 	}
 
 	/**
-	 * Variant of {@link snapshot(Cell, Lambda2)} that captures the values of
+	 * Variant of {@link #snapshot(Cell, Lambda2)} that captures the values of
 	 * three cells.
      */
 	public final <B,C,D,E> Stream<E> snapshot(final Cell<B> cb, final Cell<C> cc, final Cell<D> cd, final Lambda4<A,B,C,D,E> fn)
@@ -289,7 +289,7 @@ public class Stream<A> {
 	}
 
 	/**
-	 * Variant of {@link snapshot(Cell, Lambda2)} that captures the values of
+	 * Variant of {@link #snapshot(Cell, Lambda2)} that captures the values of
 	 * four cells.
      */
 	public final <B,C,D,E,F> Stream<F> snapshot(final Cell<B> cb, final Cell<C> cc, final Cell<D> cd, final Cell<E> ce, final Lambda5<A,B,C,D,E,F> fn)
@@ -302,7 +302,7 @@ public class Stream<A> {
 	}
 
 	/**
-	 * Variant of {@link snapshot(Cell, Lambda2)} that captures the values of
+	 * Variant of {@link #snapshot(Cell, Lambda2)} that captures the values of
 	 * five cells.
      */
 	public final <B,C,D,E,F,G> Stream<G> snapshot(final Cell<B> cb, final Cell<C> cc, final Cell<D> cd, final Cell<E> ce, final Cell<F> cf, final Lambda6<A,B,C,D,E,F,G> fn)
@@ -378,7 +378,7 @@ public class Stream<A> {
     }
 
     /**
-     * Variant of {@link orElse(Stream)} that merges a collection of streams.
+     * Variant of {@link #orElse(Stream)} that merges a collection of streams.
      */
     public static <A> Stream<A> orElse(Iterable<Stream<A>> ss) {
         return Stream.<A>merge(ss, new Lambda2<A,A,A>() {
@@ -387,7 +387,7 @@ public class Stream<A> {
     }
 
     /**
-     * Variant of {@link merge(Stream,Lambda2)} that merges a collection of streams.
+     * Variant of {@link #merge(Stream,Lambda2)} that merges a collection of streams.
      */
     public static <A> Stream<A> merge(Iterable<Stream<A>> ss, final Lambda2<A,A,A> f) {
         Vector<Stream<A>> v = new Vector<Stream<A>>();
@@ -481,7 +481,7 @@ public class Stream<A> {
     }
 
     /**
-     * A variant of {@link collect(Object, Lambda2)} that takes an initial state returned by
+     * A variant of {@link #collect(Object, Lambda2)} that takes an initial state returned by
      * {@link Cell#sampleLazy()}.
      */
     public final <B,S> Stream<B> collectLazy(final Lazy<S> initState, final Lambda2<A, S, Tuple2<B, S>> f)
@@ -516,7 +516,7 @@ public class Stream<A> {
     }
 
     /**
-     * A variant of {@link accum(Object, Lambda2)} that takes an initial state returned by
+     * A variant of {@link #accum(Object, Lambda2)} that takes an initial state returned by
      * {@link Cell#sampleLazy()}.
      */
     public final <S> Cell<S> accumLazy(final Lazy<S> initState, final Lambda2<A, S, S> f)
@@ -575,7 +575,7 @@ public class Stream<A> {
      * when this stream is garbage collected. Useful for functions that initiate I/O,
      * returning the result of it through a stream.
      * <P>
-     * You must use this only with listeners returned by {@link listenWeak(Handler)} so that
+     * You must use this only with listeners returned by {@link #listenWeak(Handler)} so that
      * things don't get kept alive when they shouldn't.
      */
     public Stream<A> addCleanup(final Listener cleanup) {

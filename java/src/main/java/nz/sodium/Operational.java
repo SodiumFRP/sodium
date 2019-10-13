@@ -22,7 +22,7 @@ public class Operational {
 
     /**
      * A stream that is guaranteed to fire once in the transaction where value() is invoked, giving
-     * the current value of the cell, and thereafter behaves like {@link updates(Cell)},
+     * the current value of the cell, and thereafter behaves like {@link #updates(Cell)},
      * firing for each update/step of the cell's value.
      * <P>
      * This is an OPERATIONAL primitive, which is not part of the main Sodium
@@ -41,7 +41,7 @@ public class Operational {
 
 	/**
 	 * Push each event onto a new transaction guaranteed to come before the next externally
-	 * initiated transaction. Same as {@link split(Stream)} but it works on a single value.
+	 * initiated transaction. Same as {@link #split(Stream)} but it works on a single value.
 	 */
 	public static <A> Stream<A> defer(Stream<A> s)
 	{
@@ -59,7 +59,7 @@ public class Operational {
 	 * to come before the next externally initiated transaction. Note that the semantics
 	 * are such that two different invocations of split() can put events into the same
 	 * new transaction, so the resulting stream's events could be simultaneous with
-	 * events output by split() or {@link defer(Stream)} invoked elsewhere in the code.
+	 * events output by split() or {@link #defer(Stream)} invoked elsewhere in the code.
 	 */
     public static <A, C extends Iterable<A>> Stream<A> split(Stream<C> s) {
 	    final StreamWithSend<A> out = new StreamWithSend<A>();

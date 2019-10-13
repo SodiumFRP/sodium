@@ -60,7 +60,7 @@ public class Cell<A> {
      * including {@link Stream#map(Lambda1)} in which case it is equivalent to snapshotting the cell,
      * {@link Stream#snapshot(Cell, Lambda2)}, {@link Stream#filter(Lambda1)} and
      * {@link Stream#merge(Stream, Lambda2)}.
-     * It should generally be avoided in favour of {@link listen(Handler)} so you don't
+     * It should generally be avoided in favour of {@link #listen(Handler)} so you don't
      * miss any updates, but in many circumstances it makes sense.
      */
     public final A sample()
@@ -82,7 +82,7 @@ public class Cell<A> {
     }
 
     /**
-     * A variant of {@link sample()} that works with {@link CellLoop}s when they haven't been looped yet.
+     * A variant of {@link #sample()} that works with {@link CellLoop}s when they haven't been looped yet.
      * It should be used in any code that's general enough that it could be passed a {@link CellLoop}.
      * @see Stream#holdLazy(Lazy) Stream.holdLazy()
      */
@@ -469,8 +469,8 @@ public class Cell<A> {
 	}
 
 	/**
-	 * A variant of {@link listen(Handler)} that will deregister the listener automatically
-	 * if the listener is garbage collected. With {@link listen(Handler)}, the listener is
+	 * A variant of {@link #listen(Handler)} that will deregister the listener automatically
+	 * if the listener is garbage collected. With {@link #listen(Handler)}, the listener is
 	 * only deregistered if {@link Listener#unlisten()} is called explicitly.
 	 */
 	public final Listener listenWeak(final Handler<A> action) {
@@ -485,7 +485,7 @@ public class Cell<A> {
 	 * Lift a binary function into cells, so the returned Cell always reflects the specified
 	 * function applied to the input cells' values.
 	 * @param fn Function to apply. It must be <em>referentially transparent</em>.
-	 * @deprecated As of release 1.1.0, replaced by {@link lift(Cell,Lambda2)}
+	 * @deprecated As of release 1.1.0, replaced by {@link #lift(Cell,Lambda2)}
 	 */
     @Deprecated
 	public static final <A,B,C> Cell<C> lift(final Lambda2<A,B,C> fn, Cell<A> a, Cell<B> b)
@@ -497,7 +497,7 @@ public class Cell<A> {
 	 * Lift a ternary function into cells, so the returned Cell always reflects the specified
 	 * function applied to the input cells' values.
 	 * @param fn Function to apply. It must be <em>referentially transparent</em>.
-	 * @deprecated As of release 1.1.0, replaced by {@link lift(Cell,Cell,Lambda3)}
+	 * @deprecated As of release 1.1.0, replaced by {@link #lift(Cell,Cell,Lambda3)}
 	 */
     @Deprecated
 	public static final <A,B,C,D> Cell<D> lift(final Lambda3<A,B,C,D> fn, Cell<A> a, Cell<B> b, Cell<C> c)
@@ -509,7 +509,7 @@ public class Cell<A> {
 	 * Lift a quaternary function into cells, so the returned Cell always reflects the specified
 	 * function applied to the input cells' values.
 	 * @param fn Function to apply. It must be <em>referentially transparent</em>.
-	 * @deprecated As of release 1.1.0, replaced by {@link lift(Cell,Cell,Cell,Lambda4)}
+	 * @deprecated As of release 1.1.0, replaced by {@link #lift(Cell,Cell,Cell,Lambda4)}
 	 */
     @Deprecated
 	public static final <A,B,C,D,E> Cell<E> lift(final Lambda4<A,B,C,D,E> fn, Cell<A> a, Cell<B> b, Cell<C> c, Cell<D> d)
@@ -521,7 +521,7 @@ public class Cell<A> {
 	 * Lift a 5-argument function into cells, so the returned Cell always reflects the specified
 	 * function applied to the input cells' values.
 	 * @param fn Function to apply. It must be <em>referentially transparent</em>.
-	 * @deprecated As of release 1.1.0, replaced by {@link lift(Cell,Cell,Cell,Cell,Lambda5)}
+	 * @deprecated As of release 1.1.0, replaced by {@link #lift(Cell,Cell,Cell,Cell,Lambda5)}
 	 */
     @Deprecated
 	public static final <A,B,C,D,E,F> Cell<F> lift(final Lambda5<A,B,C,D,E,F> fn, Cell<A> a, Cell<B> b, Cell<C> c, Cell<D> d, Cell<E> e)
@@ -533,7 +533,7 @@ public class Cell<A> {
 	 * Lift a 6-argument function into cells, so the returned Cell always reflects the specified
 	 * function applied to the input cells' values.
 	 * @param fn Function to apply. It must be <em>referentially transparent</em>.
-	 * @deprecated As of release 1.1.0, replaced by {@link lift(Cell,Cell,Cell,Cell,Cell,Lambda6)}
+	 * @deprecated As of release 1.1.0, replaced by {@link #lift(Cell,Cell,Cell,Cell,Cell,Lambda6)}
 	 */
     @Deprecated
 	public static final <A,B,C,D,E,F,G> Cell<G> lift(final Lambda6<A,B,C,D,E,F,G> fn, Cell<A> a, Cell<B> b, Cell<C> c, Cell<D> d, Cell<E> e, Cell<F> f)

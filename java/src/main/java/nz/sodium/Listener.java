@@ -13,7 +13,7 @@ public class Listener {
     public void unlisten() {}
 
     /**
-     * Combine listeners into one so that invoking {@link unlisten()} on the returned
+     * Combine listeners into one so that invoking {@link #unlisten()} on the returned
      * listener will unlisten both the inputs.
      */
     public final Listener append(final Listener two) {

@@ -49,7 +49,7 @@
         <javac includeantruntime="false" debug="true" srcdir="src/main/java" destdir="build/1.5/src" source="1.5" target="1.5"/>
     </target>
 
-    <target name="jar" depends="jar-old,jar-new"/>
+    <target name="jar" depends="jar-new"/>
 
     <target name="jar-new" depends="compile-new,doc,javaCheck" if="Java8OrHigher">
         <mkdir dir="build/1.8/jar" />

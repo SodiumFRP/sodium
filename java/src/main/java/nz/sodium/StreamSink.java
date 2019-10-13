@@ -9,7 +9,7 @@ public class StreamSink<A> extends StreamWithSend<A> {
     /**
      * Construct a StreamSink that allows send() to be called once on it per transaction.
      * If you call send() more than once, it will throw an exception. If you need to do
-     * this, then use {@link StreamSink(Lambda2)}.
+     * this, then use {@link #StreamSink(Lambda2)}.
      */
     public StreamSink() {
         this(new Lambda2<A,A,A>() {
