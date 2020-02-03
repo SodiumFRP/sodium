@@ -5,13 +5,26 @@ namespace Sodium.Functional
 {
     public interface IMaybe
     {
-        T Match<T>(Func<object, T> onSome, Func<T> onNone);
-        void MatchVoid(Action<object> onSome, Action onNone);
-        void MatchSome(Action<object> onSome);
-        void MatchNone(Action onNone);
-        Task<T> MatchAsync<T>(Func<object, Task<T>> onSome, Func<Task<T>> onNone);
-        Task MatchAsyncVoid(Func<object, Task> onSome, Func<Task> onNone);
-        Task MatchSomeAsync(Func<object, Task> onSome);
-        Task MatchNoneAsync(Func<Task> onNone);
+        T Match<T>(
+            [JetBrains.Annotations.InstantHandle] Func<object, T> onSome,
+            [JetBrains.Annotations.InstantHandle] Func<T> onNone);
+        
+        void MatchVoid(
+            [JetBrains.Annotations.InstantHandle] Action<object> onSome,
+            [JetBrains.Annotations.InstantHandle] Action onNone);
+        
+        void MatchSome([JetBrains.Annotations.InstantHandle] Action<object> onSome);
+        void MatchNone([JetBrains.Annotations.InstantHandle] Action onNone);
+        
+        Task<T> MatchAsync<T>(
+            [JetBrains.Annotations.InstantHandle] Func<object, Task<T>> onSome,
+            [JetBrains.Annotations.InstantHandle] Func<Task<T>> onNone);
+        
+        Task MatchAsyncVoid(
+            [JetBrains.Annotations.InstantHandle] Func<object, Task> onSome,
+            [JetBrains.Annotations.InstantHandle] Func<Task> onNone);
+        
+        Task MatchSomeAsync([JetBrains.Annotations.InstantHandle] Func<object, Task> onSome);
+        Task MatchNoneAsync([JetBrains.Annotations.InstantHandle] Func<Task> onNone);
     }
 }

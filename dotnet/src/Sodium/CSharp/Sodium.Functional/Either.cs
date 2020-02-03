@@ -138,7 +138,7 @@ namespace Sodium.Functional
                 a.Match<T>(v1 => v1, v2 => v2, v3 => v3, v4 => v4, v5 => v5, v6 => v6, v7 => v7, v8 => v8);
         }
     }
-
+    
     public struct Either<T1, T2> : IEitherOfTwo
     {
         private readonly int valueType;
@@ -166,8 +166,9 @@ namespace Sodium.Functional
 
         object IEither.GetValueAsObject() => Either.GetValueAs<object>().From(this);
 
-        [Pure]
-        public T Match<T>(Func<T1, T> onFirst, Func<T2, T> onSecond) =>
+        public T Match<T>(
+            [JetBrains.Annotations.InstantHandle] Func<T1, T> onFirst,
+            [JetBrains.Annotations.InstantHandle] Func<T2, T> onSecond) =>
             this.valueType == 0 ? onFirst(this.value1) : onSecond(this.value2);
 
         #endregion
@@ -178,34 +179,35 @@ namespace Sodium.Functional
             // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
             this.Match(onFirst.ToFunc(), onSecond.ToFunc());
 
-        [Pure]
-        public Task<T> MatchAsync<T>(Func<T1, Task<T>> onFirst, Func<T2, Task<T>> onSecond) =>
+        public Task<T> MatchAsync<T>(
+            [JetBrains.Annotations.InstantHandle] Func<T1, Task<T>> onFirst,
+            [JetBrains.Annotations.InstantHandle] Func<T2, Task<T>> onSecond) =>
             this.Match(onFirst, onSecond);
 
-        public Task MatchAsyncVoid(Func<T1, Task> onFirst, Func<T2, Task> onSecond) =>
+        public Task MatchAsyncVoid(
+            [JetBrains.Annotations.InstantHandle] Func<T1, Task> onFirst,
+            [JetBrains.Annotations.InstantHandle] Func<T2, Task> onSecond) =>
             this.MatchAsync(onFirst.ToAsyncFunc(), onSecond.ToAsyncFunc());
 
-        [Pure]
-        public Either<T, T2> MapFirst<T>(Func<T1, T> f) =>
+        public Either<T, T2> MapFirst<T>([JetBrains.Annotations.InstantHandle] Func<T1, T> f) =>
             this.Match(v1 => Either<T, T2>.First(f(v1)), v2 => Either.Second(v2));
 
-        [Pure]
-        public Either<T1, T> MapSecond<T>(Func<T2, T> f) =>
+        public Either<T1, T> MapSecond<T>([JetBrains.Annotations.InstantHandle] Func<T2, T> f) =>
             this.Match(Either<T1, T>.First, v2 => Either.Second(f(v2)));
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T1> TryGetFirst() =>
             this.Match(Maybe.Some, _ => Maybe.None);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T2> TryGetSecond() =>
             this.Match(_ => Maybe.None, Maybe.Some);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsFirst() =>
             this.Match(_ => true, _ => false);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsSecond() =>
             this.Match(_ => false, _ => true);
 
@@ -279,8 +281,10 @@ namespace Sodium.Functional
 
         object IEither.GetValueAsObject() => Either.GetValueAs<object>().From(this);
 
-        [Pure]
-        public T Match<T>(Func<T1, T> onFirst, Func<T2, T> onSecond, Func<T3, T> onThird) =>
+        public T Match<T>(
+            [JetBrains.Annotations.InstantHandle] Func<T1, T> onFirst,
+            [JetBrains.Annotations.InstantHandle] Func<T2, T> onSecond,
+            [JetBrains.Annotations.InstantHandle] Func<T3, T> onThird) =>
             this.valueType == 0
                 ? onFirst(this.value1)
                 : (this.valueType == 1 ? onSecond(this.value2) : onThird(this.value3));
@@ -289,53 +293,55 @@ namespace Sodium.Functional
 
         #region Helper Methods
 
-        public void MatchVoid(Action<T1> onFirst, Action<T2> onSecond, Action<T3> onThird) =>
+        public void MatchVoid(
+            [JetBrains.Annotations.InstantHandle] Action<T1> onFirst,
+            [JetBrains.Annotations.InstantHandle] Action<T2> onSecond,
+            [JetBrains.Annotations.InstantHandle] Action<T3> onThird) =>
             // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
             this.Match(onFirst.ToFunc(), onSecond.ToFunc(), onThird.ToFunc());
 
-        [Pure]
         public Task<T> MatchAsync<T>(
-            Func<T1, Task<T>> onFirst,
-            Func<T2, Task<T>> onSecond,
-            Func<T3, Task<T>> onThird) =>
+            [JetBrains.Annotations.InstantHandle] Func<T1, Task<T>> onFirst,
+            [JetBrains.Annotations.InstantHandle] Func<T2, Task<T>> onSecond,
+            [JetBrains.Annotations.InstantHandle] Func<T3, Task<T>> onThird) =>
             this.Match(onFirst, onSecond, onThird);
 
-        public Task MatchAsyncVoid(Func<T1, Task> onFirst, Func<T2, Task> onSecond, Func<T3, Task> onThird) =>
+        public Task MatchAsyncVoid(
+            [JetBrains.Annotations.InstantHandle] Func<T1, Task> onFirst,
+            [JetBrains.Annotations.InstantHandle] Func<T2, Task> onSecond,
+            [JetBrains.Annotations.InstantHandle] Func<T3, Task> onThird) =>
             this.MatchAsync(onFirst.ToAsyncFunc(), onSecond.ToAsyncFunc(), onThird.ToAsyncFunc());
 
-        [Pure]
-        public Either<T, T2, T3> MapFirst<T>(Func<T1, T> f) =>
+        public Either<T, T2, T3> MapFirst<T>([JetBrains.Annotations.InstantHandle] Func<T1, T> f) =>
             this.Match(v1 => Either<T, T2, T3>.First(f(v1)), v2 => Either.Second(v2), v3 => Either.Third(v3));
 
-        [Pure]
-        public Either<T1, T, T3> MapSecond<T>(Func<T2, T> f) =>
+        public Either<T1, T, T3> MapSecond<T>([JetBrains.Annotations.InstantHandle] Func<T2, T> f) =>
             this.Match(Either<T1, T, T3>.First, v2 => Either.Second(f(v2)), v3 => Either.Third(v3));
 
-        [Pure]
-        public Either<T1, T2, T> MapThird<T>(Func<T3, T> f) =>
+        public Either<T1, T2, T> MapThird<T>([JetBrains.Annotations.InstantHandle] Func<T3, T> f) =>
             this.Match(Either<T1, T2, T>.First, v2 => Either.Second(v2), v3 => Either.Third(f(v3)));
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T1> TryGetFirst() =>
             this.Match(Maybe.Some, _ => Maybe.None, _ => Maybe.None);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T2> TryGetSecond() =>
             this.Match(_ => Maybe.None, Maybe.Some, _ => Maybe.None);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T3> TryGetThird() =>
             this.Match(_ => Maybe.None, _ => Maybe.None, Maybe.Some);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsFirst() =>
             this.Match(_ => true, _ => false, _ => false);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsSecond() =>
             this.Match(_ => false, _ => true, _ => false);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsThird() =>
             this.Match(_ => false, _ => false, _ => true);
 
@@ -438,8 +444,11 @@ namespace Sodium.Functional
 
         object IEither.GetValueAsObject() => Either.GetValueAs<object>().From(this);
 
-        [Pure]
-        public T Match<T>(Func<T1, T> onFirst, Func<T2, T> onSecond, Func<T3, T> onThird, Func<T4, T> onFourth) =>
+        public T Match<T>(
+            [JetBrains.Annotations.InstantHandle] Func<T1, T> onFirst,
+            [JetBrains.Annotations.InstantHandle] Func<T2, T> onSecond,
+            [JetBrains.Annotations.InstantHandle] Func<T3, T> onThird,
+            [JetBrains.Annotations.InstantHandle] Func<T4, T> onFourth) =>
             this.valueType == 0
                 ? onFirst(this.value1)
                 : (this.valueType == 1
@@ -450,90 +459,89 @@ namespace Sodium.Functional
 
         #region Helper Methods
 
-        public void MatchVoid(Action<T1> onFirst, Action<T2> onSecond, Action<T3> onThird, Action<T4> onFourth) =>
+        public void MatchVoid(
+            [JetBrains.Annotations.InstantHandle] Action<T1> onFirst,
+            [JetBrains.Annotations.InstantHandle] Action<T2> onSecond,
+            [JetBrains.Annotations.InstantHandle] Action<T3> onThird,
+            [JetBrains.Annotations.InstantHandle] Action<T4> onFourth) =>
             // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
             this.Match(onFirst.ToFunc(), onSecond.ToFunc(), onThird.ToFunc(), onFourth.ToFunc());
 
-        [Pure]
         public Task<T> MatchAsync<T>(
-            Func<T1, Task<T>> onFirst,
-            Func<T2, Task<T>> onSecond,
-            Func<T3, Task<T>> onThird,
-            Func<T4, Task<T>> onFourth) =>
+            [JetBrains.Annotations.InstantHandle] Func<T1, Task<T>> onFirst,
+            [JetBrains.Annotations.InstantHandle] Func<T2, Task<T>> onSecond,
+            [JetBrains.Annotations.InstantHandle] Func<T3, Task<T>> onThird,
+            [JetBrains.Annotations.InstantHandle] Func<T4, Task<T>> onFourth) =>
             this.Match(onFirst, onSecond, onThird, onFourth);
 
         public Task MatchAsyncVoid(
-            Func<T1, Task> onFirst,
-            Func<T2, Task> onSecond,
-            Func<T3, Task> onThird,
-            Func<T4, Task> onFourth) =>
+            [JetBrains.Annotations.InstantHandle] Func<T1, Task> onFirst,
+            [JetBrains.Annotations.InstantHandle] Func<T2, Task> onSecond,
+            [JetBrains.Annotations.InstantHandle] Func<T3, Task> onThird,
+            [JetBrains.Annotations.InstantHandle] Func<T4, Task> onFourth) =>
             this.MatchAsync(
                 onFirst.ToAsyncFunc(),
                 onSecond.ToAsyncFunc(),
                 onThird.ToAsyncFunc(),
                 onFourth.ToAsyncFunc());
 
-        [Pure]
-        public Either<T, T2, T3, T4> MapFirst<T>(Func<T1, T> f) =>
+        public Either<T, T2, T3, T4> MapFirst<T>([JetBrains.Annotations.InstantHandle] Func<T1, T> f) =>
             this.Match(
                 v1 => Either<T, T2, T3, T4>.First(f(v1)),
                 v2 => Either.Second(v2),
                 v3 => Either.Third(v3),
                 v4 => Either.Fourth(v4));
 
-        [Pure]
-        public Either<T1, T, T3, T4> MapSecond<T>(Func<T2, T> f) =>
+        public Either<T1, T, T3, T4> MapSecond<T>([JetBrains.Annotations.InstantHandle] Func<T2, T> f) =>
             this.Match(
                 Either<T1, T, T3, T4>.First,
                 v2 => Either.Second(f(v2)),
                 v3 => Either.Third(v3),
                 v4 => Either.Fourth(v4));
 
-        [Pure]
-        public Either<T1, T2, T, T4> MapThird<T>(Func<T3, T> f) =>
+        public Either<T1, T2, T, T4> MapThird<T>([JetBrains.Annotations.InstantHandle] Func<T3, T> f) =>
             this.Match(
                 Either<T1, T2, T, T4>.First,
                 v2 => Either.Second(v2),
                 v3 => Either.Third(f(v3)),
                 v4 => Either.Fourth(v4));
 
-        [Pure]
-        public Either<T1, T2, T3, T> MapFourth<T>(Func<T4, T> f) =>
+        public Either<T1, T2, T3, T> MapFourth<T>([JetBrains.Annotations.InstantHandle] Func<T4, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T>.First,
                 v2 => Either.Second(v2),
                 v3 => Either.Third(v3),
                 v4 => Either.Fourth(f(v4)));
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T1> TryGetFirst() =>
             this.Match(Maybe.Some, _ => Maybe.None, _ => Maybe.None, _ => Maybe.None);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T2> TryGetSecond() =>
             this.Match(_ => Maybe.None, Maybe.Some, _ => Maybe.None, _ => Maybe.None);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T3> TryGetThird() =>
             this.Match(_ => Maybe.None, _ => Maybe.None, Maybe.Some, _ => Maybe.None);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T4> TryGetFourth() =>
             this.Match(_ => Maybe.None, _ => Maybe.None, _ => Maybe.None, Maybe.Some);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsFirst() =>
             this.Match(_ => true, _ => false, _ => false, _ => false);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsSecond() =>
             this.Match(_ => false, _ => true, _ => false, _ => false);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsThird() =>
             this.Match(_ => false, _ => false, _ => true, _ => false);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsFourth() =>
             this.Match(_ => false, _ => false, _ => false, _ => true);
 
@@ -684,13 +692,12 @@ namespace Sodium.Functional
 
         object IEither.GetValueAsObject() => Either.GetValueAs<object>().From(this);
 
-        [Pure]
         public T Match<T>(
-            Func<T1, T> onFirst,
-            Func<T2, T> onSecond,
-            Func<T3, T> onThird,
-            Func<T4, T> onFourth,
-            Func<T5, T> onFifth) =>
+            [JetBrains.Annotations.InstantHandle] Func<T1, T> onFirst,
+            [JetBrains.Annotations.InstantHandle] Func<T2, T> onSecond,
+            [JetBrains.Annotations.InstantHandle] Func<T3, T> onThird,
+            [JetBrains.Annotations.InstantHandle] Func<T4, T> onFourth,
+            [JetBrains.Annotations.InstantHandle] Func<T5, T> onFifth) =>
             this.valueType == 0
                 ? onFirst(this.value1)
                 : (this.valueType == 1
@@ -704,29 +711,28 @@ namespace Sodium.Functional
         #region Helper Methods
 
         public void MatchVoid(
-            Action<T1> onFirst,
-            Action<T2> onSecond,
-            Action<T3> onThird,
-            Action<T4> onFourth,
-            Action<T5> onFifth) =>
+            [JetBrains.Annotations.InstantHandle] Action<T1> onFirst,
+            [JetBrains.Annotations.InstantHandle] Action<T2> onSecond,
+            [JetBrains.Annotations.InstantHandle] Action<T3> onThird,
+            [JetBrains.Annotations.InstantHandle] Action<T4> onFourth,
+            [JetBrains.Annotations.InstantHandle] Action<T5> onFifth) =>
             // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
             this.Match(onFirst.ToFunc(), onSecond.ToFunc(), onThird.ToFunc(), onFourth.ToFunc(), onFifth.ToFunc());
 
-        [Pure]
         public Task<T> MatchAsync<T>(
-            Func<T1, Task<T>> onFirst,
-            Func<T2, Task<T>> onSecond,
-            Func<T3, Task<T>> onThird,
-            Func<T4, Task<T>> onFourth,
-            Func<T5, Task<T>> onFifth) =>
+            [JetBrains.Annotations.InstantHandle] Func<T1, Task<T>> onFirst,
+            [JetBrains.Annotations.InstantHandle] Func<T2, Task<T>> onSecond,
+            [JetBrains.Annotations.InstantHandle] Func<T3, Task<T>> onThird,
+            [JetBrains.Annotations.InstantHandle] Func<T4, Task<T>> onFourth,
+            [JetBrains.Annotations.InstantHandle] Func<T5, Task<T>> onFifth) =>
             this.Match(onFirst, onSecond, onThird, onFourth, onFifth);
 
         public Task MatchAsyncVoid(
-            Func<T1, Task> onFirst,
-            Func<T2, Task> onSecond,
-            Func<T3, Task> onThird,
-            Func<T4, Task> onFourth,
-            Func<T5, Task> onFifth) =>
+            [JetBrains.Annotations.InstantHandle] Func<T1, Task> onFirst,
+            [JetBrains.Annotations.InstantHandle] Func<T2, Task> onSecond,
+            [JetBrains.Annotations.InstantHandle] Func<T3, Task> onThird,
+            [JetBrains.Annotations.InstantHandle] Func<T4, Task> onFourth,
+            [JetBrains.Annotations.InstantHandle] Func<T5, Task> onFifth) =>
             this.MatchAsync(
                 onFirst.ToAsyncFunc(),
                 onSecond.ToAsyncFunc(),
@@ -734,8 +740,7 @@ namespace Sodium.Functional
                 onFourth.ToAsyncFunc(),
                 onFifth.ToAsyncFunc());
 
-        [Pure]
-        public Either<T, T2, T3, T4, T5> MapFirst<T>(Func<T1, T> f) =>
+        public Either<T, T2, T3, T4, T5> MapFirst<T>([JetBrains.Annotations.InstantHandle] Func<T1, T> f) =>
             this.Match(
                 v1 => Either<T, T2, T3, T4, T5>.First(f(v1)),
                 v2 => Either.Second(v2),
@@ -743,8 +748,7 @@ namespace Sodium.Functional
                 v4 => Either.Fourth(v4),
                 v5 => Either.Fifth(v5));
 
-        [Pure]
-        public Either<T1, T, T3, T4, T5> MapSecond<T>(Func<T2, T> f) =>
+        public Either<T1, T, T3, T4, T5> MapSecond<T>([JetBrains.Annotations.InstantHandle] Func<T2, T> f) =>
             this.Match(
                 Either<T1, T, T3, T4, T5>.First,
                 v2 => Either.Second(f(v2)),
@@ -752,8 +756,7 @@ namespace Sodium.Functional
                 v4 => Either.Fourth(v4),
                 v5 => Either.Fifth(v5));
 
-        [Pure]
-        public Either<T1, T2, T, T4, T5> MapThird<T>(Func<T3, T> f) =>
+        public Either<T1, T2, T, T4, T5> MapThird<T>([JetBrains.Annotations.InstantHandle] Func<T3, T> f) =>
             this.Match(
                 Either<T1, T2, T, T4, T5>.First,
                 v2 => Either.Second(v2),
@@ -761,8 +764,7 @@ namespace Sodium.Functional
                 v4 => Either.Fourth(v4),
                 v5 => Either.Fifth(v5));
 
-        [Pure]
-        public Either<T1, T2, T3, T, T5> MapFourth<T>(Func<T4, T> f) =>
+        public Either<T1, T2, T3, T, T5> MapFourth<T>([JetBrains.Annotations.InstantHandle] Func<T4, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T, T5>.First,
                 v2 => Either.Second(v2),
@@ -770,8 +772,7 @@ namespace Sodium.Functional
                 v4 => Either.Fourth(f(v4)),
                 v5 => Either.Fifth(v5));
 
-        [Pure]
-        public Either<T1, T2, T3, T4, T> MapFifth<T>(Func<T5, T> f) =>
+        public Either<T1, T2, T3, T4, T> MapFifth<T>([JetBrains.Annotations.InstantHandle] Func<T5, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T4, T>.First,
                 v2 => Either.Second(v2),
@@ -779,43 +780,43 @@ namespace Sodium.Functional
                 v4 => Either.Fourth(v4),
                 v5 => Either.Fifth(f(v5)));
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T1> TryGetFirst() =>
             this.Match(Maybe.Some, _ => Maybe.None, _ => Maybe.None, _ => Maybe.None, _ => Maybe.None);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T2> TryGetSecond() =>
             this.Match(_ => Maybe.None, Maybe.Some, _ => Maybe.None, _ => Maybe.None, _ => Maybe.None);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T3> TryGetThird() =>
             this.Match(_ => Maybe.None, _ => Maybe.None, Maybe.Some, _ => Maybe.None, _ => Maybe.None);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T4> TryGetFourth() =>
             this.Match(_ => Maybe.None, _ => Maybe.None, _ => Maybe.None, Maybe.Some, _ => Maybe.None);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T5> TryGetFifth() =>
             this.Match(_ => Maybe.None, _ => Maybe.None, _ => Maybe.None, _ => Maybe.None, Maybe.Some);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsFirst() =>
             this.Match(_ => true, _ => false, _ => false, _ => false, _ => false);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsSecond() =>
             this.Match(_ => false, _ => true, _ => false, _ => false, _ => false);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsThird() =>
             this.Match(_ => false, _ => false, _ => true, _ => false, _ => false);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsFourth() =>
             this.Match(_ => false, _ => false, _ => false, _ => true, _ => false);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsFifth() =>
             this.Match(_ => false, _ => false, _ => false, _ => false, _ => true);
 
@@ -999,14 +1000,13 @@ namespace Sodium.Functional
 
         object IEither.GetValueAsObject() => Either.GetValueAs<object>().From(this);
 
-        [Pure]
         public T Match<T>(
-            Func<T1, T> onFirst,
-            Func<T2, T> onSecond,
-            Func<T3, T> onThird,
-            Func<T4, T> onFourth,
-            Func<T5, T> onFifth,
-            Func<T6, T> onSixth) =>
+            [JetBrains.Annotations.InstantHandle] Func<T1, T> onFirst,
+            [JetBrains.Annotations.InstantHandle] Func<T2, T> onSecond,
+            [JetBrains.Annotations.InstantHandle] Func<T3, T> onThird,
+            [JetBrains.Annotations.InstantHandle] Func<T4, T> onFourth,
+            [JetBrains.Annotations.InstantHandle] Func<T5, T> onFifth,
+            [JetBrains.Annotations.InstantHandle] Func<T6, T> onSixth) =>
             this.valueType == 0
                 ? onFirst(this.value1)
                 : (this.valueType == 1
@@ -1022,12 +1022,12 @@ namespace Sodium.Functional
         #region Helper Methods
 
         public void MatchVoid(
-            Action<T1> onFirst,
-            Action<T2> onSecond,
-            Action<T3> onThird,
-            Action<T4> onFourth,
-            Action<T5> onFifth,
-            Action<T6> onSixth) =>
+            [JetBrains.Annotations.InstantHandle] Action<T1> onFirst,
+            [JetBrains.Annotations.InstantHandle] Action<T2> onSecond,
+            [JetBrains.Annotations.InstantHandle] Action<T3> onThird,
+            [JetBrains.Annotations.InstantHandle] Action<T4> onFourth,
+            [JetBrains.Annotations.InstantHandle] Action<T5> onFifth,
+            [JetBrains.Annotations.InstantHandle] Action<T6> onSixth) =>
             // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
             this.Match(
                 onFirst.ToFunc(),
@@ -1037,23 +1037,22 @@ namespace Sodium.Functional
                 onFifth.ToFunc(),
                 onSixth.ToFunc());
 
-        [Pure]
         public Task<T> MatchAsync<T>(
-            Func<T1, Task<T>> onFirst,
-            Func<T2, Task<T>> onSecond,
-            Func<T3, Task<T>> onThird,
-            Func<T4, Task<T>> onFourth,
-            Func<T5, Task<T>> onFifth,
-            Func<T6, Task<T>> onSixth) =>
+            [JetBrains.Annotations.InstantHandle] Func<T1, Task<T>> onFirst,
+            [JetBrains.Annotations.InstantHandle] Func<T2, Task<T>> onSecond,
+            [JetBrains.Annotations.InstantHandle] Func<T3, Task<T>> onThird,
+            [JetBrains.Annotations.InstantHandle] Func<T4, Task<T>> onFourth,
+            [JetBrains.Annotations.InstantHandle] Func<T5, Task<T>> onFifth,
+            [JetBrains.Annotations.InstantHandle] Func<T6, Task<T>> onSixth) =>
             this.Match(onFirst, onSecond, onThird, onFourth, onFifth, onSixth);
 
         public Task MatchAsyncVoid(
-            Func<T1, Task> onFirst,
-            Func<T2, Task> onSecond,
-            Func<T3, Task> onThird,
-            Func<T4, Task> onFourth,
-            Func<T5, Task> onFifth,
-            Func<T6, Task> onSixth) =>
+            [JetBrains.Annotations.InstantHandle] Func<T1, Task> onFirst,
+            [JetBrains.Annotations.InstantHandle] Func<T2, Task> onSecond,
+            [JetBrains.Annotations.InstantHandle] Func<T3, Task> onThird,
+            [JetBrains.Annotations.InstantHandle] Func<T4, Task> onFourth,
+            [JetBrains.Annotations.InstantHandle] Func<T5, Task> onFifth,
+            [JetBrains.Annotations.InstantHandle] Func<T6, Task> onSixth) =>
             this.MatchAsync(
                 onFirst.ToAsyncFunc(),
                 onSecond.ToAsyncFunc(),
@@ -1062,8 +1061,7 @@ namespace Sodium.Functional
                 onFifth.ToAsyncFunc(),
                 onSixth.ToAsyncFunc());
 
-        [Pure]
-        public Either<T, T2, T3, T4, T5, T6> MapFirst<T>(Func<T1, T> f) =>
+        public Either<T, T2, T3, T4, T5, T6> MapFirst<T>([JetBrains.Annotations.InstantHandle] Func<T1, T> f) =>
             this.Match(
                 v1 => Either<T, T2, T3, T4, T5, T6>.First(f(v1)),
                 v2 => Either.Second(v2),
@@ -1072,8 +1070,7 @@ namespace Sodium.Functional
                 v5 => Either.Fifth(v5),
                 v6 => Either.Sixth(v6));
 
-        [Pure]
-        public Either<T1, T, T3, T4, T5, T6> MapSecond<T>(Func<T2, T> f) =>
+        public Either<T1, T, T3, T4, T5, T6> MapSecond<T>([JetBrains.Annotations.InstantHandle] Func<T2, T> f) =>
             this.Match(
                 Either<T1, T, T3, T4, T5, T6>.First,
                 v2 => Either.Second(f(v2)),
@@ -1082,8 +1079,7 @@ namespace Sodium.Functional
                 v5 => Either.Fifth(v5),
                 v6 => Either.Sixth(v6));
 
-        [Pure]
-        public Either<T1, T2, T, T4, T5, T6> MapThird<T>(Func<T3, T> f) =>
+        public Either<T1, T2, T, T4, T5, T6> MapThird<T>([JetBrains.Annotations.InstantHandle] Func<T3, T> f) =>
             this.Match(
                 Either<T1, T2, T, T4, T5, T6>.First,
                 v2 => Either.Second(v2),
@@ -1092,8 +1088,7 @@ namespace Sodium.Functional
                 v5 => Either.Fifth(v5),
                 v6 => Either.Sixth(v6));
 
-        [Pure]
-        public Either<T1, T2, T3, T, T5, T6> MapFourth<T>(Func<T4, T> f) =>
+        public Either<T1, T2, T3, T, T5, T6> MapFourth<T>([JetBrains.Annotations.InstantHandle] Func<T4, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T, T5, T6>.First,
                 v2 => Either.Second(v2),
@@ -1102,8 +1097,7 @@ namespace Sodium.Functional
                 v5 => Either.Fifth(v5),
                 v6 => Either.Sixth(v6));
 
-        [Pure]
-        public Either<T1, T2, T3, T4, T, T6> MapFifth<T>(Func<T5, T> f) =>
+        public Either<T1, T2, T3, T4, T, T6> MapFifth<T>([JetBrains.Annotations.InstantHandle] Func<T5, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T4, T, T6>.First,
                 v2 => Either.Second(v2),
@@ -1112,8 +1106,7 @@ namespace Sodium.Functional
                 v5 => Either.Fifth(f(v5)),
                 v6 => Either.Sixth(v6));
 
-        [Pure]
-        public Either<T1, T2, T3, T4, T5, T> MapSixth<T>(Func<T6, T> f) =>
+        public Either<T1, T2, T3, T4, T5, T> MapSixth<T>([JetBrains.Annotations.InstantHandle] Func<T6, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T4, T5, T>.First,
                 v2 => Either.Second(v2),
@@ -1122,51 +1115,51 @@ namespace Sodium.Functional
                 v5 => Either.Fifth(v5),
                 v6 => Either.Sixth(f(v6)));
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T1> TryGetFirst() =>
             this.Match(Maybe.Some, _ => Maybe.None, _ => Maybe.None, _ => Maybe.None, _ => Maybe.None, _ => Maybe.None);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T2> TryGetSecond() =>
             this.Match(_ => Maybe.None, Maybe.Some, _ => Maybe.None, _ => Maybe.None, _ => Maybe.None, _ => Maybe.None);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T3> TryGetThird() =>
             this.Match(_ => Maybe.None, _ => Maybe.None, Maybe.Some, _ => Maybe.None, _ => Maybe.None, _ => Maybe.None);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T4> TryGetFourth() =>
             this.Match(_ => Maybe.None, _ => Maybe.None, _ => Maybe.None, Maybe.Some, _ => Maybe.None, _ => Maybe.None);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T5> TryGetFifth() =>
             this.Match(_ => Maybe.None, _ => Maybe.None, _ => Maybe.None, _ => Maybe.None, Maybe.Some, _ => Maybe.None);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T6> TryGetSixth() =>
             this.Match(_ => Maybe.None, _ => Maybe.None, _ => Maybe.None, _ => Maybe.None, _ => Maybe.None, Maybe.Some);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsFirst() =>
             this.Match(_ => true, _ => false, _ => false, _ => false, _ => false, _ => false);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsSecond() =>
             this.Match(_ => false, _ => true, _ => false, _ => false, _ => false, _ => false);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsThird() =>
             this.Match(_ => false, _ => false, _ => true, _ => false, _ => false, _ => false);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsFourth() =>
             this.Match(_ => false, _ => false, _ => false, _ => true, _ => false, _ => false);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsFifth() =>
             this.Match(_ => false, _ => false, _ => false, _ => false, _ => true, _ => false);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsSixth() =>
             this.Match(_ => false, _ => false, _ => false, _ => false, _ => false, _ => true);
 
@@ -1386,15 +1379,14 @@ namespace Sodium.Functional
 
         object IEither.GetValueAsObject() => Either.GetValueAs<object>().From(this);
 
-        [Pure]
         public T Match<T>(
-            Func<T1, T> onFirst,
-            Func<T2, T> onSecond,
-            Func<T3, T> onThird,
-            Func<T4, T> onFourth,
-            Func<T5, T> onFifth,
-            Func<T6, T> onSixth,
-            Func<T7, T> onSeventh) =>
+            [JetBrains.Annotations.InstantHandle] Func<T1, T> onFirst,
+            [JetBrains.Annotations.InstantHandle] Func<T2, T> onSecond,
+            [JetBrains.Annotations.InstantHandle] Func<T3, T> onThird,
+            [JetBrains.Annotations.InstantHandle] Func<T4, T> onFourth,
+            [JetBrains.Annotations.InstantHandle] Func<T5, T> onFifth,
+            [JetBrains.Annotations.InstantHandle] Func<T6, T> onSixth,
+            [JetBrains.Annotations.InstantHandle] Func<T7, T> onSeventh) =>
             this.valueType == 0
                 ? onFirst(this.value1)
                 : (this.valueType == 1
@@ -1412,13 +1404,13 @@ namespace Sodium.Functional
         #region Helper Methods
 
         public void MatchVoid(
-            Action<T1> onFirst,
-            Action<T2> onSecond,
-            Action<T3> onThird,
-            Action<T4> onFourth,
-            Action<T5> onFifth,
-            Action<T6> onSixth,
-            Action<T7> onSeventh) =>
+            [JetBrains.Annotations.InstantHandle] Action<T1> onFirst,
+            [JetBrains.Annotations.InstantHandle] Action<T2> onSecond,
+            [JetBrains.Annotations.InstantHandle] Action<T3> onThird,
+            [JetBrains.Annotations.InstantHandle] Action<T4> onFourth,
+            [JetBrains.Annotations.InstantHandle] Action<T5> onFifth,
+            [JetBrains.Annotations.InstantHandle] Action<T6> onSixth,
+            [JetBrains.Annotations.InstantHandle] Action<T7> onSeventh) =>
             // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
             this.Match(
                 onFirst.ToFunc(),
@@ -1429,25 +1421,24 @@ namespace Sodium.Functional
                 onSixth.ToFunc(),
                 onSeventh.ToFunc());
 
-        [Pure]
         public Task<T> MatchAsync<T>(
-            Func<T1, Task<T>> onFirst,
-            Func<T2, Task<T>> onSecond,
-            Func<T3, Task<T>> onThird,
-            Func<T4, Task<T>> onFourth,
-            Func<T5, Task<T>> onFifth,
-            Func<T6, Task<T>> onSixth,
-            Func<T7, Task<T>> onSeventh) =>
+            [JetBrains.Annotations.InstantHandle] Func<T1, Task<T>> onFirst,
+            [JetBrains.Annotations.InstantHandle] Func<T2, Task<T>> onSecond,
+            [JetBrains.Annotations.InstantHandle] Func<T3, Task<T>> onThird,
+            [JetBrains.Annotations.InstantHandle] Func<T4, Task<T>> onFourth,
+            [JetBrains.Annotations.InstantHandle] Func<T5, Task<T>> onFifth,
+            [JetBrains.Annotations.InstantHandle] Func<T6, Task<T>> onSixth,
+            [JetBrains.Annotations.InstantHandle] Func<T7, Task<T>> onSeventh) =>
             this.Match(onFirst, onSecond, onThird, onFourth, onFifth, onSixth, onSeventh);
 
         public Task MatchAsyncVoid(
-            Func<T1, Task> onFirst,
-            Func<T2, Task> onSecond,
-            Func<T3, Task> onThird,
-            Func<T4, Task> onFourth,
-            Func<T5, Task> onFifth,
-            Func<T6, Task> onSixth,
-            Func<T7, Task> onSeventh) =>
+            [JetBrains.Annotations.InstantHandle] Func<T1, Task> onFirst,
+            [JetBrains.Annotations.InstantHandle] Func<T2, Task> onSecond,
+            [JetBrains.Annotations.InstantHandle] Func<T3, Task> onThird,
+            [JetBrains.Annotations.InstantHandle] Func<T4, Task> onFourth,
+            [JetBrains.Annotations.InstantHandle] Func<T5, Task> onFifth,
+            [JetBrains.Annotations.InstantHandle] Func<T6, Task> onSixth,
+            [JetBrains.Annotations.InstantHandle] Func<T7, Task> onSeventh) =>
             this.MatchAsync(
                 onFirst.ToAsyncFunc(),
                 onSecond.ToAsyncFunc(),
@@ -1457,8 +1448,7 @@ namespace Sodium.Functional
                 onSixth.ToAsyncFunc(),
                 onSeventh.ToAsyncFunc());
 
-        [Pure]
-        public Either<T, T2, T3, T4, T5, T6, T7> MapFirst<T>(Func<T1, T> f) =>
+        public Either<T, T2, T3, T4, T5, T6, T7> MapFirst<T>([JetBrains.Annotations.InstantHandle] Func<T1, T> f) =>
             this.Match(
                 v1 => Either<T, T2, T3, T4, T5, T6, T7>.First(f(v1)),
                 v2 => Either.Second(v2),
@@ -1468,8 +1458,7 @@ namespace Sodium.Functional
                 v6 => Either.Sixth(v6),
                 v7 => Either.Seventh(v7));
 
-        [Pure]
-        public Either<T1, T, T3, T4, T5, T6, T7> MapSecond<T>(Func<T2, T> f) =>
+        public Either<T1, T, T3, T4, T5, T6, T7> MapSecond<T>([JetBrains.Annotations.InstantHandle] Func<T2, T> f) =>
             this.Match(
                 Either<T1, T, T3, T4, T5, T6, T7>.First,
                 v2 => Either.Second(f(v2)),
@@ -1479,8 +1468,7 @@ namespace Sodium.Functional
                 v6 => Either.Sixth(v6),
                 v7 => Either.Seventh(v7));
 
-        [Pure]
-        public Either<T1, T2, T, T4, T5, T6, T7> MapThird<T>(Func<T3, T> f) =>
+        public Either<T1, T2, T, T4, T5, T6, T7> MapThird<T>([JetBrains.Annotations.InstantHandle] Func<T3, T> f) =>
             this.Match(
                 Either<T1, T2, T, T4, T5, T6, T7>.First,
                 v2 => Either.Second(v2),
@@ -1490,8 +1478,7 @@ namespace Sodium.Functional
                 v6 => Either.Sixth(v6),
                 v7 => Either.Seventh(v7));
 
-        [Pure]
-        public Either<T1, T2, T3, T, T5, T6, T7> MapFourth<T>(Func<T4, T> f) =>
+        public Either<T1, T2, T3, T, T5, T6, T7> MapFourth<T>([JetBrains.Annotations.InstantHandle] Func<T4, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T, T5, T6, T7>.First,
                 v2 => Either.Second(v2),
@@ -1501,8 +1488,7 @@ namespace Sodium.Functional
                 v6 => Either.Sixth(v6),
                 v7 => Either.Seventh(v7));
 
-        [Pure]
-        public Either<T1, T2, T3, T4, T, T6, T7> MapFifth<T>(Func<T5, T> f) =>
+        public Either<T1, T2, T3, T4, T, T6, T7> MapFifth<T>([JetBrains.Annotations.InstantHandle] Func<T5, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T4, T, T6, T7>.First,
                 v2 => Either.Second(v2),
@@ -1512,8 +1498,7 @@ namespace Sodium.Functional
                 v6 => Either.Sixth(v6),
                 v7 => Either.Seventh(v7));
 
-        [Pure]
-        public Either<T1, T2, T3, T4, T5, T, T7> MapSixth<T>(Func<T6, T> f) =>
+        public Either<T1, T2, T3, T4, T5, T, T7> MapSixth<T>([JetBrains.Annotations.InstantHandle] Func<T6, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T4, T5, T, T7>.First,
                 v2 => Either.Second(v2),
@@ -1523,8 +1508,7 @@ namespace Sodium.Functional
                 v6 => Either.Sixth(f(v6)),
                 v7 => Either.Seventh(v7));
 
-        [Pure]
-        public Either<T1, T2, T3, T4, T5, T6, T> MapSeventh<T>(Func<T7, T> f) =>
+        public Either<T1, T2, T3, T4, T5, T6, T> MapSeventh<T>([JetBrains.Annotations.InstantHandle] Func<T7, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T4, T5, T6, T>.First,
                 v2 => Either.Second(v2),
@@ -1534,7 +1518,7 @@ namespace Sodium.Functional
                 v6 => Either.Sixth(v6),
                 v7 => Either.Seventh(f(v7)));
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T1> TryGetFirst() =>
             this.Match(
                 Maybe.Some,
@@ -1545,7 +1529,7 @@ namespace Sodium.Functional
                 _ => Maybe.None,
                 _ => Maybe.None);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T2> TryGetSecond() =>
             this.Match(
                 _ => Maybe.None,
@@ -1556,7 +1540,7 @@ namespace Sodium.Functional
                 _ => Maybe.None,
                 _ => Maybe.None);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T3> TryGetThird() =>
             this.Match(
                 _ => Maybe.None,
@@ -1567,7 +1551,7 @@ namespace Sodium.Functional
                 _ => Maybe.None,
                 _ => Maybe.None);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T4> TryGetFourth() =>
             this.Match(
                 _ => Maybe.None,
@@ -1578,7 +1562,7 @@ namespace Sodium.Functional
                 _ => Maybe.None,
                 _ => Maybe.None);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T5> TryGetFifth() =>
             this.Match(
                 _ => Maybe.None,
@@ -1589,7 +1573,7 @@ namespace Sodium.Functional
                 _ => Maybe.None,
                 _ => Maybe.None);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T6> TryGetSixth() =>
             this.Match(
                 _ => Maybe.None,
@@ -1600,7 +1584,7 @@ namespace Sodium.Functional
                 Maybe.Some,
                 _ => Maybe.None);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T7> TryGetSeventh() =>
             this.Match(
                 _ => Maybe.None,
@@ -1611,31 +1595,31 @@ namespace Sodium.Functional
                 _ => Maybe.None,
                 Maybe.Some);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsFirst() =>
             this.Match(_ => true, _ => false, _ => false, _ => false, _ => false, _ => false, _ => false);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsSecond() =>
             this.Match(_ => false, _ => true, _ => false, _ => false, _ => false, _ => false, _ => false);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsThird() =>
             this.Match(_ => false, _ => false, _ => true, _ => false, _ => false, _ => false, _ => false);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsFourth() =>
             this.Match(_ => false, _ => false, _ => false, _ => true, _ => false, _ => false, _ => false);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsFifth() =>
             this.Match(_ => false, _ => false, _ => false, _ => false, _ => true, _ => false, _ => false);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsSixth() =>
             this.Match(_ => false, _ => false, _ => false, _ => false, _ => false, _ => true, _ => false);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsSeventh() =>
             this.Match(_ => false, _ => false, _ => false, _ => false, _ => false, _ => false, _ => true);
 
@@ -1907,16 +1891,15 @@ namespace Sodium.Functional
 
         object IEither.GetValueAsObject() => Either.GetValueAs<object>().From(this);
 
-        [Pure]
         public T Match<T>(
-            Func<T1, T> onFirst,
-            Func<T2, T> onSecond,
-            Func<T3, T> onThird,
-            Func<T4, T> onFourth,
-            Func<T5, T> onFifth,
-            Func<T6, T> onSixth,
-            Func<T7, T> onSeventh,
-            Func<T8, T> onEighth) =>
+            [JetBrains.Annotations.InstantHandle] Func<T1, T> onFirst,
+            [JetBrains.Annotations.InstantHandle] Func<T2, T> onSecond,
+            [JetBrains.Annotations.InstantHandle] Func<T3, T> onThird,
+            [JetBrains.Annotations.InstantHandle] Func<T4, T> onFourth,
+            [JetBrains.Annotations.InstantHandle] Func<T5, T> onFifth,
+            [JetBrains.Annotations.InstantHandle] Func<T6, T> onSixth,
+            [JetBrains.Annotations.InstantHandle] Func<T7, T> onSeventh,
+            [JetBrains.Annotations.InstantHandle] Func<T8, T> onEighth) =>
             this.valueType == 0
                 ? onFirst(this.value1)
                 : (this.valueType == 1
@@ -1936,14 +1919,14 @@ namespace Sodium.Functional
         #region Helper Methods
 
         public void MatchVoid(
-            Action<T1> onFirst,
-            Action<T2> onSecond,
-            Action<T3> onThird,
-            Action<T4> onFourth,
-            Action<T5> onFifth,
-            Action<T6> onSixth,
-            Action<T7> onSeventh,
-            Action<T8> onEighth) =>
+            [JetBrains.Annotations.InstantHandle] Action<T1> onFirst,
+            [JetBrains.Annotations.InstantHandle] Action<T2> onSecond,
+            [JetBrains.Annotations.InstantHandle] Action<T3> onThird,
+            [JetBrains.Annotations.InstantHandle] Action<T4> onFourth,
+            [JetBrains.Annotations.InstantHandle] Action<T5> onFifth,
+            [JetBrains.Annotations.InstantHandle] Action<T6> onSixth,
+            [JetBrains.Annotations.InstantHandle] Action<T7> onSeventh,
+            [JetBrains.Annotations.InstantHandle] Action<T8> onEighth) =>
             // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
             this.Match(
                 onFirst.ToFunc(),
@@ -1955,27 +1938,26 @@ namespace Sodium.Functional
                 onSeventh.ToFunc(),
                 onEighth.ToFunc());
 
-        [Pure]
         public Task<T> MatchAsync<T>(
-            Func<T1, Task<T>> onFirst,
-            Func<T2, Task<T>> onSecond,
-            Func<T3, Task<T>> onThird,
-            Func<T4, Task<T>> onFourth,
-            Func<T5, Task<T>> onFifth,
-            Func<T6, Task<T>> onSixth,
-            Func<T7, Task<T>> onSeventh,
-            Func<T8, Task<T>> onEighth) =>
+            [JetBrains.Annotations.InstantHandle] Func<T1, Task<T>> onFirst,
+            [JetBrains.Annotations.InstantHandle] Func<T2, Task<T>> onSecond,
+            [JetBrains.Annotations.InstantHandle] Func<T3, Task<T>> onThird,
+            [JetBrains.Annotations.InstantHandle] Func<T4, Task<T>> onFourth,
+            [JetBrains.Annotations.InstantHandle] Func<T5, Task<T>> onFifth,
+            [JetBrains.Annotations.InstantHandle] Func<T6, Task<T>> onSixth,
+            [JetBrains.Annotations.InstantHandle] Func<T7, Task<T>> onSeventh,
+            [JetBrains.Annotations.InstantHandle] Func<T8, Task<T>> onEighth) =>
             this.Match(onFirst, onSecond, onThird, onFourth, onFifth, onSixth, onSeventh, onEighth);
 
         public Task MatchAsyncVoid(
-            Func<T1, Task> onFirst,
-            Func<T2, Task> onSecond,
-            Func<T3, Task> onThird,
-            Func<T4, Task> onFourth,
-            Func<T5, Task> onFifth,
-            Func<T6, Task> onSixth,
-            Func<T7, Task> onSeventh,
-            Func<T8, Task> onEighth) =>
+            [JetBrains.Annotations.InstantHandle] Func<T1, Task> onFirst,
+            [JetBrains.Annotations.InstantHandle] Func<T2, Task> onSecond,
+            [JetBrains.Annotations.InstantHandle] Func<T3, Task> onThird,
+            [JetBrains.Annotations.InstantHandle] Func<T4, Task> onFourth,
+            [JetBrains.Annotations.InstantHandle] Func<T5, Task> onFifth,
+            [JetBrains.Annotations.InstantHandle] Func<T6, Task> onSixth,
+            [JetBrains.Annotations.InstantHandle] Func<T7, Task> onSeventh,
+            [JetBrains.Annotations.InstantHandle] Func<T8, Task> onEighth) =>
             this.MatchAsync(
                 onFirst.ToAsyncFunc(),
                 onSecond.ToAsyncFunc(),
@@ -1986,8 +1968,7 @@ namespace Sodium.Functional
                 onSeventh.ToAsyncFunc(),
                 onEighth.ToAsyncFunc());
 
-        [Pure]
-        public Either<T, T2, T3, T4, T5, T6, T7, T8> MapFirst<T>(Func<T1, T> f) =>
+        public Either<T, T2, T3, T4, T5, T6, T7, T8> MapFirst<T>([JetBrains.Annotations.InstantHandle] Func<T1, T> f) =>
             this.Match(
                 v1 => Either<T, T2, T3, T4, T5, T6, T7, T8>.First(f(v1)),
                 v2 => Either.Second(v2),
@@ -1998,8 +1979,7 @@ namespace Sodium.Functional
                 v7 => Either.Seventh(v7),
                 v8 => Either.Eighth(v8));
 
-        [Pure]
-        public Either<T1, T, T3, T4, T5, T6, T7, T8> MapSecond<T>(Func<T2, T> f) =>
+        public Either<T1, T, T3, T4, T5, T6, T7, T8> MapSecond<T>([JetBrains.Annotations.InstantHandle] Func<T2, T> f) =>
             this.Match(
                 Either<T1, T, T3, T4, T5, T6, T7, T8>.First,
                 v2 => Either.Second(f(v2)),
@@ -2010,8 +1990,7 @@ namespace Sodium.Functional
                 v7 => Either.Seventh(v7),
                 v8 => Either.Eighth(v8));
 
-        [Pure]
-        public Either<T1, T2, T, T4, T5, T6, T7, T8> MapThird<T>(Func<T3, T> f) =>
+        public Either<T1, T2, T, T4, T5, T6, T7, T8> MapThird<T>([JetBrains.Annotations.InstantHandle] Func<T3, T> f) =>
             this.Match(
                 Either<T1, T2, T, T4, T5, T6, T7, T8>.First,
                 v2 => Either.Second(v2),
@@ -2022,8 +2001,7 @@ namespace Sodium.Functional
                 v7 => Either.Seventh(v7),
                 v8 => Either.Eighth(v8));
 
-        [Pure]
-        public Either<T1, T2, T3, T, T5, T6, T7, T8> MapFourth<T>(Func<T4, T> f) =>
+        public Either<T1, T2, T3, T, T5, T6, T7, T8> MapFourth<T>([JetBrains.Annotations.InstantHandle] Func<T4, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T, T5, T6, T7, T8>.First,
                 v2 => Either.Second(v2),
@@ -2034,8 +2012,7 @@ namespace Sodium.Functional
                 v7 => Either.Seventh(v7),
                 v8 => Either.Eighth(v8));
 
-        [Pure]
-        public Either<T1, T2, T3, T4, T, T6, T7, T8> MapFifth<T>(Func<T5, T> f) =>
+        public Either<T1, T2, T3, T4, T, T6, T7, T8> MapFifth<T>([JetBrains.Annotations.InstantHandle] Func<T5, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T4, T, T6, T7, T8>.First,
                 v2 => Either.Second(v2),
@@ -2046,8 +2023,7 @@ namespace Sodium.Functional
                 v7 => Either.Seventh(v7),
                 v8 => Either.Eighth(v8));
 
-        [Pure]
-        public Either<T1, T2, T3, T4, T5, T, T7, T8> MapSixth<T>(Func<T6, T> f) =>
+        public Either<T1, T2, T3, T4, T5, T, T7, T8> MapSixth<T>([JetBrains.Annotations.InstantHandle] Func<T6, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T4, T5, T, T7, T8>.First,
                 v2 => Either.Second(v2),
@@ -2058,8 +2034,7 @@ namespace Sodium.Functional
                 v7 => Either.Seventh(v7),
                 v8 => Either.Eighth(v8));
 
-        [Pure]
-        public Either<T1, T2, T3, T4, T5, T6, T, T8> MapSeventh<T>(Func<T7, T> f) =>
+        public Either<T1, T2, T3, T4, T5, T6, T, T8> MapSeventh<T>([JetBrains.Annotations.InstantHandle] Func<T7, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T4, T5, T6, T, T8>.First,
                 v2 => Either.Second(v2),
@@ -2070,8 +2045,7 @@ namespace Sodium.Functional
                 v7 => Either.Seventh(f(v7)),
                 v8 => Either.Eighth(v8));
 
-        [Pure]
-        public Either<T1, T2, T3, T4, T5, T6, T7, T> MapEighth<T>(Func<T8, T> f) =>
+        public Either<T1, T2, T3, T4, T5, T6, T7, T> MapEighth<T>([JetBrains.Annotations.InstantHandle] Func<T8, T> f) =>
             this.Match(
                 Either<T1, T2, T3, T4, T5, T6, T7, T>.First,
                 v2 => Either.Second(v2),
@@ -2082,7 +2056,7 @@ namespace Sodium.Functional
                 v7 => Either.Seventh(v7),
                 v8 => Either.Eighth(f(v8)));
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T1> TryGetFirst() =>
             this.Match(
                 Maybe.Some,
@@ -2094,7 +2068,7 @@ namespace Sodium.Functional
                 _ => Maybe.None,
                 _ => Maybe.None);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T2> TryGetSecond() =>
             this.Match(
                 _ => Maybe.None,
@@ -2106,7 +2080,7 @@ namespace Sodium.Functional
                 _ => Maybe.None,
                 _ => Maybe.None);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T3> TryGetThird() =>
             this.Match(
                 _ => Maybe.None,
@@ -2118,7 +2092,7 @@ namespace Sodium.Functional
                 _ => Maybe.None,
                 _ => Maybe.None);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T4> TryGetFourth() =>
             this.Match(
                 _ => Maybe.None,
@@ -2130,7 +2104,7 @@ namespace Sodium.Functional
                 _ => Maybe.None,
                 _ => Maybe.None);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T5> TryGetFifth() =>
             this.Match(
                 _ => Maybe.None,
@@ -2142,7 +2116,7 @@ namespace Sodium.Functional
                 _ => Maybe.None,
                 _ => Maybe.None);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T6> TryGetSixth() =>
             this.Match(
                 _ => Maybe.None,
@@ -2154,7 +2128,7 @@ namespace Sodium.Functional
                 _ => Maybe.None,
                 _ => Maybe.None);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T7> TryGetSeventh() =>
             this.Match(
                 _ => Maybe.None,
@@ -2166,7 +2140,7 @@ namespace Sodium.Functional
                 Maybe.Some,
                 _ => Maybe.None);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public Maybe<T8> TryGetEighth() =>
             this.Match(
                 _ => Maybe.None,
@@ -2178,35 +2152,35 @@ namespace Sodium.Functional
                 _ => Maybe.None,
                 Maybe.Some);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsFirst() =>
             this.Match(_ => true, _ => false, _ => false, _ => false, _ => false, _ => false, _ => false, _ => false);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsSecond() =>
             this.Match(_ => false, _ => true, _ => false, _ => false, _ => false, _ => false, _ => false, _ => false);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsThird() =>
             this.Match(_ => false, _ => false, _ => true, _ => false, _ => false, _ => false, _ => false, _ => false);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsFourth() =>
             this.Match(_ => false, _ => false, _ => false, _ => true, _ => false, _ => false, _ => false, _ => false);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsFifth() =>
             this.Match(_ => false, _ => false, _ => false, _ => false, _ => true, _ => false, _ => false, _ => false);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsSixth() =>
             this.Match(_ => false, _ => false, _ => false, _ => false, _ => false, _ => true, _ => false, _ => false);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsSeventh() =>
             this.Match(_ => false, _ => false, _ => false, _ => false, _ => false, _ => false, _ => true, _ => false);
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool IsEighth() =>
             this.Match(_ => false, _ => false, _ => false, _ => false, _ => false, _ => false, _ => false, _ => true);
 

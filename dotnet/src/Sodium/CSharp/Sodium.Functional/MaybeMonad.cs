@@ -31,7 +31,9 @@ namespace Sodium.Functional
         ///     The <see cref="Maybe{TResult}" /> which results from transforming <paramref name="value" /> using
         ///     <paramref name="transformation" />.
         /// </returns>
-        public static Maybe<TResult> Bind<T, TResult>(this Maybe<T> value, Func<T, Maybe<TResult>> transformation)
+        public static Maybe<TResult> Bind<T, TResult>(
+            this Maybe<T> value,
+            [JetBrains.Annotations.InstantHandle] Func<T, Maybe<TResult>> transformation)
         {
             Maybe<TResult> result = value.Match(
                 v =>
@@ -91,8 +93,8 @@ namespace Sodium.Functional
         /// </returns>
         public static Maybe<TResult> SelectMany<T1, T2, TResult>(
             this Maybe<T1> value,
-            Func<T1, Maybe<T2>> transformation,
-            Func<T1, T2, TResult> collation)
+            [JetBrains.Annotations.InstantHandle] Func<T1, Maybe<T2>> transformation,
+            [JetBrains.Annotations.InstantHandle] Func<T1, T2, TResult> collation)
         {
             return value.Bind(
                 firstValue =>

@@ -6,7 +6,9 @@ namespace Sodium.Functional
 {
     public static class Maybe
     {
+        [JetBrains.Annotations.Pure]
         public static Maybe<T> Some<T>(T value) => Maybe<T>.Some(value);
+        
         public static readonly NoneType None = new NoneType();
 
         public struct NoneType
@@ -27,7 +29,9 @@ namespace Sodium.Functional
 
         #region Type Constructors
 
+        [JetBrains.Annotations.Pure]
         public static Maybe<T> Some(T value) => new Maybe<T>(value);
+        
         public static readonly Maybe<T> None = new Maybe<T>();
 
         #endregion
@@ -36,7 +40,6 @@ namespace Sodium.Functional
 
         T1 IMaybe.Match<T1>(Func<object, T1> onSome, Func<T1> onNone) => this.Match(v => onSome(v), onNone);
 
-        [Pure]
         public TResult Match<TResult>(Func<T, TResult> onSome, Func<TResult> onNone) =>
             this.hasValue ? onSome(this.value) : onNone();
 
@@ -45,23 +48,34 @@ namespace Sodium.Functional
         #region Helper Methods
 
         // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
-        public void MatchVoid(Action<T> onSome, Action onNone) => this.Match(onSome.ToFunc(), onNone.ToFunc());
+        public void MatchVoid(
+            [JetBrains.Annotations.InstantHandle] Action<T> onSome,
+            [JetBrains.Annotations.InstantHandle] Action onNone) =>
+            this.Match(onSome.ToFunc(), onNone.ToFunc());
 
         // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
-        public void MatchSome(Action<T> onSome) => this.MatchVoid(onSome, () => { });
+        public void MatchSome([JetBrains.Annotations.InstantHandle] Action<T> onSome) =>
+            this.MatchVoid(onSome, () => { });
 
         // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
-        public void MatchNone(Action onNone) => this.MatchVoid(_ => { }, onNone);
+        public void MatchNone([JetBrains.Annotations.InstantHandle] Action onNone) =>
+            this.MatchVoid(_ => { }, onNone);
 
-        [Pure]
-        public Task<TResult> MatchAsync<TResult>(Func<T, Task<TResult>> onSome, Func<Task<TResult>> onNone) =>
+        public Task<TResult> MatchAsync<TResult>(
+            [JetBrains.Annotations.InstantHandle] Func<T, Task<TResult>> onSome,
+            [JetBrains.Annotations.InstantHandle] Func<Task<TResult>> onNone) =>
             this.Match(onSome, onNone);
 
-        public Task MatchAsyncVoid(Func<T, Task> onSome, Func<Task> onNone) =>
+        public Task MatchAsyncVoid(
+            [JetBrains.Annotations.InstantHandle] Func<T, Task> onSome,
+            [JetBrains.Annotations.InstantHandle] Func<Task> onNone) =>
             this.MatchAsync(onSome.ToAsyncFunc(), onNone.ToAsyncFunc());
 
-        public Task MatchSomeAsync(Func<T, Task> onSome) => this.MatchAsyncVoid(onSome, () => Task.FromResult(false));
-        public Task MatchNoneAsync(Func<Task> onNone) => this.MatchAsyncVoid(_ => Task.FromResult(false), onNone);
+        public Task MatchSomeAsync([JetBrains.Annotations.InstantHandle] Func<T, Task> onSome) =>
+            this.MatchAsyncVoid(onSome, () => Task.FromResult(false));
+        
+        public Task MatchNoneAsync([JetBrains.Annotations.InstantHandle] Func<Task> onNone) =>
+            this.MatchAsyncVoid(_ => Task.FromResult(false), onNone);
 
         /// <summary>
         ///     Map the <see cref="Maybe{T}" /> value using a mapping function if a value exists, or propogate the None value if
@@ -74,10 +88,10 @@ namespace Sodium.Functional
         ///     The <see cref="Maybe{TResult}" /> which results from transforming this <see cref="Maybe{T}" /> using
         ///     <paramref name="f" />.
         /// </returns>
-        [Pure]
-        public Maybe<TResult> Map<TResult>(Func<T, TResult> f) => this.Bind(v => Maybe.Some(f(v)));
+        public Maybe<TResult> Map<TResult>([JetBrains.Annotations.InstantHandle] Func<T, TResult> f) =>
+            this.Bind(v => Maybe.Some(f(v)));
 
-        [Pure]
+        [JetBrains.Annotations.Pure]
         public bool HasValue() => this.Match(v => true, () => false);
 
         // ReSharper disable once ReturnValueOfPureMethodIsNotUsed
