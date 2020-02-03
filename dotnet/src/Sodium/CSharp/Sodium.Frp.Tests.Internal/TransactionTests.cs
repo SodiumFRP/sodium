@@ -24,7 +24,7 @@ namespace Sodium.Frp.Tests.Internal
                             {
                                 re.Set();
 
-                                Thread.Sleep(500);
+                                Thread.Sleep(5000);
 
                                 cts.Token.ThrowIfCancellationRequested();
                             });
@@ -62,7 +62,7 @@ namespace Sodium.Frp.Tests.Internal
                             {
                                 re.Set();
 
-                                Thread.Sleep(500);
+                                Thread.Sleep(5000);
 
                                 cts.Token.ThrowIfCancellationRequested();
                             });
