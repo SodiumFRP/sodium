@@ -19,7 +19,7 @@ type ``Transaction Tests``() =
                         async {
                             Transaction.post (fun () ->
                                 re.Set () |> ignore
-                                Thread.Sleep 500
+                                Thread.Sleep 5000
                                 cts.Token.ThrowIfCancellationRequested ())
                         } |> Async.StartChild
                     re.WaitOne () |> ignore
@@ -44,7 +44,7 @@ type ``Transaction Tests``() =
                         async {
                             Transaction.post (fun () ->
                                 re.Set () |> ignore
-                                Thread.Sleep 500
+                                Thread.Sleep 5000
                                 cts.Token.ThrowIfCancellationRequested ())
                         } |> Async.StartChild
                     re.WaitOne () |> ignore
