@@ -3,9 +3,9 @@ from threading import RLock
 from typing import Callable, Dict, List, Optional, TypeVar
 
 from sodiumfrp.node import Node
+from sodiumfrp.typing import Handler
 
-A = TypeVar("A")
-Handler = Callable[[Optional["Transaction"]], None]
+T = TypeVar("T")
 
 
 class Entry:
@@ -15,18 +15,20 @@ class Entry:
 
     def __init__(self,
             rank: Node,
-            action: Handler) -> None:
+            action: Handler["Transaction"]) -> None:
         self.rank = rank
         self.action = action
         self.seq = Entry._next_seq + 1
         Entry._next_seq += 1
 
 
-    def __lt__(self, other):
-        if self.rank == other.rank:
-            # Same rank: preserve chronological sequence.
-            return self.seq < other.seq
-        return self.rank < other.rank
+    def __lt__(self, other: "Entry") -> bool:
+        if self.rank < other.rank:
+            return True
+        elif self.rank > other.rank:
+            return False
+        # Same rank: preserve chronological sequence.
+        return self.seq < other.seq
 
 
 # Functions for controlling transactions.
@@ -40,7 +42,7 @@ class Transaction:
     _running_on_start_hooks: bool = False
 
 
-    def __init__(self):
+    def __init__(self) -> None:
         # True if we need to re-generate the priority queue.
         self._to_regen = False
         self._prioritized_q: List[Entry] = []
@@ -56,7 +58,7 @@ class Transaction:
 
 
     @staticmethod
-    def run(code: Callable[[], A]) -> A:
+    def run(code: Callable[[], T]) -> T:
         """
         Run the specified code inside a single transaction, with
         the contained code returning a value of the parameter type A.
@@ -114,7 +116,7 @@ class Transaction:
 
 
     @staticmethod
-    def _apply(code: Callable[[Transaction], A]) -> A:
+    def _apply(code: Callable[["Transaction"], T]) -> T:
         with Transaction._transaction_lock:
             # If we are already inside a transaction (which must be on
             # the same thread otherwise we wouldn't have acquired
