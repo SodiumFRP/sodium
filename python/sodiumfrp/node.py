@@ -1,13 +1,15 @@
 from typing import List, Set
 import weakref
 
-from sodiumfrp.typing import TransactionHandler
 from sodiumfrp.unit import Unit
+from sodiumfrp.typing import TransactionHandler
 
 
 class Target:
 
-    def __init__(self, action: TransactionHandler[Unit], node: "Node") -> None:
+    def __init__(self,
+            action: "TransactionHandler[Unit]",
+            node: "Node") -> None:
         self.action = weakref.ref(action)
         self.node = node
 
@@ -19,8 +21,9 @@ class Node:
         self._listeners: List[Target] = []
 
 
+
     def _link_to(self,
-            action: TransactionHandler[Unit],
+            action: "TransactionHandler[Unit]",
             target: "Node",
             out_target: List[Target]) -> bool:
         """ Return true if any changes were made. """
@@ -53,3 +56,6 @@ class Node:
 
     def __gt__(self, other: "Node") -> bool:
         return self._rank == other._rank
+
+
+NULL_NODE = Node(1_000_000_000_000_000_000)

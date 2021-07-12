@@ -1,8 +1,8 @@
-from typing import Callable, Optional, TypeVar
+from typing import TYPE_CHECKING, Callable, TypeVar
+if TYPE_CHECKING:
+    from sodiumfrp.transaction import Transaction
 
 T = TypeVar("T")
 
-class Transaction: ...
-
-Handler = Callable[[Optional[T]], None]
-TransactionHandler = Callable[[Transaction, T], None]
+Handler = Callable[[T], None]
+TransactionHandler = Callable[["Transaction", T], None]

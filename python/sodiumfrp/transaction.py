@@ -3,7 +3,7 @@ from threading import RLock
 from typing import Callable, Dict, List, Optional, TypeVar
 
 from sodiumfrp.node import Node
-from sodiumfrp.typing import Handler
+from sodiumfrp.typing import Handler, TransactionHandler
 
 T = TypeVar("T")
 
@@ -36,7 +36,8 @@ class Transaction:
 
     # Coarse-grained lock that's held during the whole transaction.
     _transaction_lock: RLock = RLock()
-    _current_transaction: Optional["Transaction"] = None
+    _listeners_lock: RLock = RLock()
+    _current_transaction: "Transaction" = None
     in_callback: int = 0
     _on_start_hooks: List[Callable[[], None]] = []
     _running_on_start_hooks: bool = False
@@ -47,11 +48,11 @@ class Transaction:
         self._to_regen = False
         self._prioritized_q: List[Entry] = []
         self._last_q: List[Callable[[], None]] = []
-        self._post_q: Dict[int, Handler] = {}
+        self._post_q: Dict[int, Handler["Transaction"]] = {}
 
 
     @staticmethod
-    def get_current_transaction() -> Optional["Transaction"]:
+    def get_current_transaction() -> "Transaction":
         """ Return the current transaction, or null if there isn't one. """
         with Transaction._transaction_lock:
             return Transaction._current_transaction
@@ -84,7 +85,7 @@ class Transaction:
 
 
     @staticmethod
-    def _run_handler(code: Handler) -> None:
+    def _run_handler(code: Handler["Transaction"]) -> None:
         with Transaction._transaction_lock:
             # If we are already inside a transaction (which must be on
             # the same thread otherwise we wouldn't have acquired
@@ -146,7 +147,7 @@ class Transaction:
             Transaction._current_transaction = Transaction()
 
 
-    def _prioritized(self, rank: Node, action: Handler) -> None:
+    def _prioritized(self, rank: Node, action: Handler["Transaction"]) -> None:
         entry = Entry(rank, action)
         heappush(self._prioritized_q, entry)
 
@@ -156,14 +157,14 @@ class Transaction:
         self._last_q.append(action)
 
 
-    def _post(self, child_idx: int, action: Handler) -> None:
+    def _post(self, child_idx: int, action: Handler["Transaction"]) -> None:
         """ Add an action to run after all last() actions. """
         if self._post_q is None:
             self._post_q = {}
         # If an entry exists already, combine the old one with the new one.
         if child_idx in self._post_q:
             existing = self._post_q[child_idx]
-            def new(trans: Optional[Transaction]) -> None:
+            def new(trans: Transaction) -> None:
                 existing(trans)
                 action(trans)
             self._post_q[child_idx] = new
@@ -177,7 +178,7 @@ class Transaction:
         Execute the specified code after the current transaction is closed,
         or immediately if there is no current transaction.
         """
-        def handler(trans: Optional[Transaction]) -> None:
+        def handler(trans: Transaction) -> None:
             # -1 will mean it runs before anything split/deferred, and
             # will run outside a transaction context.
             trans._post(-1, lambda _: action())
