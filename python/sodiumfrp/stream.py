@@ -1,6 +1,6 @@
 from threading import RLock
 import traceback
-from typing import Callable, Generic, List, Optional, Set, TypeVar
+from typing import Callable, Generic, List, Optional, Sequence, Set, TypeVar
 
 from sodiumfrp.listener import Listener
 from sodiumfrp.node import NULL_NODE, Node, Target
@@ -468,6 +468,21 @@ class Stream(Generic[A]):
 #      * be taken, because events can be dropped.
 #      */
 # 	public final Stream<A> orElse(final Stream<A> s)
+    def or_else(self, s: "Stream[A]") -> "Stream[A]":
+        """
+        Variant of `Stream.merge(Stream, Callable)` that merges two streams
+        and will drop an event in the simultaneous case.
+
+        In the case where two events are simultaneous (i.e. both within
+        the same transaction), the event from **this** will take precedence,
+        and the event from *s* will be dropped. If you want to specify your
+        own combining function, use `Stream.merge(Stream, Callable)`.
+        s1.or_else(s2) is equivalent to s1.merge(s2, lambda l, r: l).
+
+        The name or_else() is used instead of merge() to make it really
+        clear that care should be taken, because events can be dropped.
+        """
+        return self.merge(s, lambda left, right: left)
 # 	{
 # 	    return merge(s, new Lambda2<A,A,A>() {
 #             public A apply(A left, A right) { return left; }
@@ -475,6 +490,24 @@ class Stream(Generic[A]):
 # 	}
 # 
 # 	private static <A> Stream<A> merge(final Stream<A> ea, final Stream<A> eb)
+    @staticmethod
+    def _merge(ea: "Stream[A]", eb: "Stream[A]") -> "Stream[A]":
+        out: StreamWithSend[A] = StreamWithSend()
+        left = Node(0)
+        right = out._node
+        node_target_: List[Target] = [None]
+        left._link_to(lambda _: None, right, node_target_)
+        node_target = node_target_[0]
+        h = out._send
+        l1 = ea._listen(left, h)
+        l2 = eb._listen(right, h)
+        class MergeListener(Listener):
+            def unlisten(self) -> None:
+                left._unlink_to(node_target)
+        return out \
+            ._unsafe_add_cleanup(l1) \
+            ._unsafe_add_cleanup(l2) \
+            ._unsafe_add_cleanup(MergeListener())
 # 	{
 # 	    final StreamWithSend<A> out = new StreamWithSend<A>();
 #         final Node left = new Node(0);
@@ -509,6 +542,23 @@ class Stream(Generic[A]):
 #      *    {@link Cell#sample()}. Apart from this the function must be <em>referentially transparent</em>.
 #      */
 #     public final Stream<A> merge(final Stream<A> s, final Lambda2<A,A,A> f)
+    def merge(self, s: "Stream[A]", f: Callable[[A, A], A]) -> "Stream[A]":
+        """
+        Merge two streams of the same type into one, so that events on
+        either input appear on the returned stream.
+
+        If the events are simultaneous (that is, one event from this and one
+        from **s** occurring in the same transaction), combine them into one
+        using the specified combining function so that the returned stream
+        is guaranteed only ever to have one event per transaction. The event
+        from **self** will appear at the left input of the combining
+        function, and the event from **s** will appear at the right.
+        @param f Function to combine the values. It may construct FRP logic
+            or use `Cell.sample()`. Apart from this the function must be
+            **referentially transparent**.
+        """
+        return Transaction._apply(
+            lambda trans: Stream._merge(self, s)._coalesce(trans, f))
 #     {
 # 	    return Transaction.apply(new Lambda1<Transaction, Stream<A>>() {
 # 	    	public Stream<A> apply(Transaction trans) {
@@ -521,6 +571,13 @@ class Stream(Generic[A]):
 #      * Variant of {@link #orElse(Stream)} that merges a collection of streams.
 #      */
 #     public static <A> Stream<A> orElse(Iterable<Stream<A>> ss) {
+    @staticmethod
+    def or_else_(*streams: "Stream[A]") -> "Stream[A]":
+        """
+        Variant of `or_else(Stream)` that merges a collection of streams.
+        """
+        return Stream.merge_(lambda left, right: left, *streams)
+
 #         return Stream.<A>merge(ss, new Lambda2<A,A,A>() {
 #             public A apply(A left, A right) { return left; }
 #         });
@@ -530,6 +587,14 @@ class Stream(Generic[A]):
 #      * Variant of {@link #merge(Stream,Lambda2)} that merges a collection of streams.
 #      */
 #     public static <A> Stream<A> merge(Iterable<Stream<A>> ss, final Lambda2<A,A,A> f) {
+    @staticmethod
+    def merge_(
+            f: Callable[[A,A],A],
+            *streams: "Stream[A]") -> "Stream[A]":
+        """
+        Variant of `merge(Stream, Callable)` that merges a collection of streams.
+        """
+        return Stream._merge_many(streams, 0, len(streams), f)
 #         Vector<Stream<A>> v = new Vector<Stream<A>>();
 #         for (Stream<A> s : ss)
 #             v.add(s);
@@ -537,6 +602,26 @@ class Stream(Generic[A]):
 #     }
 # 
 #     private static <A> Stream<A> merge(Vector<Stream<A>> sas, int start, int end, final Lambda2<A,A,A> f) {
+    @staticmethod
+    def _merge_many(
+            streams: Sequence["Stream[A]"],
+            start: int,
+            end: int,
+            f: Callable[[A,A],A]) -> "Stream[A]":
+        length = end - start
+        if length == 0:
+            return Stream.never()
+        elif length == 1:
+            return streams[start]
+        elif length == 2:
+            left = streams[start]
+            right = streams[start + 1]
+            return left.merge(right, f)
+        else:
+            mid = (start + end) // 2
+            left = Stream._merge_many(streams, start, mid, f)
+            right = Stream._merge_many(streams, mid, end, f)
+            return left.merge(right, f)
 #         int len = end - start;
 #         if (len == 0) return new Stream<A>(); else
 #         if (len == 1) return sas.get(start); else
@@ -547,6 +632,13 @@ class Stream(Generic[A]):
 #     }
 # 
 # 	private final Stream<A> coalesce(Transaction trans1, final Lambda2<A,A,A> f)
+    def _coalesce(self,
+            trans1: Transaction,
+            f: Callable[[A,A],A]) -> "Stream[A]":
+        out: StreamWithSend[A]  = StreamWithSend()
+        h = CoalesceHandler(f, out)
+        l = self._listen_internal(out._node, trans1, h, False)
+        return out._unsafe_add_cleanup(l)
 # 	{
 # 	    final Stream<A> ev = this;
 # 	    final StreamWithSend<A> out = new StreamWithSend<A>();
