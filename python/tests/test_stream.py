@@ -170,3 +170,13 @@ def test_or_else_multiple() -> None:
 
     l.unlisten()
     assert [1, 9, 2, 1, 9] == out
+
+def test_filter() -> None:
+    e: StreamSink[str] = StreamSink()
+    out: List[str] = []
+    l = e.filter(str.isupper).listen(out.append)
+    e.send("H")
+    e.send("o")
+    e.send("I")
+    l.unlisten()
+    assert ["H", "I"] == out

@@ -661,6 +661,17 @@ class Stream(Generic[A]):
 #      * Return a stream that only outputs events for which the predicate returns true.
 #      */
 #     public final Stream<A> filter(final Lambda1<A,Boolean> predicate)
+    def filter(self, predicate: Callable[[A], bool]) -> "Stream[A]":
+        """
+        Return a stream that only outputs events for which the predicate
+        returns true.
+        """
+        out: StreamWithSend[A] = StreamWithSend()
+        def handler(trans2: Transaction, a: A) -> None:
+            if predicate(a):
+                out._send(trans2, a)
+        l = self._listen(out._node, handler)
+        return out._unsafe_add_cleanup(l)
 #     {
 #         final Stream<A> ev = this;
 #         final StreamWithSend<A> out = new StreamWithSend<A>();
