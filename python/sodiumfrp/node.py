@@ -21,7 +21,6 @@ class Node:
         self._listeners: List[Target] = []
 
 
-
     def _link_to(self,
             action: "TransactionHandler[Unit]",
             target: "Node",
