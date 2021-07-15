@@ -1,6 +1,6 @@
 from threading import RLock
 import traceback
-from typing import Callable, Generic, List, Optional, Sequence, Set, TypeVar
+from typing import Any, Callable, Generic, List, Optional, Sequence, Set, TypeVar
 
 from sodiumfrp.listener import Listener
 from sodiumfrp.node import NULL_NODE, Node, Target
@@ -93,12 +93,11 @@ class Stream(Generic[A]):
             this to create your own primitives.
         """
         l0 = self.listen_weak(handler)
-        class StreamListener(Listener):
-            def unlisten(_self) -> None:
-                l0.unlisten()
-                with Stream._keep_listeners_alive_lock:
-                    Stream._keep_listeners_alive.remove(_self)
-        l = StreamListener()
+        def unlisten(_self: Listener) -> None:
+            l0.unlisten()
+            with Stream._keep_listeners_alive_lock:
+                Stream._keep_listeners_alive.remove(_self)
+        l = Listener(unlisten)
         with Stream._keep_listeners_alive_lock:
             Stream._keep_listeners_alive.add(l)
         return l
@@ -229,20 +228,16 @@ class Stream(Generic[A]):
 #             });
 
 # 	private static final class ListenerImplementation<A> extends Listener {
-        class ListenerImpl(Listener):
-
-            def __init__(self,
-                    event: "Stream[A]",
-                    action: TransactionHandler[A],
-                    target: Target) -> None:
-                # It's essential that we keep the listener alive while
-                # the caller holds the Listener, so that the finalizer
-                # doesn't get triggered.
-                self.event = event
-                # It's also essential that we keep the action alive,
-                # since the node uses a weak reference.
-                self.action = action
-                self.target = target
+        captures: List[Any] = [
+            # It's essential that we keep the listener alive while
+            # the caller holds the Listener, so that the finalizer doesn't
+            # get triggered.
+            self,
+            # It's also essential that we keep the action alive, since
+            # the node uses a weak reference.
+            action,
+            node_target
+        ]
         # 		/**
         # 		 * It's essential that we keep the listener alive while the caller holds
         # 		 * the Listener, so that the finalizer doesn't get triggered.
@@ -262,13 +257,15 @@ class Stream(Generic[A]):
         # 		}
         # 
         # 		public void unlisten() {
-            def unlisten(self) -> None:
-                with Transaction._listeners_lock:
-                    if self.event is not None:
-                        self.event._node._unlink_to(self.target)
-                        self.event = None
-                        self.action = None
-                        self.target = None
+        def unlisten(_self: Listener) -> None:
+            event, _, target = captures
+            with Transaction._listeners_lock:
+                if event is not None:
+                    event._node._unlink_to(target)
+                    # Release captured references
+                    captures[0] = None
+                    captures[1] = None
+                    captures[2] = None
 # 		    synchronized (Transaction.listenersLock) {
 # 		        if (this.event != null) {
 #                     event.node.unlinkTo(target);
@@ -280,7 +277,7 @@ class Stream(Generic[A]):
 # 		}
 # 	}
 
-        return ListenerImpl(self, action, node_target)
+        return Listener(unlisten)
 # 		return new ListenerImplementation<A>(this, action, node_target);
 # 	}
 # 
@@ -501,13 +498,12 @@ class Stream(Generic[A]):
         h = out._send
         l1 = ea._listen(left, h)
         l2 = eb._listen(right, h)
-        class MergeListener(Listener):
-            def unlisten(self) -> None:
-                left._unlink_to(node_target)
+        def unlisten(_self: Listener) -> None:
+            left._unlink_to(node_target)
         return out \
             ._unsafe_add_cleanup(l1) \
             ._unsafe_add_cleanup(l2) \
-            ._unsafe_add_cleanup(MergeListener())
+            ._unsafe_add_cleanup(Listener(unlisten))
 # 	{
 # 	    final StreamWithSend<A> out = new StreamWithSend<A>();
 #         final Node left = new Node(0);

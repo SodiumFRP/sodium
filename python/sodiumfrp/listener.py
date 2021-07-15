@@ -1,11 +1,13 @@
+from typing import Callable
+
 class Listener:
     """
     A handle for a listener that was registered with Cell.listen() or
     Stream.listen()
     """
 
-    def __init__(self) -> None:
-        pass
+    def __init__(self, unlisten: Callable[["Listener"], None]) -> None:
+        self._unlisten = unlisten
 
 
     def unlisten(self) -> None:
@@ -14,7 +16,7 @@ class Listener:
         be called back, allowing associated resources to be garbage
         collected.
         """
-        raise RuntimeError("Not implemented")
+        self._unlisten(self)
 
 
     def append(self, two: "Listener") -> "Listener":
@@ -22,16 +24,8 @@ class Listener:
         Combine listeners into one so that invoking .unlisten() on
         the returned listener will unlisten both the inputs.
         """
-        return ChainedListener(self, two)
-
-
-class ChainedListener(Listener):
-
-    def __init__(self, one: Listener, two: Listener):
-        self.one = one
-        self.two = two
-
-
-    def unlisten(self) -> None:
-        self.one.unlisten()
-        self.two.unlisten()
+        one = self
+        def unlisten(_: "Listener") -> None:
+            one.unlisten()
+            two.unlisten()
+        return Listener(unlisten)
