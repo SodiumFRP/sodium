@@ -54,7 +54,7 @@ class Node:
 
 
     def __gt__(self, other: "Node") -> bool:
-        return self._rank == other._rank
+        return self._rank > other._rank
 
 
 NULL_NODE = Node(1_000_000_000_000_000_000)
