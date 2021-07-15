@@ -3,7 +3,7 @@ import traceback
 from typing import Any, Callable, Generic, List, Optional, Sequence, Set, TypeVar
 
 from sodiumfrp.listener import Listener
-from sodiumfrp.node import NULL_NODE, Node, Target
+from sodiumfrp.node import NODE_NULL, Node, Target
 from sodiumfrp.transaction import Transaction
 from sodiumfrp.typing import Handler, TransactionHandler
 
@@ -166,7 +166,7 @@ class Stream(Generic[A]):
         `Stream.add_cleanup_listener()` to ensure that things don't get
         kept alive when they shouldn't.
         """
-        return self._listen(NULL_NODE, lambda trans2, a: action(a))
+        return self._listen(NODE_NULL, lambda trans2, a: action(a))
 # 		return listen_(Node.NULL, new TransactionHandler<A>() {
 # 			public void run(Transaction trans2, A a) {
 # 				action.run(a);

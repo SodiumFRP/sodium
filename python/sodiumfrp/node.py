@@ -57,4 +57,4 @@ class Node:
         return self._rank > other._rank
 
 
-NULL_NODE = Node(1_000_000_000_000_000_000)
+NODE_NULL = Node(9_223_372_036_854_775_807)

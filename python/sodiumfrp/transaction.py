@@ -18,7 +18,7 @@ class Entry:
             action: Handler["Transaction"]) -> None:
         self.rank = rank
         self.action = action
-        self.seq = Entry._next_seq + 1
+        self.seq = Entry._next_seq
         Entry._next_seq += 1
 
 
@@ -48,7 +48,7 @@ class Transaction:
         self._to_regen = False
         self._prioritized_q: List[Entry] = []
         self._last_q: List[Callable[[], None]] = []
-        self._post_q: Dict[int, Handler["Transaction"]] = {}
+        self._post_q: Dict[int, Handler["Transaction"]] = None
 
 
     @staticmethod
@@ -198,8 +198,10 @@ class Transaction:
 
     def close(self) -> None:
 
-        while len(self._prioritized_q) > 0:
+        while True:
             self._check_regen()
+            if len(self._prioritized_q) == 0:
+                break
             entry = heappop(self._prioritized_q)
             entry.action(self)
 
