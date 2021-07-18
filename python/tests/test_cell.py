@@ -39,3 +39,13 @@ def test_hold_is_delayed() -> None:
     e.send(3)
     l.unlisten()
     assert ["2 0", "3 2"] == out
+
+def test_sample() -> None:
+    b: CellSink = CellSink(0)
+    out: List[int] = []
+    out.append(b.sample())
+    b.send(3)
+    out.append(b.sample())
+    b.send(42)
+    out.append(b.sample())
+    assert [0, 3, 42] == out

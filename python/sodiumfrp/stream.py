@@ -1158,6 +1158,19 @@ class Cell(Generic[A]):
 #      * miss any updates, but in many circumstances it makes sense.
 #      */
 #     public final A sample()
+    def sample(self) -> A:
+        """
+        Sample the cell's current value.
+
+        It may be used inside the functions passed to primitives that apply
+        them to `Stream`s, including `Stream.map` in which case it is
+        equivalent to snapshotting the cell, `Stream.snapshot`,
+        `Stream.filter` and `Stream.merge`.
+
+        It should generally be avoided in favour of `listen` so you don't
+        miss any updates, but in many circumstances it makes sense.
+        """
+        return Transaction._apply(lambda trans: self._sample_no_trans())
 #     {
 #         return Transaction.apply(new Lambda1<Transaction, A>() {
 #         	public A apply(Transaction trans) {
