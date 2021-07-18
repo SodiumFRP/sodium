@@ -872,7 +872,11 @@ class StreamWithSend(Stream[A]):
 #             listeners = new HashSet<Node.Target>(node.listeners);
 #         }
         for target in listeners:
-            def handler(trans2: Transaction) -> None:
+            def handler(
+                    trans2: Transaction,
+                    # Pass target as default argument, as loop variables
+                    # shouldn't be captured by a closure
+                    target: Target = target) -> None:
                 Transaction.in_callback += 1
                 try:
                     # Don't allow transactions to interfere with Sodium
