@@ -86,3 +86,10 @@ def test_listen() -> None:
     b.send(7)
     l.unlisten()
     assert [9, 2, 7] == out
+
+def test_constant() -> None:
+    b = Cell.constant(12)
+    out: List[int] = []
+    l = b.listen(out.append)
+    l.unlisten()
+    assert [12] == out
