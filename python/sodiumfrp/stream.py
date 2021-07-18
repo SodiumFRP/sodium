@@ -355,7 +355,7 @@ class Stream(Generic[A]):
         the current transaction.
         """
         return Transaction._apply(
-            lambda trans: Cell._from_stream(self, init_value))
+            lambda trans: Cell(self, init_value))
 # 		return Transaction.apply(new Lambda1<Transaction, Cell<A>>() {
 # 			public Cell<A> apply(Transaction trans) {
 # 			    return new Cell<A>(Stream.this, initValue);
@@ -1054,18 +1054,6 @@ class Cell(Generic[A]):
 # 	A valueUpdate;
 # 	private Listener cleanup;
 #     Lazy<A> lazyInitValue;  // Used by LazyCell
-
-    def __init__(self,
-            stream: Stream[A],
-            value: A,
-            value_update: A,
-            cleanup: Listener,
-            lazy_init_value: "Lazy[A]") -> None:
-        self._stream = stream
-        self._value = value
-        self._value_update = value_update
-        self._cleanup = cleanup
-        self._lazy_init_value = lazy_init_value
 # 
 # 	/**
 # 	 * A cell with a constant value.
@@ -1073,29 +1061,31 @@ class Cell(Generic[A]):
 #     public Cell(A value)
     @staticmethod
     def constant(value: A) -> "Cell[A]":
-        return Cell(Stream.never(), value, None, None, None)
+        return Cell(Stream.never(), value)
 #     {
 #     	this.str = new Stream<A>();
 #     	this.value = value;
 #     }
 # 
 #     Cell(final Stream<A> str, A initValue)
-    @staticmethod
-    def _from_stream(stream: Stream[A], init_value: A) -> "Cell[A]":
-        cell = Cell(stream, init_value, None, None, None)
+    def __init__(self, stream: Stream[A], init_value: A) -> "Cell[A]":
+        self._stream = stream
+        self._value = init_value
+        self._value_update: A = None
+        self._cleanup: Listener = None
+        self._lazy_init_value: "Lazy[A]" = None
         def handler(trans1: Transaction) -> None:
             def handler2(trans2: Transaction, a: A) -> None:
-                if cell._value_update is None:
+                if self._value_update is None:
                     def run() -> None:
-                        cell._value = cell._value_update
-                        cell._lazy_init_value = None
-                        cell._value_update = None
+                        self._value = self._value_update
+                        self._lazy_init_value = None
+                        self._value_update = None
                     trans2.last(run)
-                cell._value_update = a
-            cell._cleanup = stream._listen_internal(
+                self._value_update = a
+            self._cleanup = stream._listen_internal(
                 NODE_NULL, trans1, handler2, False)
         Transaction._run_handler(handler)
-        return cell
 #     {
 #     	this.str = str;
 #     	this.value = initValue;
@@ -1618,3 +1608,67 @@ class Cell(Generic[A]):
 # 	}
 # }
 # 
+
+# package nz.sodium;
+# 
+# /**
+#  * A cell that allows values to be pushed into it, acting as an interface between the
+#  * world of I/O and the world of FRP. Code that exports CellSinks for read-only use
+#  * should downcast to {@link Cell}.
+#  */
+# public final class CellSink<A> extends Cell<A> {
+class CellSink(Cell[A]):
+    """
+    A cell that allows values to be pushed into it, acting as an interface
+    between the world of I/O and the world of FRP. Code that exports
+    CellSinks for read-only use should downcast to `Cell`.
+    """
+#     /**
+#      * Construct a writable cell with the specified initial value. If multiple values are
+#      * sent in the same transaction, the last one is used.
+#      */
+#     public CellSink(A initValue) {
+#     	super(new StreamSink<A>(), initValue);
+#     }
+# 
+#     /**
+#      * Construct a writable cell with the specified initial value. If multiple values are
+#      * sent in the same transaction, the specified function is used to combine them.
+#      */
+#     public CellSink(A initValue, Lambda2<A,A,A> f) {
+    def __init__(self, init_value: A, f: Callable[[A,A],A] = None) -> None:
+        """
+        Construct a writable cell with the specified initial value.
+        If multiple values are sent in the same transaction, the specified
+        function is used to combine them. If the function isn't provided,
+        `send()` throws an exception when called multiple times from the
+        same transaction.
+        """
+        super().__init__(StreamSink(f), init_value)
+#     	super(new StreamSink<A>(f), initValue);
+#     }
+# 
+#     /**
+#      * Send a value, modifying the value of the cell. send(A) may not be used inside
+#      * handlers registered with {@link Stream#listen(Handler)} or {@link Cell#listen(Handler)}.
+#      * An exception will be thrown, because CellSink is for interfacing I/O to FRP only.
+#      * You are not meant to use this to define your own primitives.
+#      * @param a Value to push into the cell.
+#      */
+#     public void send(A a)
+    def send(self, a: A) -> None:
+        """
+        Send a value, modifying the value of the cell. send(A) may not be
+        used inside handlers registered with `Stream.listen()` or
+        `Cell.listen()`. An exception will be thrown, because CellSink is
+        for interfacing I/O to FRP only. You are not meant to use this
+        to define your own primitives.
+
+        @param a Value to push into the cell.
+        """
+        self._stream.send(a)
+#     {
+#         ((StreamSink<A>)str).send(a);
+#     }
+# }
+
