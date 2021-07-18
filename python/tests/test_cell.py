@@ -1,7 +1,7 @@
 from typing import List
 
 from sodiumfrp import operational
-from sodiumfrp.stream import CellSink, StreamSink
+from sodiumfrp.stream import Cell, CellSink, StreamSink
 
 def test_hold() -> None:
     e: StreamSink[int] = StreamSink()
@@ -49,6 +49,16 @@ def test_sample() -> None:
     b.send(42)
     out.append(b.sample())
     assert [0, 3, 42] == out
+
+def test_apply() -> None:
+    bf = CellSink(lambda b: f"1 {b}")
+    ba = CellSink(5)
+    out: List[str] = []
+    l = Cell.apply(bf, ba).listen(out.append)
+    bf.send(lambda b: f"12 {b}")
+    ba.send(6)
+    l.unlisten()
+    assert ["1 5", "12 5", "12 6"] == out
 
 def test_listen() -> None:
     b = CellSink(9)

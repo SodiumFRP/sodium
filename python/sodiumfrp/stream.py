@@ -2,6 +2,7 @@ from threading import RLock
 import traceback
 from typing import Any, Callable, Generic, List, Optional, Sequence, Set, TypeVar
 
+from sodiumfrp.lazy import Lazy
 from sodiumfrp.listener import Listener
 from sodiumfrp.node import NODE_NULL, Node, Target
 from sodiumfrp.transaction import Transaction
@@ -369,6 +370,13 @@ class Stream(Generic[A]):
 # 	 * A variant of {@link #hold(Object)} with an initial value captured by {@link Cell#sampleLazy()}.
 # 	 */
 # 	public final Cell<A> holdLazy(final Lazy<A> initValue) {
+    def hold_lazy(self, init_value: Lazy[A]) -> "Cell[A]":
+        """
+        A variant of {@link #hold(Object)} with an initial value captured
+        by `Cell.sample_lazy`.
+        """
+        return Transaction._apply(
+            lambda trans: self._hold_lazy(trans, init_value))
 # 		return Transaction.apply(new Lambda1<Transaction, Cell<A>>() {
 # 			public Cell<A> apply(Transaction trans) {
 # 			    return holdLazy(trans, initValue);
@@ -377,6 +385,8 @@ class Stream(Generic[A]):
 # 	}
 # 
 # 	final Cell<A> holdLazy(Transaction trans, final Lazy<A> initValue) {
+    def _hold_lazy(self, trans: Transaction, init_value: Lazy[A]) -> "Cell[A]":
+        return LazyCell(self, init_value)
 # 	    return new LazyCell<A>(this, initValue);
 # 	}
 # 
@@ -684,6 +694,11 @@ class Stream(Generic[A]):
 #      * Clean up the output by discarding any firing other than the last one.
 #      */
 #     final Stream<A> lastFiringOnly(Transaction trans)
+    def _last_firing_only(self, trans: Transaction) -> "Stream[A]":
+        """
+        Clean up the output by discarding any firing other than the last one.
+        """
+        return self._coalesce(trans, lambda first, second: second)
 #     {
 #         return coalesce(trans, new Lambda2<A,A,A>() {
 #         	public A apply(A first, A second) { return second; }
@@ -1104,7 +1119,7 @@ class Cell(Generic[A]):
         self._value = init_value
         self._value_update: A = None
         self._cleanup: Listener = None
-        self._lazy_init_value: "Lazy[A]" = None
+        self._lazy_init_value: Lazy[A] = None # Use by LazyCell
         def handler(trans1: Transaction) -> None:
             def handler2(trans2: Transaction, a: A) -> None:
                 if self._value_update is None:
@@ -1416,12 +1431,29 @@ class Cell(Generic[A]):
 # 	 * primitive for all function lifting.
 # 	 */
 # 	public static <A,B> Cell<B> apply(final Cell<Lambda1<A,B>> bf, final Cell<A> ba)
+    @staticmethod
+    def apply(bf: "Cell[Callable[[A],B]]", ba: "Cell[A]") -> "Cell[B]":
+        """
+        Apply a value inside a cell to a function inside a cell. This is the
+        primitive for all function lifting.
+        """
 # 	{
 #     	return Transaction.apply(new Lambda1<Transaction, Cell<B>>() {
 #     		public Cell<B> apply(Transaction trans0) {
+        def handler(trans0: Transaction) -> "Cell[B]":
+            out: StreamWithSend[B] = StreamWithSend()
 #                 final StreamWithSend<B> out = new StreamWithSend<B>();
 # 
 #                 class ApplyHandler implements Handler<Transaction> {
+            class ApplyHandler:
+                def __init__(self) -> None:
+                    self.f: Callable[[A],B] = None
+                    self.f_present = False
+                    self.a: A = None
+                    self.a_present = False
+                def run(self, trans1: Transaction) -> None:
+                    trans1._prioritized(out._node,
+                        lambda trans2: out._send(trans2, self.f(self.a)))
 #                     ApplyHandler(Transaction trans0) {
 #                     }
 #                     Lambda1<A,B> f = null;
@@ -1438,12 +1470,25 @@ class Cell(Generic[A]):
 #                     }
 #                 }
 # 
+            out_target = out._node
+            in_target = Node(0)
+            node_target_: List[Target] = [None]
+            in_target._link_to(lambda _: None, out_target, node_target_)
+            node_target = node_target_[0]
+            h = ApplyHandler()
 #                 Node out_target = out.node;
 #                 final Node in_target = new Node(0);
 #                 Node.Target[] node_target_ = new Node.Target[1];
 #                 in_target.linkTo(null, out_target, node_target_);
 #                 final Node.Target node_target = node_target_[0];
 #                 final ApplyHandler h = new ApplyHandler(trans0);
+
+            def handler_f(trans1: Transaction, f: Callable[[A],B]) -> None:
+                h.f = f
+                h.f_present = True
+                if h.a_present:
+                    h.run(trans1)
+            l1 = bf._value_stream(trans0)._listen(in_target, handler_f)
 #                 Listener l1 = bf.value(trans0).listen_(in_target, new TransactionHandler<Lambda1<A,B>>() {
 #                     public void run(Transaction trans1, Lambda1<A,B> f) {
 #                         h.f = f;
@@ -1452,6 +1497,12 @@ class Cell(Generic[A]):
 #                             h.run(trans1);
 #                     }
 #                 });
+            def handler_a(trans1: Transaction, a: A) -> None:
+                h.a = a
+                h.a_present = True
+                if h.f_present:
+                    h.run(trans1)
+            l2 = ba._value_stream(trans0)._listen(in_target, handler_a)
 #                 Listener l2 = ba.value(trans0).listen_(in_target, new TransactionHandler<A>() {
 #                     public void run(Transaction trans1, A a) {
 #                         h.a = a;
@@ -1460,6 +1511,14 @@ class Cell(Generic[A]):
 #                             h.run(trans1);
 #                     }
 #                 });
+            return out \
+                ._last_firing_only(trans0) \
+                ._unsafe_add_cleanup(l1) \
+                ._unsafe_add_cleanup(l2) \
+                ._unsafe_add_cleanup(
+                    Listener(lambda: in_target._unlink_to(node_target))) \
+                .hold_lazy(
+                    Lazy(lambda: bf._sample_no_trans()(ba._sample_no_trans())))
 #                 return out.lastFiringOnly(trans0).unsafeAddCleanup(l1).unsafeAddCleanup(l2).unsafeAddCleanup(
 #                     new Listener() {
 #                         public void unlisten() {
@@ -1472,6 +1531,7 @@ class Cell(Generic[A]):
 #                     }));
 #             }
 #         });
+        return Transaction._apply(handler)
 # 	}
 # 
 # 	/**
@@ -1740,3 +1800,28 @@ class CellSink(Cell[A]):
 #     }
 # }
 
+# class LazyCell<A> extends Cell<A> {
+class LazyCell(Cell[A]):
+#     LazyCell(final Stream<A> event, final Lazy<A> lazyInitValue) {
+    def __init__(self, event: Stream[A], lazy_init_value: Lazy[A]) -> None:
+        super().__init__(event, None)
+        self._lazy_init_value = lazy_init_value
+#         super(event, null);
+#         this.lazyInitValue = lazyInitValue;
+#     }
+# 
+#     @Override
+#     A sampleNoTrans()
+    def _sample_no_trans(self) -> A:
+        if (self._value is None) and (self._lazy_init_value is not None):
+            self._value = self._lazy_init_value.get()
+            self._lazy_init_value = None
+        return self._value
+#     {
+#         if (value == null && lazyInitValue != null) {
+#             value = lazyInitValue.get();
+#             lazyInitValue = null;
+#         }
+#         return value;
+#     }
+# }
