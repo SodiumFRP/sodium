@@ -6,6 +6,7 @@ from sodiumfrp.listener import Listener
 from sodiumfrp.node import NODE_NULL, Node, Target
 from sodiumfrp.transaction import Transaction
 from sodiumfrp.typing import Handler, TransactionHandler
+from sodiumfrp.unit import Unit, UNIT
 
 A = TypeVar("A")
 B = TypeVar("B")
@@ -1237,6 +1238,12 @@ class Cell(Generic[A]):
 #     }
 # 
 #     final Stream<A> value(Transaction trans1)
+    def _value_stream(self, trans1: Transaction) -> Stream[A]:
+        s_spark: StreamWithSend[Unit] = StreamWithSend()
+        trans1._prioritized(
+            s_spark._node, lambda trans2: s_spark._send(trans2, UNIT))
+        s_initial: Stream[A] = s_spark.snapshot(self)
+        return s_initial.merge(self._updates(), lambda left, right: right)
 #     {
 #     	final StreamWithSend<Unit> sSpark = new StreamWithSend<Unit>();
 #         trans1.prioritized(sSpark.node, new Handler<Transaction>() {
@@ -1572,6 +1579,22 @@ class Cell(Generic[A]):
 # 	 *   your own primitives.
 #      */
 # 	public final Listener listen(final Handler<A> action) {
+    def listen(self, action: Callable[[A],None]) -> Listener:
+        """
+        Listen for updates to the value of this cell. This is the observer
+        pattern. The returned `Listener` has a `Listener.unlisten` method
+        to cause the listener to be removed. This is an OPERATIONAL
+        mechanism is for interfacing between the world of I/O and for FRP.
+
+        @param action The handler to execute when there's a new value.
+            You should make no assumptions about what thread you are called
+            on, and the handler should not block. You are not allowed
+            to use `CellSink.send` or `StreamSink.send` in the handler.
+            An exception will be thrown, because you are not meant to use
+            this to create your own primitives.
+        """
+        return Transaction._apply(
+            lambda trans: self._value_stream(trans).listen(action))
 #         return Transaction.apply(new Lambda1<Transaction, Listener>() {
 #         	public Listener apply(final Transaction trans) {
 #                 return value(trans).listen(action);

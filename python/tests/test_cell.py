@@ -49,3 +49,12 @@ def test_sample() -> None:
     b.send(42)
     out.append(b.sample())
     assert [0, 3, 42] == out
+
+def test_listen() -> None:
+    b = CellSink(9)
+    out: List[int] = []
+    l = b.listen(out.append)
+    b.send(2)
+    b.send(7)
+    l.unlisten()
+    assert [9, 2, 7] == out
