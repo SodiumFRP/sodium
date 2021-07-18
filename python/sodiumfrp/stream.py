@@ -59,9 +59,9 @@ class Stream(Generic[A]):
 # 	 */
 # 	public Stream() {
     @staticmethod
-    def never() -> "Stream[A]":
+    def never() -> "StreamWithSend[A]":
         """ A stream that never fires. """
-        return Stream(Node(0), [], [])
+        return StreamWithSend()
 # 	    this.node = new Node(0L);
 # 	    this.finalizers = new ArrayList<Listener>();
 # 	    this.firings = new ArrayList<A>();
@@ -357,6 +357,7 @@ class Stream(Generic[A]):
         sees the value of a cell as it was before any state changes from
         the current transaction.
         """
+        assert isinstance(self, StreamWithSend)
         return Transaction._apply(
             lambda trans: Cell(self, init_value))
 # 		return Transaction.apply(new Lambda1<Transaction, Cell<A>>() {
@@ -385,7 +386,7 @@ class Stream(Generic[A]):
 # 	}
 # 
 # 	final Cell<A> holdLazy(Transaction trans, final Lazy<A> initValue) {
-    def _hold_lazy(self, trans: Transaction, init_value: Lazy[A]) -> "Cell[A]":
+    def _hold_lazy(self, _: Transaction, init_value: Lazy[A]) -> "Cell[A]":
         return LazyCell(self, init_value)
 # 	    return new LazyCell<A>(this, initValue);
 # 	}
@@ -1114,7 +1115,7 @@ class Cell(Generic[A]):
 #     }
 # 
 #     Cell(final Stream<A> str, A initValue)
-    def __init__(self, stream: Stream[A], init_value: A) -> "Cell[A]":
+    def __init__(self, stream: StreamWithSend[A], init_value: A) -> None:
         self._stream = stream
         self._value = init_value
         self._value_update: A = None
