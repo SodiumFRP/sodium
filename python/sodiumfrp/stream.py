@@ -948,13 +948,12 @@ class StreamSink(StreamWithSend[A]):
 #      */
     def __init__(self, f: Callable[[A, A], A] = None) -> None:
         """
-        Construct a StreamSink that allows send() to be called once on it
-        per transaction.  If you call send() more than once, it will throw
-        an exception. If you need to do this, then use `StreamSink`.
+        Construct a StreamSink. Use the provided function to combine values,
+        that were sent to the stream during the same transaction, into a
+        single event. If the function is `None`, send() throws an exception,
+        if it is called more then once per transaction.
 
-        If you send more than one event in a transaction, they are combined
-        into a single event using the specified function. The combining
-        function should be **associative**.
+        The combining function should be **associative**.
 
         @param f Function to combine the values. It may construct
             FRP logic or use `Cell.sample()`. Apart from this the function
