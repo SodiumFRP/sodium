@@ -9,6 +9,7 @@ from sodiumfrp.typing import Handler, TransactionHandler
 
 A = TypeVar("A")
 B = TypeVar("B")
+C = TypeVar("C")
 
 
 #     package nz.sodium;
@@ -402,6 +403,27 @@ class Stream(Generic[A]):
 #      * transaction.
 #      */
 # 	public final <B,C> Stream<C> snapshot(final Cell<B> c, final Lambda2<A,B,C> f)
+    def snapshot(self,
+            c: "Cell[B]",
+            f: Callable[[A,B],C] = (lambda a, b: b)) -> "Stream[C]":
+        """
+        Return a stream whose events are the result of the combination using
+        the specified function of the input stream's event value and
+        the value of the cell at that time.
+
+        If the function is omitted, return a stream that captures the cell's
+        value at the time of the event firing, ignoring the stream's value.
+
+        There is an implicit delay: State updates caused by event firings
+        being held with `Stream.hold` don't become visible as the cell's
+        current value until the following transaction. To put this another
+        way, `Stream.snapshot` always sees the value of a cell as it was
+        before any state changes from the current transaction.
+        """
+        out: StreamWithSend[C] = StreamWithSend()
+        l = self._listen(out._node,
+            lambda trans2, a: out._send(trans2, f(a, c._sample_no_trans())))
+        return out._unsafe_add_cleanup(l)
 # 	{
 # 	    final Stream<A> ev = this;
 # 		final StreamWithSend<C> out = new StreamWithSend<C>();
@@ -1180,6 +1202,8 @@ class Cell(Generic[A]):
 #     }
 # 
 #     A sampleNoTrans()
+    def _sample_no_trans(self) -> A:
+        return self._value
 #     {
 #         return value;
 #     }
