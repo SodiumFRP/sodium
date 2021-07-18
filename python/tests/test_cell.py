@@ -1,7 +1,8 @@
-from typing import List
+from typing import List, Tuple
 
 from sodiumfrp import operational
 from sodiumfrp.stream import Cell, CellSink, StreamSink
+from sodiumfrp.transaction import Transaction
 
 def test_hold() -> None:
     e: StreamSink[int] = StreamSink()
@@ -77,6 +78,39 @@ def test_apply() -> None:
     ba.send(6)
     l.unlisten()
     assert ["1 5", "12 5", "12 6"] == out
+
+def test_lift() -> None:
+    a = CellSink(1)
+    b = CellSink(5)
+    out: List[str] = []
+    l = a.lift(b, lambda x, y: f"{x} {y}").listen(out.append)
+    a.send(12)
+    b.send(6)
+    l.unlisten()
+    assert ["1 5", "12 5", "12 6"] == out
+
+def test_lift_glitch() -> None:
+    a = CellSink(1)
+    a3 = a.map(lambda x: x * 3)
+    a5 = a.map(lambda x: x * 5)
+    b = a3.lift(a5, lambda x, y: f"{x} {y}")
+    out: List[str] = []
+    l = b.listen(out.append)
+    a.send(2)
+    l.unlisten()
+    assert ["3 5", "6 10"] == out
+
+def test_lift_from_simultaneous() -> None:
+    def transaction() -> Tuple[Cell,Cell]:
+        b1 = CellSink(3)
+        b2 = CellSink(5)
+        b2.send(7)
+        return (b1, b2)
+    b1, b2 = Transaction.run(transaction)
+    out: List[int] = []
+    l = b1.lift(b2, lambda x, y: x + y).listen(out.append)
+    l.unlisten()
+    assert [10] == out
 
 def test_listen() -> None:
     b = CellSink(9)

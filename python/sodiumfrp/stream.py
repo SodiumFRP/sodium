@@ -1323,6 +1323,13 @@ class Cell(Generic[A]):
 # 	 * @param fn Function to apply. It must be <em>referentially transparent</em>.
 # 	 */
 # 	public final <B,C> Cell<C> lift(Cell<B> b, final Lambda2<A,B,C> fn)
+    def lift(self, b: "Cell[B]", f: Callable[[A,B],C]) -> "Cell[C]":
+        """
+        Lift a binary function into cells, so the returned Cell always
+        reflects the specified function applied to the input cells' values.
+
+        @param f Function to apply. It must be **referentially transparent**.
+        """
 # 	{
 # 		Lambda1<A, Lambda1<B,C>> ffa = new Lambda1<A, Lambda1<B,C>>() {
 # 			public Lambda1<B,C> apply(final A aa) {
@@ -1333,6 +1340,8 @@ class Cell(Generic[A]):
 # 				};
 # 			}
 # 		};
+        bf = self.map(lambda aa: lambda bb: f(aa, bb))
+        return Cell.apply(bf, b)
 # 		Cell<Lambda1<B,C>> bf = this.map(ffa);
 # 		return this.apply(bf, b);
 # 	}
