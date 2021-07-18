@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from threading import RLock
 import traceback
 from typing import Any, Callable, Generic, List, Optional, Sequence, Set, TypeVar
@@ -1211,6 +1212,13 @@ class Cell(Generic[A]):
 #      * @see Stream#holdLazy(Lazy) Stream.holdLazy()
 #      */
 #     public final Lazy<A> sampleLazy() {
+    def sample_lazy(self) -> Lazy[A]:
+        """
+        A variant of `sample()` that works with `CellLoop`s when they
+        haven't been looped yet.  It should be used in any code that's
+        general enough that it could be passed a `CellLoop`.
+        """
+        return Transaction._apply(lambda trans: self._sample_lazy(trans))
 #         final Cell<A> me = this;
 #         return Transaction.apply(new Lambda1<Transaction, Lazy<A>>() {
 #         	public Lazy<A> apply(Transaction trans) {
@@ -1220,6 +1228,21 @@ class Cell(Generic[A]):
 #     }
 # 
 #     final Lazy<A> sampleLazy(Transaction trans) {
+    def _sample_lazy(self, trans: Transaction) -> Lazy[A]:
+        @dataclass
+        class LazySample:
+            cell: Cell[A]
+            has_value: bool
+            value: A
+        s = LazySample(cell=self, has_value=None, value=None)
+        def handler() -> None:
+            s.value = self._value_update \
+                if self._value_update is not None \
+                else self._sample_no_trans()
+            s.has_value = True
+            s.cell = None
+        trans.last(handler)
+        return Lazy(lambda: s.value if s.has_value else s.cell.sample())
 #         final Cell<A> me = this;
 #         final LazySample<A> s = new LazySample<A>(me);
 #         trans.last(new Runnable() {
@@ -1279,6 +1302,13 @@ class Cell(Generic[A]):
 #      * @param f Function to apply to convert the values. It must be <em>referentially transparent</em>.
 #      */
 # 	public final <B> Cell<B> map(final Lambda1<A,B> f)
+    def map(self, f: Callable[[A], B]) -> "Cell[B]":
+        return Transaction._apply(
+            lambda trans: self \
+                ._updates() \
+                .map(f) \
+                ._hold_lazy(trans, self._sample_lazy(trans).lift(f))
+        )
 # 	{
 # 		return Transaction.apply(new Lambda1<Transaction, Cell<B>>() {
 # 			public Cell<B> apply(Transaction trans) {

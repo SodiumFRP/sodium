@@ -50,6 +50,24 @@ def test_sample() -> None:
     out.append(b.sample())
     assert [0, 3, 42] == out
 
+def test_map() -> None:
+    b = CellSink(6)
+    out: List[str] = []
+    l = b.map(str).listen(out.append)
+    b.send(8)
+    l.unlisten()
+    assert ["6", "8"] == out
+
+def test_map_late_listen() -> None:
+    b = CellSink(6)
+    out: List[str] = []
+    bm = b.map(str)
+    b.send(2)
+    l = bm.listen(out.append)
+    b.send(8)
+    l.unlisten()
+    assert ["2", "8"] == out
+
 def test_apply() -> None:
     bf = CellSink(lambda b: f"1 {b}")
     ba = CellSink(5)
