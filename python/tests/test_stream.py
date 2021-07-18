@@ -1,6 +1,6 @@
 from typing import List
 
-from sodiumfrp.stream import Stream, StreamSink
+from sodiumfrp.stream import CellSink, Stream, StreamSink
 from sodiumfrp.transaction import Transaction
 
 def test_send_stream() -> None:
@@ -178,5 +178,18 @@ def test_filter() -> None:
     e.send("H")
     e.send("o")
     e.send("I")
+    l.unlisten()
+    assert ["H", "I"] == out
+
+def test_gate() -> None:
+    ec: StreamSink[str] = StreamSink()
+    epred = CellSink(True)
+    out: List[str] = []
+    l = ec.gate(epred).listen(out.append)
+    ec.send("H")
+    epred.send(False)
+    ec.send("O")
+    epred.send(True)
+    ec.send("I")
     l.unlisten()
     assert ["H", "I"] == out

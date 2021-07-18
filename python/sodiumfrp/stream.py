@@ -735,6 +735,14 @@ class Stream(Generic[A]):
 #      * when the specified cell's value is true.
 #      */
 #     public final Stream<A> gate(Cell<Boolean> c)
+    def gate(self, c: "Cell[bool]") -> "Stream[A]":
+        """
+        Return a stream that only outputs events from the input stream
+        when the specified cell's value is `True`.
+        """
+        return self \
+            .snapshot(c, lambda a, pred: a if pred else None) \
+            .filter(lambda x: x is not None)
 #     {
 #         return Stream.filterOptional(
 #             snapshot(c, new Lambda2<A,Boolean,Optional<A>>() {
