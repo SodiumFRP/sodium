@@ -1,8 +1,8 @@
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import Any, List, Optional, Tuple
 
 from sodiumfrp import operational
-from sodiumfrp.stream import Cell, CellSink, StreamSink
+from sodiumfrp.stream import Cell, CellSink, Stream, StreamSink
 from sodiumfrp.transaction import Transaction
 
 def test_hold() -> None:
@@ -140,7 +140,6 @@ def test_switch_cell() -> None:
     esb: StreamSink[SB] = StreamSink()
     # Split each field out of SB so we can update multiple behaviours in a
     # single transaction.
-    not_none = lambda x: x is not None
     ba = esb.map(lambda s: s.a).filter(not_none).hold("A")
     bb = esb.map(lambda s: s.b).filter(not_none).hold("a")
     bsw = esb.map(lambda s: s.sw).filter(not_none).hold(ba)
@@ -159,3 +158,68 @@ def test_switch_cell() -> None:
     esb.send(SB("I", "i", ba))
     l.unlisten()
     assert ["A", "B", "c", "d", "E", "F", "f", "F", "g", "H", "I"] == out
+
+def test_switch_stream() -> None:
+
+    @dataclass
+    class SE:
+        a: str
+        b: str
+        sw: Stream[str]
+
+    ese: StreamSink[SE] = StreamSink()
+    ea = ese.map(lambda s: s.a)
+    eb = ese.map(lambda s: s.b)
+    bsw = ese.map(lambda s: s.sw).filter(not_none).hold(ea)
+    out: List[str] = []
+    eo = Cell.switch_stream(bsw)
+    l = eo.listen(out.append)
+    ese.send(SE('A', 'a', None))
+    ese.send(SE('B', 'b', None))
+    ese.send(SE('C', 'c', eb))
+    ese.send(SE('D', 'd', None))
+    ese.send(SE('E', 'e', ea))
+    ese.send(SE('F', 'f', None))
+    ese.send(SE('G', 'g', eb))
+    ese.send(SE('H', 'h', ea))
+    ese.send(SE('I', 'i', ea))
+    l.unlisten()
+    assert ['A', 'B', 'C', 'd', 'e', 'F', 'G', 'h', 'I'] == out
+
+def test_switch_stream_simultaneous() -> None:
+
+    class SS2:
+        def __init__(self) -> None:
+            self.s: StreamSink[int] = StreamSink()
+
+    ss1 = SS2()
+    css = CellSink(ss1)
+    so = Cell.switch_stream(css.map(lambda b: b.s))
+    out: List[int] = []
+    l = so.listen(out.append)
+    ss3 = SS2()
+    ss4 = SS2()
+    ss2 = SS2()
+    ss1.s.send(0)
+    ss1.s.send(1)
+    ss1.s.send(2)
+    css.send(ss2)
+    ss1.s.send(7)
+    ss2.s.send(3)
+    ss2.s.send(4)
+    ss3.s.send(2)
+    css.send(ss3)
+    ss3.s.send(5)
+    ss3.s.send(6)
+    ss3.s.send(7)
+    def transaction() -> None:
+        ss3.s.send(8)
+        css.send(ss4)
+        ss4.s.send(2)
+    Transaction.run(transaction)
+    ss4.s.send(9)
+    l.unlisten()
+    assert [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] == out
+
+def not_none(x: Optional[Any]) -> bool:
+    return x is not None

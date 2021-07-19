@@ -1653,6 +1653,14 @@ class Cell(Generic[A]):
 # 	 * Unwrap a stream inside a cell to give a time-varying stream implementation.
 # 	 */
 # 	public static <A> Stream<A> switchS(final Cell<Stream<A>> bea)
+    @staticmethod
+    def switch_stream(bea: "Cell[Stream[A]]") -> Stream[A]:
+        """
+        Unwrap a stream inside a cell to give a time-varying stream
+        implementation.
+        """
+        return Transaction._apply(
+            lambda trans: Cell._switch_stream(trans, bea))
 # 	{
 #         return Transaction.apply(new Lambda1<Transaction, Stream<A>>() {
 #         	public Stream<A> apply(final Transaction trans) {
@@ -1662,6 +1670,12 @@ class Cell(Generic[A]):
 #     }
 # 
 # 	private static <A> Stream<A> switchS(final Transaction trans1, final Cell<Stream<A>> bea)
+    @staticmethod
+    def _switch_stream(
+            trans1: Transaction,
+            bea: "Cell[Stream[A]]") -> Stream[A]:
+        out: StreamWithSend[A] = StreamWithSend()
+        h2 = out._send
 # 	{
 #         final StreamWithSend<A> out = new StreamWithSend<A>();
 #         final TransactionHandler<A> h2 = new TransactionHandler<A>() {
@@ -1670,10 +1684,22 @@ class Cell(Generic[A]):
 # 	        }
 #         };
 #         TransactionHandler<Stream<A>> h1 = new TransactionHandler<Stream<A>>() {
+        class _Handler:
 #             private Listener currentListener = bea.sampleNoTrans().listen(out.node, trans1, h2, false);
+            def __init__(self) -> None:
+                self.current_listener = bea \
+                    ._sample_no_trans() \
+                    ._listen_internal(out._node, trans1, h2, False)
 # 
 #             @Override
 #             public void run(final Transaction trans2, final Stream<A> ea) {
+            def __call__(self, trans2: Transaction, ea: Stream[A]) -> None:
+                def run() -> None:
+                    if self.current_listener is not None:
+                        self.current_listener.unlisten()
+                    self.current_listener = ea._listen_internal(
+                        out._node, trans2, h2, True)
+                trans2.last(run)
 #                 trans2.last(new Runnable() {
 #                 	public void run() {
 # 	                    if (currentListener != null)
@@ -1685,10 +1711,16 @@ class Cell(Generic[A]):
 # 
 #             @Override
 #             protected void finalize() throws Throwable {
+            def __del__(self) -> None:
+                if self.current_listener is not None:
+                    self.current_listener.unlisten()
 #                 if (currentListener != null)
 #                     currentListener.unlisten();
 #             }
 #         };
+        h1 = _Handler()
+        l1 = bea._updates()._listen_internal(out._node, trans1, h1, False)
+        return out._unsafe_add_cleanup(l1)
 #         Listener l1 = bea.updates().listen(out.node, trans1, h1, false);
 #         return out.unsafeAddCleanup(l1);
 # 	}
