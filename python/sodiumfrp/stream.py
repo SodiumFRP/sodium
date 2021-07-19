@@ -1578,19 +1578,43 @@ class Cell(Generic[A]):
 # 	 * Unwrap a cell inside another cell to give a time-varying cell implementation.
 # 	 */
 # 	public static <A> Cell<A> switchC(final Cell<Cell<A>> bba)
+    @staticmethod
+    def switch_cell(bba: "Cell[Cell[A]]") -> "Cell[A]":
+        """
+        Unwrap a cell inside another cell to give a time-varying cell
+        implementation.
+        """
 # 	{
 # 	    return Transaction.apply(new Lambda1<Transaction, Cell<A>>() {
 # 	        public Cell<A> apply(Transaction trans0) {
+        def helper(trans0: Transaction) -> "Cell[A]":
+            za = bba.sample_lazy().lift(lambda ba: ba.sample())
 #                 Lazy<A> za = bba.sampleLazy().map(new Lambda1<Cell<A>, A>() {
 #                     public A apply(Cell<A> ba) {
 #                         return ba.sample();
 #                     }
 #                 });
+            out: StreamWithSend[A] = StreamWithSend()
 #                 final StreamWithSend<A> out = new StreamWithSend<A>();
 #                 TransactionHandler<Cell<A>> h = new TransactionHandler<Cell<A>>() {
+            class _Handler:
 #                     private Listener currentListener;
+                def __init__(self) -> None:
+                    self.current_listener: Listener = None
 #                     @Override
 #                     public void run(Transaction trans2, Cell<A> ba) {
+                def __call__(self, trans2: Transaction, ba: Cell[A]) -> None:
+                    # Note: If any switch takes place during a transaction,
+                    # then the _last_firing_only() below will always cause
+                    # a sample to be fetched from the one we just switched
+                    # to. So anything from the old input cell that might
+                    # have happened during this transaction will be suppressed.
+                    if self.current_listener is not None:
+                        self.current_listener.unlisten()
+                    self.current_listener = ba \
+                        ._value_stream(trans2) \
+                        ._listen_internal(out._node, trans2, out._send, False)
+
 #                         // Note: If any switch takes place during a transaction, then the
 #                         // lastFiringOnly() below will always cause a sample to be fetched
 #                         // from the one we just switched to. So anything from the old input cell
@@ -1606,14 +1630,23 @@ class Cell(Generic[A]):
 # 
 #                     @Override
 #                     protected void finalize() throws Throwable {
+                def __del__(self) -> None:
+                    if self.current_listener is not None:
+                        self.current_listener.unlisten()
 #                         if (currentListener != null)
 #                             currentListener.unlisten();
 #                     }
 #                 };
+            l1 = bba._value_stream(trans0)._listen(out._node, _Handler())
+            return out \
+                ._last_firing_only(trans0) \
+                ._unsafe_add_cleanup(l1) \
+                .hold_lazy(za)
 #                 Listener l1 = bba.value(trans0).listen_(out.node, h);
 #                 return out.lastFiringOnly(trans0).unsafeAddCleanup(l1).holdLazy(za);
 #             }
 #         });
+        return Transaction._apply(helper)
 # 	}
 # 	
 # 	/**

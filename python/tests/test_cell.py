@@ -1,3 +1,4 @@
+from dataclasses import dataclass
 from typing import List, Tuple
 
 from sodiumfrp import operational
@@ -127,3 +128,34 @@ def test_constant() -> None:
     l = b.listen(out.append)
     l.unlisten()
     assert [12] == out
+
+def test_switch_cell() -> None:
+
+    @dataclass
+    class SB:
+        a: str
+        b: str
+        sw: Cell[str]
+
+    esb: StreamSink[SB] = StreamSink()
+    # Split each field out of SB so we can update multiple behaviours in a
+    # single transaction.
+    not_none = lambda x: x is not None
+    ba = esb.map(lambda s: s.a).filter(not_none).hold("A")
+    bb = esb.map(lambda s: s.b).filter(not_none).hold("a")
+    bsw = esb.map(lambda s: s.sw).filter(not_none).hold(ba)
+    bo = Cell.switch_cell(bsw)
+    out: List[str] = []
+    l = bo.listen(out.append)
+    esb.send(SB("B", "b", None))
+    esb.send(SB("C", "c", bb))
+    esb.send(SB("D", "d", None))
+    esb.send(SB("E", "e", ba))
+    esb.send(SB("F", "f", None))
+    esb.send(SB(None, None, bb))
+    esb.send(SB(None, None, ba))
+    esb.send(SB("G", "g", bb))
+    esb.send(SB("H", "h", ba))
+    esb.send(SB("I", "i", ba))
+    l.unlisten()
+    assert ["A", "B", "c", "d", "E", "F", "f", "F", "g", "H", "I"] == out
