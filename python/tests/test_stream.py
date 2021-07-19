@@ -222,3 +222,16 @@ def test_collect() -> None:
     ea.send(3)
     l.unlisten()
     assert [105, 112, 113, 115 ,118] == out
+
+def test_accum() -> None:
+    ea: StreamSink[int] = StreamSink()
+    out: List[int] = []
+    sum_ = ea.accum(100, lambda a, s: a + s)
+    l = sum_.listen(out.append)
+    ea.send(5)
+    ea.send(7)
+    ea.send(1)
+    ea.send(2)
+    ea.send(3)
+    l.unlisten()
+    assert [100, 105, 112, 113, 115, 118] == out

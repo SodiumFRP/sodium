@@ -853,6 +853,16 @@ class Stream(Generic[A]):
 #      *    cell. Apart from this the function must be <em>referentially transparent</em>.
 #      */
 #     public final <S> Cell<S> accum(final S initState, final Lambda2<A, S, S> f)
+    def accum(self, init_state: S, f: Callable[[A, S], S]) -> "Cell[S]":
+        """
+        Accumulate on input event, outputting the new state each time.
+
+        @param f Function to apply to update the state. It may construct FRP
+            logic or use `Cell.sample()` in which case it is equivalent
+            to `Stream.snapshot()`ing the cell. Apart from this the function
+            must be **referentially transparent**.
+        """
+        return self.accum_lazy(Lazy(lambda: init_state), f)
 #     {
 #         return accumLazy(new Lazy<S>(initState), f);
 #     }
@@ -862,9 +872,23 @@ class Stream(Generic[A]):
 #      * {@link Cell#sampleLazy()}.
 #      */
 #     public final <S> Cell<S> accumLazy(final Lazy<S> initState, final Lambda2<A, S, S> f)
+    def accum_lazy(self,
+            init_state: Lazy[S],
+            f: Callable[[A, S], S]) -> "Cell[S]":
+        """
+        A variant of `accum()` that takes an initial state returned by
+        `Cell.sample_lazy()`.
+        """
 #     {
 #         return Transaction.<Cell<S>>run(new Lambda0<Cell<S>>() {
 #             public Cell<S> apply() {
+        def handler() -> Cell[S]:
+            ea = self
+            es: StreamLoop[S] = StreamLoop()
+            s = es.hold_lazy(init_state)
+            es_out = ea.snapshot(s, f)
+            es.loop(es_out)
+            return es_out.hold_lazy(init_state)
 #                 final Stream<A> ea = Stream.this;
 #                 StreamLoop<S> es = new StreamLoop<S>();
 #                 Cell<S> s = es.holdLazy(initState);
@@ -873,6 +897,7 @@ class Stream(Generic[A]):
 #                 return es_out.holdLazy(initState);
 #             }
 #         });
+        return Transaction.run(handler)
 #     }
 # 
 #     /**
