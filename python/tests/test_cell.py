@@ -280,5 +280,20 @@ def test_lift_loop() -> None:
     l.unlisten()
     assert ["tea kettle", "tea caddy"] == out
 
+def test_switch_and_defer() -> None:
+    out: List[str] = []
+    si: StreamSink[int] = StreamSink()
+    l = Cell.switch_stream(
+            si.map(
+                lambda i: operational.defer(
+                    operational.value(Cell.constant(f"A{i}"))
+                )
+            ).hold(Stream.never())
+        ).listen(out.append)
+    si.send(2)
+    si.send(4)
+    l.unlisten()
+    assert ["A2", "A4"] == out
+
 def not_none(x: Optional[Any]) -> bool:
     return x is not None
