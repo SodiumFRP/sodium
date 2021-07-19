@@ -3,6 +3,7 @@
 from typing import TypeVar
 
 from sodiumfrp.stream import Cell, Stream
+from sodiumfrp.transaction import Transaction
 
 A = TypeVar("A")
 
@@ -49,6 +50,18 @@ def updates(c: Cell[A]) -> Stream[A]:
 #      * that do not allow the caller to detect the cell updates.
 #      */
 #     public static <A> Stream<A> value(final Cell<A> c)
+def value(c: Cell[A]) -> Stream[A]:
+    """
+    A stream that is guaranteed to fire once in the transaction where
+    value() is invoked, giving the current value of the cell, and thereafter
+    behaves like `updates()`, firing for each update/step of the cell's value.
+
+    This is an OPERATIONAL primitive, which is not part of the main Sodium
+    API. It breaks the property of non-detectability of cell steps/updates.
+    The rule with this primitive is that you should only use it in functions
+    that do not allow the caller to detect the cell updates.
+    """
+    return Transaction._apply(c._value_stream)
 #     {
 #         return Transaction.apply(new Lambda1<Transaction, Stream<A>>() {
 #         	public Stream<A> apply(Transaction trans) {

@@ -2,8 +2,10 @@ from dataclasses import dataclass
 from typing import Any, List, Optional, Tuple
 
 from sodiumfrp import operational
-from sodiumfrp.stream import Cell, CellSink, Stream, StreamSink
+from sodiumfrp.listener import Listener
+from sodiumfrp.stream import Cell, CellLoop, CellSink, Stream, StreamSink
 from sodiumfrp.transaction import Transaction
+from sodiumfrp.unit import Unit, UNIT
 
 def test_hold() -> None:
     e: StreamSink[int] = StreamSink()
@@ -220,6 +222,63 @@ def test_switch_stream_simultaneous() -> None:
     ss4.s.send(9)
     l.unlisten()
     assert [0, 1, 2, 3, 4, 5, 6, 7, 8, 9] == out
+
+def test_loop_cell() -> None:
+    sa: StreamSink[int] = StreamSink()
+    def transaction() -> Cell[int]:
+        sum_: CellLoop[int] = CellLoop()
+        sum_out_ = sa.snapshot(sum_, lambda x, y: x + y).hold(0)
+        sum_.loop(sum_out_)
+        return sum_out_
+    sum_out = Transaction.run(transaction)
+    out: List[int] = []
+    l = sum_out.listen(out.append)
+    sa.send(2)
+    sa.send(3)
+    sa.send(1)
+    l.unlisten()
+    assert [0, 2, 5, 6] == out
+    assert 6 == sum_out.sample()
+
+def test_loop_value_snapshot() -> None:
+    out: List[str] = []
+    def transaction() -> Listener:
+        a = Cell.constant("lettuce")
+        b: CellLoop[str] = CellLoop()
+        eSnap = operational.value(a).snapshot(b, lambda x, y: f"{x} {y}")
+        b.loop(Cell.constant("cheese"))
+        return eSnap.listen(out.append)
+    l = Transaction.run(transaction)
+    l.unlisten()
+    assert ["lettuce cheese"] == out
+
+def test_loop_value_hold() -> None:
+    out: List[str] = []
+    def transaction() -> Cell[str]:
+        a: CellLoop[str] = CellLoop()
+        value_ = operational.value(a).hold("onion")
+        a.loop(Cell.constant("cheese"))
+        return value_
+    value = Transaction.run(transaction)
+    eTick: StreamSink[Unit] = StreamSink()
+    l = eTick.snapshot(value).listen(out.append)
+    eTick.send(UNIT)
+    l.unlisten()
+    assert ["cheese"] == out
+
+def test_lift_loop() -> None:
+    out: List[str] = []
+    b = CellSink("kettle")
+    def transaction() -> Cell[str]:
+        a: CellLoop[str] = CellLoop()
+        c_ = a.lift(b, lambda x, y: f"{x} {y}")
+        a.loop(Cell.constant("tea"))
+        return c_
+    c = Transaction.run(transaction)
+    l = c.listen(out.append)
+    b.send("caddy")
+    l.unlisten()
+    assert ["tea kettle", "tea caddy"] == out
 
 def not_none(x: Optional[Any]) -> bool:
     return x is not None
