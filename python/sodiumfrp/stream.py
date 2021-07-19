@@ -905,6 +905,16 @@ class Stream(Generic[A]):
 #      * input stream, starting from the transaction in which once() was invoked.
 #      */
 #     public final Stream<A> once()
+    def once(self) -> "Stream[A]":
+        """
+        Return a stream that outputs only one value: the next event of the
+        input stream, starting from the transaction in which once() was
+        invoked.
+        """
+        # This is a bit long-winded but it's efficient because it deregisters
+        # the listener.
+        la: List[Optional[Listener]] = [None]
+        out: StreamWithSend[A] = StreamWithSend()
 #     {
 #         // This is a bit long-winded but it's efficient because it deregisters
 #         // the listener.
@@ -913,6 +923,11 @@ class Stream(Generic[A]):
 #         final StreamWithSend<A> out = new StreamWithSend<A>();
 #         la[0] = ev.listen_(out.node, new TransactionHandler<A>() {
 #         	public void run(Transaction trans, A a) {
+        def handler(trans: Transaction, a: A) -> None:
+            if la[0] is not None:
+                out._send(trans, a)
+                la[0].unlisten()
+                la[0] = None
 # 	            if (la[0] != null) {
 #                     out.send(trans, a);
 # 	                la[0].unlisten();
@@ -920,6 +935,8 @@ class Stream(Generic[A]):
 # 	            }
 # 	        }
 #         });
+        la[0] = self._listen(out._node, handler)
+        return out._unsafe_add_cleanup(la[0])
 #         return out.unsafeAddCleanup(la[0]);
 #     }
 # 

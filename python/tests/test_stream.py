@@ -235,3 +235,13 @@ def test_accum() -> None:
     ea.send(3)
     l.unlisten()
     assert [100, 105, 112, 113, 115, 118] == out
+
+def test_once() -> None:
+    e: StreamSink[str] = StreamSink()
+    out: List[str] = []
+    l = e.once().listen(out.append)
+    e.send("A")
+    e.send("B")
+    e.send("C")
+    l.unlisten()
+    assert ["A"] == out
