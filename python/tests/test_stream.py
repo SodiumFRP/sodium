@@ -1,5 +1,6 @@
 from typing import List
 
+from sodiumfrp import operational
 from sodiumfrp.stream import CellSink, Stream, StreamLoop, StreamSink
 from sodiumfrp.transaction import Transaction
 
@@ -245,3 +246,14 @@ def test_once() -> None:
     e.send("C")
     l.unlisten()
     assert ["A"] == out
+
+def test_defer() -> None:
+    e: StreamSink[str] = StreamSink()
+    b = e.hold(" ")
+    out: List[str] = []
+    l = operational.defer(e).snapshot(b).listen(out.append)
+    e.send("C")
+    e.send("B")
+    e.send("A")
+    l.unlisten()
+    assert ["C", "B", "A"] == out

@@ -1,8 +1,8 @@
 """ Operational primitives that must be used with care. """
 
-from typing import TypeVar
+from typing import Iterable, TypeVar
 
-from sodiumfrp.stream import Cell, Stream
+from sodiumfrp.stream import Cell, Stream, StreamWithSend
 from sodiumfrp.transaction import Transaction
 
 A = TypeVar("A")
@@ -75,6 +75,13 @@ def value(c: Cell[A]) -> Stream[A]:
 # 	 * initiated transaction. Same as {@link #split(Stream)} but it works on a single value.
 # 	 */
 # 	public static <A> Stream<A> defer(Stream<A> s)
+def defer(s: Stream[A]) -> Stream[A]:
+    """
+    Push each event onto a new transaction guaranteed to come before
+    the next externally initiated transaction. Same as `split()` but it
+    works on a single value.
+    """
+    return split(s.map(lambda a: [a]))
 # 	{
 # 	    return split(s.map(new Lambda1<A,Iterable<A>>() {
 # 	        public Iterable<A> apply(A a) {
@@ -93,9 +100,26 @@ def value(c: Cell[A]) -> Stream[A]:
 # 	 * events output by split() or {@link #defer(Stream)} invoked elsewhere in the code.
 # 	 */
 #     public static <A, C extends Iterable<A>> Stream<A> split(Stream<C> s) {
+def split(s: Stream[Iterable[A]]) -> Stream[A]:
+    """
+    Push each event in the list onto a newly created transaction guaranteed
+    to come before the next externally initiated transaction. Note that
+    the semantics are such that two different invocations of split() can
+    put events into the same new transaction, so the resulting stream's
+    events could be simultaneous with events output by split() or `defer()`
+    invoked elsewhere in the code.
+    """
+    out: StreamWithSend[A] = StreamWithSend()
 # 	    final StreamWithSend<A> out = new StreamWithSend<A>();
 # 	    Listener l1 = s.listen_(out.node, new TransactionHandler<C>() {
 # 	        public void run(Transaction trans, C as) {
+    def handler(trans: Transaction, as_: Iterable[A]) -> None:
+        child_idx = 0
+        for a in as_:
+            def run(trans: Transaction, _a: A = a) -> None:
+                out._send(trans, _a)
+            trans._post(child_idx, run)
+            child_idx += 1
 # 	            int childIx = 0;
 #                 for (final A a : as) {
 #                     trans.post_(childIx, new Handler<Transaction>() {
@@ -107,6 +131,8 @@ def value(c: Cell[A]) -> Stream[A]:
 #                 }
 # 	        }
 # 	    });
+    l1 = s._listen(out._node, handler)
+    return out._unsafe_add_cleanup(l1)
 # 	    return out.unsafeAddCleanup(l1);
 #     }
 # }
