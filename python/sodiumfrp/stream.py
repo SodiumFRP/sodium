@@ -1067,8 +1067,71 @@ class StreamSink(StreamWithSend[A]):
 # 		});
 # 	}
 # }
+
+
+# /**
+#  * A forward reference for a {@link Stream} equivalent to the Stream that is referenced.
+#  */
+# public class StreamLoop<A> extends StreamWithSend<A> {
+class StreamLoop(StreamWithSend[A]):
+    """
+    A forward reference for a `Stream` equivalent to the Stream that
+    is referenced.
+    """
+#     boolean assigned = false;
 # 
+#     public StreamLoop()
+    def __init__(self) -> None:
+        super().__init__()
+        self._assigned = False
+        if Transaction.get_current_transaction() is None:
+            raise RuntimeError("StreamLoop/CellLoop must be used within "
+                "an explicit transaction")
+#     {
+#     	if (Transaction.getCurrentTransaction() == null)
+#     	    throw new RuntimeException("StreamLoop/CellLoop must be used within an explicit transaction");
+#     }
 # 
+#     /**
+#      * Resolve the loop to specify what the StreamLoop was a forward reference to. It
+#      * must be invoked inside the same transaction as the place where the StreamLoop is used.
+#      * This requires you to create an explicit transaction with {@link Transaction#run(Lambda0)}
+#      * or {@link Transaction#runVoid(Runnable)}.
+#      */
+#     public void loop(final Stream<A> ea_out)
+    def loop(self, ea_out: Stream[A]) -> None:
+        """
+        Resolve the loop to specify what the StreamLoop was a forward
+        reference to. It must be invoked inside the same transaction as
+        the place where the StreamLoop is used.  This requires you to create
+        an explicit transaction with `Transaction.run()`.
+        """
+        if self._assigned:
+            raise RuntimeError("StreamLoop looped more than once")
+        self._assigned = True
+        Transaction.run(
+            lambda: self._unsafe_add_cleanup(
+                ea_out._listen(self._node, self._send)
+            )
+        )
+#     {
+#         if (assigned)
+#             throw new RuntimeException("StreamLoop looped more than once");
+#         assigned = true;
+#         final StreamLoop<A> me = this;
+#         Transaction.runVoid(new Runnable() {
+#             public void run() {
+#                 unsafeAddCleanup(ea_out.listen_(StreamLoop.this.node, new TransactionHandler<A>() {
+#                     public void run(Transaction trans, A a) {
+#                         me.send(trans, a);
+#                     }
+#                 }));
+#             }
+#         });
+#     }
+# }
+
+
 class CoalesceHandler(Generic[A]):
 
     def __init__(self, f: Callable[[A,A], A], out: StreamWithSend[A]):

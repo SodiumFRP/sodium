@@ -1,6 +1,6 @@
 from typing import List
 
-from sodiumfrp.stream import CellSink, Stream, StreamSink
+from sodiumfrp.stream import CellSink, Stream, StreamLoop, StreamSink
 from sodiumfrp.transaction import Transaction
 
 def test_send_stream() -> None:
@@ -193,3 +193,19 @@ def test_gate() -> None:
     ec.send("I")
     l.unlisten()
     assert ["H", "I"] == out
+
+def test_loop_stream() -> None:
+    ea: StreamSink[int] = StreamSink()
+    def transaction() -> Stream[int]:
+        eb: StreamLoop[int] = StreamLoop()
+        ec_ = ea.map(lambda x: x % 10).merge(eb, lambda x, y: x + y)
+        eb_out = ea.map(lambda x: x // 10).filter(lambda x: x != 0)
+        eb.loop(eb_out)
+        return ec_
+    ec = Transaction.run(transaction)
+    out: List[int] = []
+    l = ec.listen(out.append)
+    ea.send(2)
+    ea.send(52)
+    l.unlisten()
+    assert [2, 7] == out
