@@ -1,7 +1,16 @@
 from dataclasses import dataclass
 from threading import RLock
 import traceback
-from typing import Any, Callable, Generic, List, Optional, Sequence, Set, TypeVar
+from typing import \
+    Any, \
+    Callable, \
+    Generic, \
+    List, \
+    Optional, \
+    Sequence, \
+    Set, \
+    Tuple, \
+    TypeVar
 
 from sodiumfrp.lazy import Lazy
 from sodiumfrp.listener import Listener
@@ -13,6 +22,7 @@ from sodiumfrp.unit import Unit, UNIT
 A = TypeVar("A")
 B = TypeVar("B")
 C = TypeVar("C")
+S = TypeVar("S")
 
 
 #     package nz.sodium;
@@ -777,6 +787,20 @@ class Stream(Generic[A]):
 #      *    cell. Apart from this the function must be <em>referentially transparent</em>.
 #      */
 #     public final <B,S> Stream<B> collect(final S initState, final Lambda2<A, S, Tuple2<B, S>> f)
+    def collect(self,
+            init_state: S,
+            f: Callable[[A, S], Tuple[B, S]]) -> "Stream[B]":
+        """
+        Transform an event with a generalized state loop (a Mealy machine).
+        The function is passed the input and the old state and returns
+        the new state and output value.
+
+        @param f Function to apply to update the state. It may construct FRP
+            logic or use `Cell.sample()` in which case it is equivalent
+            to `Stream.snapshot()`ing the cell. Apart from this the function
+            must be **referentially transparent**.
+        """
+        return self.collect_lazy(Lazy(lambda: init_state), f)
 #     {
 #         return collectLazy(new Lazy<S>(initState), f);
 #     }
@@ -786,9 +810,25 @@ class Stream(Generic[A]):
 #      * {@link Cell#sampleLazy()}.
 #      */
 #     public final <B,S> Stream<B> collectLazy(final Lazy<S> initState, final Lambda2<A, S, Tuple2<B, S>> f)
+    def collect_lazy(self,
+            init_state: Lazy[S],
+            f: Callable[[A, S], Tuple[B, S]]) -> "Stream[B]":
+        """
+        A variant of `collect()` that takes an initial state returned by
+        `Cell.sample_lazy()`.
+        """
 #     {
 #         return Transaction.<Stream<B>>run(new Lambda0<Stream<B>>() {
 #             public Stream<B> apply() {
+        def handler() -> Stream[B]:
+            ea = self
+            es: StreamLoop[S] = StreamLoop()
+            s = es.hold_lazy(init_state)
+            ebs = ea.snapshot(s, f)
+            eb = ebs.map(lambda bs: bs[0])
+            es_out = ebs.map(lambda bs: bs[1])
+            es.loop(es_out)
+            return eb
 #                 final Stream<A> ea = Stream.this;
 #                 StreamLoop<S> es = new StreamLoop<S>();
 #                 Cell<S> s = es.holdLazy(initState);
@@ -803,6 +843,7 @@ class Stream(Generic[A]):
 #                 return eb;
 #             }
 #         });
+        return Transaction.run(handler)
 #     }
 # 
 #     /**
