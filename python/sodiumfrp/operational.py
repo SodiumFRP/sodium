@@ -2,7 +2,7 @@
 
 from typing import Iterable, TypeVar
 
-from sodiumfrp.stream import Cell, Stream, StreamWithSend
+from sodiumfrp.core import Cell, Stream, StreamWithSend
 from sodiumfrp.transaction import Transaction
 
 A = TypeVar("A")

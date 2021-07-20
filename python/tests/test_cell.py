@@ -3,7 +3,7 @@ from typing import Any, List, Optional, Tuple
 
 from sodiumfrp import operational
 from sodiumfrp.listener import Listener
-from sodiumfrp.stream import Cell, CellLoop, CellSink, Stream, StreamSink
+from sodiumfrp.core import Cell, CellLoop, CellSink, Stream, StreamSink
 from sodiumfrp.transaction import Transaction
 from sodiumfrp.unit import Unit, UNIT
 
