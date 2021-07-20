@@ -1000,6 +1000,9 @@ class Stream(Generic[A]):
 # 
 # 	@Override
 # 	protected void finalize() throws Throwable {
+    def __del__(self) -> None:
+        for l in self._finalizers:
+            l.unlisten()
 # 		for (Listener l : finalizers)
 # 			l.unlisten();
 # 	}
@@ -1888,6 +1891,9 @@ class Cell(Generic[A]):
 # 
 # 	@Override
 # 	protected void finalize() throws Throwable {
+    def __del__(self) -> None:
+        if self._cleanup is not None:
+            self._cleanup.unlisten()
 # 	    if (cleanup != null)
 #             cleanup.unlisten();
 # 	}
