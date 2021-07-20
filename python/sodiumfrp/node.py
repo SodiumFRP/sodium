@@ -20,7 +20,6 @@ class Node:
         self._rank = rank
         self._listeners: List[Target] = []
 
-
     def _link_to(self,
             action: "TransactionHandler[Unit]",
             target: "Node",
@@ -32,10 +31,8 @@ class Node:
         out_target[0] = t
         return changed
 
-
     def _unlink_to(self, target: Target) -> None:
         self._listeners.remove(target)
-
 
     def _ensure_bigger_than(self, limit: int, visited: Set["Node"]) -> bool:
         if self._rank > limit or (self in visited):
@@ -48,10 +45,8 @@ class Node:
         visited.remove(self)
         return True
 
-
     def __lt__(self, other: "Node") -> bool:
         return self._rank < other._rank
-
 
     def __gt__(self, other: "Node") -> bool:
         return self._rank > other._rank

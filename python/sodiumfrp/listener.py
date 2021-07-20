@@ -9,7 +9,6 @@ class Listener:
     def __init__(self, unlisten: Callable[["Listener"], None]) -> None:
         self._unlisten = unlisten
 
-
     def unlisten(self) -> None:
         """
         Deregister the listener that was registered so it will no longer
@@ -17,7 +16,6 @@ class Listener:
         collected.
         """
         self._unlisten(self)
-
 
     def append(self, two: "Listener") -> "Listener":
         """

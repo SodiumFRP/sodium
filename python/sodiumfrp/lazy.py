@@ -12,7 +12,6 @@ class Lazy(Generic[A]):
     def __init__(self, f: Callable[[], A]) -> None:
         self._f = f
 
-
     def get(self) -> A:
         """
         Get the value if available, throwing an exception if not.
@@ -20,7 +19,6 @@ class Lazy(Generic[A]):
         transactions to when the Lazy was obtained.
         """
         return self._f()
-
 
     def lift(self, f: Callable[...,B], *others: "Lazy") -> "Lazy[B]":
         """

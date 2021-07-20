@@ -12,7 +12,6 @@ class Entry:
 
     _next_seq: int = 0
 
-
     def __init__(self,
             rank: Node,
             action: Handler["Transaction"]) -> None:
@@ -20,7 +19,6 @@ class Entry:
         self.action = action
         self.seq = Entry._next_seq
         Entry._next_seq += 1
-
 
     def __lt__(self, other: "Entry") -> bool:
         if self.rank < other.rank:
@@ -42,7 +40,6 @@ class Transaction:
     _on_start_hooks: List[Callable[[], None]] = []
     _running_on_start_hooks: bool = False
 
-
     def __init__(self) -> None:
         # True if we need to re-generate the priority queue.
         self._to_regen = False
@@ -50,13 +47,11 @@ class Transaction:
         self._last_q: List[Callable[[], None]] = []
         self._post_q: Dict[int, Handler["Transaction"]] = None
 
-
     @staticmethod
     def get_current_transaction() -> "Transaction":
         """ Return the current transaction, or null if there isn't one. """
         with Transaction._transaction_lock:
             return Transaction._current_transaction
-
 
     @staticmethod
     def run(code: Callable[[], T]) -> T:
@@ -83,7 +78,6 @@ class Transaction:
                 finally:
                     Transaction._current_transaction = prev_trans
 
-
     @staticmethod
     def _run_handler(code: Handler["Transaction"]) -> None:
         with Transaction._transaction_lock:
@@ -101,7 +95,6 @@ class Transaction:
                 finally:
                     Transaction._current_transaction = prev_trans
 
-
     @staticmethod
     def on_start(runnable: Callable[[], None]) -> None:
         """
@@ -114,7 +107,6 @@ class Transaction:
         """
         with Transaction._transaction_lock:
             Transaction._on_start_hooks.append(runnable)
-
 
     @staticmethod
     def _apply(code: Callable[["Transaction"], T]) -> T:
@@ -133,7 +125,6 @@ class Transaction:
                 finally:
                     Transaction._current_transaction = prev_trans
 
-
     @staticmethod
     def _start_if_necessary() -> None:
         if Transaction._current_transaction is None:
@@ -146,16 +137,13 @@ class Transaction:
                     Transaction._running_on_start_hooks = False
             Transaction._current_transaction = Transaction()
 
-
     def _prioritized(self, rank: Node, action: Handler["Transaction"]) -> None:
         entry = Entry(rank, action)
         heappush(self._prioritized_q, entry)
 
-
     def last(self, action: Callable[[], None]) -> None:
         """ Add an action to run after all prioritized() actions. """
         self._last_q.append(action)
-
 
     def _post(self, child_idx: int, action: Handler["Transaction"]) -> None:
         """ Add an action to run after all last() actions. """
@@ -171,7 +159,6 @@ class Transaction:
         else:
             self._post_q[child_idx] = action
 
-
     @staticmethod
     def post(action: Callable[[], None]) -> None:
         """
@@ -184,7 +171,6 @@ class Transaction:
             trans._post(-1, lambda _: action())
         Transaction._run_handler(handler)
 
-
     def _check_regen(self) -> None:
         """
         If the priority queue has entries in it when we modify any of
@@ -194,7 +180,6 @@ class Transaction:
         if self._to_regen:
             self._to_regen = False
             self._prioritized_q.sort()
-
 
     def close(self) -> None:
 
