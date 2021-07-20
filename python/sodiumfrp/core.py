@@ -722,7 +722,7 @@ class Cell(Generic[A]):
                 ._unsafe_add_cleanup(l1) \
                 ._unsafe_add_cleanup(l2) \
                 ._unsafe_add_cleanup(
-                    Listener(lambda: in_target._unlink_to(node_target))) \
+                    Listener(lambda _: in_target._unlink_to(node_target))) \
                 .hold_lazy(
                     Lazy(
                         lambda: bf._sample_no_trans()(ba._sample_no_trans())
