@@ -2,3 +2,4 @@ mypy.ini
 __pycache__
 .pylintrc
 .idea
+*.pyc
