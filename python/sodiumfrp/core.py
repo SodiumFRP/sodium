@@ -974,13 +974,28 @@ class Stream(Generic[A]):
 #      * things don't get kept alive when they shouldn't.
 #      */
 #     public Stream<A> addCleanup(final Listener cleanup) {
+    def add_cleanup(self, cleanup: Listener) -> "Stream[A]":
+        """
+        Attach a listener to this stream so that its `Listener.unlisten()`
+        is invoked when this stream is garbage collected. Useful for
+        functions that initiate I/O, returning the result of it through
+        a stream.
+
+        You must use this only with listeners returned by `listen_weak()`
+        so that things don't get kept alive when they shouldn't.
+        """
 #         return Transaction.run(new Lambda0<Stream<A>>() {
 #             public Stream<A> apply() {
+        def helper() -> Stream[A]:
+            fs_new = self._finalizers.copy()
+            fs_new.append(cleanup)
+            return Stream(self._node, fs_new, self._firings)
 #                 List<Listener> fsNew = new ArrayList<Listener>(finalizers);
 #                 fsNew.add(cleanup);
 #                 return new Stream<A>(node, fsNew, firings);
 #             }
 #         });
+        return Transaction.run(helper)
 #     }
 # 
 # 	@Override
