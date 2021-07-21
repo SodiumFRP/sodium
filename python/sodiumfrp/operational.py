@@ -56,8 +56,8 @@ def split(s: Stream[Iterable[A]]) -> Stream[A]:
     def handler(trans: Transaction, as_: Iterable[A]) -> None:
         child_idx = 0
         for a in as_:
-            def run(trans: Transaction, _a: A = a) -> None:
-                out._send(trans, _a)
+            def run(trans2: Transaction, _a: A = a) -> None:
+                out._send(trans2, _a)
             trans._post(child_idx, run)
             child_idx += 1
 
