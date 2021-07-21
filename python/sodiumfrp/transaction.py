@@ -195,8 +195,9 @@ class Transaction:
         self._last_q.clear()
 
         if self._post_q is not None:
-            while self._post_q:
-                index, handler = self._post_q.popitem()
+            # _post_q must be traversed in the order of the indices
+            for index in sorted(self._post_q.keys()):
+                handler = self._post_q.pop(index)
                 parent_trans = Transaction._current_transaction
                 try:
                     if index >= 0:
