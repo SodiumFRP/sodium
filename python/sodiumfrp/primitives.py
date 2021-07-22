@@ -86,8 +86,8 @@ class Stream(Generic[A]):
         `Listener.unlisten()` is called explicitly.
 
         This method should be used for listeners that are to be passed to
-        `Stream.add_cleanup_listener()` to ensure that things don't get
-        kept alive when they shouldn't.
+        `Stream.add_cleanup()` to ensure that things don't get kept alive
+        when they shouldn't.
         """
         return self._listen(NODE_NULL, lambda trans2, a: action(a))
 
