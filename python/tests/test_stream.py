@@ -1,8 +1,7 @@
 from typing import List
 
 from sodiumfrp import operational
-from sodiumfrp.core import CellSink, Stream, StreamLoop, StreamSink
-from sodiumfrp.transaction import Transaction
+from sodiumfrp import CellSink, Stream, StreamLoop, StreamSink, Transaction
 
 def test_send_stream() -> None:
     e: StreamSink[int] = StreamSink()
