@@ -108,7 +108,7 @@ class Stream(Generic[A]):
                     Transaction.in_callback += 1
                     try:
                         action(trans2, firing)
-                    except Exception as e:
+                    except:
                         # Don't allow transactions to interfere with Sodium
                         # internals.
                         traceback.print_exc()
