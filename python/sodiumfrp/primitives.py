@@ -211,19 +211,19 @@ class Stream(Generic[A]):
 
     def or_else(self, s: "Stream[A]") -> "Stream[A]":
         """
-        Variant of `Stream.merge(Stream, Callable)` that merges two streams
-        and will drop an event in the simultaneous case.
+        Variant of `Stream.merge_with(Stream, Callable)` that merges two
+        streams and will drop an event in the simultaneous case.
 
         In the case where two events are simultaneous (i.e. both within
         the same transaction), the event from **this** will take precedence,
         and the event from *s* will be dropped. If you want to specify your
-        own combining function, use `Stream.merge(Stream, Callable)`.
-        s1.or_else(s2) is equivalent to s1.merge(s2, lambda l, r: l).
+        own combining function, use `Stream.merge_with(Stream, Callable)`.
+        s1.or_else(s2) is equivalent to s1.merge_with(s2, lambda l, r: l).
 
-        The name or_else() is used instead of merge() to make it really
+        The name or_else() is used instead of merge_with() to make it really
         clear that care should be taken, because events can be dropped.
         """
-        return self.merge(s, lambda left, right: left)
+        return self.merge_with(s, lambda left, right: left)
 
     @staticmethod
     def _merge(ea: "Stream[A]", eb: "Stream[A]") -> "Stream[A]":
@@ -243,7 +243,9 @@ class Stream(Generic[A]):
             ._unsafe_add_cleanup(l2) \
             ._unsafe_add_cleanup(Listener(unlisten))
 
-    def merge(self, s: "Stream[A]", f: Callable[[A, A], A]) -> "Stream[A]":
+    def merge_with(self,
+            s: "Stream[A]",
+            f: Callable[[A, A], A]) -> "Stream[A]":
         """
         Merge two streams of the same type into one, so that events on
         either input appear on the returned stream.
@@ -266,15 +268,15 @@ class Stream(Generic[A]):
         """
         Variant of `or_else(Stream)` that merges a collection of streams.
         """
-        return Stream.merge_(lambda left, right: left, *streams)
+        return Stream.merge(lambda left, right: left, *streams)
 
     @staticmethod
-    def merge_(
+    def merge(
             f: Callable[[A,A],A],
             *streams: "Stream[A]") -> "Stream[A]":
         """
-        Variant of `merge(Stream, Callable)` that merges a collection of
-        streams.
+        Variant of `Stream.merge_with(Stream, Callable)` that merges
+        multiple streams.
         """
         return Stream._merge_many(streams, 0, len(streams), f)
 
@@ -292,12 +294,12 @@ class Stream(Generic[A]):
         elif length == 2:
             left = streams[start]
             right = streams[start + 1]
-            return left.merge(right, f)
+            return left.merge_with(right, f)
         else:
             mid = (start + end) // 2
             left = Stream._merge_many(streams, start, mid, f)
             right = Stream._merge_many(streams, mid, end, f)
-            return left.merge(right, f)
+            return left.merge_with(right, f)
 
     def _coalesce(self,
             trans1: Transaction,
@@ -653,7 +655,8 @@ class Cell(Generic[A]):
         trans1._prioritized(
             s_spark._node, lambda trans2: s_spark._send(trans2, UNIT))
         s_initial: Stream[A] = s_spark.snapshot(self)
-        return s_initial.merge(self._updates(), lambda left, right: right)
+        return s_initial.merge_with(
+            self._updates(), lambda left, right: right)
 
     def map(self, f: Callable[[A], B]) -> "Cell[B]":
         return Transaction._apply(

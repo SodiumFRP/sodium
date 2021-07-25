@@ -104,7 +104,7 @@ def test_merge_multiple() -> None:
     s2: StreamSink[int] = StreamSink()
     s3: StreamSink[int] = StreamSink()
     out: List[int] = []
-    l = Stream.merge_(lambda a, b: a + b, s1, s2, s3).listen(out.append)
+    l = Stream.merge(lambda a, b: a + b, s1, s2, s3).listen(out.append)
 
     def trans1() -> None:
         s3.send(7)
@@ -198,7 +198,7 @@ def test_loop_stream() -> None:
     ea: StreamSink[int] = StreamSink()
     def transaction() -> Stream[int]:
         eb: StreamLoop[int] = StreamLoop()
-        ec_ = ea.map(lambda x: x % 10).merge(eb, lambda x, y: x + y)
+        ec_ = ea.map(lambda x: x % 10).merge_with(eb, lambda x, y: x + y)
         eb_out = ea.map(lambda x: x // 10).filter(lambda x: x != 0)
         eb.loop(eb_out)
         return ec_
