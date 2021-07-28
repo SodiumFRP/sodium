@@ -739,6 +739,17 @@ class Cell(Generic[A]):
 
         return Transaction._apply(handler)
 
+    def switch(self) -> "Cell":
+        if isinstance(self._value, Stream):
+            return Cell.switch_stream(self)
+        elif isinstance(self._value, Cell):
+            return Cell.switch_cell(self)
+        else:
+            raise TypeError(
+                "Can't apply Cell.switch() to a Cell holding value of type "
+                f"{type(self._value)}. Type of the value must be either "
+                "Stream or Cell.")
+
     @staticmethod
     def switch_cell(bba: "Cell[Cell[A]]") -> "Cell[A]":
         """
