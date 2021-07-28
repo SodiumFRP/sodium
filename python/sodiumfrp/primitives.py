@@ -423,8 +423,8 @@ class Stream(Generic[A]):
         This is not thread-safe, so one of these two conditions must apply:
         1. We are within a transaction, since in the current implementation
            a transaction locks out all other threads.
-        2. The object on which this is being called was created has not yet
-           been returned from the method where it was created, so it can't
+        2. The object on which this is being called has not yet been
+           returned from the method where it was created, so it can't
            be shared between threads.
         """
         self._finalizers.append(cleanup)
