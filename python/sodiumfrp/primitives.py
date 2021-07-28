@@ -11,6 +11,7 @@ from typing import \
     Set, \
     Tuple, \
     TypeVar
+import weakref
 
 from sodiumfrp.lazy import Lazy
 from sodiumfrp.listener import Listener
@@ -305,7 +306,7 @@ class Stream(Generic[A]):
             trans1: Transaction,
             f: Callable[[A,A],A]) -> "Stream[A]":
         out: StreamWithSend[A]  = StreamWithSend()
-        h = CoalesceHandler(f, out)
+        h = CoalesceHandler(f, weakref.ref(out))
         l = self._listen_internal(out._node, trans1, h, False)
         return out._unsafe_add_cleanup(l)
 
@@ -510,7 +511,7 @@ class StreamSink(StreamWithSend[A]):
                 "the events? Then pass a combining function to your "
                 "StreamSink constructor.");
         self._coalescer = CoalesceHandler(
-            f if f is not None else error, self)
+            f if f is not None else error, weakref.ref(self))
 
     def send(self, a: A) -> None:
         """
@@ -561,7 +562,11 @@ class StreamLoop(StreamWithSend[A]):
 
 class CoalesceHandler(Generic[A]):
 
-    def __init__(self, f: Callable[[A,A], A], out: StreamWithSend[A]):
+    def __init__(self,
+            f: Callable[[A,A], A],
+            # Pass a weak reference here, to prevent circular references
+            # in Stream._coalesce() and StreamSink.__init__().
+            out: "weakref.ReferenceType[StreamWithSend[A]]") -> None:
         self._f = f
         self._out = out
         self._accum_valid = False
@@ -572,10 +577,10 @@ class CoalesceHandler(Generic[A]):
             self._accum = self._f(self._accum, a)
         else:
             def handler(trans2: Optional[Transaction]) -> None:
-                self._out._send(trans2, self._accum)
+                self._out()._send(trans2, self._accum)
                 self._accum_valid = False
                 self._accum = None
-            trans1._prioritized(self._out._node, handler)
+            trans1._prioritized(self._out()._node, handler)
             self._accum = a
             self._accum_valid = True
 
