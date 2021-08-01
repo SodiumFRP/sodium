@@ -3,3 +3,4 @@ __pycache__
 .pylintrc
 .idea
 *.pyc
+*.egg-info
