@@ -664,6 +664,11 @@ class Cell(Generic[A]):
             self._updates(), lambda left, right: right)
 
     def map(self, f: Callable[[A], B]) -> "Cell[B]":
+        """
+        Transform the cell's value according to the supplied function,
+        so the returned Cell always reflects the value of the function
+        applied to the input Cell's value.
+        """
         return Transaction._apply(
             lambda trans: self \
                 ._updates() \
