@@ -24,6 +24,7 @@ A = TypeVar("A")
 B = TypeVar("B")
 C = TypeVar("C")
 S = TypeVar("S")
+T = TypeVar("T")
 
 
 class Stream(Generic[A]):
@@ -158,6 +159,14 @@ class Stream(Generic[A]):
 
     def map_to(self, b: B) -> "Stream[B]":
         return self.map(lambda _: b)
+
+    def starmap(self, f: Callable[...,T]) -> "Stream[T]":
+        """
+        Like `Stream.map()`, except that the elements of the stream are
+        iterables that are unpacked as arguments when passing to the mapping
+        function.
+        """
+        return self.map(lambda t: f(*t))
 
     def hold(self, init_value: A) -> "Cell[A]":
         """
@@ -676,6 +685,13 @@ class Cell(Generic[A]):
                 ._hold_lazy(trans, self._sample_lazy(trans).lift(f))
         )
 
+    def starmap(self, f: Callable[...,T]) -> "Cell[T]":
+        """
+        Like `Cell.map()`, except that the value of the cell is
+        an iterable that is unpacked as arguments when passing to
+        the mapping function.
+        """
+        return self.map(lambda t: f(*t))
 
     # TODO lift over multiple cells at once
     def lift(self, b: "Cell[B]", f: Callable[[A,B],C]) -> "Cell[C]":

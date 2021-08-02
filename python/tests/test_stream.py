@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 
 from sodiumfrp import operational
 from sodiumfrp import CellSink, Stream, StreamLoop, StreamSink, Transaction
@@ -31,6 +31,15 @@ def test_map_to() -> None:
     e.send(6)
     l.unlisten()
     assert ["fusebox", "fusebox"] == out
+
+def test_starmap() -> None:
+    e: StreamSink[Tuple] = StreamSink()
+    m = e.starmap(lambda x, y: f"{x} {y}")
+    out: List[str] = []
+    l = m.listen(out.append)
+    e.send((1, 2))
+    l.unlisten()
+    assert ["1 2"] == out
 
 def test_merge_non_simultaneous() -> None:
     e1: StreamSink[int] = StreamSink()

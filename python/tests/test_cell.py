@@ -78,6 +78,14 @@ def test_map_late_listen() -> None:
     l.unlisten()
     assert ["2", "8"] == out
 
+def test_starmap() -> None:
+    b = CellSink((1, 2))
+    out: List[str] = []
+    l = b.starmap(lambda x, y: f"{x} {y}").listen(out.append)
+    b.send((3, 4))
+    l.unlisten()
+    assert ["1 2", "3 4"] == out
+
 def test_apply() -> None:
     bf = CellSink(lambda b: f"1 {b}")
     ba = CellSink(5)
