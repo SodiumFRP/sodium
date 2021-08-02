@@ -39,6 +39,58 @@ def test_snapshot() -> None:
     l.unlisten()
     assert ["100 0", "200 2", "300 1"] == out
 
+def test_snapshot_default() -> None:
+    b: CellSink[int] = CellSink(0)
+    trigger: StreamSink[int] = StreamSink()
+    out: List[str] = []
+    l = trigger \
+        .snapshot(b) \
+        .listen(out.append)
+    trigger.send(100)
+    b.send(2)
+    trigger.send(200)
+    b.send(9)
+    b.send(1)
+    trigger.send(300)
+    l.unlisten()
+    assert [0, 2, 1] == out
+
+def test_snapshot_many() -> None:
+    b: CellSink[int] = CellSink(0)
+    c: CellSink[int] = CellSink(1)
+    trigger: StreamSink[int] = StreamSink()
+    out: List[str] = []
+    l = trigger \
+        .snapshot(b, c, lambda a, b, c: f"{a} {b} {c}") \
+        .listen(out.append)
+    trigger.send(100)
+    b.send(2)
+    c.send(3)
+    trigger.send(200)
+    b.send(9)
+    b.send(1)
+    trigger.send(300)
+    l.unlisten()
+    assert ["100 0 1", "200 2 3", "300 1 3"] == out
+
+def test_snapshot_many_default() -> None:
+    b: CellSink[int] = CellSink(0)
+    c: CellSink[int] = CellSink(1)
+    trigger: StreamSink[int] = StreamSink()
+    out: List[str] = []
+    l = trigger \
+        .snapshot(b, c) \
+        .listen(out.append)
+    trigger.send(100)
+    c.send(3)
+    b.send(2)
+    trigger.send(200)
+    b.send(9)
+    b.send(1)
+    trigger.send(300)
+    l.unlisten()
+    assert [(0,1), (2,3), (1,3)] == out
+
 def test_hold_is_delayed() -> None:
     e: StreamSink[int] = StreamSink()
     h = e.hold(0)

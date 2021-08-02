@@ -5,12 +5,14 @@ from typing import \
     Any, \
     Callable, \
     Generic, \
+    Iterable, \
     List, \
     Optional, \
     Sequence, \
     Set, \
     Tuple, \
-    TypeVar
+    TypeVar, \
+    Union
 import weakref
 
 from sodiumfrp.lazy import Lazy
@@ -195,28 +197,63 @@ class Stream(Generic[A]):
     def _hold_lazy(self, _: Transaction, init_value: Lazy[A]) -> "Cell[A]":
         return LazyCell(self, init_value)
 
-
-    # TODO snapshot multiple cells at once
-    def snapshot(self,
-            c: "Cell[B]",
-            f: Callable[[A,B],C] = (lambda a, b: b)) -> "Stream[C]":
+    def snapshot(self, *args: Union["Cell", Callable[...,T]]) -> "Stream[T]":
         """
-        Return a stream whose events are the result of the combination using
-        the specified function of the input stream's event value and
-        the value of the cell at that time.
+        Return a stream whose events are the result of the combination, using
+        the specified function, of the input stream's event value and
+        the values of the provided cells at the time of the event.
 
-        If the function is omitted, return a stream that captures the cell's
-        value at the time of the event firing, ignoring the stream's value.
+        The comibining function is optional and, if it is present, must be
+        provided as the last argument. If the function is omitted,
+        the default combining function will be used, which ignores
+        the stream's value and returns the values of the provided cells
+        as a tuple. If only one cell provided, the default combining function
+        returns just the value of this cell.
 
         There is an implicit delay: State updates caused by event firings
-        being held with `Stream.hold` don't become visible as the cell's
+        being held with `Stream.hold()` don't become visible as the cell's
         current value until the following transaction. To put this another
-        way, `Stream.snapshot` always sees the value of a cell as it was
+        way, `Stream.snapshot()` always sees the value of a cell as it was
         before any state changes from the current transaction.
         """
-        out: StreamWithSend[C] = StreamWithSend()
+
+        def parse_args() -> Tuple[Tuple, Callable]:
+            if len(args) == 0:
+                raise RuntimeError(
+                    "Stream.snapshot() expects one or more arguments")
+
+            def check_cell_types(cells: Iterable[Cell]) -> None:
+                for index, cell in enumerate(cells):
+                    if not isinstance(cell, Cell):
+                        raise TypeError(
+                            f"Argument {index} must be of type Cell. "
+                            f"Actual type: {type(cell)}")
+
+            if callable(args[-1]):
+                cells = args[:-1]
+                if len(cells) == 0:
+                    raise RuntimeError("No cells were provided")
+                check_cell_types(cells)
+                f = args[-1]
+                combine = lambda a: \
+                    f(a, *map(lambda c: c._sample_no_trans(), cells))
+                return cells, combine
+            else:
+                cells = args
+                check_cell_types(cells)
+                if len(cells) == 1:
+                    cell = cells[0]
+                    combine = lambda a: cell._sample_no_trans()
+                else:
+                    combine = lambda a: \
+                        tuple(map(lambda c: c._sample_no_trans(), cells))
+                return cells, combine
+
+        cells, combine = parse_args()
+
+        out: StreamWithSend[T] = StreamWithSend()
         l = self._listen(out._node,
-            lambda trans2, a: out._send(trans2, f(a, c._sample_no_trans())))
+            lambda trans2, a: out._send(trans2, combine(a)))
         return out._unsafe_add_cleanup(l)
 
     def or_else(self, s: "Stream[A]") -> "Stream[A]":
