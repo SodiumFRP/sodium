@@ -96,17 +96,23 @@ class Transaction:
                     Transaction._current_transaction = prev_trans
 
     @staticmethod
-    def on_start(runnable: Callable[[], None]) -> None:
+    def on_start(runnable: Callable[[], None]) -> Callable[[], None]:
         """
         Add a runnable that will be executed whenever a transaction is
-        started.  That runnable may start transactions itself, which will
+        started. That runnable may start transactions itself, which will
         not cause the hooks to be run recursively.
 
         The main use case of this is the implementation of a time/alarm
         system.
+
+        Returns a callable which, when called, unregisters the hook.
         """
         with Transaction._transaction_lock:
             Transaction._on_start_hooks.append(runnable)
+            def unregister_hook() -> None:
+                with Transaction._transaction_lock:
+                    Transaction._on_start_hooks.remove(runnable)
+            return unregister_hook
 
     @staticmethod
     def _apply(code: Callable[["Transaction"], T]) -> T:
