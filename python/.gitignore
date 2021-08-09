@@ -4,3 +4,4 @@ __pycache__
 .idea
 *.pyc
 *.egg-info
+.coverage
