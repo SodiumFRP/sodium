@@ -39,6 +39,7 @@ class Transaction:
     in_callback: int = 0
     _on_start_hooks: List[Callable[[], None]] = []
     _running_on_start_hooks: bool = False
+    _post_q_lock = RLock()
 
     def __init__(self) -> None:
         # True if we need to re-generate the priority queue.
@@ -46,6 +47,7 @@ class Transaction:
         self._prioritized_q: List[Entry] = []
         self._last_q: List[Callable[[], None]] = []
         self._post_q: Dict[int, Handler["Transaction"]] = None
+        self._closed = False
 
     @staticmethod
     def get_current_transaction() -> "Transaction":
@@ -171,11 +173,13 @@ class Transaction:
         Execute the specified code after the current transaction is closed,
         or immediately if there is no current transaction.
         """
-        def handler(trans: Transaction) -> None:
-            # -1 will mean it runs before anything split/deferred, and
-            # will run outside a transaction context.
-            trans._post(-1, lambda _: action())
-        Transaction._run_handler(handler)
+        if Transaction._current_transaction is not None:
+            with Transaction._post_q_lock:
+                if not Transaction._current_transaction._closed:
+                    Transaction._current_transaction._post(
+                        -1, lambda _: action())
+                    return
+        Transaction.run(action)
 
     def _check_regen(self) -> None:
         """
@@ -200,21 +204,23 @@ class Transaction:
             action()
         self._last_q.clear()
 
-        if self._post_q is not None:
-            # _post_q must be traversed in the order of the indices
-            for index in sorted(self._post_q.keys()):
-                handler = self._post_q.pop(index)
-                parent_trans = Transaction._current_transaction
-                try:
-                    if index >= 0:
-                        trans = Transaction()
-                        Transaction._current_transaction = trans
-                        try:
-                            handler(trans)
-                        finally:
-                            trans.close()
-                    else:
-                        Transaction._current_transaction = None
-                        handler(None)
-                finally:
-                    Transaction._current_transaction = parent_trans
+        with Transaction._post_q_lock:
+            self._closed = True
+            if self._post_q is not None:
+                # _post_q must be traversed in the order of the indices
+                for index in sorted(self._post_q.keys()):
+                    handler = self._post_q.pop(index)
+                    parent_trans = Transaction._current_transaction
+                    try:
+                        if index >= 0:
+                            trans = Transaction()
+                            Transaction._current_transaction = trans
+                            try:
+                                handler(trans)
+                            finally:
+                                trans.close()
+                        else:
+                            Transaction._current_transaction = None
+                            handler(None)
+                    finally:
+                        Transaction._current_transaction = parent_trans
