@@ -22,6 +22,7 @@ class TimerSystem:
         self._timers: List[Timer] = []
         self._timers_changed = Condition()
         self._stop = Event()
+        self._released = False
 
         worker = Thread(target=self._thread)
         worker.daemon = True
@@ -30,6 +31,10 @@ class TimerSystem:
         self._unregister_hook = Transaction.on_start(
             self._on_transaction_start)
 
+    def __del__(self) -> None:
+        if not self._released:
+            self.release()
+
     def __enter__(self) -> "TimerSystem":
         return self
 
@@ -37,9 +42,11 @@ class TimerSystem:
         self.release()
 
     def release(self) -> None:
+        self._released = True
         self._stop.set()
         self._unregister_hook()
         with self._timers_changed:
+            # Unlock the thread and let it exit the infinite loop
             self._timers_changed.notify_all()
 
     def _thread(self) -> None:
