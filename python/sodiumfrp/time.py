@@ -24,6 +24,7 @@ class TimerSystem:
         self._stop = Event()
 
         worker = Thread(target=self._thread)
+        worker.daemon = True
         worker.start()
 
         self._unregister_hook = Transaction.on_start(

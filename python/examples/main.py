@@ -73,10 +73,7 @@ def main() -> None:
 
     Transaction.run(initial_transaction)
 
-    try:
-        ui["root"].mainloop()
-    finally:
-        timer_system.release()
+    ui["root"].mainloop()
 
 def build_ui() -> Dict[str, Any]:
     root = tk.Tk()
