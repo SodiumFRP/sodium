@@ -361,5 +361,75 @@ def test_switch_and_defer() -> None:
     l.unlisten()
     assert ["A2", "A4"] == out
 
+def test_calm() -> None:
+    b: CellSink[int] = CellSink(42)
+    out: List[int] = []
+    l = b.calm().listen(out.append)
+    ins = [
+        1, 1,
+        2, 2, 2,
+        1,
+        3, 3,
+        1, 1, 1,
+        2, 2, 2, 2,
+        3,
+    ]
+    for i in ins:
+        b.send(i)
+    l.unlisten()
+    assert [42, 1, 2, 1, 3, 1, 2, 3] == out
+
+def test_calm_repeat_inital_value() -> None:
+    b: CellSink[int] = CellSink(1)
+    out: List[int] = []
+    l = b.calm().listen(out.append)
+    ins = [
+        1, 1,
+        2, 2, 2,
+        1,
+        3, 3,
+        1, 1, 1,
+        2, 2, 2, 2,
+        3,
+    ]
+    for i in ins:
+        b.send(i)
+    l.unlisten()
+    assert [1, 2, 1, 3, 1, 2, 3] == out
+
+def test_calm_merge() -> None:
+    out: List = []
+
+    def init() -> Tuple:
+        b1: CellSink[int] = CellSink(1)
+        b2 = b1.calm()
+        e1 = operational.value(b1)
+        e2 = operational.value(b2)
+        lm = e1.merge_with(e2, lambda x, y: (x, y)).listen(out.append)
+        return b1, lm
+
+    b1, lm = Transaction.run(init)
+    ins = [
+        1, 1,
+        2, 2, 2,
+        1,
+        3, 3,
+        1, 1, 1,
+        2, 2, 2, 2,
+        3,
+    ]
+    for i in ins:
+        b1.send(i)
+    lm.unlisten()
+    assert [
+            (1, 1), 1, 1,
+            (2, 2), 2, 2,
+            (1, 1),
+            (3, 3), 3,
+            (1, 1), 1, 1,
+            (2, 2), 2, 2, 2,
+            (3, 3),
+        ] == out
+
 def not_none(x: Optional[Any]) -> bool:
     return x is not None

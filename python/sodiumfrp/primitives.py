@@ -465,6 +465,17 @@ class Stream(Generic[A]):
         la[0] = self._listen(out._node, handler)
         return out._unsafe_add_cleanup(la[0])
 
+    def calm(self) -> "Stream[A]":
+        """
+        Returns Stream that ignores repeating values produced
+        by the source stream.
+        """
+        return self._calm(None)
+
+    def _calm(self, init) -> "Stream[A]":
+        reducer = lambda new, old: (None, old) if new == old else (new, new)
+        return self.collect(init, reducer).filter(lambda x: x is not None)
+
     def _unsafe_add_cleanup(self, cleanup: Listener) -> "Stream[A]":
         """
         This is not thread-safe, so one of these two conditions must apply:
@@ -885,6 +896,14 @@ class Cell(Generic[A]):
         h1 = _Handler()
         l1 = bea._updates()._listen_internal(out._node, trans1, h1, False)
         return out._unsafe_add_cleanup(l1)
+
+    def calm(self) -> "Cell[A]":
+        """
+        Returns Cell that holds the same value as the source cell, but
+        ignores updates that don't change value of the cell.
+        """
+        init = self.sample()
+        return self._updates()._calm(init).hold(init)
 
     def __del__(self) -> None:
         if self._cleanup is not None:

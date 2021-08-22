@@ -265,3 +265,21 @@ def test_defer() -> None:
     e.send("A")
     l.unlisten()
     assert ["C", "B", "A"] == out
+
+def test_calm() -> None:
+    e: StreamSink[int] = StreamSink()
+    out: List[int] = []
+    l = e.calm().listen(out.append)
+    ins = [
+        1, 1,
+        2, 2, 2,
+        1,
+        3, 3,
+        1, 1, 1,
+        2, 2, 2, 2,
+        3,
+    ]
+    for i in ins:
+        e.send(i)
+    l.unlisten()
+    assert [1, 2, 1, 3, 1, 2, 3] == out
