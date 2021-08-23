@@ -203,6 +203,19 @@ def test_gate() -> None:
     l.unlisten()
     assert ["H", "I"] == out
 
+def test_gate_none() -> None:
+    ec: StreamSink[None] = StreamSink()
+    epred = CellSink(True)
+    out: List[None] = []
+    l = ec.gate(epred).listen(out.append)
+    ec.send(None)
+    epred.send(False)
+    ec.send(None)
+    epred.send(True)
+    ec.send(None)
+    l.unlisten()
+    assert [None, None] == out
+
 def test_loop_stream() -> None:
     ea: StreamSink[int] = StreamSink()
     def transaction() -> Stream[int]:

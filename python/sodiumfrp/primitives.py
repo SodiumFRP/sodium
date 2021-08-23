@@ -379,9 +379,10 @@ class Stream(Generic[A]):
         Return a stream that only outputs events from the input stream
         when the specified cell's value is `True`.
         """
+        skip = object()
         return self \
-            .snapshot(c, lambda a, pred: a if pred else None) \
-            .filter(lambda x: x is not None)
+            .snapshot(c, lambda a, pred: a if pred else skip) \
+            .filter(lambda x: x is not skip)
 
     def collect(self,
             init_state: S,
