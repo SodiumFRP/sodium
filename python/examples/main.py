@@ -1,7 +1,7 @@
 from pathlib import Path
 import sys
 import threading
-from threading import Event, Thread
+from threading import Thread
 from time import sleep
 import tkinter as tk
 from tkinter import ttk
@@ -126,14 +126,14 @@ def build_ui() -> Dict[str, Any]:
 def sodium_wrap_command(widget: tk.Widget) -> Stream:
     stream: StreamSink = StreamSink()
     def callback() -> None:
-        Transaction.post(lambda: stream.send(None))
+        stream.send(None)
     widget["command"] = callback
     return stream
 
 def sodium_wrap_event(widget: tk.Widget, event: str) -> Stream:
     stream: StreamSink = StreamSink()
     def callback(*args: Any) -> None:
-        Transaction.post(lambda: stream.send(args))
+        stream.send(args)
     widget.bind(event, callback)
     return stream
 
@@ -205,7 +205,7 @@ def request_async(request: Callable[[], T]) -> Stream[T]:
             result = request()
         except Exception as exc:
             result = exc
-        Transaction.post(lambda: stream.send(result))
+        stream.send(result)
     Thread(target=thread).start()
     return stream.once()
 
@@ -217,16 +217,9 @@ def update_ui(widget: tk.Widget, func: Callable, *args: Any) -> None:
     if threading.current_thread() == threading.main_thread():
         func(*args)
     else:
-        event = Event()
-        def wrapper() -> None:
-            try:
-                func(*args)
-            finally:
-                event.set()
-        widget.after_idle(wrapper)
-        # Wait until UI update finished to ensure consistency between
-        # model and view
-        event.wait()
+        # after_idle() may block the current transaction, thus we schedule
+        # it on another thread
+        Thread(target=widget.after_idle, args=(func, *args)).start()
 
 def periodic_timer(
         timer_system: TimerSystem,
