@@ -115,7 +115,7 @@ class Stream(Generic[A]):
                     except:
                         # Don't allow transactions to interfere with Sodium
                         # internals.
-                        traceback.print_exc()
+                        _print_stack()
                     finally:
                         Transaction.in_callback -= 1
             trans._prioritized(target, handler)
@@ -530,13 +530,13 @@ class StreamWithSend(Stream[A]):
                     target: Target = target) -> None:
                 Transaction.in_callback += 1
                 try:
-                    # Don't allow transactions to interfere with Sodium
-                    # internals.
                     uta = target.action() # Dereference the weak reference
                     if uta is not None: # If it hasn't been GC'ed, call it
                         uta(trans2, a)
                 except:
-                    traceback.print_exc()
+                    # Don't allow transactions to interfere with Sodium
+                    # internals.
+                    _print_stack()
                 finally:
                     Transaction.in_callback -= 1
             trans._prioritized(target.node, handler)
@@ -997,3 +997,12 @@ class CellLoop(LazyCell[A]):
         if not self._stream._assigned:
             raise RuntimeError("CellLoop sampled before it was looped")
         return super()._sample_no_trans()
+
+def _print_stack() -> None:
+    """ Print full stack trace. format_exc() shows only part of it. """
+    stack = traceback.format_stack()[:-2]
+    exc = traceback.format_exc()
+    stack_lines = "".join(stack).split("\n")[:-1]
+    exc_lines = exc.split("\n")
+    trace = "\n".join(exc_lines[:1] + stack_lines + exc_lines[1:])
+    print(trace)
