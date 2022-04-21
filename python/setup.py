@@ -15,6 +15,7 @@ setuptools.setup(
     long_description_content_type="text/markdown",
     url="https://github.com/SodiumFRP/sodium",
     packages=setuptools.find_packages(),
+    package_data={"sodiumfrp": ["py.typed"]},
     license="BSD-3 License",
     classifiers=[
         "Programming Language :: Python :: 3",
