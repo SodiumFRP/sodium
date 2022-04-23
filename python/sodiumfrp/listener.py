@@ -2,8 +2,9 @@ from typing import Callable
 
 class Listener:
     """
-    A handle for a listener that was registered with Cell.listen() or
-    Stream.listen()
+    A handle for a listener that was registered with :meth:`Cell.listen()
+    <sodiumfrp.primitives.Cell.listen>` or :meth:`Stream.listen()
+    <sodiumfrp.primitives.Stream.listen>`.
     """
 
     def __init__(self, unlisten: Callable[["Listener"], None]) -> None:
@@ -19,7 +20,7 @@ class Listener:
 
     def append(self, two: "Listener") -> "Listener":
         """
-        Combine listeners into one so that invoking .unlisten() on
+        Combine listeners into one so that invoking :meth:`unlisten` on
         the returned listener will unlisten both the inputs.
         """
         one = self

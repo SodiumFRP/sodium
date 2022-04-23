@@ -73,8 +73,9 @@ class TimerSystem:
 
     def _on_transaction_start(self) -> None:
         """
-        This should be used as a Transaction.on_start() hook. At the
-        beginning of each transaction, update self._time_ms and execute
+        This should be used as a :meth:`Transaction.on_start()
+        <sodiumfrp.transaction.Transaction.start>` hook. At the
+        beginning of each transaction, update `self._time_ms` and execute
         all timers that should've been fired by this time.
         """
         trans_time = int(_now_ms())
@@ -109,7 +110,7 @@ class TimerSystem:
     def at(self, alarm_time: Cell[Optional[int]]) -> Stream[int]:
         """
         Returns a stream that fires events at the points in time indicated
-        by the value of the input cell. If the value of the cell is None
+        by the value of the input cell. If the value of the cell is `None`
         or less than the current time, then no events will be fired and
         the timer set by the previous value of the cell will be canceled.
         """

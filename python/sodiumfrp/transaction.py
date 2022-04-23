@@ -29,8 +29,8 @@ class Entry:
         return self.seq < other.seq
 
 
-# Functions for controlling transactions.
 class Transaction:
+    """ Functions for controlling transactions. """
 
     # Coarse-grained lock that's held during the whole transaction.
     _transaction_lock: RLock = RLock()
@@ -51,7 +51,7 @@ class Transaction:
 
     @staticmethod
     def get_current_transaction() -> "Transaction":
-        """ Return the current transaction, or null if there isn't one. """
+        """ Return the current transaction, or `None` if there isn't one. """
         with Transaction._transaction_lock:
             return Transaction._current_transaction
 
@@ -59,7 +59,7 @@ class Transaction:
     def run(code: Callable[[], T]) -> T:
         """
         Run the specified code inside a single transaction, with
-        the contained code returning a value of the parameter type A.
+        the contained code returning a value of the parameter type `T`.
 
         In most cases this is not needed, because the primitives always
         create their own transaction automatically, but it is needed in some
@@ -150,11 +150,11 @@ class Transaction:
         heappush(self._prioritized_q, entry)
 
     def last(self, action: Callable[[], None]) -> None:
-        """ Add an action to run after all prioritized() actions. """
+        """ Add an action to run after all :meth:`_prioritized` actions. """
         self._last_q.append(action)
 
     def _post(self, child_idx: int, action: Handler["Transaction"]) -> None:
-        """ Add an action to run after all last() actions. """
+        """ Add an action to run after all :meth:`last` actions. """
         if self._post_q is None:
             self._post_q = {}
         # If an entry exists already, combine the old one with the new one.
@@ -192,6 +192,7 @@ class Transaction:
             self._prioritized_q.sort()
 
     def close(self) -> None:
+        """ Close this transaction. Runs all scheduled actions. """
 
         while True:
             self._check_regen()

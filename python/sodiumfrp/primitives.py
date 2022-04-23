@@ -32,7 +32,7 @@ T = TypeVar("T")
 class Stream(Generic[A]):
     """
     Represents a stream of discrete events/firings containing values of
-    type A.
+    type `A`.
     """
 
     _keep_listeners_alive: Set[Listener] = set()
@@ -54,16 +54,17 @@ class Stream(Generic[A]):
     def listen(self, handler: Handler[A]) -> Listener:
         """
         Listen for events/firings on this stream. This is the observer
-        pattern. The returned `Listener` has a `Listener.unlisten()` method
-        to cause the listener to be removed. This is an OPERATIONAL
+        pattern. The returned :class:`~sodiumfrp.listener.Listener` has an
+        :meth:`~sodiumfrp.listener.Listener.unlisten` method
+        to cause the listener to be removed. This is an **operational**
         mechanism is for interfacing between the world of I/O and for FRP.
 
-        @param handler The handler to execute when there's a new value.
+        :param handler: The handler to execute when there's a new value.
             You should make no assumptions about what thread you are
             called on, and the handler should not block. You are not allowed
-            to use `CellSink.send()` or `StreamSink.send()` in the handler.
-            An exception will be thrown, because you are not meant to use
-            this to create your own primitives.
+            to use :meth:`CellSink.send` or :meth:`StreamSink.send` in
+            the handler. An exception will be thrown, because you are not
+            meant to use this to create your own primitives.
         """
         l0 = self.listen_weak(handler)
         def unlisten(_self: Listener) -> None:
@@ -84,14 +85,15 @@ class Stream(Generic[A]):
 
     def listen_weak(self, action: Handler[A]) -> Listener:
         """
-        A variant of `listen(Handler)` that will deregister the listener
+        A variant of :meth:`listen` that will deregister the listener
         automatically if the listener is garbage collected. With
-        `listen(Handler)`, the listener is only deregistered if
-        `Listener.unlisten()` is called explicitly.
+        :meth:`listen`, the listener is only deregistered if
+        :meth:`Listener.unlisten() <sodiumfrp.listener.Listener.unlisten>`
+        is called explicitly.
 
         This method should be used for listeners that are to be passed to
-        `Stream.add_cleanup()` to ensure that things don't get kept alive
-        when they shouldn't.
+        :meth:`Stream.add_cleanup` to ensure that things don't get kept
+        alive when they shouldn't.
         """
         return self._listen(NODE_NULL, lambda trans2, a: action(a))
 
@@ -149,10 +151,10 @@ class Stream(Generic[A]):
         function, so the returned Stream's event values reflect the value
         of the function applied to the input Stream's event values.
 
-        @param f Function to apply to convert the values. It may construct
-            FRP logic or use `Cell.sample()` in which case it is equivalent
-            to `Stream.snapshot(Cell)`ing the cell. Apart from this
-            the function must be **referentially transparent**.
+        :param f: Function to apply to convert the values. It may construct
+            FRP logic or use :meth:`Cell.sample` in which case
+            it is equivalent to :meth:`Stream.snapshot`'ing the cell. Apart
+            from this the function must be **referentially transparent**.
         """
         out: StreamWithSend[B] = StreamWithSend()
         l = self._listen(out._node,
@@ -160,11 +162,15 @@ class Stream(Generic[A]):
         return out._unsafe_add_cleanup(l)
 
     def map_to(self, b: B) -> "Stream[B]":
+        """
+        Returns a stream that outputs `b` for each event of the source
+        stream.
+        """
         return self.map(lambda _: b)
 
     def starmap(self, f: Callable[...,T]) -> "Stream[T]":
         """
-        Like `Stream.map()`, except that the elements of the stream are
+        Like :meth:`Stream.map`, except that the elements of the stream are
         iterables that are unpacked as arguments when passing to the mapping
         function.
         """
@@ -172,14 +178,14 @@ class Stream(Generic[A]):
 
     def hold(self, init_value: A) -> "Cell[A]":
         """
-        Create a `Cell` with the specified initial value, that is
-        updated by this stream's event values.
+        Create a cell with the specified initial value, that is updated
+        by this stream's event values.
 
-        There is an implicit delay: State updates caused by event firings
+        There is an implicit delay: state updates caused by event firings
         don't become visible as the cell's current value as viewed by
-        `Stream.snapshot(Cell, Callable)` until the following transaction.
-        To put this another way, `Stream.snapshot(Cell, Callable)` always
-        sees the value of a cell as it was before any state changes from
+        :meth:`Stream.snapshot` until the following transaction.
+        To put this another way, :meth:`Stream.snapshot` always sees
+        the value of a cell as it was before any state changes from
         the current transaction.
         """
         assert isinstance(self, StreamWithSend)
@@ -188,8 +194,8 @@ class Stream(Generic[A]):
 
     def hold_lazy(self, init_value: Lazy[A]) -> "Cell[A]":
         """
-        A variant of {@link #hold(Object)} with an initial value captured
-        by `Cell.sample_lazy`.
+        A variant of :meth:`hold` with an initial value captured
+        by :meth:`Cell.sample_lazy`.
         """
         return Transaction._apply(
             lambda trans: self._hold_lazy(trans, init_value))
@@ -210,11 +216,11 @@ class Stream(Generic[A]):
         as a tuple. If only one cell provided, the default combining function
         returns just the value of this cell.
 
-        There is an implicit delay: State updates caused by event firings
-        being held with `Stream.hold()` don't become visible as the cell's
+        There is an implicit delay: state updates caused by event firings
+        being held with :meth:`Stream.hold` don't become visible as the cell's
         current value until the following transaction. To put this another
-        way, `Stream.snapshot()` always sees the value of a cell as it was
-        before any state changes from the current transaction.
+        way, :meth:`Stream.snapshot` always sees the value of a cell as it
+        was before any state changes from the current transaction.
         """
 
         def parse_args() -> Tuple[Tuple, Callable]:
@@ -258,17 +264,17 @@ class Stream(Generic[A]):
 
     def or_else(self, s: "Stream[A]") -> "Stream[A]":
         """
-        Variant of `Stream.merge_with(Stream, Callable)` that merges two
-        streams and will drop an event in the simultaneous case.
+        Variant of :meth:`merge_with` that merges two streams and will drop
+        an event in the simultaneous case.
 
         In the case where two events are simultaneous (i.e. both within
-        the same transaction), the event from **this** will take precedence,
-        and the event from *s* will be dropped. If you want to specify your
-        own combining function, use `Stream.merge_with(Stream, Callable)`.
-        s1.or_else(s2) is equivalent to s1.merge_with(s2, lambda l, r: l).
+        the same transaction), the event from `this` will take precedence,
+        and the event from `s` will be dropped. If you want to specify your
+        own combining function, use :meth:`merge_with`. `s1.or_else(s2)` is
+        equivalent to `s1.merge_with(s2, lambda l, r: l)`.
 
-        The name or_else() is used instead of merge_with() to make it really
-        clear that care should be taken, because events can be dropped.
+        The name `or_else` is used instead of `merge_with` to make it
+        really clear that care should be taken, because events can be dropped.
         """
         return self.merge_with(s, lambda left, right: left)
 
@@ -298,13 +304,14 @@ class Stream(Generic[A]):
         either input appear on the returned stream.
 
         If the events are simultaneous (that is, one event from this and one
-        from **s** occurring in the same transaction), combine them into one
+        from `s` occurring in the same transaction), combine them into one
         using the specified combining function so that the returned stream
         is guaranteed only ever to have one event per transaction. The event
-        from **self** will appear at the left input of the combining
-        function, and the event from **s** will appear at the right.
-        @param f Function to combine the values. It may construct FRP logic
-            or use `Cell.sample()`. Apart from this the function must be
+        from `self` will appear at the left input of the combining
+        function, and the event from `s` will appear at the right.
+
+        :param f: Function to combine the values. It may construct FRP logic
+            or use :meth:`Cell.sample`. Apart from this the function must be
             **referentially transparent**.
         """
         return Transaction._apply(
@@ -313,7 +320,7 @@ class Stream(Generic[A]):
     @staticmethod
     def or_else_(*streams: "Stream[A]") -> "Stream[A]":
         """
-        Variant of `or_else(Stream)` that merges a collection of streams.
+        Variant of :meth:`or_else` that merges a collection of streams.
         """
         return Stream.merge(lambda left, right: left, *streams)
 
@@ -322,8 +329,7 @@ class Stream(Generic[A]):
             f: Callable[[A,A],A],
             *streams: "Stream[A]") -> "Stream[A]":
         """
-        Variant of `Stream.merge_with(Stream, Callable)` that merges
-        multiple streams.
+        Variant of :meth:`merge_with` that merges multiple streams.
         """
         return Stream._merge_many(streams, 0, len(streams), f)
 
@@ -365,7 +371,7 @@ class Stream(Generic[A]):
     def filter(self, predicate: Callable[[A], bool]) -> "Stream[A]":
         """
         Return a stream that only outputs events for which the predicate
-        returns true.
+        returns `True`.
         """
         out: StreamWithSend[A] = StreamWithSend()
         def handler(trans2: Transaction, a: A) -> None:
@@ -392,10 +398,10 @@ class Stream(Generic[A]):
         The function is passed the input and the old state and returns
         the new state and output value.
 
-        @param f Function to apply to update the state. It may construct FRP
-            logic or use `Cell.sample()` in which case it is equivalent
-            to `Stream.snapshot()`ing the cell. Apart from this the function
-            must be **referentially transparent**.
+        :param f: Function to apply to update the state. It may construct FRP
+            logic or use :meth:`Cell.sample` in which case it is equivalent
+            to :meth:`Stream.snapshot`'ing the cell. Apart from this
+            the function must be **referentially transparent**.
         """
         return self.collect_lazy(Lazy(lambda: init_state), f)
 
@@ -403,8 +409,8 @@ class Stream(Generic[A]):
             init_state: Lazy[S],
             f: Callable[[A, S], Tuple[B, S]]) -> "Stream[B]":
         """
-        A variant of `collect()` that takes an initial state returned by
-        `Cell.sample_lazy()`.
+        A variant of :meth:`collect` that takes an initial state returned by
+        :meth:`Cell.sample_lazy`.
         """
         def handler() -> Stream[B]:
             ea = self
@@ -422,10 +428,10 @@ class Stream(Generic[A]):
         """
         Accumulate on input event, outputting the new state each time.
 
-        @param f Function to apply to update the state. It may construct FRP
-            logic or use `Cell.sample()` in which case it is equivalent
-            to `Stream.snapshot()`ing the cell. Apart from this the function
-            must be **referentially transparent**.
+        :param f: Function to apply to update the state. It may construct FRP
+            logic or use :meth:`Cell.sample` in which case it is equivalent
+            to :meth:`Stream.snapshot`'ing the cell. Apart from this
+            the function must be **referentially transparent**.
         """
         return self.accum_lazy(Lazy(lambda: init_state), f)
 
@@ -433,8 +439,8 @@ class Stream(Generic[A]):
             init_state: Lazy[S],
             f: Callable[[A, S], S]) -> "Cell[S]":
         """
-        A variant of `accum()` that takes an initial state returned by
-        `Cell.sample_lazy()`.
+        A variant of :meth:`accum` that takes an initial state returned by
+        :meth:`Cell.sample_lazy`.
         """
         def handler() -> Cell[S]:
             ea = self
@@ -449,7 +455,7 @@ class Stream(Generic[A]):
     def once(self) -> "Stream[A]":
         """
         Return a stream that outputs only one value: the next event of the
-        input stream, starting from the transaction in which once() was
+        input stream, starting from the transaction in which `once()` was
         invoked.
         """
         # This is a bit long-winded but it's efficient because it deregisters
@@ -468,7 +474,7 @@ class Stream(Generic[A]):
 
     def calm(self) -> "Stream[A]":
         """
-        Returns Stream that ignores repeating values produced
+        Returns a stream that ignores repeating values produced
         by the source stream.
         """
         return self._calm(None)
@@ -491,13 +497,15 @@ class Stream(Generic[A]):
 
     def add_cleanup(self, cleanup: Listener) -> "Stream[A]":
         """
-        Attach a listener to this stream so that its `Listener.unlisten()`
+        Attach a listener to this stream so that its
+        :meth:`Listener.unlisten() <sodiumfrp.listener.Listener.unlisten>`
         is invoked when this stream is garbage collected. Useful for
         functions that initiate I/O, returning the result of it through
         a stream.
 
-        You must use this only with listeners returned by `listen_weak()`
-        so that things don't get kept alive when they shouldn't.
+        You must use this only with listeners returned
+        by :meth:`listen_weak()` so that things don't get kept alive when
+        they shouldn't.
         """
         def helper() -> Stream[A]:
             fs_new = self._finalizers.copy()
@@ -546,20 +554,20 @@ class StreamSink(StreamWithSend[A]):
     """
     A stream that allows values to be pushed into it, acting as an interface
     between the world of I/O and the world of FRP. Code that exports
-    StreamSinks for read-only use should downcast to `Stream`.
+    `StreamSinks` for read-only use should downcast to :class:`Stream`.
     """
 
     def __init__(self, f: Callable[[A, A], A] = None) -> None:
         """
-        Construct a StreamSink. Use the provided function to combine values,
+        Construct a `StreamSink`. Use the provided function to combine values,
         that were sent to the stream during the same transaction, into a
-        single event. If the function is `None`, send() throws an exception,
-        if it is called more then once per transaction.
+        single event. If the function is `None`, :meth:`send` throws
+        an exception, if it is called more then once per transaction.
 
         The combining function should be **associative**.
 
-        @param f Function to combine the values. It may construct
-            FRP logic or use `Cell.sample()`. Apart from this the function
+        :param f: Function to combine the values. It may construct FRP logic
+            or use :meth:`Cell.sample`. Apart from this the function
             must be **referentially transparent**.
         """
         super().__init__()
@@ -574,11 +582,13 @@ class StreamSink(StreamWithSend[A]):
     def send(self, a: A) -> None:
         """
         Send a value to be made available to consumers of the stream.
-        send(A) may not be used inside handlers registered with
-        `Stream.listen(Handler)` or `Cell.listen(Handler)`. An exception
-        will be thrown, because StreamSink is for interfacing I/O to FRP only.
-        You are not meant to use this to define your own primitives.
-        @param a Value to push into the cell.
+        `send()` may not be used inside handlers registered with
+        :meth:`Stream.listen` or :meth:`Cell.listen`. An exception
+        will be thrown, because `StreamSink` is for interfacing I/O
+        to FRP only. You are not meant to use this to define your own
+        primitives.
+
+        :param a: value to push into the cell.
         """
         def handler(trans: Transaction) -> None:
             if trans.in_callback > 0:
@@ -590,7 +600,7 @@ class StreamSink(StreamWithSend[A]):
 
 class StreamLoop(StreamWithSend[A]):
     """
-    A forward reference for a `Stream` equivalent to the Stream that
+    A forward reference for a `Stream` equivalent to the `Stream` that
     is referenced.
     """
 
@@ -603,10 +613,11 @@ class StreamLoop(StreamWithSend[A]):
 
     def loop(self, ea_out: Stream[A]) -> None:
         """
-        Resolve the loop to specify what the StreamLoop was a forward
+        Resolve the loop to specify what the `StreamLoop` was a forward
         reference to. It must be invoked inside the same transaction as
-        the place where the StreamLoop is used.  This requires you to create
-        an explicit transaction with `Transaction.run()`.
+        the place where the `StreamLoop` is used. This requires you to create
+        an explicit transaction with :meth:`Transaction.run()
+        <sodiumfrp.transaction.Transaction.run>`.
         """
         if self._assigned:
             raise RuntimeError("StreamLoop looped more than once")
@@ -644,10 +655,11 @@ class CoalesceHandler(Generic[A]):
 
 
 class Cell(Generic[A]):
-    """ Represents a value of type A that changes over time. """
+    """ Represents a value of type `A` that changes over time. """
 
     @staticmethod
     def constant(value: A) -> "Cell[A]":
+        """ Returns a cell that never changes, always holding the `value`. """
         return Cell(Stream.never(), value)
 
     def __init__(self, stream: StreamWithSend[A], init_value: A) -> None:
@@ -674,20 +686,20 @@ class Cell(Generic[A]):
         Sample the cell's current value.
 
         It may be used inside the functions passed to primitives that apply
-        them to `Stream`s, including `Stream.map` in which case it is
-        equivalent to snapshotting the cell, `Stream.snapshot`,
-        `Stream.filter` and `Stream.merge`.
+        them to :class:`Stream` including :meth:`Stream.map` (in which case
+        it is equivalent to snapshotting the cell), :meth:`Stream.snapshot`,
+        :meth:`Stream.filter` and :meth:`Stream.merge`.
 
-        It should generally be avoided in favour of `listen` so you don't
-        miss any updates, but in many circumstances it makes sense.
+        It should generally be avoided in favour of :meth:`listen` so you
+        don't miss any updates, but in many circumstances it makes sense.
         """
         return Transaction._apply(lambda trans: self._sample_no_trans())
 
     def sample_lazy(self) -> Lazy[A]:
         """
-        A variant of `sample()` that works with `CellLoop`s when they
-        haven't been looped yet.  It should be used in any code that's
-        general enough that it could be passed a `CellLoop`.
+        A variant of :meth:`sample` that works with :class:`CellLoop` when
+        they haven't been looped yet.  It should be used in any code that's
+        general enough that it could be passed a :class:`CellLoop`.
         """
         return Transaction._apply(lambda trans: self._sample_lazy(trans))
 
@@ -724,8 +736,8 @@ class Cell(Generic[A]):
     def map(self, f: Callable[[A], B]) -> "Cell[B]":
         """
         Transform the cell's value according to the supplied function,
-        so the returned Cell always reflects the value of the function
-        applied to the input Cell's value.
+        so the returned cell always reflects the value of the function
+        applied to the input cell's value.
         """
         return Transaction._apply(
             lambda trans: self \
@@ -736,7 +748,7 @@ class Cell(Generic[A]):
 
     def starmap(self, f: Callable[...,T]) -> "Cell[T]":
         """
-        Like `Cell.map()`, except that the value of the cell is
+        Like :meth:`Cell.map`, except that the value of the cell is
         an iterable that is unpacked as arguments when passing to
         the mapping function.
         """
@@ -745,10 +757,10 @@ class Cell(Generic[A]):
     # TODO lift over multiple cells at once
     def lift(self, b: "Cell[B]", f: Callable[[A,B],C]) -> "Cell[C]":
         """
-        Lift a binary function into cells, so the returned Cell always
+        Lift a binary function into cells, so the returned cell always
         reflects the specified function applied to the input cells' values.
 
-        @param f Function to apply. It must be **referentially transparent**.
+        :param f: Function to apply. It must be **referentially transparent**.
         """
         bf = self.map(lambda aa: lambda bb: f(aa, bb))
         return Cell.apply(bf, b)
@@ -810,6 +822,10 @@ class Cell(Generic[A]):
         return Transaction._apply(handler)
 
     def switch(self) -> "Cell":
+        """
+        Do either :meth:`switch_stream` or :meth:`switch_cell` depending on
+        the type of the value of the cell.
+        """
         if isinstance(self._value, Stream):
             return Cell.switch_stream(self)
         elif isinstance(self._value, Cell):
@@ -900,7 +916,7 @@ class Cell(Generic[A]):
 
     def calm(self) -> "Cell[A]":
         """
-        Returns Cell that holds the same value as the source cell, but
+        Returns a cell that holds the same value as the source cell, but
         ignores updates that don't change value of the cell.
         """
         init = self.sample()
@@ -913,16 +929,17 @@ class Cell(Generic[A]):
     def listen(self, action: Callable[[A],None]) -> Listener:
         """
         Listen for updates to the value of this cell. This is the observer
-        pattern. The returned `Listener` has a `Listener.unlisten` method
-        to cause the listener to be removed. This is an OPERATIONAL
-        mechanism is for interfacing between the world of I/O and for FRP.
+        pattern. The returned :class:`~sodiumfrp.listener.Listener` has
+        an :meth:`~sodiumfrp.listener.Listener.unlisten` method
+        to cause the listener to be removed. This is an **operational**
+        mechanism for interfacing between the world of I/O and for FRP.
 
-        @param action The handler to execute when there's a new value.
+        :param action: the handler to execute when there's a new value.
             You should make no assumptions about what thread you are called
             on, and the handler should not block. You are not allowed
-            to use `CellSink.send` or `StreamSink.send` in the handler.
-            An exception will be thrown, because you are not meant to use
-            this to create your own primitives.
+            to use :meth:`CellSink.send` or :meth:`StreamSink.send` in
+            the handler. An exception will be thrown, because you are not
+            meant to use this to create your own primitives.
         """
         return Transaction._apply(
             lambda trans: self._value_stream(trans).listen(action))
@@ -932,7 +949,8 @@ class CellSink(Cell[A]):
     """
     A cell that allows values to be pushed into it, acting as an interface
     between the world of I/O and the world of FRP. Code that exports
-    CellSinks for read-only use should downcast to `Cell`.
+    `CellSinks` for read-only use should downcast to
+    :class:`~sodiumfrp.primitives.Cell`.
     """
 
     def __init__(self, init_value: A, f: Callable[[A,A],A] = None) -> None:
@@ -940,20 +958,20 @@ class CellSink(Cell[A]):
         Construct a writable cell with the specified initial value.
         If multiple values are sent in the same transaction, the specified
         function is used to combine them. If the function isn't provided,
-        `send()` throws an exception when called multiple times from the
+        :meth:`send` throws an exception when called multiple times from the
         same transaction.
         """
         super().__init__(StreamSink(f), init_value)
 
     def send(self, a: A) -> None:
         """
-        Send a value, modifying the value of the cell. send(A) may not be
-        used inside handlers registered with `Stream.listen()` or
-        `Cell.listen()`. An exception will be thrown, because CellSink is
-        for interfacing I/O to FRP only. You are not meant to use this
+        Send a value, modifying the value of the cell. `send()` may not be
+        used inside handlers registered with :meth:`Stream.listen` or
+        :meth:`Cell.listen`. An exception will be thrown, because `CellSink`
+        is for interfacing I/O to FRP only. You are not meant to use this
         to define your own primitives.
 
-        @param a Value to push into the cell.
+        :param a: value to push into the cell.
         """
         self._stream.send(a)
 
@@ -973,7 +991,7 @@ class LazyCell(Cell[A]):
 
 class CellLoop(LazyCell[A]):
     """
-    A forward reference for a `Cell` equivalent to the Cell that is
+    A forward reference for a :class:`Cell` equivalent to the `Cell` that is
     referenced.
     """
 
@@ -982,10 +1000,11 @@ class CellLoop(LazyCell[A]):
 
     def loop(self, a_out: Cell[A]) -> None:
         """
-        Resolve the loop to specify what the CellLoop was a forward
+        Resolve the loop to specify what the `CellLoop` was a forward
         reference to. It must be invoked inside the same transaction as
-        the place where the CellLoop is used. This requires you to create
-        an explicit transaction with `Transaction.run()`.
+        the place where the `CellLoop` is used. This requires you to create
+        an explicit transaction with
+        :meth:`Transaction.run() <sodiumfrp.transaction.Transaction.run>`.
         """
         def handler(trans: Transaction) -> Unit:
             self._stream.loop(a_out._updates())
