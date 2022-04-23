@@ -42,6 +42,7 @@ class Stream(Generic[A]):
             node: Node,
             finalizers: List[Listener],
             firings: List[A]) -> None:
+        """ Shouldn't be constructed explicitly. """
         self._node = node
         self._finalizers = finalizers
         self._firings = firings
@@ -605,6 +606,7 @@ class StreamLoop(StreamWithSend[A]):
     """
 
     def __init__(self) -> None:
+        """ Make an instance of `StreamLoop`. """
         super().__init__()
         self._assigned = False
         if Transaction.get_current_transaction() is None:
@@ -663,6 +665,7 @@ class Cell(Generic[A]):
         return Cell(Stream.never(), value)
 
     def __init__(self, stream: StreamWithSend[A], init_value: A) -> None:
+        """ Shouldn't be constructed explicitly. """
         self._stream = stream
         self._value = init_value
         self._value_update: A = None
@@ -996,6 +999,7 @@ class CellLoop(LazyCell[A]):
     """
 
     def __init__(self) -> None:
+        """ Make an instance of `CellLoop`. """
         super().__init__(StreamLoop(), None)
 
     def loop(self, a_out: Cell[A]) -> None:
