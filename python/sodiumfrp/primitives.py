@@ -1,4 +1,3 @@
-from dataclasses import dataclass
 from threading import RLock
 import traceback
 from typing import \
@@ -707,11 +706,16 @@ class Cell(Generic[A]):
         return Transaction._apply(lambda trans: self._sample_lazy(trans))
 
     def _sample_lazy(self, trans: Transaction) -> Lazy[A]:
-        @dataclass
+
         class LazySample:
-            cell: Cell[A]
-            has_value: bool
-            value: A
+            def __init__(self,
+                    cell: Cell[A],
+                    has_value: bool,
+                    value: A) -> None:
+                self.cell = cell
+                self.has_value = has_value
+                self.value = value
+
         s = LazySample(cell=self, has_value=None, value=None)
         def handler() -> None:
             s.value = self._value_update \

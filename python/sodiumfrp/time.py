@@ -1,6 +1,6 @@
 """ Utilities for working with continuous time. """
 
-from dataclasses import dataclass
+from collections import namedtuple
 from threading import Condition, Event, Thread
 import time
 from typing import Callable, List, Optional, Set, Tuple, TypeVar
@@ -10,10 +10,7 @@ from sodiumfrp import Cell, CellSink, Stream, StreamSink, Transaction
 A = TypeVar("A")
 B = TypeVar("B")
 
-@dataclass
-class Timer:
-    time: int
-    streams: Set[StreamSink[int]]
+Timer = namedtuple("Timer", ["time", "streams"])
 
 class TimerSystem:
 

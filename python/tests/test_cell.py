@@ -1,4 +1,4 @@
-from dataclasses import dataclass
+from collections import namedtuple
 from typing import Any, List, Optional, Tuple
 
 from sodiumfrp import operational
@@ -198,13 +198,7 @@ def test_constant() -> None:
     assert [12] == out
 
 def test_switch_cell() -> None:
-
-    @dataclass
-    class SB:
-        a: str
-        b: str
-        sw: Cell[str]
-
+    SB = namedtuple("SB", ["a", "b", "sw"])
     esb: StreamSink[SB] = StreamSink()
     # Split each field out of SB so we can update multiple behaviours in a
     # single transaction.
@@ -228,13 +222,7 @@ def test_switch_cell() -> None:
     assert ["A", "B", "c", "d", "E", "F", "f", "F", "g", "H", "I"] == out
 
 def test_switch_stream() -> None:
-
-    @dataclass
-    class SE:
-        a: str
-        b: str
-        sw: Stream[str]
-
+    SE = namedtuple("SE", ["a", "b", "sw"])
     ese: StreamSink[SE] = StreamSink()
     ea = ese.map(lambda s: s.a)
     eb = ese.map(lambda s: s.b)
