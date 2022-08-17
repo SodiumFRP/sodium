@@ -24,6 +24,14 @@
     <IncludeSymbols>True</IncludeSymbols>
   </PropertyGroup>
 
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DocumentationFile>bin\Debug\Sodium.FSharp.Frp.xml</DocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DocumentationFile>bin\Release\Sodium.FSharp.Frp.xml</DocumentationFile>
+  </PropertyGroup>
+
   <ItemGroup>
     <PackageReference Include="OptimizedPriorityQueue" Version="4.1.1" />
   </ItemGroup>

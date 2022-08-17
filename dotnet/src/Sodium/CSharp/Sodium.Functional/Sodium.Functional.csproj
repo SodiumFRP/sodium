@@ -24,4 +24,12 @@
     <RootNamespace>Sodium.Functional</RootNamespace>
   </PropertyGroup>
 
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DocumentationFile>bin\Debug\Sodium.Functional.xml</DocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DocumentationFile>bin\Release\Sodium.Functional.xml</DocumentationFile>
+  </PropertyGroup>
+
 </Project>
