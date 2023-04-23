@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net45</TargetFrameworks>
     <AssemblyName>Sodium.FSharp.Frp.Tests.Internal</AssemblyName>
     <RootNamespace>Sodium.Frp.Tests.Internal</RootNamespace>
+    <TargetFramework>net472</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>

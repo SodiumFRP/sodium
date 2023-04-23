@@ -12,7 +12,7 @@ namespace Sodium.Frp.Time
         {
         }
 
-        private class Implementation : TimerSystemImplementationImplementationBase<double>
+        private class Implementation : TimerSystemImplementationBase<double>
         {
             private readonly DateTime startTime;
 

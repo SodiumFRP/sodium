@@ -30,19 +30,28 @@ type TimerSystem<'T when 'T : comparison> (implementation : 'T ITimerSystemImple
         Transaction.onStart (fun () ->
             let t = implementation.Now
             implementation.RunTimersTo t
+            let events = List<Event<'T>>()
             let rec processEvents () =
-                let event = lock eventQueue (fun () ->
+                lock eventQueue (fun () ->
                     if eventQueue.Count > 0 then
                         let event = eventQueue.Peek()
                         if event.Time <= t then
-                            let event = eventQueue.Dequeue()
-                            Some event
-                        else None
-                    else None)
-                event |> Option.iter (fun event ->
-                    timeSink |> BehaviorSink.send event.Time
-                    event.Alarm |> StreamSink.send event.Time
-                    processEvents ())
+                            events.Add(eventQueue.Dequeue())
+                            let timeToCheck = event.Time
+                            let rec findMoreEvents() =
+                                if eventQueue.Count > 0 then
+                                    let event = eventQueue.Peek()
+                                    if event.Time = timeToCheck then
+                                        events.Add(eventQueue.Dequeue())
+                                        findMoreEvents()
+                            findMoreEvents())
+                if events.Count > 0 then
+                    timeSink |> BehaviorSink.send events[0].Time
+                    Transaction.run(fun () ->
+                        events |> Seq.iter (fun event ->
+                            event.Alarm |> StreamSink.send event.Time))
+                    events.Clear()
+                    processEvents()
             processEvents ()
             timeSink |> BehaviorSink.send t)
         timeSink :> 'T Behavior) ()
@@ -67,7 +76,7 @@ type private WaitOrFire =
     | Fire of (unit -> unit)
 
 [<AbstractClass>]
-type TimerSystemImplementationImplementationBase<'T when 'T : comparison>() as this =
+type TimerSystemImplementationBase<'T when 'T : comparison>() as this =
     let lockObject = obj ()
     let timers = SortedSet<SimpleTimer<'T>> ()
     let cancellationTokenSourceLock = obj ()
@@ -133,7 +142,7 @@ type TimerSystemImplementationImplementationBase<'T when 'T : comparison>() as t
 
         member this.Now = this.Now
 
-and SimpleTimer<'T when 'T : comparison> (implementation : 'T TimerSystemImplementationImplementationBase, time : 'T, callback : unit -> unit) as this =
+and SimpleTimer<'T when 'T : comparison> (implementation : 'T TimerSystemImplementationBase, time : 'T, callback : unit -> unit) as this =
     let seq = lock implementation.LockObject (fun () ->
         let seq = implementation.NextSeq
         implementation.NextSeq <- implementation.NextSeq + 1
@@ -173,7 +182,7 @@ and SimpleTimer<'T when 'T : comparison> (implementation : 'T TimerSystemImpleme
         member this.Dispose () = cancel ()
 
 type private SystemClockTimerSystemImplementation() =
-    inherit TimerSystemImplementationImplementationBase<DateTime>()
+    inherit TimerSystemImplementationBase<DateTime>()
     override __.SubtractTimes first second = first - second
     override __.Now = DateTime.Now
 
@@ -181,7 +190,7 @@ type SystemClockTimerSystem(handleException : exn -> unit) =
     inherit TimerSystem<DateTime>(SystemClockTimerSystemImplementation(), handleException)
     
 type private SecondsTimerSystemImplementation() =
-    inherit TimerSystemImplementationImplementationBase<float>()
+    inherit TimerSystemImplementationBase<float>()
     let startTime = DateTime.Now
     override __.SubtractTimes first second = TimeSpan.FromSeconds(first - second)
     override __.Now = (DateTime.Now - startTime).TotalSeconds

@@ -10,7 +10,7 @@
     <AppDesignerFolder>Properties</AppDesignerFolder>
     <RootNamespace>Sodium.Frp.Tests</RootNamespace>
     <AssemblyName>Sodium.Frp.Tests</AssemblyName>
-    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <TargetFrameworkVersion>v4.6</TargetFrameworkVersion>
     <FileAlignment>512</FileAlignment>
     <Deterministic>true</Deterministic>
     <NuGetPackageImportStamp>
@@ -63,6 +63,7 @@
     <Compile Include="PerformanceTests.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
     <Compile Include="StreamTests.cs" />
+    <Compile Include="TimerTests.cs" />
     <Compile Include="TransactionTests.cs" />
   </ItemGroup>
   <ItemGroup>

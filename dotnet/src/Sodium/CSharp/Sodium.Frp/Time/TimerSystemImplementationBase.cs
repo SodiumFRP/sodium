@@ -6,7 +6,7 @@ using System.Threading.Tasks;
 
 namespace Sodium.Frp.Time
 {
-    public abstract class TimerSystemImplementationImplementationBase<T> : ITimerSystemImplementation<T>
+    public abstract class TimerSystemImplementationBase<T> : ITimerSystemImplementation<T>
         where T : IComparable
     {
         private readonly object lockObject = new object();
@@ -64,29 +64,19 @@ namespace Sodium.Frp.Time
                     {
                         try
                         {
+                            lock (this.cancellationTokenSourceLock)
+                            {
+                                this.cancellationTokenSource = new CancellationTokenSource();
+                            }
+
                             TimeSpan waitTime = this.TimeUntilNext(this.Now);
                             if (waitTime > TimeSpan.Zero)
                             {
-                                try
-                                {
-                                    lock (this.cancellationTokenSourceLock)
-                                    {
-                                        this.cancellationTokenSource = new CancellationTokenSource();
-                                    }
-
-                                    await Task.Delay(waitTime, this.cancellationTokenSource.Token);
-                                }
-                                catch (OperationCanceledException)
-                                {
-                                }
-                                finally
-                                {
-                                    lock (this.cancellationTokenSourceLock)
-                                    {
-                                        this.cancellationTokenSource = null;
-                                    }
-                                }
+                                await Task.Delay(waitTime, this.cancellationTokenSource.Token);
                             }
+                        }
+                        catch (OperationCanceledException)
+                        {
                         }
                         catch (Exception e)
                         {
@@ -117,13 +107,13 @@ namespace Sodium.Frp.Time
 
         private class SimpleTimer : ITimer, IComparable<SimpleTimer>
         {
-            private readonly TimerSystemImplementationImplementationBase<T> implementation;
+            private readonly TimerSystemImplementationBase<T> implementation;
             private readonly long seq;
 
             internal readonly T Time;
             internal readonly Action Callback;
 
-            internal SimpleTimer(TimerSystemImplementationImplementationBase<T> implementation, T time, Action callback)
+            internal SimpleTimer(TimerSystemImplementationBase<T> implementation, T time, Action callback)
             {
                 this.implementation = implementation;
                 this.Time = time;

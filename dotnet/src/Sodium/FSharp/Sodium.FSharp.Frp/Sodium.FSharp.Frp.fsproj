@@ -34,6 +34,7 @@
 
   <ItemGroup>
     <PackageReference Include="OptimizedPriorityQueue" Version="4.1.1" />
+    <PackageReference Update="FSharp.Core" Version="4.5.2" />
   </ItemGroup>
 
   <ItemGroup>

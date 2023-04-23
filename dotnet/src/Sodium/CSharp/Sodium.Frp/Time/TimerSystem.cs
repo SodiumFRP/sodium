@@ -22,9 +22,9 @@ namespace Sodium.Frp.Time
                 {
                     T t = this.implementation.Now;
                     this.implementation.RunTimersTo(t);
+                    List<Event> events = new List<Event>();
                     while (true)
                     {
-                        Event ev = null;
                         // Pop all events earlier than t.
                         lock (this.eventQueue)
                         {
@@ -33,20 +33,44 @@ namespace Sodium.Frp.Time
                                 Event tempEvent = this.eventQueue.Peek();
                                 if (tempEvent != null && tempEvent.Time.CompareTo(t) <= 0)
                                 {
-                                    ev = this.eventQueue.Dequeue();
+                                    events.Add(this.eventQueue.Dequeue());
+
+                                    T timeToCheck = tempEvent.Time;
+                                    while (this.eventQueue.Count > 0)
+                                    {
+                                        tempEvent = this.eventQueue.Peek();
+                                        if (tempEvent != null && tempEvent.Time.CompareTo(timeToCheck) == 0)
+                                        {
+                                            events.Add(this.eventQueue.Dequeue());
+                                        }
+                                        else
+                                        {
+                                            break;
+                                        }
+                                    }
                                 }
                             }
                         }
 
-                        if (ev != null)
+                        if (events.Count > 0)
                         {
-                            timeSink.Send(ev.Time);
-                            ev.Alarm.Send(ev.Time);
+                            timeSink.Send(events[0].Time);
+                            
+                            Transaction.RunVoid(
+                                () =>
+                                {
+                                    foreach (Event ev in events)
+                                    {
+                                        ev.Alarm.Send(ev.Time);
+                                    }
+                                });
                         }
                         else
                         {
                             break;
                         }
+
+                        events.Clear();
                     }
 
                     timeSink.Send(t);

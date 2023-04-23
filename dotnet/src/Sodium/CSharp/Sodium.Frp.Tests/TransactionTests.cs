@@ -284,5 +284,26 @@ namespace Sodium.Frp.Tests
             Assert.IsTrue(threadIsActive4);
             Assert.IsFalse(threadIsActive5);
         }
+
+        [Test]
+        public void StartHooksRunOnlyOnce()
+        {
+            int startHooksCount = 0;
+            Transaction.OnStart(() => startHooksCount++);
+            Transaction.RunVoid(() => Transaction.RunVoid(() => { }));
+
+            Assert.That(startHooksCount, Is.EqualTo(1));
+        }
+
+        [Test]
+        public void StartHooksRunOnlyOnceWithSample()
+        {
+            int startHooksCount = 0;
+            Cell<int> cell = Cell.Constant(0);
+            Transaction.OnStart(() => startHooksCount++);
+            Transaction.RunVoid(() => Transaction.RunVoid(() => cell.Sample()));
+
+            Assert.That(startHooksCount, Is.EqualTo(1));
+        }
     }
 }

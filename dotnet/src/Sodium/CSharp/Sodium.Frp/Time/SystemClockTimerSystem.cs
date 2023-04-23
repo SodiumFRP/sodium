@@ -12,7 +12,7 @@ namespace Sodium.Frp.Time
         {
         }
 
-        internal class Implementation : TimerSystemImplementationImplementationBase<DateTime>
+        internal class Implementation : TimerSystemImplementationBase<DateTime>
         {
             protected override TimeSpan SubtractTimes(DateTime first, DateTime second) => first - second;
             public override DateTime Now => DateTime.Now;

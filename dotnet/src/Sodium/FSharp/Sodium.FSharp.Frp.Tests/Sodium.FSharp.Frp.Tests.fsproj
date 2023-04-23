@@ -1,9 +1,9 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net45</TargetFrameworks>
     <AssemblyName>Sodium.FSharp.Frp.Tests</AssemblyName>
     <RootNamespace>Sodium.Frp.Tests</RootNamespace>
+    <TargetFramework>net472</TargetFramework>
   </PropertyGroup>
 
   <ItemGroup>
@@ -16,6 +16,7 @@
     <Compile Include="LoopTests.fs" />
     <Compile Include="PerformanceTests.fs" />
     <Compile Include="StreamTests.fs" />
+    <Compile Include="TimerTests.fs" />
     <Compile Include="TransactionTests.fs" />
   </ItemGroup>
 

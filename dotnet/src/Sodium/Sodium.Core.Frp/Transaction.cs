@@ -127,7 +127,7 @@ namespace Sodium.Frp
             {
                 if (transaction == null)
                 {
-                    if (newTransaction != null && newTransaction.isElevated && !newTransaction.hasParentTransaction)
+                    if (newTransaction != null && newTransaction.isElevated && !newTransaction.hasParentTransaction && !runningOnStartHooks)
                     {
                         Monitor.Exit(TransactionLock);
                     }
@@ -143,12 +143,12 @@ namespace Sodium.Frp
             {
                 transaction.isElevated = true;
 
-                if (!transaction.hasParentTransaction)
+                if (!transaction.hasParentTransaction && !runningOnStartHooks)
                 {
                     Monitor.Enter(TransactionLock);
                 }
 
-                RunStartHooks();
+                RunStartHooks(transaction);
             }
         }
 
@@ -160,13 +160,15 @@ namespace Sodium.Frp
             }
         }
 
-        private static void RunStartHooks()
+        private static void RunStartHooks(TransactionInternal transaction)
         {
-            if (!runningOnStartHooks)
+            if (!runningOnStartHooks && OnStartHooks.Count > 0)
             {
                 runningOnStartHooks = true;
                 try
                 {
+                    LocalTransaction.Value = null;
+
                     foreach (Action action in OnStartHooks)
                     {
                         action();
@@ -174,6 +176,7 @@ namespace Sodium.Frp
                 }
                 finally
                 {
+                    LocalTransaction.Value = transaction;
                     runningOnStartHooks = false;
                 }
             }
