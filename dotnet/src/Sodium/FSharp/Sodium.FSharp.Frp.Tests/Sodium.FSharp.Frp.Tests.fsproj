@@ -18,6 +18,7 @@
     <Compile Include="StreamTests.fs" />
     <Compile Include="TimerTests.fs" />
     <Compile Include="TransactionTests.fs" />
+    <Compile Include="BuilderTests.fs" />
   </ItemGroup>
 
   <ItemGroup>

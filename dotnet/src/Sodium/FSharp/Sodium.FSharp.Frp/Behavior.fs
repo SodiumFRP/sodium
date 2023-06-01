@@ -5,6 +5,9 @@ open System.Collections.Generic
 open System.Runtime.CompilerServices
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
+let asBehavior (b : #Behavior<_>) : Behavior<_> = upcast b
+
+[<MethodImpl(MethodImplOptions.NoInlining)>]
 let constant value = BehaviorInternal.ConstantImpl value
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
@@ -39,19 +42,19 @@ let map f (behavior : Behavior<_>) = behavior.MapImpl (Func<_,_> f)
 let apply f (behavior : Behavior<_>) = behavior.ApplyImpl (f |> map (fun f -> Func<_,_> f))
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
-let lift2 f ((behavior : Behavior<_>), behavior2) = behavior.LiftImpl (behavior2, Func<_,_,_> f)
+let lift2 f (behavior : Behavior<_>, behavior2) = behavior.LiftImpl (behavior2, Func<_,_,_> f)
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
-let lift3 f ((behavior : Behavior<_>), behavior2, behavior3) = behavior.LiftImpl (behavior2, behavior3, Func<_,_,_,_> f)
+let lift3 f (behavior : Behavior<_>, behavior2, behavior3) = behavior.LiftImpl (behavior2, behavior3, Func<_,_,_,_> f)
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
-let lift4 f ((behavior : Behavior<_>), behavior2, behavior3, behavior4) = behavior.LiftImpl (behavior2, behavior3, behavior4, Func<_,_,_,_,_> f)
+let lift4 f (behavior : Behavior<_>, behavior2, behavior3, behavior4) = behavior.LiftImpl (behavior2, behavior3, behavior4, Func<_,_,_,_,_> f)
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
-let lift5 f ((behavior : Behavior<_>), behavior2, behavior3, behavior4, behavior5) = behavior.LiftImpl (behavior2, behavior3, behavior4, behavior5, Func<_,_,_,_,_,_> f)
+let lift5 f (behavior : Behavior<_>, behavior2, behavior3, behavior4, behavior5) = behavior.LiftImpl (behavior2, behavior3, behavior4, behavior5, Func<_,_,_,_,_,_> f)
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
-let lift6 f ((behavior : Behavior<_>), behavior2, behavior3, behavior4, behavior5, behavior6) = behavior.LiftImpl (behavior2, behavior3, behavior4, behavior5, behavior6, Func<_,_,_,_,_,_,_> f)
+let lift6 f (behavior : Behavior<_>, behavior2, behavior3, behavior4, behavior5, behavior6) = behavior.LiftImpl (behavior2, behavior3, behavior4, behavior5, behavior6, Func<_,_,_,_,_,_,_> f)
 
 let lift7 f (behavior, behavior2, behavior3, behavior4, behavior5, behavior6, behavior7) =
     ((behavior, behavior2, behavior3, behavior4, behavior5, behavior6) |> lift6 tuple6S, behavior7) |> lift2 (fun struct (a, b, c, d, e, f') g -> f a b c d e f' g)

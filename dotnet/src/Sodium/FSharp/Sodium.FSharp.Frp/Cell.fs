@@ -5,6 +5,9 @@ open System.Collections.Generic
 open System.Runtime.CompilerServices
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
+let asCell (c : #Cell<_>) : Cell<_> = upcast c
+
+[<MethodImpl(MethodImplOptions.NoInlining)>]
 let constant value = CellInternal.ConstantImpl value
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
@@ -54,19 +57,19 @@ let map f (cell : Cell<_>) = cell.MapImpl (Func<_,_> f)
 let apply f (cell : Cell<_>) = cell.ApplyImpl (f |> map (fun f -> Func<_,_> f))
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
-let lift2 f ((cell : Cell<_>), cell2) = cell.LiftImpl (cell2, Func<_,_,_> f)
+let lift2 f (cell : Cell<_>, cell2) = cell.LiftImpl (cell2, Func<_,_,_> f)
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
-let lift3 f ((cell : Cell<_>), cell2, cell3) = cell.LiftImpl (cell2, cell3, Func<_,_,_,_> f)
+let lift3 f (cell : Cell<_>, cell2, cell3) = cell.LiftImpl (cell2, cell3, Func<_,_,_,_> f)
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
-let lift4 f ((cell : Cell<_>), cell2, cell3, cell4) = cell.LiftImpl (cell2, cell3, cell4, Func<_,_,_,_,_> f)
+let lift4 f (cell : Cell<_>, cell2, cell3, cell4) = cell.LiftImpl (cell2, cell3, cell4, Func<_,_,_,_,_> f)
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
-let lift5 f ((cell : Cell<_>), cell2, cell3, cell4, cell5) = cell.LiftImpl (cell2, cell3, cell4, cell5, Func<_,_,_,_,_,_> f)
+let lift5 f (cell : Cell<_>, cell2, cell3, cell4, cell5) = cell.LiftImpl (cell2, cell3, cell4, cell5, Func<_,_,_,_,_,_> f)
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
-let lift6 f ((cell : Cell<_>), cell2, cell3, cell4, cell5, cell6) = cell.LiftImpl (cell2, cell3, cell4, cell5, cell6, Func<_,_,_,_,_,_,_> f)
+let lift6 f (cell : Cell<_>, cell2, cell3, cell4, cell5, cell6) = cell.LiftImpl (cell2, cell3, cell4, cell5, cell6, Func<_,_,_,_,_,_,_> f)
 
 let lift7 f (cell, cell2, cell3, cell4, cell5, cell6, cell7) =
     ((cell, cell2, cell3, cell4, cell5, cell6) |> lift6 tuple6S, cell7) |> lift2 (fun struct (a, b, c, d, e, f') g -> f a b c d e f' g)

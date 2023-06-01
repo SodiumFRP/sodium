@@ -6,6 +6,9 @@ open System.Collections.Generic
 open System.Runtime.CompilerServices
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
+let asStream (s : #Stream<_>) : Stream<_> = upcast s
+
+[<MethodImpl(MethodImplOptions.NoInlining)>]
 let never<'a> () = StreamInternal.NeverImpl<'a> ()
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
@@ -125,10 +128,10 @@ let snapshot8 cell1 cell2 cell3 cell4 cell5 cell6 cell7 cell8 f stream =
     stream |> snapshot8B (cell1 |> Cell.asBehavior) (cell2 |> Cell.asBehavior) (cell3 |> Cell.asBehavior) (cell4 |> Cell.asBehavior) (cell5 |> Cell.asBehavior) (cell6 |> Cell.asBehavior) (cell7 |> Cell.asBehavior) (cell8 |> Cell.asBehavior) f
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
-let merge f ((stream : Stream<_>), stream2) = stream.MergeImpl (stream2, (Func<_,_,_> f))
+let merge f (stream : Stream<_>, stream2) = stream.MergeImpl (stream2, (Func<_,_,_> f))
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
-let orElse ((stream : Stream<_>), stream2) = stream.OrElseImpl stream2
+let orElse (stream : Stream<_>, stream2) = stream.OrElseImpl stream2
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
 let filter predicate (stream : Stream<_>) = stream.FilterImpl (Func<_,_> predicate)

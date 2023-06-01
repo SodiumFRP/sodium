@@ -52,6 +52,7 @@
     <Compile Include="Operational.fs" />
     <Compile Include="Time.fs" />
     <Compile Include="Sodium.fs" />
+    <Compile Include="FrpBuilder.fs" />
   </ItemGroup>
 
   <ItemGroup>

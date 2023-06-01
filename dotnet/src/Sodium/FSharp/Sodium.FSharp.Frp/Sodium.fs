@@ -10,6 +10,7 @@ let inline unlistenL listener = Listener.unlisten listener
 let inline unlistenWeakL listener = WeakListener.unlisten listener
 let inline unlistenStrongL listener = StrongListener.unlisten listener
 
+let inline asS s = Stream.asStream s
 let inline neverS<'a> () = Stream.never<'a> ()
 let inline sinkS<'a> () = StreamSink.create<'a> ()
 let inline sinkWithCoalesceS coalesce = StreamSink.createWithCoalesce coalesce
@@ -47,6 +48,7 @@ let inline snapshot8B behavior1 behavior2 behavior3 behavior4 behavior5 behavior
 let inline snapshot8C cell1 cell2 cell3 cell4 cell5 cell6 cell7 cell8 f stream = Stream.snapshot8 cell1 cell2 cell3 cell4 cell5 cell6 cell7 cell8 f stream
 let inline mergeS f (stream, stream2) = Stream.merge f (stream, stream2)
 let inline orElseS (stream, stream2) = Stream.orElse (stream, stream2)
+let inline (|||) stream stream2 = Stream.orElse (stream, stream2)
 let inline filterS predicate stream = Stream.filter predicate stream
 let inline filterOptionS stream = Stream.filterOption stream
 let inline gateB behavior stream = Stream.gateB behavior stream
@@ -62,6 +64,7 @@ let inline onceS stream = Stream.once stream
 let inline mergeAllS f streams = Stream.mergeAll f streams
 let inline orElseAllS streams = Stream.orElseAll streams
 
+let inline asB b = Behavior.asBehavior b
 let inline constantB value = Behavior.constant value
 let inline constantLazyB value = Behavior.constantLazy value
 let inline sinkB initialValue = BehaviorSink.create initialValue
@@ -85,6 +88,7 @@ let inline switchBB behavior = Behavior.switchB behavior
 let inline switchCB behavior = Behavior.switchC behavior
 let inline switchSB behavior = Behavior.switchS behavior
 
+let inline asC c = Cell.asCell c
 let inline constantC value = Cell.constant value
 let inline constantLazyC value = Cell.constantLazy value
 let inline sinkC initialValue = CellSink.create initialValue
