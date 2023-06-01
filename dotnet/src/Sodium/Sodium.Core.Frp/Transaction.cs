@@ -3,7 +3,9 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading;
+#if !NET6_0_OR_GREATER
 using Priority_Queue;
+#endif
 
 namespace Sodium.Frp
 {
@@ -31,7 +33,11 @@ namespace Sodium.Frp
         internal readonly List<Node.Target> TargetsToActivate;
         internal bool ActivatedTargets;
 
+#if NET6_0_OR_GREATER
+        private readonly PriorityQueue<Entry, long> prioritizedQueue = new();
+#else
         private readonly SimplePriorityQueue<Entry, long> prioritizedQueue = new SimplePriorityQueue<Entry, long>();
+#endif
 
         // True if we need to re-generate the priority queue.
         private bool toRegen;
