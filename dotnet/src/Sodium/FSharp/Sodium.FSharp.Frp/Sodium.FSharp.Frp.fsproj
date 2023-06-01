@@ -3,7 +3,7 @@
   <PropertyGroup>
     <AssemblyName>Sodium.FSharp.Frp</AssemblyName>
     <RootNamespace>Sodium.Frp</RootNamespace>
-    <TargetFrameworks>net45;netstandard1.6;netstandard2.0;net60</TargetFrameworks>
+    <TargetFrameworks>net45;netstandard1.6;netstandard2.0;net6.0</TargetFrameworks>
   </PropertyGroup>
 
   <PropertyGroup>
