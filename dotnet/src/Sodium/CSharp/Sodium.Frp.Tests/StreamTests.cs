@@ -43,7 +43,7 @@ namespace Sodium.Frp.Tests
             }
 
             Assert.IsNotNull(actual);
-            Assert.AreEqual("Send may not be called inside a Sodium callback.", actual.Message);
+            Assert.AreEqual("Send may not be called inside a callback.", actual.Message);
         }
 
         [Test]
@@ -72,7 +72,7 @@ namespace Sodium.Frp.Tests
             }
 
             Assert.IsNotNull(actual);
-            Assert.AreEqual("Send may not be called inside a Sodium callback.", actual.Message);
+            Assert.AreEqual("Send may not be called inside a callback.", actual.Message);
         }
 
         [Test]
@@ -100,7 +100,7 @@ namespace Sodium.Frp.Tests
             }
 
             Assert.IsNotNull(actual);
-            Assert.AreEqual("Send may not be called inside a Sodium callback.", actual.Message);
+            Assert.AreEqual("Send may not be called inside a callback.", actual.Message);
         }
 
         [Test]
@@ -130,7 +130,7 @@ namespace Sodium.Frp.Tests
             }
 
             Assert.IsNotNull(actual);
-            Assert.AreEqual("Send may not be called inside a Sodium callback.", actual.Message);
+            Assert.AreEqual("Send may not be called inside a callback.", actual.Message);
         }
 
         [Test]
@@ -158,7 +158,7 @@ namespace Sodium.Frp.Tests
             }
 
             Assert.IsNotNull(actual);
-            Assert.AreEqual("Send may not be called inside a Sodium callback.", actual.Message);
+            Assert.AreEqual("Send may not be called inside a callback.", actual.Message);
         }
 
         [Test]

@@ -26,7 +26,7 @@ namespace Sodium.Frp
             StackTrace stackTrace = null;
             if (TransactionInternal.IsDebugMode)
             {
-                stackTrace = new StackTrace();
+                stackTrace = new StackTrace(true);
             }
 
             TransactionInternal.Apply(

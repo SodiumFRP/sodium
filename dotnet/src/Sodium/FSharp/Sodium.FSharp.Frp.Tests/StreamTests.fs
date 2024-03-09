@@ -32,7 +32,7 @@ type ``Stream Tests``() =
             with
                 | :? InvalidOperationException as e -> Some e
         )
-        actual |> assertExceptionExists (fun e -> Assert.AreEqual ("Send may not be called inside a Sodium callback.", e.Message))
+        actual |> assertExceptionExists (fun e -> Assert.AreEqual ("Send may not be called inside a callback.", e.Message))
 
     [<Test>]
     member __.``Test Stream Send In Map Throws Exception``() =
@@ -46,7 +46,7 @@ type ``Stream Tests``() =
             with
                 | :? InvalidOperationException as e -> Some e
         )
-        actual |> assertExceptionExists (fun e -> Assert.AreEqual ("Send may not be called inside a Sodium callback.", e.Message))
+        actual |> assertExceptionExists (fun e -> Assert.AreEqual ("Send may not be called inside a callback.", e.Message))
 
     [<Test>]
     member __.``Test Stream Send In Cell Map Throws Exception``() =
@@ -59,7 +59,7 @@ type ``Stream Tests``() =
             with
                 | :? InvalidOperationException as e -> Some e
         )
-        actual |> assertExceptionExists (fun e -> Assert.AreEqual ("Send may not be called inside a Sodium callback.", e.Message))
+        actual |> assertExceptionExists (fun e -> Assert.AreEqual ("Send may not be called inside a callback.", e.Message))
 
     [<Test>]
     member __.``Test Stream Send In Cell Lift Throws Exception``() =
@@ -73,7 +73,7 @@ type ``Stream Tests``() =
             with
                 | :? InvalidOperationException as e -> Some e
         )
-        actual |> assertExceptionExists (fun e -> Assert.AreEqual ("Send may not be called inside a Sodium callback.", e.Message))
+        actual |> assertExceptionExists (fun e -> Assert.AreEqual ("Send may not be called inside a callback.", e.Message))
 
     [<Test>]
     member __.``Test Stream Send In Cell Apply Throws Exception``() =
@@ -87,7 +87,7 @@ type ``Stream Tests``() =
             with
                 | :? InvalidOperationException as e -> Some e
         )
-        actual |> assertExceptionExists (fun e -> Assert.AreEqual ("Send may not be called inside a Sodium callback.", e.Message))
+        actual |> assertExceptionExists (fun e -> Assert.AreEqual ("Send may not be called inside a callback.", e.Message))
 
     [<Test>]
     member __.``Test Map``() =
