@@ -14,3 +14,9 @@ let onStart a = TransactionInternal.OnStartImpl (Action a)
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
 let post a = TransactionInternal.PostImpl (Action a)
+
+[<MethodImpl(MethodImplOptions.NoInlining)>]
+let getIsDebugMode() = TransactionInternal.IsDebugMode
+
+[<MethodImpl(MethodImplOptions.NoInlining)>]
+let setIsDebugMode isDebugMode = TransactionInternal.IsDebugMode <- isDebugMode

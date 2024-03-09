@@ -1,4 +1,5 @@
 using System;
+using System.Diagnostics;
 
 namespace Sodium.Frp
 {
@@ -22,12 +23,23 @@ namespace Sodium.Frp
 
         internal void SendImpl(T a)
         {
+            StackTrace stackTrace = null;
+            if (TransactionInternal.IsDebugMode)
+            {
+                stackTrace = new StackTrace();
+            }
+
             TransactionInternal.Apply(
                 (trans, _) =>
                 {
                     if (TransactionInternal.InCallback > 0)
                     {
-                        throw new InvalidOperationException("Send may not be called inside a Sodium callback.");
+                        if (stackTrace != null)
+                        {
+                            throw new InvalidOperationException("Send may not be called inside a callback.  Original stack trace: " + stackTrace);
+                        }
+
+                        throw new InvalidOperationException("Send may not be called inside a callback.");
                     }
 
                     trans.Send(t => this.coalescer(t, a));
