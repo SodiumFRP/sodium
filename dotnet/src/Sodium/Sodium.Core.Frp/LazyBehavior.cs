@@ -6,22 +6,17 @@ namespace Sodium.Frp
     {
         internal Lazy<T> LazyInitialValue;
 
-        internal LazyBehavior(Stream<T> stream)
-            : base(stream, default(T))
-        {
-        }
-
         internal LazyBehavior(TransactionInternal trans, Stream<T> stream, Lazy<T> lazyInitialValue)
             : base(stream, default(T))
         {
-            this.LazyInitialValue = new Lazy<T>(() => GuardAgainstSend(lazyInitialValue));
+            this.LazyInitialValue = new Lazy<T>(() => GuardAgainstSend(trans, lazyInitialValue));
 
             trans.Sample(this.EnsureValueIsCreated);
         }
 
-        private static T GuardAgainstSend(Lazy<T> v)
+        private static T GuardAgainstSend(TransactionInternal trans, Lazy<T> v)
         {
-            TransactionInternal.InCallback++;
+            trans.InCallback++;
             try
             {
                 // Don't allow transactions to interfere with Sodium
@@ -30,7 +25,7 @@ namespace Sodium.Frp
             }
             finally
             {
-                TransactionInternal.InCallback--;
+                trans.InCallback--;
             }
         }
 

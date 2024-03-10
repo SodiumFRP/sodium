@@ -25,7 +25,7 @@ namespace Sodium.Frp
             TransactionInternal.Apply(
                 (trans, _) =>
                 {
-                    if (TransactionInternal.InCallback > 0)
+                    if (trans.InCallback > 0)
                     {
                         throw new InvalidOperationException("Send may not be called inside a callback.");
                     }

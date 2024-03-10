@@ -142,7 +142,7 @@ namespace Sodium.Frp
                         // there's no order dependency between send and listen.
                         foreach (T a in firings)
                         {
-                            TransactionInternal.InCallback++;
+                            trans2.InCallback++;
                             try
                             {
                                 // Don't allow transactions to interfere with Sodium
@@ -151,7 +151,7 @@ namespace Sodium.Frp
                             }
                             finally
                             {
-                                TransactionInternal.InCallback--;
+                                trans2.InCallback--;
                             }
                         }
                     });
@@ -443,7 +443,7 @@ namespace Sodium.Frp
                     target.Node,
                     trans2 =>
                     {
-                        TransactionInternal.InCallback++;
+                        trans2.InCallback++;
                         try
                         {
                             // Don't allow transactions to interfere with Sodium
@@ -465,7 +465,7 @@ namespace Sodium.Frp
                         }
                         finally
                         {
-                            TransactionInternal.InCallback--;
+                            trans2.InCallback--;
                         }
                     });
             }

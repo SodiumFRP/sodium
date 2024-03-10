@@ -18,7 +18,7 @@ namespace Sodium.Frp
         private static readonly object TransactionLock = new object();
 
         private bool isElevated;
-        internal static int InCallback;
+        internal int InCallback;
         private static readonly List<Action> OnStartHooks = new List<Action>();
         private static bool runningOnStartHooks;
         private List<Entry> entries = new List<Entry>();
