@@ -67,17 +67,5 @@ namespace Sodium.Frp
         /// </param>
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static void Post(Action action) => TransactionInternal.PostImpl(action);
-
-        /// <summary>
-        ///     Gets whether or not debug mode is being used, which captures extra diagnostic information.
-        /// </summary>
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        public static bool IsDebugMode() => TransactionInternal.IsDebugMode;
-        
-        /// <summary>
-        ///     Sets whether or not debug mode is being used, which captures extra diagnostic information.
-        /// </summary>
-        [MethodImpl(MethodImplOptions.NoInlining)]
-        public static bool SetIsDebugMode(bool isDebugMode) => TransactionInternal.IsDebugMode = isDebugMode;
     }
 }
