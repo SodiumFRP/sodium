@@ -46,7 +46,7 @@ type TimerSystem<'T when 'T : comparison> (implementation : 'T ITimerSystemImple
                                         findMoreEvents()
                             findMoreEvents())
                 if events.Count > 0 then
-                    timeSink |> BehaviorSink.send events[0].Time
+                    timeSink |> BehaviorSink.send events.[0].Time
                     Transaction.run(fun () ->
                         events |> Seq.iter (fun event ->
                             event.Alarm |> StreamSink.send event.Time))
