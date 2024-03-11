@@ -17,9 +17,9 @@ type ``Timer Tests``() =
         let l = List<DateTime>()
         Transaction.run(fun () ->
             let now = time |> Behavior.sample
-            let a1 = ts.At(Cell.constant(Some(now.AddMilliseconds(99))))
-            let a2 = ts.At(Cell.constant(Some(now.AddMilliseconds(100))))
-            let a3 = ts.At(Cell.constant(Some(now.AddMilliseconds(100))))
+            let a1 = ts.At(Cell.constant(Some(now.AddMilliseconds(99.0))))
+            let a2 = ts.At(Cell.constant(Some(now.AddMilliseconds(100.0))))
+            let a3 = ts.At(Cell.constant(Some(now.AddMilliseconds(100.0))))
             let m = Stream.orElseAll [a1;a2;a3]
             m |> Stream.listen l.Add |> ignore)
         Thread.Sleep 200
