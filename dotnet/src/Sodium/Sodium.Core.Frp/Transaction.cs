@@ -13,14 +13,15 @@ namespace Sodium.Frp
     internal sealed class TransactionInternal
     {
         private static readonly ThreadLocal<TransactionInternal> LocalTransaction = new ThreadLocal<TransactionInternal>();
+        private static readonly ThreadLocal<bool> RunningOnStartHooks = new ThreadLocal<bool>();
 
         // Coarse-grained lock that's held during the whole transaction.
         private static readonly object TransactionLock = new object();
 
         private bool isElevated;
+        private bool obtainedLock;
         internal int InCallback;
         private static readonly List<Action> OnStartHooks = new List<Action>();
-        private static bool runningOnStartHooks;
         private List<Entry> entries = new List<Entry>();
         private readonly List<Action<TransactionInternal>> sendQueue = new List<Action<TransactionInternal>>();
         private List<Action> sampleQueue = new List<Action>();
@@ -127,7 +128,7 @@ namespace Sodium.Frp
             {
                 if (transaction == null)
                 {
-                    if (newTransaction != null && newTransaction.isElevated && !newTransaction.hasParentTransaction && !runningOnStartHooks)
+                    if (newTransaction != null && newTransaction.obtainedLock)
                     {
                         Monitor.Exit(TransactionLock);
                     }
@@ -143,12 +144,16 @@ namespace Sodium.Frp
             {
                 transaction.isElevated = true;
 
-                if (!transaction.hasParentTransaction && !runningOnStartHooks)
+                if (!RunningOnStartHooks.Value)
                 {
-                    Monitor.Enter(TransactionLock);
-                }
+                    if (!transaction.hasParentTransaction)
+                    {
+                        Monitor.Enter(TransactionLock);
+                        transaction.obtainedLock = true;
+                    }
 
-                RunStartHooks(transaction);
+                    RunStartHooks(transaction);
+                }
             }
         }
 
@@ -162,12 +167,12 @@ namespace Sodium.Frp
 
         private static void RunStartHooks(TransactionInternal transaction)
         {
-            if (!runningOnStartHooks && OnStartHooks.Count > 0)
+            if (OnStartHooks.Count > 0)
             {
-                runningOnStartHooks = true;
                 try
                 {
                     LocalTransaction.Value = null;
+                    RunningOnStartHooks.Value = true;
 
                     foreach (Action action in OnStartHooks)
                     {
@@ -177,7 +182,7 @@ namespace Sodium.Frp
                 finally
                 {
                     LocalTransaction.Value = transaction;
-                    runningOnStartHooks = false;
+                    RunningOnStartHooks.Value = false;
                 }
             }
         }
