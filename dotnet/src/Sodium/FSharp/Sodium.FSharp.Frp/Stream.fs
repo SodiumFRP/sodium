@@ -37,26 +37,38 @@ let attachListener listener (stream : Stream<_>) = stream.AttachListenerImpl lis
 let listenOnce handler (stream : Stream<_>) = stream.ListenOnceImpl (Action<_> handler)
 
 let listenOnceAsync stream =
+#if NETSTANDARD2_0_OR_GREATER || NET461_OR_GREATER || NET
+    let tcs = TaskCompletionSource<_> TaskCreationOptions.RunContinuationsAsynchronously
+#else
     let tcs = TaskCompletionSource<_> ()
+#endif
     let mutable listenerOption = None
     let mutable unlistenEarly = false
     let listener = stream |> listen (fun a ->
         match listenerOption with
             | None -> unlistenEarly <- true
-            | Some listener ->
-                listener |> Listener.unlisten
-                listenerOption <- None
+            | Some listener -> listener |> Listener.unlisten
         tcs.TrySetResult(a) |> ignore)
     listenerOption <- Some listener
-    if unlistenEarly then
-        listener |> Listener.unlisten
-        listenerOption <- None
+    if unlistenEarly then listener |> Listener.unlisten
     async {
         let! ct = Async.CancellationToken
         ct.Register (fun () ->
             Listener.unlisten listener
             tcs.TrySetCanceled () |> ignore) |> ignore
-        return! Async.AwaitTask tcs.Task }
+#if NETSTANDARD2_0_OR_GREATER || NET461_OR_GREATER || NET
+        return! Async.AwaitTask tcs.Task
+#else
+        let execute (tcs : TaskCompletionSource<_>) =
+            async {
+                let! result = Async.AwaitTask tcs.Task
+                do! Utilities.Yield() |> Async.AwaitTask
+                return result
+            }
+
+        return! execute tcs
+#endif
+    }
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
 let map f (stream : Stream<_>) = stream.MapImpl (Func<_,_> f)
@@ -125,10 +137,10 @@ let snapshot8 cell1 cell2 cell3 cell4 cell5 cell6 cell7 cell8 f stream =
     stream |> snapshot8B (cell1 |> Cell.asBehavior) (cell2 |> Cell.asBehavior) (cell3 |> Cell.asBehavior) (cell4 |> Cell.asBehavior) (cell5 |> Cell.asBehavior) (cell6 |> Cell.asBehavior) (cell7 |> Cell.asBehavior) (cell8 |> Cell.asBehavior) f
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
-let merge f ((stream : Stream<_>), stream2) = stream.MergeImpl (stream2, (Func<_,_,_> f))
+let merge f (stream : Stream<_>, stream2) = stream.MergeImpl (stream2, (Func<_,_,_> f))
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
-let orElse ((stream : Stream<_>), stream2) = stream.OrElseImpl stream2
+let orElse (stream : Stream<_>, stream2) = stream.OrElseImpl stream2
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
 let filter predicate (stream : Stream<_>) = stream.FilterImpl (Func<_,_> predicate)

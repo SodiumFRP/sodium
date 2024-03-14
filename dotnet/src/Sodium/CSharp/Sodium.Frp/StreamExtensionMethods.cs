@@ -31,7 +31,7 @@ namespace Sodium.Frp
         ///     </para>
         ///     <para>
         ///         To ensure this <see cref="IStrongListener" /> is disposed as soon as the stream it is listening to is either
-        ///         disposed, pass the returned listener to this stream's <see cref="AttachListener{T}" /> method.
+        ///         disposed or garbage collected, pass the returned listener to this stream's <see cref="AttachListener{T}" /> method.
         ///     </para>
         /// </remarks>
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -59,7 +59,7 @@ namespace Sodium.Frp
         ///     </para>
         ///     <para>
         ///         To ensure this <see cref="IWeakListener" /> is disposed as soon as the stream it is listening to is either
-        ///         disposed, pass the returned listener to this stream's <see cref="AttachListener{T}" /> method.
+        ///         disposed or garbage collected, pass the returned listener to this stream's <see cref="AttachListener{T}" /> method.
         ///     </para>
         /// </remarks>
         [MethodImpl(MethodImplOptions.NoInlining)]
@@ -95,7 +95,7 @@ namespace Sodium.Frp
         /// <typeparam name="T">The type of the stream.</typeparam>
         /// <param name="s">The stream.</param>
         /// <returns>A task which completes when a value is fired by this stream.</returns>
-        public static TaskWithListener<T> ListenOnceAsync<T>(this Stream<T> s) => s.ListenOnceAsync(CancellationToken.None);
+        public static Task<T> ListenOnceAsync<T>(this Stream<T> s) => s.ListenOnceAsync(CancellationToken.None);
 
         /// <summary>
         ///     Handle the first event on this stream and then automatically unregister.
@@ -104,62 +104,13 @@ namespace Sodium.Frp
         /// <param name="s">The stream.</param>
         /// <param name="token">The cancellation token.</param>
         /// <returns>A task which completes when a value is fired by this stream.</returns>
-        public static TaskWithListener<T> ListenOnceAsync<T>(this Stream<T> s, CancellationToken token) =>
-            s.ListenOnceAsync(t => t, CancellationToken.None);
-
-        /// <summary>
-        ///     Handle the first event on this stream and then automatically unregister.
-        /// </summary>
-        /// <typeparam name="T">The type of the stream.</typeparam>
-        /// <param name="s">The stream.</param>
-        /// <param name="modifyTask">A function to modify the task produced by this method.</param>
-        /// <returns>A task which completes when a value is fired by this stream.</returns>
-        public static TaskWithListener ListenOnceAsync<T>(this Stream<T> s, Func<Task<T>, Task> modifyTask) =>
-            s.ListenOnceAsync(modifyTask, CancellationToken.None);
-
-        /// <summary>
-        ///     Handle the first event on this stream and then automatically unregister.
-        /// </summary>
-        /// <typeparam name="T">The type of the stream.</typeparam>
-        /// <param name="s">The stream.</param>
-        /// <param name="modifyTask">A function to modify the task produced by this method.</param>
-        /// <param name="token">The cancellation token.</param>
-        /// <returns>A task which completes when a value is fired by this stream.</returns>
-        public static TaskWithListener ListenOnceAsync<T>(this Stream<T> s, Func<Task<T>, Task> modifyTask, CancellationToken token) =>
-            s.ListenOnceAsyncInternal((t, l) => new TaskWithListener(modifyTask(t), l), token);
-
-        /// <summary>
-        ///     Handle the first event on this stream and then automatically unregister.
-        /// </summary>
-        /// <typeparam name="T">The type of the stream.</typeparam>
-        /// <typeparam name="TResult">The type of the result of the task.</typeparam>
-        /// <param name="s">The stream.</param>
-        /// <param name="modifyTask">A function to modify the task produced by this method.</param>
-        /// <returns>A task which completes when a value is fired by this stream.</returns>
-        public static TaskWithListener<TResult> ListenOnceAsync<T, TResult>(this Stream<T> s, Func<Task<T>, Task<TResult>> modifyTask) =>
-            s.ListenOnceAsync(modifyTask, CancellationToken.None);
-
-        /// <summary>
-        ///     Handle the first event on this stream and then automatically unregister.
-        /// </summary>
-        /// <typeparam name="T">The type of the stream.</typeparam>
-        /// <typeparam name="TResult">The type of the result of the task.</typeparam>
-        /// <param name="s">The stream.</param>
-        /// <param name="modifyTask">A function to modify the task produced by this method.</param>
-        /// <param name="token">The cancellation token.</param>
-        /// <returns>A task which completes when a value is fired by this stream.</returns>
-        public static TaskWithListener<TResult> ListenOnceAsync<T, TResult>(
-            this Stream<T> s,
-            Func<Task<T>, Task<TResult>> modifyTask,
-            CancellationToken token) =>
-            s.ListenOnceAsyncInternal((t, l) => new TaskWithListener<TResult>(modifyTask(t), l), token);
-
-        private static TResult ListenOnceAsyncInternal<T, TResult>(
-            this Stream<T> s,
-            Func<Task<T>, IStrongListener, TResult> generateResult,
-            CancellationToken token)
+        public static Task<T> ListenOnceAsync<T>(this Stream<T> s, CancellationToken token)
         {
+#if NETSTANDARD2_0_OR_GREATER || NET461_OR_GREATER || NET
+            TaskCompletionSource<T> tcs = new TaskCompletionSource<T>(TaskCreationOptions.RunContinuationsAsynchronously);
+#else
             TaskCompletionSource<T> tcs = new TaskCompletionSource<T>();
+#endif
 
             IStrongListener listener = null;
             bool unlistenEarly = false;
@@ -180,9 +131,10 @@ namespace Sodium.Frp
 
                     tcs.TrySetResult(a);
                 });
+
             if (unlistenEarly)
             {
-                listener.Unlisten();
+                listener?.Unlisten();
                 listener = null;
             }
 
@@ -190,11 +142,23 @@ namespace Sodium.Frp
                 () =>
                 {
                     listener?.Unlisten();
+                    listener = null;
 
                     tcs.TrySetCanceled();
                 });
 
-            return generateResult(tcs.Task, listener);
+#if NETSTANDARD2_0_OR_GREATER || NET461_OR_GREATER || NET
+            return tcs.Task;
+#else
+            async Task<T> Execute(TaskCompletionSource<T> tcs2)
+            {
+                T result = await tcs2.Task;
+                await Task.Yield();
+                return result;
+            }
+
+            return Execute(tcs);
+#endif
         }
 
         /// <summary>

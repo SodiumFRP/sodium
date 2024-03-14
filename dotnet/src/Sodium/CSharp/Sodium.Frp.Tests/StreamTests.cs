@@ -798,7 +798,7 @@ namespace Sodium.Frp.Tests
                 s.Send('B');
                 s.Send('C');
             }).Start();
-            TaskWithListener<char> t = s.ListenOnceAsync();
+            Task<char> t = s.ListenOnceAsync();
             GC.Collect(0, GCCollectionMode.Forced);
             char r = await t;
             Assert.AreEqual('A', r);
@@ -808,7 +808,7 @@ namespace Sodium.Frp.Tests
         public async Task TestListenOnceAsyncSameThread()
         {
             StreamSink<char> s = Stream.CreateSink<char>();
-            TaskWithListener<char> t = s.ListenOnceAsync();
+            Task<char> t = s.ListenOnceAsync();
             s.Send('A');
             s.Send('B');
             s.Send('C');
@@ -820,54 +820,12 @@ namespace Sodium.Frp.Tests
         public async Task TestListenOnceAsyncSameThreadWithCleanup()
         {
             StreamSink<char> s = Stream.CreateSink<char>();
-            TaskWithListener<char> t = s.ListenOnceAsync();
+            Task<char> t = s.ListenOnceAsync();
             GC.Collect(0, GCCollectionMode.Forced);
             s.Send('A');
             s.Send('B');
             s.Send('C');
             char r = await t;
-            Assert.AreEqual('A', r);
-        }
-
-        [Test]
-        public async Task TestListenOnceAsyncModify()
-        {
-            StreamSink<char> s = Stream.CreateSink<char>();
-            TaskWithListener<char> t = s.ListenOnceAsync(async t2 => await t2.ConfigureAwait(false));
-            GC.Collect(0, GCCollectionMode.Forced);
-            s.Send('A');
-            s.Send('B');
-            s.Send('C');
-            char r = await t;
-            Assert.AreEqual('A', r);
-        }
-
-        [Test]
-        public async Task TestListenOnceAsyncModifyVoid()
-        {
-            char r = ' ';
-            void SetResult(char v) => r = v;
-            StreamSink<char> s = Stream.CreateSink<char>();
-            TaskWithListener t = s.ListenOnceAsync(t2 => t2.ContinueWith(t3 => SetResult(t3.Result), TaskContinuationOptions.ExecuteSynchronously));
-            GC.Collect(0, GCCollectionMode.Forced);
-            s.Send('A');
-            s.Send('B');
-            s.Send('C');
-            await t;
-            Assert.AreEqual('A', r);
-        }
-
-        [Test]
-        public async Task TestListenOnceAsyncModifyVoid2()
-        {
-            char r = ' ';
-            StreamSink<char> s = Stream.CreateSink<char>();
-            TaskWithListener t = s.ListenOnceAsync(t2 => t2.ContinueWith(t3 => r = t3.Result, TaskContinuationOptions.ExecuteSynchronously));
-            GC.Collect(0, GCCollectionMode.Forced);
-            s.Send('A');
-            s.Send('B');
-            s.Send('C');
-            await t;
             Assert.AreEqual('A', r);
         }
 
