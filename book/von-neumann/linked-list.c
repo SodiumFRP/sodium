@@ -1,4 +1,5 @@
 #include <stdlib.h>
+#include <string.h>
 #include <assert.h>
 
 typedef struct Node {
@@ -34,7 +35,7 @@ int main(int argc, char* argv[])
             nodes[i]->value = i;
         }
         shuffle(nodes, n,
-            argc == 2 && strcmp(argv[1], "--no-shuffle") == 0);
+            !(argc == 2 && strcmp(argv[1], "--no-shuffle") == 0));
         for (i = 0; i < n; i++)
             nodes[i]->next = (i+1) < n ? nodes[i+1] : NULL;
         head = nodes[0];
