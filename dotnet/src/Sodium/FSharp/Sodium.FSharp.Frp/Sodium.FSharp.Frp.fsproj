@@ -3,7 +3,7 @@
   <PropertyGroup>
     <AssemblyName>Sodium.FSharp.Frp</AssemblyName>
     <RootNamespace>Sodium.Frp</RootNamespace>
-    <TargetFrameworks>net45;netstandard1.6;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>net462;net60;netstandard2.0</TargetFrameworks>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -33,7 +33,6 @@
   </PropertyGroup>
 
   <ItemGroup>
-    <PackageReference Include="OptimizedPriorityQueue" Version="4.1.1" />
     <PackageReference Update="FSharp.Core" Version="4.5.2" />
   </ItemGroup>
 
