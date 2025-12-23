@@ -127,7 +127,7 @@ namespace Sodium.Frp
             (bool changed, Node<T>.Target nodeTarget) = this.Node.Link(trans, action, target);
             if (changed)
             {
-                trans.SetNeedsRegenerating();
+                //trans.SetNeedsRegenerating();
             }
 
             // ReSharper disable once LocalVariableHidesMember
@@ -266,7 +266,7 @@ namespace Sodium.Frp
             (bool changed, Node<T>.Target nodeTarget) = left.Link(trans, (t, v) => { }, right);
             if (changed)
             {
-                trans.SetNeedsRegenerating();
+                //trans.SetNeedsRegenerating();
             }
 
             Action<TransactionInternal, T> h = @out.Send;

@@ -177,7 +177,7 @@ namespace Sodium.Frp
                     (bool changed, Node<UnitInternal>.Target nodeTarget) = inTarget.Link(trans0, (t, v) => { }, outTarget);
                     if (changed)
                     {
-                        trans0.SetNeedsRegenerating();
+                        //trans0.SetNeedsRegenerating();
                     }
 
                     Func<T, TResult> f = null;

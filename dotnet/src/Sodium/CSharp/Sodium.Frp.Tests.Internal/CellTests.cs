@@ -30,12 +30,6 @@ namespace Sodium.Frp.Tests.Internal
             TransactionInternal.Apply(
                 (trans, _) =>
                 {
-                    void SetNeedsRegeneratingAndPrioritized(Action action)
-                    {
-                        trans.SetNeedsRegenerating();
-                        trans.Prioritized(new Node<Unit>(), __ => action());
-                    }
-
                     SetNeedsRegeneratingAndPrioritized(() => @out.Add(1));
                     SetNeedsRegeneratingAndPrioritized(() => SetNeedsRegeneratingAndPrioritized(() => @out.Add(4)));
                     SetNeedsRegeneratingAndPrioritized(() => @out.Add(2));
@@ -46,6 +40,12 @@ namespace Sodium.Frp.Tests.Internal
                     trans.Prioritized(new Node<Unit>(), trans2 => @out.Add(3));
 
                     return UnitInternal.Value;
+
+                    void SetNeedsRegeneratingAndPrioritized(Action action)
+                    {
+                        //trans.SetNeedsRegenerating();
+                        trans.Prioritized(new Node<Unit>(), __ => action());
+                    }
                 },
                 false);
             CollectionAssert.AreEqual(new[] { 1, 2, 3, 4, 5, 6 }, @out);

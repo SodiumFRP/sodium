@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net462;net60;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>net472;net60;netstandard2.0</TargetFrameworks>
   </PropertyGroup>
 
   <PropertyGroup>

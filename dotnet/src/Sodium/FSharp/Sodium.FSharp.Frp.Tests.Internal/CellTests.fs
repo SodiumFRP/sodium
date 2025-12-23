@@ -25,7 +25,7 @@ type ``Cell Tests``() =
             (
                 (fun trans _ ->
                     let setNeedsRegeneratingAndPrioritized a =
-                        trans.SetNeedsRegenerating ()
+                        //trans.SetNeedsRegenerating ()
                         trans.Prioritized (Node<unit> (), (fun _ -> a ()))
                     setNeedsRegeneratingAndPrioritized (fun () -> out.Add 1)
                     setNeedsRegeneratingAndPrioritized (fun () ->
