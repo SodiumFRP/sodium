@@ -114,7 +114,7 @@ namespace Sodium.Frp
                     this.minRank = pqRank;
                 }
 
-                if (pqRank < this.maxRank)
+                if (pqRank > this.maxRank)
                 {
                     this.maxRank = pqRank;
                 }
@@ -251,16 +251,7 @@ namespace Sodium.Frp
 
             e.InPq = false;
 
-            HeadAndTail entry = new HeadAndTail(null, null);
-
-            if (pqRank == Node.NullRank)
-            {
-                entry = this.last;
-            }
-            else
-            {
-                entry = this.entries[pqRank];
-            }
+            HeadAndTail entry = pqRank == Node.NullRank ? this.last : this.entries[pqRank];
 
             if (e.PqPrev != null)
             {
