@@ -1,7 +1,7 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <TargetFrameworks>net462;net60;netstandard2.0</TargetFrameworks>
+    <TargetFrameworks>net472;net60;netstandard2.0</TargetFrameworks>
   </PropertyGroup>
 
   <PropertyGroup>
@@ -25,6 +25,7 @@
 </PropertyGroup>
 
   <ItemGroup>
+    <PackageReference Include="OptimizedPriorityQueue" Version="4.1.1" />
     <PackageReference Include="System.ValueTuple" Version="4.4.0" />
   </ItemGroup>
 
