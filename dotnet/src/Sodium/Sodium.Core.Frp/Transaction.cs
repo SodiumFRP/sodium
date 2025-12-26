@@ -366,6 +366,7 @@ namespace Sodium.Frp
             public readonly Node Node;
             public readonly Action<TransactionInternal> Action;
             public bool InPq;
+            public int PqRank;
             public Entry PqNext;
             public Entry PqPrev;
             public bool IsRemoved;
@@ -374,6 +375,7 @@ namespace Sodium.Frp
             {
                 this.Node = node;
                 this.Action = action;
+                this.PqRank = node.Rank;
                 this.Node.Entries.Add(this);
             }
 

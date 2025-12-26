@@ -8,7 +8,7 @@ namespace Sodium.Frp
 {
     internal class EntryPriorityQueue
     {
-        private const bool SanityChecks = false;
+        private const bool SanityChecks = true;
 
         private class HeadAndTail
         {
@@ -56,7 +56,7 @@ namespace Sodium.Frp
                 TransactionInternal.Entry current = e.Head;
                 while (current != null)
                 {
-                    if (current.Node.Rank != expectedPqRank)
+                    if (current.PqRank != expectedPqRank)
                     {
                         throw new Exception("Rank was not the expected value.");
                     }
@@ -85,9 +85,12 @@ namespace Sodium.Frp
 
         internal void Enqueue(TransactionInternal.Entry e)
         {
-            int pqRank = e.Node.Rank;
+            if (e.PqRank != e.Node.Rank)
+            {
+                throw new Exception("Enqueue requires ranks to agree.");
+            }
 
-            if (pqRank > this.entriesSize)
+            if (e.PqRank > this.entriesSize)
             {
                 int newSize = this.entriesSize * 2;
                 Array.Resize(ref this.entries, newSize);
@@ -103,27 +106,27 @@ namespace Sodium.Frp
 
             HeadAndTail entry;
 
-            if (pqRank == Node.NullRank)
+            if (e.PqRank == Node.NullRank)
             {
                 entry = this.last;
             }
             else
             {
-                if (pqRank < this.minRank)
+                if (e.PqRank < this.minRank)
                 {
-                    this.minRank = pqRank;
+                    this.minRank = e.PqRank;
                 }
 
-                if (pqRank > this.maxRank)
+                if (e.PqRank > this.maxRank)
                 {
-                    this.maxRank = pqRank;
+                    this.maxRank = e.PqRank;
                 }
 
-                entry = this.entries[pqRank];
+                entry = this.entries[e.PqRank];
 
                 if (entry == null)
                 {
-                    this.entries[pqRank] = new HeadAndTail(e, e);
+                    this.entries[e.PqRank] = new HeadAndTail(e, e);
 
                     if (SanityChecks)
                     {
@@ -223,7 +226,7 @@ namespace Sodium.Frp
 
                             while (current != null)
                             {
-                                if (current.Node.Rank < result.Node.Rank)
+                                if (current.PqRank < result.PqRank)
                                 {
                                     throw new Exception("Priority queue contains less than the expected number of elements.");
                                 }
@@ -247,11 +250,9 @@ namespace Sodium.Frp
                 return;
             }
 
-            int pqRank = e.Node.Rank;
-
             e.InPq = false;
 
-            HeadAndTail entry = pqRank == Node.NullRank ? this.last : this.entries[pqRank];
+            HeadAndTail entry = e.PqRank == Node.NullRank ? this.last : this.entries[e.PqRank];
 
             if (e.PqPrev != null)
             {
@@ -302,7 +303,7 @@ namespace Sodium.Frp
         public void ChangeRank(TransactionInternal.Entry e, int newRank)
         {
             this.Remove(e);
-            e.Node.Rank = newRank;
+            e.PqRank = newRank;
             this.Enqueue(e);
         }
     }
