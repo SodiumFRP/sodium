@@ -8,7 +8,7 @@ namespace Sodium.Frp
 {
     internal class EntryPriorityQueue
     {
-        private const bool SanityChecks = true;
+        private const bool SanityChecks = false;
 
         private class HeadAndTail
         {
@@ -90,7 +90,7 @@ namespace Sodium.Frp
                 throw new Exception("Enqueue requires ranks to agree.");
             }
 
-            if (e.PqRank > this.entriesSize)
+            if (e.PqRank != Node.NullRank && e.PqRank > this.entriesSize)
             {
                 int newSize = this.entriesSize * 2;
                 Array.Resize(ref this.entries, newSize);

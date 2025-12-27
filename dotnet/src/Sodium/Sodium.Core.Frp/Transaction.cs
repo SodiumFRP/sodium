@@ -30,7 +30,7 @@ namespace Sodium.Frp
         internal readonly List<Node.Target> TargetsToActivate;
         internal bool ActivatedTargets;
 
-        private readonly EntryPriorityQueue prioritizedQueue = new EntryPriorityQueue();
+        private static readonly EntryPriorityQueue prioritizedQueue = new EntryPriorityQueue();
 
         public readonly HashSet<Entry> RerankEntriesSet = new HashSet<Entry>();
 
@@ -191,7 +191,7 @@ namespace Sodium.Frp
             Entry e = new Entry(node, action);
             lock (Node.NodeRanksLock)
             {
-                this.prioritizedQueue.Enqueue(e);
+                prioritizedQueue.Enqueue(e);
             }
         }
 
@@ -264,7 +264,7 @@ namespace Sodium.Frp
         {
             foreach (Entry entry in this.RerankEntriesSet)
             {
-                this.prioritizedQueue.ChangeRank(entry, entry.Node.Rank);
+                prioritizedQueue.ChangeRank(entry, entry.Node.Rank);
             }
 
             this.RerankEntriesSet.Clear();
@@ -272,92 +272,116 @@ namespace Sodium.Frp
 
         internal void Close()
         {
-            EnsureElevated(this);
-
-            foreach (Node.Target target in this.TargetsToActivate)
+            try
             {
-                target.IsActivated = true;
-            }
+                EnsureElevated(this);
 
-            this.ActivatedTargets = true;
-
-            // ReSharper disable once ForCanBeConvertedToForeach
-            for (int i = 0; i < this.sendQueue.Count; i++)
-            {
-                this.sendQueue[i](this);
-            }
-
-            this.sendQueue.Clear();
-
-            while (!this.prioritizedQueue.IsEmpty() || this.sampleQueue.Count > 0)
-            {
-                while (!this.prioritizedQueue.IsEmpty())
+                foreach (Node.Target target in this.TargetsToActivate)
                 {
-                    this.CheckRegen();
-
-                    Entry e = this.prioritizedQueue.Dequeue();
-                    e.IsRemoved = true;
-                    e.Action(this);
-                    e.Dispose();
+                    target.IsActivated = true;
                 }
 
-                List<Action> sq = this.sampleQueue;
-                this.sampleQueue = new List<Action>();
-                foreach (Action s in sq)
+                this.ActivatedTargets = true;
+
+                // ReSharper disable once ForCanBeConvertedToForeach
+                for (int i = 0; i < this.sendQueue.Count; i++)
                 {
-                    s();
+                    this.sendQueue[i](this);
                 }
-            }
 
-            while (this.lastQueue.Count > 0)
-            {
-                this.lastQueue.Dequeue()();
-            }
+                this.sendQueue.Clear();
 
-            if (!this.hasParentTransaction)
-            {
-                void ExecuteInNewTransaction(Action<TransactionInternal> action, bool runStartHooks)
+                while (!prioritizedQueue.IsEmpty() || this.sampleQueue.Count > 0)
                 {
-                    try
+                    while (!prioritizedQueue.IsEmpty())
                     {
-                        TransactionInternal transaction = new TransactionInternal(this.postQueue, this.splitQueue);
+                        this.CheckRegen();
 
-                        if (!runStartHooks)
-                        {
-                            // this will ensure we don't run start hooks
-                            transaction.isElevated = true;
-                        }
+                        Entry e = prioritizedQueue.Dequeue();
+                        e.IsRemoved = true;
+                        e.Action(this);
+                        e.Dispose();
+                    }
 
-                        LocalTransaction.Value = transaction;
+                    List<Action> sq = this.sampleQueue;
+                    this.sampleQueue = new List<Action>();
+                    foreach (Action s in sq)
+                    {
+                        s();
+                    }
+                }
+
+                while (this.lastQueue.Count > 0)
+                {
+                    this.lastQueue.Dequeue()();
+                }
+
+                if (!this.hasParentTransaction)
+                {
+                    void ExecuteInNewTransaction(Action<TransactionInternal> action, bool runStartHooks)
+                    {
                         try
                         {
-                            action(transaction);
+                            TransactionInternal transaction = new TransactionInternal(this.postQueue, this.splitQueue);
+
+                            if (!runStartHooks)
+                            {
+                                // this will ensure we don't run start hooks
+                                transaction.isElevated = true;
+                            }
+
+                            LocalTransaction.Value = transaction;
+                            try
+                            {
+                                action(transaction);
+                            }
+                            finally
+                            {
+                                transaction.Close();
+                            }
                         }
                         finally
                         {
-                            transaction.Close();
+                            LocalTransaction.Value = this;
                         }
                     }
-                    finally
+
+                    while (this.postQueue.Count > 0 || this.splitQueue.Count > 0)
                     {
-                        LocalTransaction.Value = this;
+                        while (this.postQueue.Count > 0)
+                        {
+                            ExecuteInNewTransaction(this.postQueue.Dequeue(), true);
+                        }
+
+                        Dictionary<int, Action<TransactionInternal>> sq = this.splitQueue;
+                        this.splitQueue = new Dictionary<int, Action<TransactionInternal>>();
+                        foreach (int n in sq.Keys.OrderBy(n => n))
+                        {
+                            ExecuteInNewTransaction(sq[n], false);
+                        }
                     }
                 }
-
-                while (this.postQueue.Count > 0 || this.splitQueue.Count > 0)
+            }
+            catch
+            {
+                this.sendQueue.Clear();
+                
+                while (!prioritizedQueue.IsEmpty())
                 {
-                    while (this.postQueue.Count > 0)
-                    {
-                        ExecuteInNewTransaction(this.postQueue.Dequeue(), true);
-                    }
-
-                    Dictionary<int, Action<TransactionInternal>> sq = this.splitQueue;
-                    this.splitQueue = new Dictionary<int, Action<TransactionInternal>>();
-                    foreach (int n in sq.Keys.OrderBy(n => n))
-                    {
-                        ExecuteInNewTransaction(sq[n], false);
-                    }
+                    Entry e = prioritizedQueue.Dequeue();
+                    e.IsRemoved = true;
+                    e.Dispose();
                 }
+                
+                this.sampleQueue = new List<Action>();
+                
+                this.lastQueue.Clear();
+                
+                this.postQueue.Clear();
+                
+                this.splitQueue = new Dictionary<int, Action<TransactionInternal>>();
+                
+                throw;
             }
         }
 
