@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading;
-using Priority_Queue;
 
 namespace Sodium.Frp
 {
@@ -22,7 +21,6 @@ namespace Sodium.Frp
         private bool obtainedLock;
         internal int InCallback;
         private static readonly List<Action> OnStartHooks = new List<Action>();
-        private List<Entry> entries = new List<Entry>();
         private readonly List<Action<TransactionInternal>> sendQueue = new List<Action<TransactionInternal>>();
         private List<Action> sampleQueue = new List<Action>();
         private readonly Queue<Action> lastQueue = new Queue<Action>();
@@ -32,10 +30,9 @@ namespace Sodium.Frp
         internal readonly List<Node.Target> TargetsToActivate;
         internal bool ActivatedTargets;
 
-        private readonly SimplePriorityQueue<Entry, long> prioritizedQueue = new SimplePriorityQueue<Entry, long>();
+        private static readonly EntryPriorityQueue prioritizedQueue = new EntryPriorityQueue();
 
-        // True if we need to re-generate the priority queue.
-        private bool toRegen;
+        public readonly HashSet<Entry> RerankEntriesSet = new HashSet<Entry>();
 
         internal TransactionInternal()
             : this(new Queue<Action<TransactionInternal>>(), new Dictionary<int, Action<TransactionInternal>>(), false)
@@ -56,7 +53,7 @@ namespace Sodium.Frp
         internal static bool IsActiveImpl() => HasCurrentTransaction();
 
         /// <summary>
-        ///     Return whether or not there is a current transaction.
+        ///     Return whether there is a current transaction.
         /// </summary>
         /// <returns><code>true</code> if there is a current transaction, <code>false</code> otherwise.</returns>
         internal static bool HasCurrentTransaction() => LocalTransaction.Value != null;
@@ -67,13 +64,13 @@ namespace Sodium.Frp
         /// <returns>The current transaction or <code>null</code>.</returns>
         internal static TransactionInternal GetCurrentTransaction() => LocalTransaction.Value;
 
-        internal static T RunImpl<T>(Func<T> f) => Apply((_, __) => f(), false);
+        internal static T RunImpl<T>(Func<T> f) => Apply((_, __) => f());
 
-        internal static T Apply<T>(Func<TransactionInternal, bool, T> code, bool ensureElevated)
+        internal static T Apply<T>(Func<TransactionInternal, bool, T> code)
         {
             TransactionInternal transaction = LocalTransaction.Value;
 
-            T returnValue = default(T);
+            T returnValue = default;
             Exception exception = null;
             TransactionInternal newTransaction = transaction;
             try
@@ -86,10 +83,7 @@ namespace Sodium.Frp
                     LocalTransaction.Value = newTransaction;
                 }
 
-                if (ensureElevated)
-                {
-                    EnsureElevated(newTransaction);
-                }
+                EnsureElevated(newTransaction);
 
                 returnValue = code(newTransaction, createdNewTransaction);
             }
@@ -194,10 +188,8 @@ namespace Sodium.Frp
             Entry e = new Entry(node, action);
             lock (Node.NodeRanksLock)
             {
-                this.prioritizedQueue.Enqueue(e, node.Rank);
+                prioritizedQueue.Enqueue(e);
             }
-
-            this.entries.Add(e);
         }
 
         internal void Sample(Action action) => this.sampleQueue.Add(action);
@@ -259,137 +251,164 @@ namespace Sodium.Frp
                     }
 
                     return UnitInternal.Value;
-                },
-                false);
+                });
         }
-
-        internal void SetNeedsRegenerating() => this.toRegen = true;
 
         // If the priority queue has entries in it when we modify any of the nodes'
         // ranks, then we need to re-generate it to make sure it's up-to-date.
         private void CheckRegen()
         {
-            if (this.toRegen)
+            foreach (Entry entry in this.RerankEntriesSet)
             {
-                this.toRegen = false;
-                this.prioritizedQueue.Clear();
-                lock (Node.NodeRanksLock)
-                {
-                    List<Entry> newEntries = new List<Entry>(this.entries.Count);
-                    foreach (Entry e in this.entries)
-                    {
-                        if (!e.IsRemoved)
-                        {
-                            newEntries.Add(e);
-                            this.prioritizedQueue.Enqueue(e, e.Node.Rank);
-                        }
-                    }
-
-                    this.entries = newEntries;
-                }
+                prioritizedQueue.ChangeRank(entry, entry.Node.Rank);
             }
+
+            this.RerankEntriesSet.Clear();
         }
 
         internal void Close()
         {
-            EnsureElevated(this);
-
-            foreach (Node.Target target in this.TargetsToActivate)
+            try
             {
-                target.IsActivated = true;
-            }
+                EnsureElevated(this);
 
-            this.ActivatedTargets = true;
-
-            // ReSharper disable once ForCanBeConvertedToForeach
-            for (int i = 0; i < this.sendQueue.Count; i++)
-            {
-                this.sendQueue[i](this);
-            }
-
-            this.sendQueue.Clear();
-
-            while (this.prioritizedQueue.Count > 0 || this.sampleQueue.Count > 0)
-            {
-                while (this.prioritizedQueue.Count > 0)
+                foreach (Node.Target target in this.TargetsToActivate)
                 {
-                    this.CheckRegen();
-
-                    Entry e = this.prioritizedQueue.Dequeue();
-                    e.IsRemoved = true;
-                    e.Action(this);
+                    target.IsActivated = true;
                 }
 
-                List<Action> sq = this.sampleQueue;
-                this.sampleQueue = new List<Action>();
-                foreach (Action s in sq)
+                this.ActivatedTargets = true;
+
+                // ReSharper disable once ForCanBeConvertedToForeach
+                for (int i = 0; i < this.sendQueue.Count; i++)
                 {
-                    s();
+                    this.sendQueue[i](this);
                 }
-            }
 
-            while (this.lastQueue.Count > 0)
-            {
-                this.lastQueue.Dequeue()();
-            }
+                this.sendQueue.Clear();
 
-            if (!this.hasParentTransaction)
-            {
-                void ExecuteInNewTransaction(Action<TransactionInternal> action, bool runStartHooks)
+                while (!prioritizedQueue.IsEmpty() || this.sampleQueue.Count > 0)
                 {
-                    try
+                    while (!prioritizedQueue.IsEmpty())
                     {
-                        TransactionInternal transaction = new TransactionInternal(this.postQueue, this.splitQueue);
+                        this.CheckRegen();
 
-                        if (!runStartHooks)
-                        {
-                            // this will ensure we don't run start hooks
-                            transaction.isElevated = true;
-                        }
+                        Entry e = prioritizedQueue.Dequeue();
+                        e.IsRemoved = true;
+                        e.Action(this);
+                        e.Dispose();
+                    }
 
-                        LocalTransaction.Value = transaction;
+                    List<Action> sq = this.sampleQueue;
+                    this.sampleQueue = new List<Action>();
+                    foreach (Action s in sq)
+                    {
+                        s();
+                    }
+                }
+
+                while (this.lastQueue.Count > 0)
+                {
+                    this.lastQueue.Dequeue()();
+                }
+
+                if (!this.hasParentTransaction)
+                {
+                    void ExecuteInNewTransaction(Action<TransactionInternal> action, bool runStartHooks)
+                    {
                         try
                         {
-                            action(transaction);
+                            TransactionInternal transaction = new TransactionInternal(this.postQueue, this.splitQueue);
+
+                            if (!runStartHooks)
+                            {
+                                // this will ensure we don't run start hooks
+                                transaction.isElevated = true;
+                            }
+
+                            LocalTransaction.Value = transaction;
+                            try
+                            {
+                                action(transaction);
+                            }
+                            finally
+                            {
+                                transaction.Close();
+                            }
                         }
                         finally
                         {
-                            transaction.Close();
+                            LocalTransaction.Value = this;
                         }
                     }
-                    finally
-                    {
-                        LocalTransaction.Value = this;
-                    }
-                }
 
-                while (this.postQueue.Count > 0 || this.splitQueue.Count > 0)
-                {
-                    while (this.postQueue.Count > 0)
+                    while (this.postQueue.Count > 0 || this.splitQueue.Count > 0)
                     {
-                        ExecuteInNewTransaction(this.postQueue.Dequeue(), true);
-                    }
+                        while (this.postQueue.Count > 0)
+                        {
+                            ExecuteInNewTransaction(this.postQueue.Dequeue(), true);
+                        }
 
-                    Dictionary<int, Action<TransactionInternal>> sq = this.splitQueue;
-                    this.splitQueue = new Dictionary<int, Action<TransactionInternal>>();
-                    foreach (int n in sq.Keys.OrderBy(n => n))
-                    {
-                        ExecuteInNewTransaction(sq[n], false);
+                        Dictionary<int, Action<TransactionInternal>> sq = this.splitQueue;
+                        this.splitQueue = new Dictionary<int, Action<TransactionInternal>>();
+                        foreach (int n in sq.Keys.OrderBy(n => n))
+                        {
+                            ExecuteInNewTransaction(sq[n], false);
+                        }
                     }
                 }
             }
+            catch
+            {
+                this.sendQueue.Clear();
+                
+                while (!prioritizedQueue.IsEmpty())
+                {
+                    Entry e = prioritizedQueue.Dequeue();
+                    e.IsRemoved = true;
+                    e.Dispose();
+                }
+                
+                this.sampleQueue = new List<Action>();
+                
+                this.lastQueue.Clear();
+                
+                this.postQueue.Clear();
+                
+                this.splitQueue = new Dictionary<int, Action<TransactionInternal>>();
+                
+                throw;
+            }
         }
 
-        private class Entry
+        internal class Entry : IDisposable
         {
             public readonly Node Node;
             public readonly Action<TransactionInternal> Action;
+            public bool InPq;
+            public int PqRank;
+            public Entry PqNext;
+            public Entry PqPrev;
             public bool IsRemoved;
 
             public Entry(Node node, Action<TransactionInternal> action)
             {
                 this.Node = node;
                 this.Action = action;
+                this.PqRank = node.Rank;
+                this.Node.Entries.Add(this);
+            }
+
+            public void Dispose()
+            {
+                for (int i = 0; i < this.Node.Entries.Count; ++i)
+                {
+                    if (this.Node.Entries[i] == this)
+                    {
+                        this.Node.Entries.RemoveAt(i);
+                        break;
+                    }
+                }
             }
         }
     }

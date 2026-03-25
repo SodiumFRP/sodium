@@ -1,13 +1,13 @@
-RESTRICTION: >= net46
+RESTRICTION: >= net472
 NUGET
   remote: https://api.nuget.org/v3/index.json
     OptimizedPriorityQueue (4.1.1)
-    Sodium.Functional (5.0)
-    SodiumFRP (5.0)
-      Sodium.Functional (>= 5.0)
-      SodiumFRP.Core (>= 5.0)
+    Sodium.Functional (5.0.11)
+    SodiumFRP (5.0.11)
+      Sodium.Functional (>= 5.0.11)
+      SodiumFRP.Core (>= 5.0.11)
       System.ValueTuple (>= 4.4)
-    SodiumFRP.Core (5.0)
+    SodiumFRP.Core (5.0.11)
       OptimizedPriorityQueue (>= 4.1.1)
       System.ValueTuple (>= 4.4)
     System.ValueTuple (4.5)

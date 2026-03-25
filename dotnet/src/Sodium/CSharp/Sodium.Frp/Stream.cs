@@ -75,8 +75,7 @@ namespace Sodium.Frp
                     (Stream<T> Stream, TCaptures Captures) result = f(loop);
                     loop.Loop(trans, result.Stream);
                     return result;
-                },
-                false);
+                });
 
         /// <summary>
         ///     Loop a stream and return the resulting stream.

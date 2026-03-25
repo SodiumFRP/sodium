@@ -48,6 +48,7 @@ namespace Sodium.Frp.Tests.Internal
         }
 
         [Test]
+        [Ignore("There is no longer a construct phase for transactions.")]
         public async Task PostSeeInside()
         {
             OperationCanceledException actual = null;

@@ -115,8 +115,7 @@ namespace Sodium.Frp
         }
 
         internal IWeakListener Listen(Node target, Action<TransactionInternal, T> action) => TransactionInternal.Apply(
-            (trans1, _) => this.Listen(target, trans1, action, false),
-            false);
+            (trans1, _) => this.Listen(target, trans1, action, false));
 
         internal IWeakListener Listen(
             Node target,
@@ -124,11 +123,7 @@ namespace Sodium.Frp
             Action<TransactionInternal, T> action,
             bool suppressEarlierFirings)
         {
-            (bool changed, Node<T>.Target nodeTarget) = this.Node.Link(trans, action, target);
-            if (changed)
-            {
-                trans.SetNeedsRegenerating();
-            }
+            Node<T>.Target nodeTarget = this.Node.Link(trans, action, target);
 
             // ReSharper disable once LocalVariableHidesMember
             List<T> firings = this.firings.ToList();
@@ -174,7 +169,7 @@ namespace Sodium.Frp
         internal Behavior<T> HoldInternal(T initialValue) => new Behavior<T>(this, initialValue);
 
         internal Cell<T> HoldLazyImpl(Lazy<T> initialValue) =>
-            TransactionInternal.Apply((trans, _) => new Cell<T>(this.HoldLazyInternal(trans, initialValue)), false);
+            TransactionInternal.Apply((trans, _) => new Cell<T>(this.HoldLazyInternal(trans, initialValue)));
 
         internal Behavior<T> HoldLazyInternal(TransactionInternal trans, Lazy<T> initialValue) =>
             new LazyBehavior<T>(trans, this, initialValue);
@@ -263,11 +258,7 @@ namespace Sodium.Frp
             Stream<T> @out = new Stream<T>(this.KeepListenersAlive);
             Node<T> left = new Node<T>();
             Node<T> right = @out.Node;
-            (bool changed, Node<T>.Target nodeTarget) = left.Link(trans, (t, v) => { }, right);
-            if (changed)
-            {
-                trans.SetNeedsRegenerating();
-            }
+            Node<T>.Target nodeTarget = left.Link(trans, (t, v) => { }, right);
 
             Action<TransactionInternal, T> h = @out.Send;
             IListener l1 = this.Listen(left, h);
@@ -277,7 +268,7 @@ namespace Sodium.Frp
                 .UnsafeAttachListener(ListenerInternal.CreateFromNodeAndTarget(left, nodeTarget));
         }
 
-        internal Stream<T> MergeImpl(Stream<T> s, Func<T, T, T> f) => TransactionInternal.Apply((trans, _) => this.Merge(trans, s, f), false);
+        internal Stream<T> MergeImpl(Stream<T> s, Func<T, T, T> f) => TransactionInternal.Apply((trans, _) => this.Merge(trans, s, f));
 
         internal Stream<T> Merge(TransactionInternal trans, Stream<T> s, Func<T, T, T> f) =>
             this.Merge(trans, s).Coalesce(trans, f);
@@ -355,8 +346,7 @@ namespace Sodium.Frp
                     Stream<TState> esOut = ebs.MapImpl(bs => bs.State);
                     es.Loop(trans, esOut);
                     return eb;
-                },
-                false);
+                });
         }
 
         internal Cell<TReturn> AccumImpl<TReturn>(TReturn initialState, Func<T, TReturn, TReturn> f) =>
@@ -372,8 +362,7 @@ namespace Sodium.Frp
                     Stream<TReturn> esOut = this.SnapshotImpl(s, f);
                     es.Loop(trans, esOut);
                     return esOut.HoldLazyImpl(initialState);
-                },
-                false);
+                });
         }
 
         internal Stream<T> OnceImpl()

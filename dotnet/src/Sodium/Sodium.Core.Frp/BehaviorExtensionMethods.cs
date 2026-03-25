@@ -28,8 +28,7 @@ namespace Sodium.Frp
                     return @out.UnsafeAttachListener(l1)
                         .UnsafeAttachListener(currentListener)
                         .HoldLazyInternal(trans1, za);
-                },
-                false);
+                });
         }
 
         internal static Cell<T> SwitchCImpl<T, T2>(this Behavior<T2> bca) where T2 : Cell<T> =>
@@ -66,8 +65,7 @@ namespace Sodium.Frp
                     trans1.Prioritized(new Node<T>(), trans2 => HInitial(trans2, bsa.SampleNoTransaction()));
                     IListener l1 = bsa.Updates().Listen(new Node<T>(), trans1, H, false);
                     return @out.UnsafeAttachListener(l1).UnsafeAttachListener(currentListener);
-                },
-                false);
+                });
         }
 
         internal static Behavior<TResult> LiftBehaviorsImpl<T, T2, TResult>(
@@ -106,8 +104,7 @@ namespace Sodium.Frp
                             })
                         .UnsafeAttachListener(ListenerInternal.CreateCompositeImpl(listeners))
                         .HoldLazyInternal(trans1, initialValue);
-                },
-                false);
+                });
         }
 
         private class FanOutKeepListenersAlive : IKeepListenersAlive

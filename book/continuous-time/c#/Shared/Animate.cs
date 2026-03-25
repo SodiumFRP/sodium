@@ -11,6 +11,11 @@ namespace Shared
         private readonly Task<Renderer> renderer;
         private readonly CellSink<bool> isStarted = Cell.CreateSink(false);
 
+        private int n = 0;
+        private long lastTick = 0L;
+            
+        public event EventHandler<double> FpsChanged; 
+
         public Animate(AnimationDelegate animation, Size size)
         {
             TaskCompletionSource<Renderer> tcs = new TaskCompletionSource<Renderer>();
@@ -34,6 +39,24 @@ namespace Shared
             if (this.renderer.IsCompleted)
             {
                 this.renderer.Result.Render(drawingContext);
+                
+                if (n == 0)
+                {
+                    long currentTick = DateTime.Now.Ticks;
+                    
+                    if (this.FpsChanged != null)
+                    {
+                        this.FpsChanged(this, 100.0 / ((currentTick - lastTick) / 10000000.0));
+                    }
+                    
+                    this.lastTick = currentTick;
+                }
+
+                n++;
+                if (n == 100)
+                {
+                    n = 0;
+                }
             }
         }
 

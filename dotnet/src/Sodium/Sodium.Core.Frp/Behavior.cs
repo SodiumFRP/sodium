@@ -7,7 +7,7 @@ namespace Sodium.Frp
         internal static Behavior<T> ConstantImpl<T>(T value) => new Behavior<T>(value);
 
         internal static Behavior<T> ConstantLazyImpl<T>(Lazy<T> value) =>
-            TransactionInternal.Apply((trans, _) => StreamInternal.NeverImpl<T>().HoldLazyInternal(trans, value), false);
+            TransactionInternal.Apply((trans, _) => StreamInternal.NeverImpl<T>().HoldLazyInternal(trans, value));
 
         internal static BehaviorSink<T> CreateSinkImpl<T>(T initialValue) => new BehaviorSink<T>(initialValue);
 
@@ -61,8 +61,7 @@ namespace Sodium.Frp
 
                             this.valueUpdate = MaybeInternal.Some(a);
                         },
-                        false),
-                false);
+                        false));
         }
 
         internal IKeepListenersAlive KeepListenersAlive => this.stream.KeepListenersAlive;
@@ -84,9 +83,9 @@ namespace Sodium.Frp
 
         protected bool UsingInitialValue { get; private set; }
 
-        internal T SampleImpl() => TransactionInternal.Apply((trans, _) => this.SampleNoTransaction(), true);
+        internal T SampleImpl() => TransactionInternal.Apply((trans, _) => this.SampleNoTransaction());
 
-        internal Lazy<T> SampleLazyImpl() => TransactionInternal.Apply((trans, _) => this.SampleLazy(trans), false);
+        internal Lazy<T> SampleLazyImpl() => TransactionInternal.Apply((trans, _) => this.SampleLazy(trans));
 
         internal Lazy<T> SampleLazy(TransactionInternal trans)
         {
@@ -115,8 +114,7 @@ namespace Sodium.Frp
 
         internal Behavior<TResult> MapImpl<TResult>(Func<T, TResult> f) =>
             TransactionInternal.Apply(
-                (trans, _) => this.Updates().MapImpl(f).HoldLazyInternal(trans, this.SampleLazy(trans).MapImpl(f)),
-                false);
+                (trans, _) => this.Updates().MapImpl(f).HoldLazyInternal(trans, this.SampleLazy(trans).MapImpl(f)));
 
         internal Behavior<TResult> LiftImpl<T2, TResult>(Behavior<T2> b2, Func<T, T2, TResult> f)
         {
@@ -174,11 +172,7 @@ namespace Sodium.Frp
 
                     Node<TResult> outTarget = @out.Node;
                     Node<UnitInternal> inTarget = new Node<UnitInternal>();
-                    (bool changed, Node<UnitInternal>.Target nodeTarget) = inTarget.Link(trans0, (t, v) => { }, outTarget);
-                    if (changed)
-                    {
-                        trans0.SetNeedsRegenerating();
-                    }
+                    Node<UnitInternal>.Target nodeTarget = inTarget.Link(trans0, (t, v) => { }, outTarget);
 
                     Func<T, TResult> f = null;
                     T a = default(T);
@@ -222,8 +216,7 @@ namespace Sodium.Frp
                         .HoldLazyInternal(
                             trans0,
                             new Lazy<TResult>(() => bf.SampleNoTransaction()(this.SampleNoTransaction())));
-                },
-                false);
+                });
         }
 
         private class LazySample

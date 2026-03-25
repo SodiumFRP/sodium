@@ -13,14 +13,11 @@ let constantLazy value = BehaviorInternal.ConstantLazyImpl value
 [<MethodImpl(MethodImplOptions.NoInlining)>]
 let loop f =
     TransactionInternal.Apply
-        (
-            (fun transaction _ ->
-                let l = LoopedBehavior ()
-                let struct (s, r) = f l
-                l.Loop (transaction, s)
-                struct (s, r)),
-            false
-        )
+        (fun transaction _ ->
+            let l = LoopedBehavior ()
+            let struct (s, r) = f l
+            l.Loop (transaction, s)
+            struct (s, r))
 
 let loopWithNoCaptures f =
     let struct (l, _) = loop (fun s -> struct (f s, ()))

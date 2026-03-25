@@ -72,7 +72,6 @@ namespace Sodium.Frp
                     this.Loop(trans, stream);
 
                     return UnitInternal.Value;
-                },
-                false);
+                });
     }
 }

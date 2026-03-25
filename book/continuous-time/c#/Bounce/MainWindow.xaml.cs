@@ -1,4 +1,5 @@
-﻿using System.Windows;
+﻿using System;
+using System.Windows;
 using System.Windows.Media;
 using Shared;
 using Sodium.Frp;
@@ -36,6 +37,7 @@ namespace Bounce
                     sBounceY.Loop(BounceAt(sys, vely, posy, floor));
                     return Shapes.Translate(Shapes.Scale(Shapes.Circle(Colors.Red), Behavior.Constant(ballRadius)), time.Lift(posx.AsBehavior(), posy.AsBehavior(), (t, x, y) => new Point(x.ValueAt(t), y.ValueAt(t))));
                 }, this.Placeholder.RenderSize);
+                animate.FpsChanged += (_, fps) => this.FpsTextBlock.Text = Math.Round(fps, 1) + " FPS";
                 this.Placeholder.Children.Add(animate);
                 animate.Start();
             };

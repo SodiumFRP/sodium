@@ -17,8 +17,7 @@ namespace Sodium.Frp.Tests.Internal
                     a.Link(trans, (t, v) => { }, b);
                     trans.Prioritized(a, t => { });
                     return UnitInternal.Value;
-                },
-                false);
+                });
             Assert.That(a.Rank, Is.LessThan(b.Rank));
         }
 

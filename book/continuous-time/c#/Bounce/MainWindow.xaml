@@ -5,5 +5,12 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="Bounce" Height="350" Width="500" ResizeMode="NoResize">
-    <Grid x:Name="Placeholder" />
+    <Grid>
+        <Grid.RowDefinitions>
+            <RowDefinition Height="*" />
+            <RowDefinition Height="50" />
+        </Grid.RowDefinitions>
+        <Grid x:Name="Placeholder" />
+        <TextBlock x:Name="FpsTextBlock" HorizontalAlignment="Right" Grid.Row="1" />
+    </Grid>
 </Window>

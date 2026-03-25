@@ -228,7 +228,7 @@ namespace Sodium.Frp.Tests.Memory
             dotMemory.Check(memory => afterStreamCount = memory.GetObjects(where => where.Type.Is<Stream<int>>()).ObjectsCount + memory.GetObjects(where => where.Type.Is<Stream<string>>()).ObjectsCount);
             dotMemory.Check(memory => afterListenerCount = memory.GetObjects(where => where.Interface.Is<IListener>()).ObjectsCount);
 
-            // although all listeners and streams have been cleand up, the nodes will not be disconnected until the stream fires next
+            // although all listeners and streams have been cleaned up, the nodes will not be disconnected until the stream fires next
             Assert.AreEqual(1, s.Node.GetListenersCopy().Count);
             s.Send(1);
             Assert.AreEqual(0, s.Node.GetListenersCopy().Count);

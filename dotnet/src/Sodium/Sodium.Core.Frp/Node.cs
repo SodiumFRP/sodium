@@ -6,40 +6,48 @@ namespace Sodium.Frp
 {
     internal abstract class Node
     {
+        public static int NullRank = int.MaxValue;
+
         // Fine-grained lock that protects listeners and nodes.
         protected static readonly object ListenersLock = new object();
 
         internal static readonly object NodeRanksLock = new object();
 
-        internal long Rank;
+        internal int Rank;
+
+        internal List<TransactionInternal.Entry> Entries = new List<TransactionInternal.Entry>();
 
         internal Node()
         {
         }
 
-        protected Node(long rank) => this.Rank = rank;
+        protected Node(int rank) => this.Rank = rank;
 
-        protected static bool EnsureBiggerThan(Node node, long limit)
+        protected static void EnsureBiggerThan(TransactionInternal trans, Node node, int limit)
         {
             if (node.Rank > limit)
             {
-                return false;
+                return;
             }
 
             node.Rank = limit + 1;
+
+            foreach (TransactionInternal.Entry e in node.Entries)
+            {
+                trans.RerankEntriesSet.Add(e);
+            }
+
             lock (ListenersLock)
             {
                 foreach (Node n in node.GetListenerNodesUnsafe())
                 {
-                    EnsureBiggerThanRecursive(node, n, node.Rank);
+                    EnsureBiggerThanRecursive(trans, node, n, node.Rank);
                 }
             }
-
-            return true;
         }
 
         // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
-        private static void EnsureBiggerThanRecursive(Node originalNode, Node node, long limit)
+        private static void EnsureBiggerThanRecursive(TransactionInternal trans, Node originalNode, Node node, int limit)
         {
             if (ReferenceEquals(originalNode, node))
             {
@@ -52,9 +60,15 @@ namespace Sodium.Frp
             }
 
             node.Rank = limit + 1;
+
+            foreach (TransactionInternal.Entry e in node.Entries)
+            {
+                trans.RerankEntriesSet.Add(e);
+            }
+
             foreach (Node n in node.GetListenerNodesUnsafe())
             {
-                EnsureBiggerThanRecursive(originalNode, n, node.Rank);
+                EnsureBiggerThanRecursive(trans, originalNode, n, node.Rank);
             }
         }
 
@@ -75,7 +89,7 @@ namespace Sodium.Frp
 
     internal class Node<T> : Node
     {
-        public static readonly Node<T> Null = new Node<T>(long.MaxValue);
+        public static readonly Node<T> Null = new Node<T>(NullRank);
 
         private HashSet<Target> listeners = new HashSet<Target>();
         private int listenersCapacity;
@@ -84,7 +98,7 @@ namespace Sodium.Frp
         {
         }
 
-        private Node(long rank)
+        private Node(int rank)
             : base(rank)
         {
         }
@@ -96,12 +110,11 @@ namespace Sodium.Frp
         /// <param name="action">The action to link to this node.</param>
         /// <param name="target">The target node to link to this node.</param>
         /// <returns>
-        ///     A tuple containing whether or not changes were made to the node rank
+        ///     A tuple containing whether changes were made to the node rank
         ///     and the <see cref="Target" /> object created for this link.
         /// </returns>
-        internal (bool Changed, Target Target) Link(TransactionInternal trans, Action<TransactionInternal, T> action, Node target)
+        internal Target Link(TransactionInternal trans, Action<TransactionInternal, T> action, Node target)
         {
-            bool changed;
             Target t = new Target(action, target, trans.ActivatedTargets);
             if (!trans.ActivatedTargets)
             {
@@ -114,9 +127,9 @@ namespace Sodium.Frp
             }
             lock (NodeRanksLock)
             {
-                changed = EnsureBiggerThan(target, this.Rank);
+                EnsureBiggerThan(trans, target, this.Rank);
             }
-            return (Changed: changed, Target: t);
+            return t;
         }
 
         internal void Unlink(Target target)

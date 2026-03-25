@@ -26,7 +26,7 @@ namespace Shared
 
         public static CompositionTargetSecondsTimerSystem Create(double startTime, Action<Exception> handleException) => new CompositionTargetSecondsTimerSystem(new Implementation(startTime), handleException);
 
-        private class Implementation : TimerSystemImplementationImplementationBase<double>
+        private class Implementation : TimerSystemImplementationBase<double>
         {
             private double now;
             private readonly object nowLock = new object();

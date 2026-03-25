@@ -115,8 +115,7 @@ namespace Sodium.Frp
                     (Cell<T> Cell, TCaptures Captures) result = f(loop);
                     loop.Loop(trans, result.Cell);
                     return result;
-                },
-                false);
+                });
 
         /// <summary>
         ///     Loop a cell and return the resulting cell.

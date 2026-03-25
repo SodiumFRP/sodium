@@ -105,6 +105,8 @@ namespace Sodium.Frp.Tests
             InvalidOperationException actual = null;
 
             StreamLoop<int> l = null;
+            
+            ManualResetEvent waitHandle = new ManualResetEvent(false);
 
             new Thread(
                 () =>
@@ -112,8 +114,11 @@ namespace Sodium.Frp.Tests
                         () =>
                         {
                             l = new StreamLoop<int>();
+                            waitHandle.Set();
                             Thread.Sleep(500);
                         })).Start();
+
+            waitHandle.WaitOne();
 
             try
             {
@@ -274,6 +279,8 @@ namespace Sodium.Frp.Tests
             InvalidOperationException actual = null;
 
             BehaviorLoop<int> l = null;
+            
+            ManualResetEvent waitHandle = new ManualResetEvent(false);
 
             new Thread(
                 () =>
@@ -281,9 +288,12 @@ namespace Sodium.Frp.Tests
                         () =>
                         {
                             l = new BehaviorLoop<int>();
+                            waitHandle.Set();
                             Thread.Sleep(500);
                         })).Start();
 
+            waitHandle.WaitOne();
+            
             try
             {
                 BehaviorSink<int> s = Behavior.CreateSink(0);
@@ -443,6 +453,8 @@ namespace Sodium.Frp.Tests
             InvalidOperationException actual = null;
 
             CellLoop<int> l = null;
+            
+            ManualResetEvent waitHandle = new ManualResetEvent(false);
 
             new Thread(
                 () =>
@@ -450,9 +462,12 @@ namespace Sodium.Frp.Tests
                         () =>
                         {
                             l = new CellLoop<int>();
+                            waitHandle.Set();
                             Thread.Sleep(500);
                         })).Start();
 
+            waitHandle.WaitOne();
+            
             try
             {
                 CellSink<int> s = Cell.CreateSink(0);
