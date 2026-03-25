@@ -33,8 +33,7 @@ namespace Sodium.Frp
                     trans.Send(t => this.coalescer(t, a));
 
                     return UnitInternal.Value;
-                },
-                true);
+                });
         }
     }
 }

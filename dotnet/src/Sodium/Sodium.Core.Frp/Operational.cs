@@ -5,10 +5,9 @@ namespace Sodium.Frp
     internal static class OperationalInternal
     {
         internal static Stream<T> UpdatesImpl<T>(Behavior<T> b) => TransactionInternal.Apply(
-            (trans, _) => b.Updates().Coalesce(trans, (left, right) => right),
-            false);
+            (trans, _) => b.Updates().Coalesce(trans, (left, right) => right));
 
-        internal static Stream<T> ValueImpl<T>(Behavior<T> b) => TransactionInternal.Apply((trans, _) => b.Value(trans), false);
+        internal static Stream<T> ValueImpl<T>(Behavior<T> b) => TransactionInternal.Apply((trans, _) => b.Value(trans));
 
         internal static Stream<T> DeferImpl<T>(Stream<T> s) => SplitImpl<T, T[]>(s.MapImpl(a => new[] { a }));
 

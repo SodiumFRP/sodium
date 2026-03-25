@@ -64,9 +64,9 @@ namespace Sodium.Frp
         /// <returns>The current transaction or <code>null</code>.</returns>
         internal static TransactionInternal GetCurrentTransaction() => LocalTransaction.Value;
 
-        internal static T RunImpl<T>(Func<T> f) => Apply((_, __) => f(), false);
+        internal static T RunImpl<T>(Func<T> f) => Apply((_, __) => f());
 
-        internal static T Apply<T>(Func<TransactionInternal, bool, T> code, bool ensureElevated)
+        internal static T Apply<T>(Func<TransactionInternal, bool, T> code)
         {
             TransactionInternal transaction = LocalTransaction.Value;
 
@@ -83,10 +83,7 @@ namespace Sodium.Frp
                     LocalTransaction.Value = newTransaction;
                 }
 
-                //if (ensureElevated)
-                //{
                 EnsureElevated(newTransaction);
-                //}
 
                 returnValue = code(newTransaction, createdNewTransaction);
             }
@@ -254,8 +251,7 @@ namespace Sodium.Frp
                     }
 
                     return UnitInternal.Value;
-                },
-                false);
+                });
         }
 
         // If the priority queue has entries in it when we modify any of the nodes'

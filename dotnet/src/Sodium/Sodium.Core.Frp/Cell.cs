@@ -8,7 +8,7 @@ namespace Sodium.Frp
             new Cell<T>(StreamInternal.NeverImpl<T>().HoldInternal(value));
 
         internal static Cell<T> ConstantLazyImpl<T>(Lazy<T> value) =>
-            TransactionInternal.Apply((trans, _) => new Cell<T>(StreamInternal.NeverImpl<T>().HoldLazyInternal(trans, value)), false);
+            TransactionInternal.Apply((trans, _) => new Cell<T>(StreamInternal.NeverImpl<T>().HoldLazyInternal(trans, value)));
 
         internal static CellSink<T> CreateSinkImpl<T>(T initialValue) => new CellSink<T>(initialValue);
 
@@ -33,8 +33,7 @@ namespace Sodium.Frp
             this.BehaviorImpl = behavior;
 
             this.updates = new Lazy<Stream<T>>(() => TransactionInternal.Apply(
-                (trans, _) => this.BehaviorImpl.Updates().Coalesce(trans, (left, right) => right),
-                false));
+                (trans, _) => this.BehaviorImpl.Updates().Coalesce(trans, (left, right) => right)));
         }
 
         internal T SampleImpl() => this.BehaviorImpl.SampleImpl();
@@ -43,17 +42,15 @@ namespace Sodium.Frp
 
         internal Stream<T> UpdatesImpl => this.updates.Value;
 
-        internal Stream<T> ValuesImpl => TransactionInternal.Apply((trans, _) => this.BehaviorImpl.Value(trans), false);
+        internal Stream<T> ValuesImpl => TransactionInternal.Apply((trans, _) => this.BehaviorImpl.Value(trans));
 
         internal Behavior<T> BehaviorImpl { get; }
 
         internal IStrongListener ListenImpl(Action<T> handler) => TransactionInternal.Apply(
-            (trans, _) => this.BehaviorImpl.Value(trans).ListenImpl(handler),
-            false);
+            (trans, _) => this.BehaviorImpl.Value(trans).ListenImpl(handler));
 
         internal IWeakListener ListenWeakImpl(Action<T> handler) => TransactionInternal.Apply(
-            (trans, _) => this.BehaviorImpl.Value(trans).ListenWeakImpl(handler),
-            false);
+            (trans, _) => this.BehaviorImpl.Value(trans).ListenWeakImpl(handler));
 
         internal Cell<TResult> MapImpl<TResult>(Func<T, TResult> f) =>
             new Cell<TResult>(this.BehaviorImpl.MapImpl(f));

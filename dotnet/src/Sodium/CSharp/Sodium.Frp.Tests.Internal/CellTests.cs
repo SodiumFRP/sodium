@@ -17,8 +17,7 @@ namespace Sodium.Frp.Tests.Internal
                 {
                     trans.Prioritized(Node<Unit>.Null, trans2 => calledBack = true);
                     return UnitInternal.Value;
-                },
-                false);
+                });
             Assert.IsTrue(calledBack);
         }
 
@@ -43,11 +42,9 @@ namespace Sodium.Frp.Tests.Internal
 
                     void SetNeedsRegeneratingAndPrioritized(Action action)
                     {
-                        //trans.SetNeedsRegenerating();
                         trans.Prioritized(new Node<Unit>(), __ => action());
                     }
-                },
-                false);
+                });
             CollectionAssert.AreEqual(new[] { 1, 2, 3, 4, 5, 6 }, @out);
         }
     }

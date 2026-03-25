@@ -87,8 +87,7 @@ namespace Sodium.Frp
                     (Behavior<T> Behavior, TCaptures Captures) result = f(loop);
                     loop.Loop(trans, result.Behavior);
                     return result;
-                },
-                false);
+                });
 
         /// <summary>
         ///     Loop a behavior and return the resulting behavior.

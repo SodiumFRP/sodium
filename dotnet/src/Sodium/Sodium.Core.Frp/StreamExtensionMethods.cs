@@ -11,7 +11,7 @@ namespace Sodium.Frp
         internal static Stream<T> MergeImpl<T, T2>(this IEnumerable<T2> s, Func<T, T, T> f) where T2 : Stream<T>
         {
             IReadOnlyList<Stream<T>> v = s.ToArray();
-            return TransactionInternal.Apply((trans, _) => Merge(trans, v, 0, v.Count, f), false);
+            return TransactionInternal.Apply((trans, _) => Merge(trans, v, 0, v.Count, f));
         }
 
         private static Stream<T> Merge<T>(

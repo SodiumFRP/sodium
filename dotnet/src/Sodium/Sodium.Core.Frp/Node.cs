@@ -23,11 +23,11 @@ namespace Sodium.Frp
 
         protected Node(int rank) => this.Rank = rank;
 
-        protected static bool EnsureBiggerThan(TransactionInternal trans, Node node, int limit)
+        protected static void EnsureBiggerThan(TransactionInternal trans, Node node, int limit)
         {
             if (node.Rank > limit)
             {
-                return false;
+                return;
             }
 
             node.Rank = limit + 1;
@@ -44,8 +44,6 @@ namespace Sodium.Frp
                     EnsureBiggerThanRecursive(trans, node, n, node.Rank);
                 }
             }
-
-            return true;
         }
 
         // ReSharper disable once ParameterOnlyUsedForPreconditionCheck.Local
@@ -115,9 +113,8 @@ namespace Sodium.Frp
         ///     A tuple containing whether changes were made to the node rank
         ///     and the <see cref="Target" /> object created for this link.
         /// </returns>
-        internal (bool Changed, Target Target) Link(TransactionInternal trans, Action<TransactionInternal, T> action, Node target)
+        internal Target Link(TransactionInternal trans, Action<TransactionInternal, T> action, Node target)
         {
-            bool changed;
             Target t = new Target(action, target, trans.ActivatedTargets);
             if (!trans.ActivatedTargets)
             {
@@ -130,9 +127,9 @@ namespace Sodium.Frp
             }
             lock (NodeRanksLock)
             {
-                changed = EnsureBiggerThan(trans, target, this.Rank);
+                EnsureBiggerThan(trans, target, this.Rank);
             }
-            return (Changed: changed, Target: t);
+            return t;
         }
 
         internal void Unlink(Target target)
