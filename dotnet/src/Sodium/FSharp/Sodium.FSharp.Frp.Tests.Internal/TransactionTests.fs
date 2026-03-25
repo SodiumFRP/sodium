@@ -34,6 +34,7 @@ type ``Transaction Tests``() =
         } |> Async.StartAsVoidTask
 
     [<Test>]
+    [<Ignore("There is no longer a construct phase for transactions.")>]
     member __.``Post See Inside``() =
         async {
             use re = new AutoResetEvent false
