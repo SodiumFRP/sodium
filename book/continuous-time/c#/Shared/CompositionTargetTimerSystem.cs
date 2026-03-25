@@ -26,7 +26,7 @@ namespace Shared
 
         public static CompositionTargetTimerSystem Create(TimeSpan startTime, Action<Exception> handleException) => new CompositionTargetTimerSystem(new Implementation(startTime), handleException);
 
-        private class Implementation : TimerSystemImplementationImplementationBase<TimeSpan>
+        private class Implementation : TimerSystemImplementationBase<TimeSpan>
         {
             private TimeSpan now;
             private readonly object nowLock = new object();
