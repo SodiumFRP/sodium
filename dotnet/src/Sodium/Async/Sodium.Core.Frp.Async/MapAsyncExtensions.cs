@@ -349,14 +349,14 @@ namespace Sodium.Frp.Async
                 throw new ArgumentNullException(nameof(strategy));
             }
 
-            return new AsyncMapExecutionManager<TInput, TResult, TState>(strategy).Attach(
-                source: source,
+            return new AsyncMapExecutionManager<TInput, TResult, TState>(
+                strategy: strategy,
                 results: results,
                 errors: errors,
                 operation: operation,
                 cancelAll: cancelAll,
                 cancelMatching: cancelMatching,
-                cancelOnDispose: cancelOnDispose);
+                cancelOnDispose: cancelOnDispose).Attach(source);
         }
     }
 
@@ -618,7 +618,7 @@ namespace Sodium.Frp.Async
         // unconditionally in Attach, regardless of whether the caller passed their own cancelAll.
         private readonly StreamSink<Unit> disposeCancelTrigger = StreamInternal.CreateSinkImpl<Unit>();
 
-        private Func<TInput, CancellationToken, Task<TResult>> operation = null!;
+        private readonly Func<TInput, CancellationToken, Task<TResult>> operation;
 
         // Gates new admissions once disposed. Only ever read/written from inside a Sodium
         // transaction (see Attach and Dispose), so it relies on the same "one transaction at a
@@ -642,22 +642,20 @@ namespace Sodium.Frp.Async
 
         private IListener? disposeCancelListener;
 
-        private StreamSink<TResult> results = null!;
+        private readonly StreamSink<TResult> results;
 
-        private StreamSink<Exception> errors = null!;
+        private readonly StreamSink<Exception> errors;
+
+        private readonly Stream<Unit>? cancelAll;
+
+        private readonly Stream<IReadOnlyCollection<TInput>>? cancelMatching;
 
         // Fixed once, at setup, and read only by Dispose — see MapAsync's cancelOnDispose
         // parameter. Not mutated after Attach, so no transaction/Interlocked protection needed.
-        private bool cancelOnDispose;
+        private readonly bool cancelOnDispose;
 
-        internal AsyncMapExecutionManager(AsyncConcurrencyStrategy<TInput, TResult, TState> strategy)
-        {
-            this.strategy = strategy;
-            this.state = strategy.CreateState();
-        }
-
-        internal AsyncMapStatus<TInput> Attach(
-            Stream<TInput> source,
+        internal AsyncMapExecutionManager(
+            AsyncConcurrencyStrategy<TInput, TResult, TState> strategy,
             StreamSink<TResult> results,
             StreamSink<Exception> errors,
             Func<TInput, CancellationToken, Task<TResult>> operation,
@@ -665,11 +663,18 @@ namespace Sodium.Frp.Async
             Stream<IReadOnlyCollection<TInput>>? cancelMatching,
             bool cancelOnDispose)
         {
+            this.strategy = strategy;
+            this.state = strategy.CreateState();
             this.results = results;
             this.errors = errors;
             this.operation = operation;
+            this.cancelAll = cancelAll;
+            this.cancelMatching = cancelMatching;
             this.cancelOnDispose = cancelOnDispose;
+        }
 
+        internal AsyncMapStatus<TInput> Attach(Stream<TInput> source)
+        {
             // Map runs as ordinary transaction-processing code, not a registered Listen()
             // callback, so it isn't subject to Sodium's "no send() inside a callback"
             // restriction — and it fires in the SAME transaction as the source. Every admitted
@@ -733,10 +738,10 @@ namespace Sodium.Frp.Async
             // replacement for calling it: GC timing is non-deterministic, and it does nothing
             // for a Task that's already running — that keeps executing to completion on its own
             // regardless of whether anything is still listening for cancellation.
-            if (cancelAll != null)
+            if (this.cancelAll != null)
             {
                 this.cancelAllListener =
-                    cancelAll
+                    this.cancelAll
                         .SnapshotImpl(c: tracked, f: (_, entries) => entries)
                         .ListenWeakImpl(entries =>
                         {
@@ -747,10 +752,10 @@ namespace Sodium.Frp.Async
                         });
             }
 
-            if (cancelMatching != null)
+            if (this.cancelMatching != null)
             {
                 this.cancelMatchingListener =
-                    cancelMatching
+                    this.cancelMatching
                         .SnapshotImpl(c: tracked, f: (toCancel, entries) => (ToCancel: toCancel, Entries: entries))
                         .ListenWeakImpl(pair =>
                         {
