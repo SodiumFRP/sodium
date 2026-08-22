@@ -239,30 +239,6 @@ namespace Sodium.Frp.Async
     {
         /// <summary>
         ///     Runs <paramref name="operation" /> for each firing of <paramref name="source" />,
-        ///     sending successes to <paramref name="results" /> and failures to <paramref name="errors" />,
-        ///     using <see cref="AsyncConcurrencyStrategy{TInput,TResult}.Queue" /> to decide how
-        ///     overlapping requests are handled. See the overload taking an explicit
-        ///     <paramref name="strategy" /> for the full parameter documentation.
-        /// </summary>
-        public static AsyncMapStatus<TInput> MapAsync<TInput, TResult>(
-            this Stream<TInput> source,
-            StreamSink<TResult> results,
-            StreamSink<Exception> errors,
-            Func<TInput, CancellationToken, Task<TResult>> operation,
-            Stream<Unit>? cancelAll = null,
-            Stream<IReadOnlyCollection<TInput>>? cancelMatching = null,
-            bool cancelOnDispose = true) =>
-            source.MapAsync(
-                results: results,
-                errors: errors,
-                operation: operation,
-                strategy: AsyncConcurrencyStrategy<TInput, TResult>.Queue(),
-                cancelAll: cancelAll,
-                cancelMatching: cancelMatching,
-                cancelOnDispose: cancelOnDispose);
-
-        /// <summary>
-        ///     Runs <paramref name="operation" /> for each firing of <paramref name="source" />,
         ///     sending successes to <paramref name="results" /> and failures to <paramref name="errors" />.
         /// </summary>
         /// <typeparam name="TInput">
