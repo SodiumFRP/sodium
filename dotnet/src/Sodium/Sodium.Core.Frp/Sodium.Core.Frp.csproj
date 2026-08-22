@@ -22,7 +22,7 @@
     <IncludeSymbols>True</IncludeSymbols>
     <AssemblyName>Sodium.Core.Frp</AssemblyName>
     <RootNamespace>Sodium.Frp</RootNamespace>
-</PropertyGroup>
+  </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="System.ValueTuple" Version="4.4.0" />

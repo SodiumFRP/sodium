@@ -1,0 +1,43 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net472;net60;netstandard2.0</TargetFrameworks>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <PackageId>SodiumFRP.Async.Core</PackageId>
+        <Authors>SodiumFRP</Authors>
+        <PackageLicenseUrl>http://opensource.org/licenses/MIT</PackageLicenseUrl>
+        <PackageProjectUrl>https://github.com/SodiumFRP/sodium</PackageProjectUrl>
+        <Version>1.0.0</Version>
+        <PackageVersion>1.0.0</PackageVersion>
+        <AssemblyVersion>1.0.0.0</AssemblyVersion>
+        <FileVersion>1.0.0.0</FileVersion>
+        <InformationalVersion>1.0.0.0</InformationalVersion>
+        <Company>SodiumFRP</Company>
+        <Product>Sodium FRP Async Core for .NET</Product>
+        <Title>Sodium FRP Async Core for .NET</Title>
+        <Description>Sodium FRP Async Extensions library for .NET core library.</Description>
+        <IncludeSource>True</IncludeSource>
+        <IncludeSymbols>True</IncludeSymbols>
+        <AssemblyName>Sodium.Core.Frp.Async</AssemblyName>
+        <RootNamespace>Sodium.Frp.Async</RootNamespace>
+        <EnableDefaultItems>false</EnableDefaultItems>
+        <Nullable>enable</Nullable>
+        <LangVersion>9</LangVersion>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="System.ValueTuple" Version="4.4.0"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Include="MapAsyncExtensions.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\CSharp\Sodium.Functional\Sodium.Functional.csproj" />
+      <ProjectReference Include="..\..\Sodium.Core.Frp\Sodium.Core.Frp.csproj" />
+    </ItemGroup>
+
+</Project>

@@ -5,3 +5,4 @@
 [assembly: InternalsVisibleTo("Sodium.Frp.Tests.Memory")]
 [assembly: InternalsVisibleTo("Sodium.FSharp.Frp")]
 [assembly: InternalsVisibleTo("Sodium.FSharp.Frp.Tests.Internal")]
+[assembly: InternalsVisibleTo("Sodium.Core.Frp.Async")]
