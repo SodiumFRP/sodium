@@ -1,8 +1,8 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <PropertyGroup>
-    <AssemblyName>Sodium.FSharp.Frp</AssemblyName>
-    <RootNamespace>Sodium.Frp</RootNamespace>
+    <AssemblyName>Sodium.FSharp.Frp.Async</AssemblyName>
+    <RootNamespace>Sodium.Frp.Async</RootNamespace>
     <TargetFrameworks>net472;net60;netstandard2.0</TargetFrameworks>
   </PropertyGroup>
 
@@ -38,6 +38,10 @@
 
   <ItemGroup>
     <Compile Include="MapAsync.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Sodium.Core.Frp.Async\Sodium.Core.Frp.Async.csproj" />
   </ItemGroup>
 
 </Project>
