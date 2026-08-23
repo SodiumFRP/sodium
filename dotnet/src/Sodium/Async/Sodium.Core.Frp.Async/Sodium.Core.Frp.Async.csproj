@@ -28,6 +28,7 @@
     </PropertyGroup>
 
     <ItemGroup>
+        <PackageReference Include="JetBrains.Annotations" Version="2026.2.0" />
         <PackageReference Include="System.ValueTuple" Version="4.4.0"/>
     </ItemGroup>
 
