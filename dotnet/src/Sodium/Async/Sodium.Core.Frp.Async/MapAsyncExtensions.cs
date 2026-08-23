@@ -1219,12 +1219,10 @@ namespace Sodium.Frp.Async
                     Array.Exists(array: entries, match: e => e.Status == AsyncItemStatus.Running));
 
             Cell<IReadOnlyList<AsyncItem<TInput>>> items =
-                trackedCell.MapImpl(entries =>
-                    (IReadOnlyList<AsyncItem<TInput>>)Array.ConvertAll(
+                trackedCell.MapImpl<IReadOnlyList<AsyncItem<TInput>>>(entries =>
+                    Array.ConvertAll(
                         array: entries,
-                        // Downcast back to TInput — safe because every tracked item's Value was
-                        // originally a TInput passed in through source (see the class remarks).
-                        converter: e => new AsyncItem<TInput>(value: (TInput)e.Item.Value!, status: e.Status)));
+                        converter: e => new AsyncItem<TInput>(value: e.Item.Value, status: e.Status)));
 
             return new AsyncMapStatus<TInput>(isRunning: isRunning, items: items, dispose: this.Dispose);
         }
