@@ -11,7 +11,10 @@ namespace Sodium.Frp.Async
     /// <summary>Whether a tracked item is waiting for a slot or actually executing.</summary>
     public enum AsyncItemStatus
     {
+        /// <summary>Admitted and tracked, but not yet promoted to Running by a strategy.</summary>
         Queued,
+
+        /// <summary>Promoted by a strategy; its operation has been (or is about to be) invoked.</summary>
         Running
     }
 
@@ -24,8 +27,10 @@ namespace Sodium.Frp.Async
             this.Status = status;
         }
 
+        /// <summary>The original input value from the source stream.</summary>
         public TInput Value { get; }
 
+        /// <summary>Whether this value is still waiting for a strategy to promote it, or already running.</summary>
         public AsyncItemStatus Status { get; }
     }
 
@@ -120,10 +125,22 @@ namespace Sodium.Frp.Async
                 this.Cancellation = cancellation;
             }
 
+            /// <summary>
+            ///     This item's identity, assigned once at admission — including across the separate
+            ///     <see cref="AsyncQueuedItem{TInput}" /> instances (one typed for the strategy, one for
+            ///     the public <see cref="AsyncItem{TInput}" /> view) the execution engine keeps for a
+            ///     single admitted value. Equal Id means the same tracked value.
+            /// </summary>
             public Guid Id { get; }
 
+            /// <summary>The value this item was admitted with.</summary>
             public TInput Value { get; }
 
+            /// <summary>
+            ///     The source of this item's own cancellation — what <see cref="Cancel" /> cancels, and
+            ///     what the execution engine links into the operation's token. Internal: a strategy
+            ///     cancels through <see cref="Cancel" /> rather than touching this directly.
+            /// </summary>
             internal CancellationTokenSource Cancellation { get; }
 
             /// <summary>
@@ -158,12 +175,14 @@ namespace Sodium.Frp.Async
         /// <summary>A previously-tracked item to start (or promote from Queued to Running) right now.</summary>
         protected internal readonly struct AsyncToStart<TInput>
         {
+            /// <exception cref="ArgumentNullException"><paramref name="item" /> is null.</exception>
             public AsyncToStart(AsyncQueuedItem<TInput> item, CancellationToken strategyToken = default)
             {
                 this.Item = item ?? throw new ArgumentNullException(nameof(item));
                 this.StrategyToken = strategyToken;
             }
 
+            /// <summary>The previously-admitted item to start or promote — from an earlier Admit call.</summary>
             public AsyncQueuedItem<TInput> Item { get; }
 
             /// <summary>
@@ -179,8 +198,17 @@ namespace Sodium.Frp.Async
         /// <summary>The three ways an item can finish.</summary>
         protected internal enum AsyncOutcomeKind
         {
+            /// <summary>The operation returned a value — see <see cref="AsyncOutcome{TResult}.Value" />.</summary>
             Succeeded,
+
+            /// <summary>The operation threw — see <see cref="AsyncOutcome{TResult}.Error" />.</summary>
             Failed,
+
+            /// <summary>
+            ///     The operation was canceled (or never started because it was canceled while still
+            ///     Queued). Never published regardless of what OnCompleted returns — see
+            ///     <see cref="AsyncConcurrencyStrategy{TInput,TResult,TState}.OnCompleted" />.
+            /// </summary>
             Cancelled
         }
 
@@ -194,18 +222,24 @@ namespace Sodium.Frp.Async
                 this.Error = error;
             }
 
+            /// <summary>Which of the three ways this item finished.</summary>
             public AsyncOutcomeKind Kind { get; }
 
+            /// <summary>The operation's return value, if <see cref="Kind" /> is Succeeded; default otherwise.</summary>
             public TResult? Value { get; }
 
+            /// <summary>The exception the operation threw, if <see cref="Kind" /> is Failed; null otherwise.</summary>
             public Exception? Error { get; }
 
+            /// <summary>Builds a Succeeded outcome carrying the operation's return value.</summary>
             public static AsyncOutcome<TResult> Succeeded(TResult value) =>
                 new(kind: AsyncOutcomeKind.Succeeded, value: value, error: null);
 
+            /// <summary>Builds a Failed outcome carrying the exception the operation threw.</summary>
             public static AsyncOutcome<TResult> Failed(Exception error) =>
                 new(kind: AsyncOutcomeKind.Failed, value: default, error: error);
 
+            /// <summary>Builds a Cancelled outcome.</summary>
             public static AsyncOutcome<TResult> Cancelled() =>
                 new(kind: AsyncOutcomeKind.Cancelled, value: default, error: null);
         }
@@ -215,6 +249,7 @@ namespace Sodium.Frp.Async
         /// </summary>
         protected internal readonly struct AsyncStrategyResult<TInput>
         {
+            /// <summary>An empty Next list — nothing more to start as a result of this decision.</summary>
             public static readonly IReadOnlyList<AsyncToStart<TInput>> None = Array.Empty<AsyncToStart<TInput>>();
 
             public AsyncStrategyResult(bool publish, IReadOnlyList<AsyncToStart<TInput>> next)
@@ -223,17 +258,36 @@ namespace Sodium.Frp.Async
                 this.Next = next;
             }
 
+            /// <summary>Whether the just-finished outcome should be sent to results/errors.</summary>
             public bool Publish { get; }
 
+            /// <summary>Previously-tracked items to start (or promote) right now, as a consequence.</summary>
             public IReadOnlyList<AsyncToStart<TInput>> Next { get; }
         }
 
+        /// <summary>
+        ///     Type-erases a strategy's <typeparamref name="TState" /> so
+        ///     <see cref="AsyncMapExecutionManager{TInput,TResult,TStrategyInput,TStrategyResult}" /> can
+        ///     hold "a strategy plus its state" without itself being generic over
+        ///     <typeparamref name="TState" /> — which is exactly what keeps TState from ever appearing
+        ///     in a MapAsync signature. See <see cref="StateManager{TInput,TResult,TState}" /> for the
+        ///     sole implementation.
+        /// </summary>
         internal interface IStateManager<TInput, TResult>
         {
+            /// <summary>Forwards to <see cref="AsyncConcurrencyStrategy{TInput,TResult,TState}.Admit" /> with the closed-over state.</summary>
             IReadOnlyList<AsyncToStart<TInput>> Admit(AsyncQueuedItem<TInput> incoming);
+
+            /// <summary>Forwards to <see cref="AsyncConcurrencyStrategy{TInput,TResult,TState}.OnCompleted" /> with the closed-over state.</summary>
             AsyncStrategyResult<TInput> OnCompleted(AsyncQueuedItem<TInput> item, AsyncOutcome<TResult> outcome);
         }
 
+        /// <summary>
+        ///     Pairs a strategy instance with the one <typeparamref name="TState" /> created for a
+        ///     single MapAsync call (see <see cref="AsyncConcurrencyStrategy{TInput,TResult,TState}.CreateStateManager" />),
+        ///     so the execution engine can call Admit/OnCompleted without knowing
+        ///     <typeparamref name="TState" /> itself.
+        /// </summary>
         internal class StateManager<TInput, TResult, TState>
             : IStateManager<TInput, TResult>
         {
@@ -266,6 +320,13 @@ namespace Sodium.Frp.Async
     /// </summary>
     public static class AsyncStreamExtensions
     {
+        /// <summary>
+        ///     Convenience overload for a strategy that only cares about scheduling, not about
+        ///     <typeparamref name="TInput" />/<typeparamref name="TResult" /> themselves (e.g. Parallel,
+        ///     Queue, SwitchLatest) — both are erased to <see cref="Unit" /> before reaching it. See the
+        ///     canonical <see cref="MapAsync{TInput,TResult,TStrategyInput,TStrategyResult}" /> overload
+        ///     for the full parameter contract.
+        /// </summary>
         public static AsyncMapStatus<TInput> MapAsync<TInput, TResult>(
             this Stream<TInput> source,
             StreamSink<TResult> results,
@@ -286,6 +347,14 @@ namespace Sodium.Frp.Async
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
+        /// <summary>
+        ///     Convenience overload for a strategy that cares about <typeparamref name="TStrategyInput" />
+        ///     but not about the result (<see cref="Unit" />), where <typeparamref name="TInput" /> is
+        ///     already a <typeparamref name="TStrategyInput" /> (e.g. QueuePerGroup on the call's own
+        ///     input type). See the canonical
+        ///     <see cref="MapAsync{TInput,TResult,TStrategyInput,TStrategyResult}" /> overload for the
+        ///     full parameter contract.
+        /// </summary>
         public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyInput>(
             this Stream<TInput> source,
             StreamSink<TResult> results,
@@ -307,6 +376,14 @@ namespace Sodium.Frp.Async
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
+        /// <summary>
+        ///     Convenience overload for a strategy that cares about <typeparamref name="TStrategyInput" />
+        ///     but not about the result (<see cref="Unit" />), where <paramref name="inputConverter" />
+        ///     derives it from <typeparamref name="TInput" /> (e.g. QueuePerGroup, deriving the group
+        ///     key). See the canonical
+        ///     <see cref="MapAsync{TInput,TResult,TStrategyInput,TStrategyResult}" /> overload for the
+        ///     full parameter contract.
+        /// </summary>
         public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyInput>(
             this Stream<TInput> source,
             StreamSink<TResult> results,
@@ -328,6 +405,13 @@ namespace Sodium.Frp.Async
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
+        /// <summary>
+        ///     Convenience overload for a strategy that doesn't care about the input (<see cref="Unit" />)
+        ///     but does care about <typeparamref name="TStrategyResult" />, where
+        ///     <typeparamref name="TResult" /> is already a <typeparamref name="TStrategyResult" />. See
+        ///     the canonical <see cref="MapAsync{TInput,TResult,TStrategyInput,TStrategyResult}" />
+        ///     overload for the full parameter contract.
+        /// </summary>
         public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyResult>(
             this Stream<TInput> source,
             StreamSink<TResult> results,
@@ -349,6 +433,13 @@ namespace Sodium.Frp.Async
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
+        /// <summary>
+        ///     Convenience overload for a strategy that doesn't care about the input (<see cref="Unit" />)
+        ///     but does care about <typeparamref name="TStrategyResult" />, where
+        ///     <paramref name="resultConverter" /> derives it from <typeparamref name="TResult" />. See
+        ///     the canonical <see cref="MapAsync{TInput,TResult,TStrategyInput,TStrategyResult}" />
+        ///     overload for the full parameter contract.
+        /// </summary>
         public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyResult>(
             this Stream<TInput> source,
             StreamSink<TResult> results,
@@ -477,6 +568,13 @@ namespace Sodium.Frp.Async
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
+        /// <summary>
+        ///     Convenience overload where <paramref name="inputConverter" /> derives
+        ///     <typeparamref name="TStrategyInput" /> from <typeparamref name="TInput" />, but
+        ///     <typeparamref name="TResult" /> is already a <typeparamref name="TStrategyResult" />. See
+        ///     the canonical <see cref="MapAsync{TInput,TResult,TStrategyInput,TStrategyResult}" />
+        ///     overload for the full parameter contract.
+        /// </summary>
         public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyInput, TStrategyResult>(
             this Stream<TInput> source,
             StreamSink<TResult> results,
@@ -499,6 +597,13 @@ namespace Sodium.Frp.Async
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
+        /// <summary>
+        ///     Convenience overload where <typeparamref name="TInput" /> is already a
+        ///     <typeparamref name="TStrategyInput" />, but <paramref name="resultConverter" /> derives
+        ///     <typeparamref name="TStrategyResult" /> from <typeparamref name="TResult" />. See the
+        ///     canonical <see cref="MapAsync{TInput,TResult,TStrategyInput,TStrategyResult}" /> overload
+        ///     for the full parameter contract.
+        /// </summary>
         public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyInput, TStrategyResult>(
             this Stream<TInput> source,
             StreamSink<TResult> results,
@@ -571,6 +676,16 @@ namespace Sodium.Frp.Async
         }
     }
 
+    /// <summary>
+    ///     The non-generic-over-<c>TState</c> face of a strategy — what
+    ///     <see cref="AsyncStreamExtensions.MapAsync{TInput,TResult,TStrategyInput,TStrategyResult}" />
+    ///     and its overloads actually accept. This is what keeps a strategy's <c>TState</c> out of every
+    ///     MapAsync signature: callers and the execution engine only ever see
+    ///     <see cref="AsyncConcurrencyStrategyBase{TInput,TResult}" />, never
+    ///     <see cref="AsyncConcurrencyStrategy{TInput,TResult,TState}" /> itself. Sealed off from direct
+    ///     external subclassing (internal constructor) — write a custom strategy by subclassing
+    ///     <see cref="AsyncConcurrencyStrategy{TInput,TResult,TState}" /> instead.
+    /// </summary>
     public abstract class AsyncConcurrencyStrategyBase<TInput, TResult>
         : AsyncMapBase
     {
@@ -578,6 +693,7 @@ namespace Sodium.Frp.Async
         {
         }
 
+        /// <summary>Creates the <see cref="IStateManager{TInput,TResult}" /> for one MapAsync call — see <see cref="AsyncConcurrencyStrategy{TInput,TResult,TState}.CreateState" />.</summary>
         internal abstract IStateManager<TInput, TResult> CreateStateManager();
     }
 
@@ -657,16 +773,24 @@ namespace Sodium.Frp.Async
             AsyncOutcome<TResult> outcome);
     }
 
+    /// <summary>Shorthand for a strategy that doesn't publish a meaningful result — <typeparamref name="TResult" /> is fixed to <see cref="Unit" />.</summary>
     public abstract class AsyncConcurrencyStrategy<TInput, TState>
         : AsyncConcurrencyStrategy<TInput, Unit, TState>
     {
     }
 
+    /// <summary>Shorthand for a strategy that cares about neither the input nor the result — both are fixed to <see cref="Unit" />.</summary>
     public abstract class AsyncConcurrencyStrategy<TState>
         : AsyncConcurrencyStrategy<Unit, Unit, TState>
     {
     }
 
+    /// <summary>
+    ///     Non-generic entry point for the built-in strategies (Parallel, Queue, QueuePerGroup,
+    ///     SwitchLatest) — each cares only about scheduling, not about the call's
+    ///     <c>TInput</c>/<c>TResult</c>, so both are fixed to <see cref="Unit" /> (or, for
+    ///     QueuePerGroup, just the input type needed to compute a group key).
+    /// </summary>
     public abstract class AsyncConcurrencyStrategy
         : AsyncConcurrencyStrategy<Unit>
     {
@@ -676,8 +800,22 @@ namespace Sodium.Frp.Async
         /// <summary>At most one operation runs at a time; later firings queue and run in order.</summary>
         public static AsyncConcurrencyStrategy<QueueStrategy.State> Queue() => QueueStrategy.Instance;
 
+        /// <summary>
+        ///     Entry point for a per-group queue: at most one operation runs at a time within a
+        ///     group, but different groups run concurrently. Call
+        ///     <see cref="QueuePerGroupHelper{TInput}.Create{TGroup}" /> on the result to supply the
+        ///     grouping function — <typeparamref name="TInput" /> here is only what's needed to infer
+        ///     that call's input type; the actual strategy is created by
+        ///     <see cref="QueuePerGroupHelper{TInput}.Create{TGroup}" />.
+        /// </summary>
         public static QueuePerGroupHelper<TInput> QueuePerGroup<TInput>() => QueuePerGroupHelper<TInput>.Instance;
 
+        /// <summary>
+        ///     Exists solely so <see cref="QueuePerGroup{TInput}" /> can infer
+        ///     <typeparamref name="TInput" /> while leaving <c>TGroup</c> to be inferred separately, by
+        ///     <see cref="Create{TGroup}" /> — C# can't infer two type parameters from two different
+        ///     calls otherwise.
+        /// </summary>
         public class QueuePerGroupHelper<TInput>
         {
             internal static readonly QueuePerGroupHelper<TInput> Instance = new();
@@ -686,6 +824,13 @@ namespace Sodium.Frp.Async
             {
             }
 
+            /// <summary>
+            ///     Builds a queue-per-group strategy: <paramref name="getGroup" /> assigns each input to a
+            ///     group, and within a group, later firings queue behind earlier ones exactly like
+            ///     <see cref="Queue" /> — but different groups don't wait on each other.
+            /// </summary>
+            /// <param name="getGroup">Computes the group key for an input value.</param>
+            /// <param name="groupComparer">Optional equality comparer for group keys; defaults to <see cref="EqualityComparer{TGroup}.Default" />.</param>
             public AsyncConcurrencyStrategy<TInput, QueuePerGroupStrategy<TInput, TGroup>.State> Create<TGroup>(
                 Func<TInput, TGroup> getGroup,
                 IEqualityComparer<TGroup>? groupComparer = null)
@@ -725,6 +870,7 @@ namespace Sodium.Frp.Async
             {
             }
 
+            /// <summary>Which item (if any) is currently running, and the backlog waiting behind it.</summary>
             public sealed class State
             {
                 internal readonly Queue<AsyncQueuedItem<Unit>> Pending = new();
@@ -774,6 +920,12 @@ namespace Sodium.Frp.Async
             }
         }
 
+        /// <summary>
+        ///     One independent <see cref="QueueStrategy" />-style queue per group, where
+        ///     <paramref name="getGroup" /> assigns each input to its group. Normally created via
+        ///     <see cref="QueuePerGroup{TInput}" />/<see cref="QueuePerGroupHelper{TInput}.Create{TGroup}" />
+        ///     rather than directly.
+        /// </summary>
         public sealed class QueuePerGroupStrategy<TInput, TGroup>
             : AsyncConcurrencyStrategy<TInput, QueuePerGroupStrategy<TInput, TGroup>.State>
             where TGroup : notnull
@@ -787,6 +939,7 @@ namespace Sodium.Frp.Async
                 this.groupComparer = groupComparer;
             }
 
+            /// <summary>Per-group queue state, keyed by group — groups are added on first use and removed once idle.</summary>
             public sealed class State
             {
                 public State(IEqualityComparer<TGroup>? groupComparer) =>
@@ -877,6 +1030,7 @@ namespace Sodium.Frp.Async
         {
             internal static readonly SwitchLatestStrategy Instance = new();
 
+            /// <summary>The currently in-flight item, if any — superseded and replaced by each new firing.</summary>
             public sealed class State
             {
                 internal AsyncQueuedItem<Unit>? Active;
@@ -936,10 +1090,14 @@ namespace Sodium.Frp.Async
     ///     <typeparamref name="TInput" />/<typeparamref name="TResult" />, since that's what the
     ///     strategy is written against; only <typeparamref name="TInput" /> values ever actually flow
     ///     in (from <c>source</c>) and only <typeparamref name="TResult" /> values ever actually flow
-    ///     out (to <c>results</c>), so converting between them at those two edges — an implicit
-    ///     upcast on the way in, an explicit (but always-safe, since every value handed to the
-    ///     strategy genuinely originated as a <typeparamref name="TInput" />/<typeparamref name="TResult" />
-    ///     here) downcast on the way out — is this class's job, not the strategy's.
+    ///     out (to <c>results</c>), so converting between them at those two edges —
+    ///     <see cref="inputConverter" /> on the way in, <see cref="resultConverter" /> on the way out —
+    ///     is this class's job, not the strategy's. Since an arbitrary
+    ///     <see cref="inputConverter" /> generally can't be converted back, the original
+    ///     <typeparamref name="TInput" />/<typeparamref name="TResult" /> values are never recovered
+    ///     from their converted counterparts — they're carried alongside them instead (see
+    ///     <see cref="Entry" /> and the <c>value</c>/<c>result</c> parameters threaded through
+    ///     <see cref="PromoteAndLaunch" />/<see cref="StartOperation" />/<see cref="Complete" />).
     /// </summary>
     internal sealed class AsyncMapExecutionManager<TInput, TResult, TStrategyInput, TStrategyResult>
         : AsyncMapBase
@@ -1062,8 +1220,10 @@ namespace Sodium.Frp.Async
 
                                 Guid newEntryId = Guid.NewGuid();
 
-                                // TInput implicitly converts to TStrategyInput here — that's the "in" edge;
-                                // see the class remarks.
+                                // TInput becomes TStrategyInput here via inputConverter — the "in" edge;
+                                // see the class remarks. The original TInput is preserved separately, in
+                                // newEntry below, since inputConverter's result generally can't be
+                                // converted back.
                                 AsyncQueuedItem<TStrategyInput> incoming =
                                     new(
                                         value: this.inputConverter(o.Value),
@@ -1181,10 +1341,10 @@ namespace Sodium.Frp.Async
                                 return;
                             }
 
-                            // Upcast each TInput into TStrategyInput to compare against tracked
-                            // entries, which are all stored as TStrategyInput — see the class
-                            // remarks. This direction is always implicit/safe, unlike the
-                            // downcast below in the `items` cell.
+                            // Compared directly against each tracked Entry's original TInput value
+                            // (Entry.Value) using the default equality comparer for TInput —
+                            // cancelMatching is expressed in terms of TInput, not TStrategyInput, so no
+                            // conversion is needed here.
                             HashSet<TInput> targets = new(pair.ToCancel);
 
                             foreach (Entry e in pair.Entries)
@@ -1417,8 +1577,9 @@ namespace Sodium.Frp.Async
                 // ever moves to another thread if and when it needs to (e.g. at its own first
                 // await) — we never force a thread-pool hop just to get it started. If it's
                 // already finished by the time we reach the await, await resumes synchronously
-                // too, so there's no continuation hop on that path either. The downcast back to
-                // TInput is safe — see the class remarks.
+                // too, so there's no continuation hop on that path either. `value` is the original
+                // TInput this item was admitted with, threaded through from PromoteAndLaunch — see
+                // the class remarks — not anything recovered from TStrategyInput.
                 TResult result =
                     await this.operation(arg1: value, arg2: linked.Token)
                         .ConfigureAwait(false);
@@ -1480,8 +1641,9 @@ namespace Sodium.Frp.Async
                 {
                     if (outcome.Kind == AsyncOutcomeKind.Succeeded)
                     {
-                        // Downcast back to TResult — safe, since this outcome was always built
-                        // from an actual TResult in StartOperation. See the class remarks.
+                        // `result` is the actual TResult StartOperation produced, threaded through as
+                        // its own parameter — not recovered from outcome.Value, which holds the
+                        // converted TStrategyResult instead. See the class remarks.
                         this.results.SendImpl(result!);
                     }
                     else
