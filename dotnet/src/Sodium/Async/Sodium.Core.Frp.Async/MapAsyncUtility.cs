@@ -202,43 +202,103 @@ namespace Sodium.Frp.Async
             public CancellationToken StrategyToken { get; }
         }
 
-        /// <summary>The three ways an item can finish.</summary>
-        [PublicAPI]
-        protected internal enum AsyncOutcomeKind
-        {
-            /// <summary>The operation returned a value — see <see cref="AsyncOutcome{TResult}.Value" />.</summary>
-            Succeeded,
-
-            /// <summary>The operation threw — see <see cref="AsyncOutcome{TResult}.Error" />.</summary>
-            Failed,
-
-            /// <summary>
-            ///     The operation was canceled (or never started because it was canceled while still
-            ///     Queued). Never published regardless of what OnCompleted returns — see
-            ///     <see cref="AsyncConcurrencyStrategy{TInput,TResult,TState}.OnCompleted" />.
-            /// </summary>
-            Canceled
-        }
-
         /// <summary>How an item finished.</summary>
         [PublicAPI]
         protected internal readonly struct AsyncOutcome<TResult>
         {
+            /// <summary>Which of the three ways this item finished.</summary>
+            private readonly AsyncOutcomeKind kind;
+            
+            /// <summary>The operation's return value, if <see cref="kind" /> is Succeeded; default otherwise.</summary>
+            private readonly TResult? value;
+
+            /// <summary>The exception the operation threw, if <see cref="kind" /> is Failed; null otherwise.</summary>
+            private readonly Exception? error;
+            
             private AsyncOutcome(AsyncOutcomeKind kind, TResult? value, Exception? error)
             {
-                this.Kind = kind;
-                this.Value = value;
-                this.Error = error;
+                this.kind = kind;
+                this.value = value;
+                this.error = error;
             }
 
-            /// <summary>Which of the three ways this item finished.</summary>
-            public AsyncOutcomeKind Kind { get; }
+            public T Match<T>(
+                Func<TResult, T> onSucceeded,
+                Func<Exception, T> onFailed,
+                Func<T> onCanceled) =>
+                this.kind switch
+                {
+                    AsyncOutcomeKind.Succeeded => onSucceeded(this.value!),
+                    AsyncOutcomeKind.Failed => onFailed(this.error!),
+                    AsyncOutcomeKind.Canceled => onCanceled(),
+                    _ => throw new InvalidOperationException("Unknown value for kind.")
+                };
 
-            /// <summary>The operation's return value, if <see cref="Kind" /> is Succeeded; default otherwise.</summary>
-            public TResult? Value { get; }
+            public void MatchVoid(
+                Action<TResult>? onSucceeded,
+                Action<Exception>? onFailed,
+                Action? onCanceled)
+            {
+                switch (this.kind)
+                {
+                    case AsyncOutcomeKind.Succeeded:
+                        onSucceeded?.Invoke(this.value!);
+                        break;
+                    case AsyncOutcomeKind.Failed:
+                        onFailed?.Invoke(this.error!);
+                        break;
+                    case AsyncOutcomeKind.Canceled:
+                        onCanceled?.Invoke();
+                        break;
+                    default:
+                        throw new InvalidOperationException("Unknown value for kind.");
+                }
+            }
 
-            /// <summary>The exception the operation threw, if <see cref="Kind" /> is Failed; null otherwise.</summary>
-            public Exception? Error { get; }
+            public async Task<T> MatchAsync<T>(
+                Func<TResult, Task<T>> onSucceeded,
+                Func<Exception, Task<T>> onFailed,
+                Func<Task<T>> onCanceled) =>
+                this.kind switch
+                {
+                    AsyncOutcomeKind.Succeeded => await onSucceeded(this.value!),
+                    AsyncOutcomeKind.Failed => await onFailed(this.error!),
+                    AsyncOutcomeKind.Canceled => await onCanceled(),
+                    _ => throw new InvalidOperationException("Unknown value for kind.")
+                };
+
+            public async Task MatchAsyncVoid(
+                Func<TResult, Task>? onSucceeded,
+                Func<Exception, Task>? onFailed,
+                Func<Task>? onCanceled)
+            {
+                switch (this.kind)
+                {
+                    case AsyncOutcomeKind.Succeeded:
+                        if (onSucceeded != null)
+                        {
+                            await onSucceeded(this.value!);
+                        }
+
+                        break;
+                    case AsyncOutcomeKind.Failed:
+                        if (onFailed != null)
+                        {
+                            await onFailed(this.error!);
+                        }
+
+                        break;
+                    case AsyncOutcomeKind.Canceled:
+                        if (onCanceled != null)
+                        {
+                            await onCanceled();
+                        }
+
+                        break;
+                    default:
+                        throw new InvalidOperationException("Unknown value for kind.");
+                }
+            }
 
             /// <summary>Builds a Succeeded outcome carrying the operation's return value.</summary>
             public static AsyncOutcome<TResult> Succeeded(TResult value) =>
@@ -249,8 +309,25 @@ namespace Sodium.Frp.Async
                 new(kind: AsyncOutcomeKind.Failed, value: default, error: error);
 
             /// <summary>Builds a Canceled outcome.</summary>
-            public static AsyncOutcome<TResult> Cancelled() =>
+            public static AsyncOutcome<TResult> Canceled() =>
                 new(kind: AsyncOutcomeKind.Canceled, value: default, error: null);
+
+            /// <summary>The three ways an item can finish.</summary>
+            private enum AsyncOutcomeKind
+            {
+                /// <summary>The operation returned a value — see <see cref="AsyncOutcome{TResult}.value" />.</summary>
+                Succeeded,
+
+                /// <summary>The operation threw — see <see cref="AsyncOutcome{TResult}.error" />.</summary>
+                Failed,
+
+                /// <summary>
+                ///     The operation was canceled (or never started because it was canceled while still
+                ///     Queued). Never published regardless of what OnCompleted returns — see
+                ///     <see cref="AsyncConcurrencyStrategy{TInput,TResult,TState}.OnCompleted" />.
+                /// </summary>
+                Canceled
+            }
         }
 
         /// <summary>
@@ -1582,7 +1659,7 @@ namespace Sodium.Frp.Async
                     AsyncQueuedItem<Unit> next = state.Pending.Dequeue();
 
                     // If `next` was canceled while it sat here, the execution engine will notice
-                    // when promoting it and short-circuit straight to Outcome.Cancelled(), which
+                    // when promoting it and short-circuit straight to Outcome.Canceled(), which
                     // calls back into OnCompleted and naturally dequeues whatever comes after it.
                     return new AsyncStrategyResult<Unit>(
                         publish: true,
@@ -1686,7 +1763,7 @@ namespace Sodium.Frp.Async
                     AsyncQueuedItem<TInput> next = groupState.Pending.Dequeue();
 
                     // If `next` was canceled while it sat here, the execution engine will notice
-                    // when promoting it and short-circuit straight to Outcome.Cancelled(), which
+                    // when promoting it and short-circuit straight to Outcome.Canceled(), which
                     // calls back into OnCompleted and naturally dequeues whatever comes after it.
                     return new AsyncStrategyResult<TInput>(
                         publish: true,
@@ -2219,8 +2296,8 @@ namespace Sodium.Frp.Async
                 // so a strategy like the built-in Queue naturally moves on to whatever's next.
                 this.Complete(
                     item: toStart.Item,
-                    outcome: AsyncOutcome<TStrategyResult>.Cancelled(),
-                    result: default,
+                    strategyOutcome: AsyncOutcome<TStrategyResult>.Canceled(),
+                    outcome: AsyncOutcome<TResult>.Canceled(),
                     entryByIdCell: entryByIdCell);
 
                 return;
@@ -2263,24 +2340,24 @@ namespace Sodium.Frp.Async
 
                 this.Complete(
                     item: toStart.Item,
-                    outcome: AsyncOutcome<TStrategyResult>.Succeeded(this.resultConverter(result)),
-                    result: result,
+                    strategyOutcome: AsyncOutcome<TStrategyResult>.Succeeded(this.resultConverter(result)),
+                    outcome: AsyncOutcome<TResult>.Succeeded(result),
                     entryByIdCell: entryByIdCell);
             }
             catch (OperationCanceledException oce) when (oce.CancellationToken == linked.Token)
             {
                 this.Complete(
                     item: toStart.Item,
-                    outcome: AsyncOutcome<TStrategyResult>.Cancelled(),
-                    result: default,
+                    strategyOutcome: AsyncOutcome<TStrategyResult>.Canceled(),
+                    outcome: AsyncOutcome<TResult>.Canceled(),
                     entryByIdCell: entryByIdCell);
             }
             catch (Exception ex)
             {
                 this.Complete(
                     item: toStart.Item,
-                    outcome: AsyncOutcome<TStrategyResult>.Failed(ex),
-                    result: default,
+                    strategyOutcome: AsyncOutcome<TStrategyResult>.Failed(ex),
+                    outcome: AsyncOutcome<TResult>.Failed(ex),
                     entryByIdCell: entryByIdCell);
             }
             finally
@@ -2304,29 +2381,25 @@ namespace Sodium.Frp.Async
         /// </summary>
         private void Complete(
             AsyncQueuedItem<TStrategyInput> item,
-            AsyncOutcome<TStrategyResult> outcome,
-            TResult? result,
+            AsyncOutcome<TStrategyResult> strategyOutcome,
+            AsyncOutcome<TResult> outcome,
             Cell<Dictionary<Guid, Entry>> entryByIdCell) =>
             TransactionInternal.RunImpl(() =>
             {
                 Dictionary<Guid, Entry> entryById = entryByIdCell.SampleImpl();
 
                 AsyncStrategyResult<TStrategyInput> decision =
-                    this.stateManager.OnCompleted(item: item, outcome: outcome);
+                    this.stateManager.OnCompleted(item: item, outcome: strategyOutcome);
 
-                if (decision.Publish && outcome.Kind != AsyncOutcomeKind.Canceled)
+                if (decision.Publish)
                 {
-                    if (outcome.Kind == AsyncOutcomeKind.Succeeded)
-                    {
+                    outcome.MatchVoid(
                         // `result` is the actual TResult StartOperation produced, threaded through as
                         // its own parameter — not recovered from outcome.Value, which holds the
                         // converted TStrategyResult instead. See the class remarks.
-                        this.results.SendImpl(result!);
-                    }
-                    else
-                    {
-                        this.errors.SendImpl(outcome.Error!);
-                    }
+                        onSucceeded: this.results.SendImpl,
+                        onFailed: this.errors.SendImpl,
+                        onCanceled: null);
                 }
 
                 Guid[] promote = new Guid[decision.Next.Count];
@@ -2453,7 +2526,7 @@ Custom concurrency logic:
     strategy instance safe to reuse across multiple MapAsync calls without their scheduling state
     bleeding into each other. The one thing you can do imperatively is item.Cancel(), to cancel an
     item you're managing (queued or running); it still completes normally through OnCompleted as
-    Outcome.Cancelled, so you can chain from there. Every value you don't immediately start stays
+    Outcome.Canceled, so you can chain from there. Every value you don't immediately start stays
     tracked as Queued automatically; hold onto its AsyncQueuedItem (not just its Value) in TState if
     you intend to promote it later or recognize it again in OnCompleted — AsyncQueuedItem is a
     sealed class you can't construct, and identity is reference identity, so ReferenceEquals (as the
