@@ -208,13 +208,13 @@ namespace Sodium.Frp.Async
         {
             /// <summary>Which of the three ways this item finished.</summary>
             private readonly AsyncOutcomeKind kind;
-            
+
             /// <summary>The operation's return value, if <see cref="kind" /> is Succeeded; default otherwise.</summary>
             private readonly TResult? value;
 
             /// <summary>The exception the operation threw, if <see cref="kind" /> is Failed; null otherwise.</summary>
             private readonly Exception? error;
-            
+
             private AsyncOutcome(AsyncOutcomeKind kind, TResult? value, Exception? error)
             {
                 this.kind = kind;
@@ -409,7 +409,7 @@ namespace Sodium.Frp.Async
     ///     pipeline down.
     /// </summary>
     [PublicAPI]
-    public static class AsyncStreamExtensions
+    internal static class AsyncStreamUtility
     {
         /// <summary>
         ///     Convenience overload for a strategy that only cares about scheduling, not about
@@ -417,7 +417,7 @@ namespace Sodium.Frp.Async
         ///     Queue, SwitchLatest) — both are erased to <see cref="Unit" /> before reaching it. See the
         ///     canonical
         ///     <see
-        ///         cref="MapAsync{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{Unit},Stream{IReadOnlyCollection{TInput}},bool)" />
+        ///         cref="MapAsyncImpl{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{Unit},Stream{IReadOnlyCollection{TInput}},bool)" />
         ///     overload
         ///     for the full parameter contract.
         /// </summary>
@@ -485,7 +485,7 @@ namespace Sodium.Frp.Async
         ///     in the same transaction as whichever event caused it to change; Items lists every
         ///     tracked value with its status; disposing it tears the pipeline down.
         /// </returns>
-        public static AsyncMapStatus<TInput> MapAsync<TInput, TResult>(
+        public static AsyncMapStatus<TInput> MapAsyncImpl<TInput, TResult>(
             this Stream<TInput> source,
             StreamSink<TResult> results,
             StreamSink<Exception> errors,
@@ -494,7 +494,7 @@ namespace Sodium.Frp.Async
             Stream<Unit>? cancelAll = null,
             Stream<IReadOnlyCollection<TInput>>? cancelMatching = null,
             bool cancelOnDispose = true) =>
-            source.MapAsync(
+            source.MapAsyncImpl(
                 results: results,
                 errors: errors,
                 operation: operation,
@@ -511,7 +511,7 @@ namespace Sodium.Frp.Async
         ///     already a <typeparamref name="TStrategyInput" /> (e.g. QueuePerGroup on the call's own
         ///     input type). See the canonical
         ///     <see
-        ///         cref="MapAsync{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{Unit},Stream{IReadOnlyCollection{TInput}},bool)" />
+        ///         cref="MapAsyncImpl{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{Unit},Stream{IReadOnlyCollection{TInput}},bool)" />
         ///     overload for the
         ///     full parameter contract.
         /// </summary>
@@ -588,7 +588,7 @@ namespace Sodium.Frp.Async
         ///     in the same transaction as whichever event caused it to change; Items lists every
         ///     tracked value with its status; disposing it tears the pipeline down.
         /// </returns>
-        public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyInput>(
+        public static AsyncMapStatus<TInput> MapAsyncImpl<TInput, TResult, TStrategyInput>(
             this Stream<TInput> source,
             StreamSink<TResult> results,
             StreamSink<Exception> errors,
@@ -598,7 +598,7 @@ namespace Sodium.Frp.Async
             Stream<IReadOnlyCollection<TInput>>? cancelMatching = null,
             bool cancelOnDispose = true)
             where TInput : TStrategyInput =>
-            source.MapAsync(
+            source.MapAsyncImpl(
                 results: results,
                 errors: errors,
                 operation: operation,
@@ -615,7 +615,7 @@ namespace Sodium.Frp.Async
         ///     derives it from <typeparamref name="TInput" /> (e.g. QueuePerGroup, deriving the group
         ///     key). See the canonical
         ///     <see
-        ///         cref="MapAsync{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{Unit},Stream{IReadOnlyCollection{TInput}},bool)" />
+        ///         cref="MapAsyncImpl{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{Unit},Stream{IReadOnlyCollection{TInput}},bool)" />
         ///     overload for the
         ///     full parameter contract.
         /// </summary>
@@ -694,7 +694,7 @@ namespace Sodium.Frp.Async
         ///     in the same transaction as whichever event caused it to change; Items lists every
         ///     tracked value with its status; disposing it tears the pipeline down.
         /// </returns>
-        public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyInput>(
+        public static AsyncMapStatus<TInput> MapAsyncImpl<TInput, TResult, TStrategyInput>(
             this Stream<TInput> source,
             StreamSink<TResult> results,
             StreamSink<Exception> errors,
@@ -704,7 +704,7 @@ namespace Sodium.Frp.Async
             Stream<Unit>? cancelAll = null,
             Stream<IReadOnlyCollection<TInput>>? cancelMatching = null,
             bool cancelOnDispose = true) =>
-            source.MapAsync(
+            source.MapAsyncImpl(
                 results: results,
                 errors: errors,
                 operation: operation,
@@ -721,7 +721,7 @@ namespace Sodium.Frp.Async
         ///     <typeparamref name="TResult" /> is already a <typeparamref name="TStrategyResult" />. See
         ///     the canonical
         ///     <see
-        ///         cref="MapAsync{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{Unit},Stream{IReadOnlyCollection{TInput}},bool)" />
+        ///         cref="MapAsyncImpl{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{Unit},Stream{IReadOnlyCollection{TInput}},bool)" />
         ///     overload for the full parameter contract.
         /// </summary>
         /// <typeparam name="TInput">
@@ -797,7 +797,7 @@ namespace Sodium.Frp.Async
         ///     in the same transaction as whichever event caused it to change; Items lists every
         ///     tracked value with its status; disposing it tears the pipeline down.
         /// </returns>
-        public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyResult>(
+        public static AsyncMapStatus<TInput> MapAsyncImpl<TInput, TResult, TStrategyResult>(
             this Stream<TInput> source,
             StreamSink<TResult> results,
             StreamSink<Exception> errors,
@@ -807,7 +807,7 @@ namespace Sodium.Frp.Async
             Stream<IReadOnlyCollection<TInput>>? cancelMatching = null,
             bool cancelOnDispose = true)
             where TResult : TStrategyResult =>
-            source.MapAsync(
+            source.MapAsyncImpl(
                 results: results,
                 errors: errors,
                 operation: operation,
@@ -824,7 +824,7 @@ namespace Sodium.Frp.Async
         ///     <paramref name="resultConverter" /> derives it from <typeparamref name="TResult" />. See
         ///     the canonical
         ///     <see
-        ///         cref="MapAsync{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{Unit},Stream{IReadOnlyCollection{TInput}},bool)" />
+        ///         cref="MapAsyncImpl{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{Unit},Stream{IReadOnlyCollection{TInput}},bool)" />
         ///     overload for the full parameter contract.
         /// </summary>
         /// <typeparam name="TInput">
@@ -902,7 +902,7 @@ namespace Sodium.Frp.Async
         ///     in the same transaction as whichever event caused it to change; Items lists every
         ///     tracked value with its status; disposing it tears the pipeline down.
         /// </returns>
-        public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyResult>(
+        public static AsyncMapStatus<TInput> MapAsyncImpl<TInput, TResult, TStrategyResult>(
             this Stream<TInput> source,
             StreamSink<TResult> results,
             StreamSink<Exception> errors,
@@ -912,7 +912,7 @@ namespace Sodium.Frp.Async
             Stream<Unit>? cancelAll = null,
             Stream<IReadOnlyCollection<TInput>>? cancelMatching = null,
             bool cancelOnDispose = true) =>
-            source.MapAsync(
+            source.MapAsyncImpl(
                 results: results,
                 errors: errors,
                 operation: operation,
@@ -923,6 +923,13 @@ namespace Sodium.Frp.Async
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
+        /// <summary>
+        ///     Convenience overload where <typeparamref name="TStrategyInput" /> is already a <typeparamref name="TInput" /> and
+        ///     <typeparamref name="TResult" /> is already a <typeparamref name="TStrategyResult" />. See the canonical
+        ///     <see
+        ///         cref="MapAsyncImpl{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{Unit},Stream{IReadOnlyCollection{TInput}},bool)" />
+        ///     overload for the full parameter contract.
+        /// </summary>
         /// <summary>
         ///     Runs <paramref name="operation" /> for each firing of <paramref name="source" />,
         ///     sending successes to <paramref name="results" /> and failures to <paramref name="errors" />.
@@ -1008,7 +1015,7 @@ namespace Sodium.Frp.Async
         ///     <paramref name="source" />, <paramref name="results" />, <paramref name="errors" />,
         ///     <paramref name="operation" />, or <paramref name="strategy" /> is null.
         /// </exception>
-        public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyInput, TStrategyResult>(
+        public static AsyncMapStatus<TInput> MapAsyncImpl<TInput, TResult, TStrategyInput, TStrategyResult>(
             this Stream<TInput> source,
             StreamSink<TResult> results,
             StreamSink<Exception> errors,
@@ -1019,7 +1026,7 @@ namespace Sodium.Frp.Async
             bool cancelOnDispose = true)
             where TInput : TStrategyInput
             where TResult : TStrategyResult =>
-            source.MapAsync(
+            source.MapAsyncImpl(
                 results: results,
                 errors: errors,
                 operation: operation,
@@ -1036,7 +1043,7 @@ namespace Sodium.Frp.Async
         ///     <typeparamref name="TResult" /> is already a <typeparamref name="TStrategyResult" />. See
         ///     the canonical
         ///     <see
-        ///         cref="MapAsync{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{Unit},Stream{IReadOnlyCollection{TInput}},bool)" />
+        ///         cref="MapAsyncImpl{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{Unit},Stream{IReadOnlyCollection{TInput}},bool)" />
         ///     overload for the full parameter contract.
         /// </summary>
         /// <typeparam name="TInput">
@@ -1120,7 +1127,7 @@ namespace Sodium.Frp.Async
         ///     in the same transaction as whichever event caused it to change; Items lists every
         ///     tracked value with its status; disposing it tears the pipeline down.
         /// </returns>
-        public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyInput, TStrategyResult>(
+        public static AsyncMapStatus<TInput> MapAsyncImpl<TInput, TResult, TStrategyInput, TStrategyResult>(
             this Stream<TInput> source,
             StreamSink<TResult> results,
             StreamSink<Exception> errors,
@@ -1131,7 +1138,7 @@ namespace Sodium.Frp.Async
             Stream<IReadOnlyCollection<TInput>>? cancelMatching = null,
             bool cancelOnDispose = true)
             where TResult : TStrategyResult =>
-            source.MapAsync(
+            source.MapAsyncImpl(
                 results: results,
                 errors: errors,
                 operation: operation,
@@ -1148,7 +1155,7 @@ namespace Sodium.Frp.Async
         ///     <typeparamref name="TStrategyResult" /> from <typeparamref name="TResult" />. See the
         ///     canonical
         ///     <see
-        ///         cref="MapAsync{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{Unit},Stream{IReadOnlyCollection{TInput}},bool)" />
+        ///         cref="MapAsyncImpl{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{Unit},Stream{IReadOnlyCollection{TInput}},bool)" />
         ///     overload
         ///     for the full parameter contract.
         /// </summary>
@@ -1233,7 +1240,7 @@ namespace Sodium.Frp.Async
         ///     in the same transaction as whichever event caused it to change; Items lists every
         ///     tracked value with its status; disposing it tears the pipeline down.
         /// </returns>
-        public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyInput, TStrategyResult>(
+        public static AsyncMapStatus<TInput> MapAsyncImpl<TInput, TResult, TStrategyInput, TStrategyResult>(
             this Stream<TInput> source,
             StreamSink<TResult> results,
             StreamSink<Exception> errors,
@@ -1244,7 +1251,7 @@ namespace Sodium.Frp.Async
             Stream<IReadOnlyCollection<TInput>>? cancelMatching = null,
             bool cancelOnDispose = true)
             where TInput : TStrategyInput =>
-            source.MapAsync(
+            source.MapAsyncImpl(
                 results: results,
                 errors: errors,
                 operation: operation,
@@ -1356,7 +1363,7 @@ namespace Sodium.Frp.Async
         ///     <paramref name="source" />, <paramref name="results" />, <paramref name="errors" />,
         ///     <paramref name="operation" />, or <paramref name="strategy" /> is null.
         /// </exception>
-        public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyInput, TStrategyResult>(
+        public static AsyncMapStatus<TInput> MapAsyncImpl<TInput, TResult, TStrategyInput, TStrategyResult>(
             this Stream<TInput> source,
             StreamSink<TResult> results,
             StreamSink<Exception> errors,
@@ -1409,7 +1416,7 @@ namespace Sodium.Frp.Async
     /// <summary>
     ///     The non-generic-over-<c>TState</c> face of a strategy — what
     ///     <see
-    ///         cref="AsyncStreamExtensions.MapAsync{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{Unit},Stream{IReadOnlyCollection{TInput}},bool)" />
+    ///         cref="AsyncStreamUtility.MapAsyncImpl{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{Unit},Stream{IReadOnlyCollection{TInput}},bool)" />
     ///     and its overloads actually accept. This is what keeps a strategy's <c>TState</c> out of every
     ///     MapAsync signature: callers and the execution engine only ever see
     ///     <see cref="AsyncConcurrencyStrategyBase{TInput,TResult}" />, never
@@ -1443,7 +1450,7 @@ namespace Sodium.Frp.Async
     ///     <see cref="CreateState" />. This is what makes a strategy instance safely reusable across
     ///     multiple, even concurrent, MapAsync calls — the execution engine (see
     ///     <see
-    ///         cref="AsyncStreamExtensions.MapAsync{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{Unit},Stream{IReadOnlyCollection{TInput}},bool)" />
+    ///         cref="AsyncStreamUtility.MapAsyncImpl{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{Unit},Stream{IReadOnlyCollection{TInput}},bool)" />
     ///     ) owns the
     ///     per-call <typeparamref name="TState" /> and is the only thing that ever passes it back in. Neither
     ///     <see cref="Admit" /> nor <see cref="OnCompleted" /> can touch the result/error sinks or a
@@ -1468,9 +1475,8 @@ namespace Sodium.Frp.Async
         ///     Creates a fresh, independent scheduling state for one MapAsync call. Called exactly
         ///     once per call — see
         ///     <see
-        ///         cref="AsyncStreamExtensions.MapAsync{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{Unit},Stream{IReadOnlyCollection{TInput}},bool)" />
-        ///     —
-        ///     so separate pipelines using the same strategy instance never see each other's state,
+        ///         cref="AsyncStreamUtility.MapAsyncImpl{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{Unit},Stream{IReadOnlyCollection{TInput}},bool)" />
+        ///     — so separate pipelines using the same strategy instance never see each other's state,
         ///     even if they run concurrently.
         /// </summary>
         protected abstract TState CreateState();
@@ -1831,9 +1837,8 @@ namespace Sodium.Frp.Async
     ///     not trusted with — a strategy only ever answers Admit/OnCompleted as data; this class is
     ///     what carries the answer out. One instance is created per MapAsync call (see
     ///     <see
-    ///         cref="AsyncStreamExtensions.MapAsync{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{Unit},Stream{IReadOnlyCollection{TInput}},bool)" />
-    ///     ),
-    ///     owns that call's single state (created once, up front, and is never
+    ///         cref="AsyncStreamUtility.MapAsyncImpl{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{Unit},Stream{IReadOnlyCollection{TInput}},bool)" />
+    ///     ), owns that call's single state (created once, up front, and is never
     ///     shared between calls — which is what lets the same strategy instance be reused safely
     ///     across many calls at once. It shares <see cref="AsyncMapBase" /> with
     ///     <see cref="AsyncConcurrencyStrategy{TInput,TResult,TState}" /> purely so it can reach that

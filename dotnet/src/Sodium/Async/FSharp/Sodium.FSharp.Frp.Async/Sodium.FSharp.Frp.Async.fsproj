@@ -1,0 +1,43 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyName>Sodium.FSharp.Frp</AssemblyName>
+    <RootNamespace>Sodium.Frp</RootNamespace>
+    <TargetFrameworks>net472;net60;netstandard2.0</TargetFrameworks>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>SodiumFRP.FSharp.Async</PackageId>
+    <Authors>SodiumFRP</Authors>
+    <PackageLicenseUrl>http://opensource.org/licenses/MIT</PackageLicenseUrl>
+    <PackageProjectUrl>https://github.com/SodiumFRP/sodium</PackageProjectUrl>
+    <Version>1.0.0</Version>
+    <PackageVersion>1.0.0</PackageVersion>
+    <AssemblyVersion>1.0.0.0</AssemblyVersion>
+    <FileVersion>1.0.0.0</FileVersion>
+    <InformationalVersion>1.0.0.0</InformationalVersion>
+    <Company>SodiumFRP</Company>
+    <Product>Sodium FRP Async Extensions for F#</Product>
+    <Title>Sodium FRP Async Extensions for F#</Title>
+    <Description>Sodium FRP Async Extensions library for F#.</Description>
+    <IncludeSource>True</IncludeSource>
+    <IncludeSymbols>True</IncludeSymbols>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
+    <DocumentationFile>bin\Debug\Sodium.FSharp.Frp.xml</DocumentationFile>
+  </PropertyGroup>
+
+  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
+    <DocumentationFile>bin\Release\Sodium.FSharp.Frp.xml</DocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Update="FSharp.Core" Version="4.5.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="MapAsync.fs" />
+  </ItemGroup>
+
+</Project>

@@ -36,4 +36,8 @@
       <Compile Include="MapAsyncExtensions.cs" />
     </ItemGroup>
 
+    <ItemGroup>
+      <ProjectReference Include="..\..\Sodium.Core.Frp.Async\Sodium.Core.Frp.Async.csproj" />
+    </ItemGroup>
+
 </Project>
