@@ -76,7 +76,7 @@ namespace Sodium.Frp.Async
     /// <summary>
     ///     Shared base for the two halves of a MapAsync pipeline — the strategy
     ///     (<see cref="AsyncConcurrencyStrategy{TInput,TResult,TState}" />) and the engine that runs
-    ///     it (<see cref="AsyncMapExecutionManager{TInput,TResult,TStrategyInput,TStrategyResult,TState}" />). Its only
+    ///     it (<see cref="AsyncMapExecutionManager{TInput,TResult,TStrategyInput,TStrategyResult}" />). Its only
     ///     purpose is to hold the small data types they pass back and forth — <see cref="AsyncQueuedItem{TInput}" />,
     ///     <see cref="AsyncToStart{TInput}" />, <see cref="AsyncOutcome{TResult}" />,
     ///     <see cref="AsyncStrategyResult{TInput}" /> — as nested types here rather than as public
@@ -227,6 +227,33 @@ namespace Sodium.Frp.Async
 
             public IReadOnlyList<AsyncToStart<TInput>> Next { get; }
         }
+
+        internal interface IStateManager<TInput, TResult>
+        {
+            IReadOnlyList<AsyncToStart<TInput>> Admit(AsyncQueuedItem<TInput> incoming);
+            AsyncStrategyResult<TInput> OnCompleted(AsyncQueuedItem<TInput> item, AsyncOutcome<TResult> outcome);
+        }
+
+        internal class StateManager<TInput, TResult, TState>
+            : IStateManager<TInput, TResult>
+        {
+            private readonly AsyncConcurrencyStrategy<TInput, TResult, TState> strategy;
+            private readonly TState state;
+
+            public StateManager(AsyncConcurrencyStrategy<TInput, TResult, TState> strategy, TState state)
+            {
+                this.strategy = strategy;
+                this.state = state;
+            }
+
+            public IReadOnlyList<AsyncToStart<TInput>> Admit(AsyncQueuedItem<TInput> incoming) =>
+                this.strategy.Admit(state: this.state, incoming: incoming);
+
+            public AsyncStrategyResult<TInput> OnCompleted(
+                AsyncQueuedItem<TInput> item,
+                AsyncOutcome<TResult> outcome) =>
+                this.strategy.OnCompleted(state: this.state, item: item, outcome: outcome);
+        }
     }
 
     /// <summary>
@@ -239,12 +266,12 @@ namespace Sodium.Frp.Async
     /// </summary>
     public static class AsyncStreamExtensions
     {
-        public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TState>(
+        public static AsyncMapStatus<TInput> MapAsync<TInput, TResult>(
             this Stream<TInput> source,
             StreamSink<TResult> results,
             StreamSink<Exception> errors,
             Func<TInput, CancellationToken, Task<TResult>> operation,
-            AsyncConcurrencyStrategy<Unit, Unit, TState> strategy,
+            AsyncConcurrencyStrategy<Unit, Unit> strategy,
             Stream<Unit>? cancelAll = null,
             Stream<IReadOnlyCollection<TInput>>? cancelMatching = null,
             bool cancelOnDispose = true) =>
@@ -259,12 +286,12 @@ namespace Sodium.Frp.Async
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
-        public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyInput, TState>(
+        public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyInput>(
             this Stream<TInput> source,
             StreamSink<TResult> results,
             StreamSink<Exception> errors,
             Func<TInput, CancellationToken, Task<TResult>> operation,
-            AsyncConcurrencyStrategy<TStrategyInput, Unit, TState> strategy,
+            AsyncConcurrencyStrategyBase<TStrategyInput, Unit> strategy,
             Stream<Unit>? cancelAll = null,
             Stream<IReadOnlyCollection<TInput>>? cancelMatching = null,
             bool cancelOnDispose = true)
@@ -280,12 +307,12 @@ namespace Sodium.Frp.Async
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
-        public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyInput, TState>(
+        public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyInput>(
             this Stream<TInput> source,
             StreamSink<TResult> results,
             StreamSink<Exception> errors,
             Func<TInput, CancellationToken, Task<TResult>> operation,
-            AsyncConcurrencyStrategy<TStrategyInput, Unit, TState> strategy,
+            AsyncConcurrencyStrategyBase<TStrategyInput, Unit> strategy,
             Func<TInput, TStrategyInput> inputConverter,
             Stream<Unit>? cancelAll = null,
             Stream<IReadOnlyCollection<TInput>>? cancelMatching = null,
@@ -301,12 +328,12 @@ namespace Sodium.Frp.Async
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
-        public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyResult, TState>(
+        public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyResult>(
             this Stream<TInput> source,
             StreamSink<TResult> results,
             StreamSink<Exception> errors,
             Func<TInput, CancellationToken, Task<TResult>> operation,
-            AsyncConcurrencyStrategy<Unit, TStrategyResult, TState> strategy,
+            AsyncConcurrencyStrategyBase<Unit, TStrategyResult> strategy,
             Stream<Unit>? cancelAll = null,
             Stream<IReadOnlyCollection<TInput>>? cancelMatching = null,
             bool cancelOnDispose = true)
@@ -322,12 +349,12 @@ namespace Sodium.Frp.Async
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
-        public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyResult, TState>(
+        public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyResult>(
             this Stream<TInput> source,
             StreamSink<TResult> results,
             StreamSink<Exception> errors,
             Func<TInput, CancellationToken, Task<TResult>> operation,
-            AsyncConcurrencyStrategy<Unit, TStrategyResult, TState> strategy,
+            AsyncConcurrencyStrategyBase<Unit, TStrategyResult> strategy,
             Func<TResult, TStrategyResult> resultConverter,
             Stream<Unit>? cancelAll = null,
             Stream<IReadOnlyCollection<TInput>>? cancelMatching = null,
@@ -372,11 +399,6 @@ namespace Sodium.Frp.Async
         ///     <typeparamref name="TResult" />, and related to it by the
         ///     <c>where TResult : TStrategyResult</c> constraint.
         /// </typeparam>
-        /// <typeparam name="TState">
-        ///     The mutable scheduling state <paramref name="strategy" /> needs — see
-        ///     <see cref="AsyncConcurrencyStrategy{TInput,TResult,TState}.CreateState" />. Always
-        ///     inferred from <paramref name="strategy" />'s type; never specify it explicitly.
-        /// </typeparam>
         /// <param name="source">
         ///     The stream of inputs to run against. Every firing is offered to
         ///     <paramref name="strategy" />, which decides whether it starts immediately or waits.
@@ -403,9 +425,7 @@ namespace Sodium.Frp.Async
         /// <param name="strategy">
         ///     How overlapping requests are handled. A strategy instance holds no state of its own
         ///     and may safely be reused across multiple MapAsync calls (even concurrently) — each
-        ///     call gets its own freshly created <typeparamref name="TState" /> via
-        ///     <see cref="AsyncConcurrencyStrategy{TInput,TResult,TState}.CreateState" />, so separate
-        ///     pipelines never share scheduling state.
+        ///     call gets its own freshly created state manager, so separate pipelines never share scheduling state.
         /// </param>
         /// <param name="cancelAll">
         ///     Optional. Each firing cancels every tracked operation — queued or already running.
@@ -435,12 +455,12 @@ namespace Sodium.Frp.Async
         ///     <paramref name="source" />, <paramref name="results" />, <paramref name="errors" />,
         ///     <paramref name="operation" />, or <paramref name="strategy" /> is null.
         /// </exception>
-        public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyInput, TStrategyResult, TState>(
+        public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyInput, TStrategyResult>(
             this Stream<TInput> source,
             StreamSink<TResult> results,
             StreamSink<Exception> errors,
             Func<TInput, CancellationToken, Task<TResult>> operation,
-            AsyncConcurrencyStrategy<TStrategyInput, TStrategyResult, TState> strategy,
+            AsyncConcurrencyStrategyBase<TStrategyInput, TStrategyResult> strategy,
             Stream<Unit>? cancelAll = null,
             Stream<IReadOnlyCollection<TInput>>? cancelMatching = null,
             bool cancelOnDispose = true)
@@ -457,12 +477,12 @@ namespace Sodium.Frp.Async
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
-        public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyInput, TStrategyResult, TState>(
+        public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyInput, TStrategyResult>(
             this Stream<TInput> source,
             StreamSink<TResult> results,
             StreamSink<Exception> errors,
             Func<TInput, CancellationToken, Task<TResult>> operation,
-            AsyncConcurrencyStrategy<TStrategyInput, TStrategyResult, TState> strategy,
+            AsyncConcurrencyStrategyBase<TStrategyInput, TStrategyResult> strategy,
             Func<TInput, TStrategyInput> inputConverter,
             Stream<Unit>? cancelAll = null,
             Stream<IReadOnlyCollection<TInput>>? cancelMatching = null,
@@ -479,12 +499,12 @@ namespace Sodium.Frp.Async
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
-        public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyInput, TStrategyResult, TState>(
+        public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyInput, TStrategyResult>(
             this Stream<TInput> source,
             StreamSink<TResult> results,
             StreamSink<Exception> errors,
             Func<TInput, CancellationToken, Task<TResult>> operation,
-            AsyncConcurrencyStrategy<TStrategyInput, TStrategyResult, TState> strategy,
+            AsyncConcurrencyStrategyBase<TStrategyInput, TStrategyResult> strategy,
             Func<TResult, TStrategyResult> resultConverter,
             Stream<Unit>? cancelAll = null,
             Stream<IReadOnlyCollection<TInput>>? cancelMatching = null,
@@ -501,12 +521,12 @@ namespace Sodium.Frp.Async
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
-        public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyInput, TStrategyResult, TState>(
+        public static AsyncMapStatus<TInput> MapAsync<TInput, TResult, TStrategyInput, TStrategyResult>(
             this Stream<TInput> source,
             StreamSink<TResult> results,
             StreamSink<Exception> errors,
             Func<TInput, CancellationToken, Task<TResult>> operation,
-            AsyncConcurrencyStrategy<TStrategyInput, TStrategyResult, TState> strategy,
+            AsyncConcurrencyStrategyBase<TStrategyInput, TStrategyResult> strategy,
             Func<TInput, TStrategyInput> inputConverter,
             Func<TResult, TStrategyResult> resultConverter,
             Stream<Unit>? cancelAll = null,
@@ -538,7 +558,7 @@ namespace Sodium.Frp.Async
                 throw new ArgumentNullException(nameof(strategy));
             }
 
-            return new AsyncMapExecutionManager<TInput, TResult, TStrategyInput, TStrategyResult, TState>(
+            return new AsyncMapExecutionManager<TInput, TResult, TStrategyInput, TStrategyResult>(
                 strategy: strategy,
                 inputConverter: inputConverter,
                 resultConverter: resultConverter,
@@ -551,6 +571,16 @@ namespace Sodium.Frp.Async
         }
     }
 
+    public abstract class AsyncConcurrencyStrategyBase<TInput, TResult>
+        : AsyncMapBase
+    {
+        internal AsyncConcurrencyStrategyBase()
+        {
+        }
+
+        internal abstract IStateManager<TInput, TResult> CreateStateManager();
+    }
+
     /// <summary>
     ///     Base class for a MapAsync scheduling strategy: how a stream of async requests is
     ///     admitted and sequenced. A strategy answers two questions, both as plain data —
@@ -561,7 +591,7 @@ namespace Sodium.Frp.Async
     ///     <typeparamref name="TState" />, one instance of which is created per MapAsync call via
     ///     <see cref="CreateState" />. This is what makes a strategy instance safely reusable across
     ///     multiple, even concurrent, MapAsync calls — the execution engine (see
-    ///     <see cref="AsyncStreamExtensions.MapAsync{TInput,TResult,TStrategyInput,TStrategyResult,TState}" />) owns the
+    ///     <see cref="AsyncStreamExtensions.MapAsync{TInput,TResult,TStrategyInput,TStrategyResult}" />) owns the
     ///     per-call <typeparamref name="TState" /> and is the only thing that ever passes it back in. Neither
     ///     <see cref="Admit" /> nor <see cref="OnCompleted" /> can touch the result/error sinks or a
     ///     Task directly, or start one — they just describe what should happen and the execution
@@ -575,22 +605,25 @@ namespace Sodium.Frp.Async
     ///     to recognize it again later.
     /// </summary>
     public abstract class AsyncConcurrencyStrategy<TInput, TResult, TState>
-        : AsyncMapBase
+        : AsyncConcurrencyStrategyBase<TInput, TResult>
     {
+        internal override IStateManager<TInput, TResult> CreateStateManager() =>
+            new StateManager<TInput, TResult, TState>(strategy: this, state: this.CreateState());
+
         /// <summary>
         ///     Creates a fresh, independent scheduling state for one MapAsync call. Called exactly
         ///     once per call — see
-        ///     <see cref="AsyncStreamExtensions.MapAsync{TInput,TResult,TStrategyInput,TStrategyResult,TState}" /> —
+        ///     <see cref="AsyncStreamExtensions.MapAsync{TInput,TResult,TStrategyInput,TStrategyResult}" /> —
         ///     so separate pipelines using the same strategy instance never see each other's state,
         ///     even if they run concurrently.
         /// </summary>
-        public abstract TState CreateState();
+        protected abstract TState CreateState();
 
         /// <summary>
         ///     Given a newly admitted value (already tracked as Queued — see
         ///     <see cref="AsyncQueuedItem{TInput}" />), which item(s) should start right now? Always
         ///     called from inside a Sodium transaction — see
-        ///     <see cref="AsyncMapExecutionManager{TInput,TResult,TStrategyInput,TStrategyResult,TState}" /> for why that makes
+        ///     <see cref="AsyncMapExecutionManager{TInput,TResult,TStrategyInput,TStrategyResult}" /> for why that makes
         ///     mutating <paramref name="state" /> here safe without an explicit lock. Return an
         ///     <see cref="AsyncToStart{TInput}" /> wrapping <paramref name="incoming" /> to start it
         ///     immediately; omitting it leaves it Queued. If you leave it Queued, hold onto
@@ -642,14 +675,13 @@ namespace Sodium.Frp.Async
 
         /// <summary>At most one operation runs at a time; later firings queue and run in order.</summary>
         public static AsyncConcurrencyStrategy<QueueStrategy.State> Queue() => QueueStrategy.Instance;
-        
-        public static QueuePerGroupHelper<TInput> QueuePerGroup<TInput>() =>
-            QueuePerGroupHelper<TInput>.Instance;
+
+        public static QueuePerGroupHelper<TInput> QueuePerGroup<TInput>() => QueuePerGroupHelper<TInput>.Instance;
 
         public class QueuePerGroupHelper<TInput>
         {
             internal static readonly QueuePerGroupHelper<TInput> Instance = new();
-            
+
             private QueuePerGroupHelper()
             {
             }
@@ -670,7 +702,7 @@ namespace Sodium.Frp.Async
         {
             internal static readonly ParallelStrategy Instance = new();
 
-            public override Unit CreateState() => Unit.Value;
+            protected override Unit CreateState() => Unit.Value;
 
             protected internal override IReadOnlyList<AsyncToStart<Unit>> Admit(
                 Unit state,
@@ -700,7 +732,7 @@ namespace Sodium.Frp.Async
                 internal bool Busy;
             }
 
-            public override State CreateState() => new();
+            protected override State CreateState() => new();
 
             protected internal override IReadOnlyList<AsyncToStart<Unit>> Admit(
                 State state,
@@ -759,7 +791,7 @@ namespace Sodium.Frp.Async
             {
                 public State(IEqualityComparer<TGroup>? groupComparer) =>
                     this.Groups = new Dictionary<TGroup, GroupState>(groupComparer);
-                
+
                 internal readonly Dictionary<TGroup, GroupState> Groups;
             }
 
@@ -770,7 +802,7 @@ namespace Sodium.Frp.Async
                 internal bool Busy;
             }
 
-            public override State CreateState() => new(this.groupComparer);
+            protected override State CreateState() => new(this.groupComparer);
 
             protected internal override IReadOnlyList<AsyncToStart<TInput>> Admit(
                 State state,
@@ -820,7 +852,7 @@ namespace Sodium.Frp.Async
                 {
                     throw new Exception("Could not find group.");
                 }
-                
+
                 if (groupState.Pending.Count > 0)
                 {
                     AsyncQueuedItem<TInput> next = groupState.Pending.Dequeue();
@@ -850,7 +882,7 @@ namespace Sodium.Frp.Async
                 internal AsyncQueuedItem<Unit>? Active;
             }
 
-            public override State CreateState() => new();
+            protected override State CreateState() => new();
 
             protected internal override IReadOnlyList<AsyncToStart<Unit>> Admit(
                 State state,
@@ -892,9 +924,8 @@ namespace Sodium.Frp.Async
     ///     everything a <see cref="AsyncConcurrencyStrategy{TInput,TResult,TState}" /> is deliberately
     ///     not trusted with — a strategy only ever answers Admit/OnCompleted as data; this class is
     ///     what carries the answer out. One instance is created per MapAsync call (see
-    ///     <see cref="AsyncStreamExtensions.MapAsync{TInput,TResult,TStrategyInput,TStrategyResult,TState}" />),
-    ///     owns that call's single <typeparamref name="TState" /> (created once, up front, via
-    ///     <see cref="AsyncConcurrencyStrategy{TInput,TResult,TState}.CreateState" />), and is never
+    ///     <see cref="AsyncStreamExtensions.MapAsync{TInput,TResult,TStrategyInput,TStrategyResult}" />),
+    ///     owns that call's single state (created once, up front, and is never
     ///     shared between calls — which is what lets the same strategy instance be reused safely
     ///     across many calls at once. It shares <see cref="AsyncMapBase" /> with
     ///     <see cref="AsyncConcurrencyStrategy{TInput,TResult,TState}" /> purely so it can reach that
@@ -910,7 +941,7 @@ namespace Sodium.Frp.Async
     ///     strategy genuinely originated as a <typeparamref name="TInput" />/<typeparamref name="TResult" />
     ///     here) downcast on the way out — is this class's job, not the strategy's.
     /// </summary>
-    internal sealed class AsyncMapExecutionManager<TInput, TResult, TStrategyInput, TStrategyResult, TState>
+    internal sealed class AsyncMapExecutionManager<TInput, TResult, TStrategyInput, TStrategyResult>
         : AsyncMapBase
     {
         private static readonly Mutation NoMutation =
@@ -918,8 +949,6 @@ namespace Sodium.Frp.Async
                 remove: Array.Empty<Guid>(),
                 promote: Array.Empty<Guid>(),
                 add: Array.Empty<Entry>());
-
-        private readonly AsyncConcurrencyStrategy<TStrategyInput, TStrategyResult, TState> strategy;
 
         private readonly Func<TInput, TStrategyInput> inputConverter;
 
@@ -932,7 +961,7 @@ namespace Sodium.Frp.Async
         // anywhere, on any thread. This relies specifically on that "one transaction at a time"
         // guarantee; if you're on a Sodium implementation that doesn't provide it, this state
         // would need its own lock again.
-        private readonly TState state;
+        private readonly IStateManager<TStrategyInput, TStrategyResult> stateManager;
 
         // Carries edits (add/promote/remove) to the tracked-items list. Always sent from either
         // Map's transform (not a registered Listen() callback — see Attach) or from well outside
@@ -982,7 +1011,7 @@ namespace Sodium.Frp.Async
         private readonly bool cancelOnDispose;
 
         internal AsyncMapExecutionManager(
-            AsyncConcurrencyStrategy<TStrategyInput, TStrategyResult, TState> strategy,
+            AsyncConcurrencyStrategyBase<TStrategyInput, TStrategyResult> strategy,
             Func<TInput, TStrategyInput> inputConverter,
             Func<TResult, TStrategyResult> resultConverter,
             StreamSink<TResult> results,
@@ -992,10 +1021,9 @@ namespace Sodium.Frp.Async
             Stream<IReadOnlyCollection<TInput>>? cancelMatching,
             bool cancelOnDispose)
         {
-            this.strategy = strategy;
             this.inputConverter = inputConverter;
             this.resultConverter = resultConverter;
-            this.state = strategy.CreateState();
+            this.stateManager = strategy.CreateStateManager();
             this.results = results;
             this.errors = errors;
             this.operation = operation;
@@ -1052,7 +1080,7 @@ namespace Sodium.Frp.Async
                                         value: o.Value);
 
                                 IReadOnlyList<AsyncToStart<TStrategyInput>> toStart =
-                                    this.strategy.Admit(state: this.state, incoming: incoming);
+                                    this.stateManager.Admit(incoming: incoming);
 
                                 Guid[] promote = new Guid[toStart.Count];
 
@@ -1448,7 +1476,7 @@ namespace Sodium.Frp.Async
                 Dictionary<Guid, Entry> entryById = entryByIdCell.SampleImpl();
 
                 AsyncStrategyResult<TStrategyInput> decision =
-                    this.strategy.OnCompleted(state: this.state, item: item, outcome: outcome);
+                    this.stateManager.OnCompleted(item: item, outcome: outcome);
 
                 if (decision.Publish && outcome.Kind != AsyncOutcomeKind.Cancelled)
                 {
