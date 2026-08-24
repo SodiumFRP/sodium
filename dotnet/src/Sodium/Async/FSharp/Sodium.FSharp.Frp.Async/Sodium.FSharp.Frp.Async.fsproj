@@ -25,11 +25,11 @@
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
-    <DocumentationFile>bin\Debug\Sodium.FSharp.Frp.xml</DocumentationFile>
+    <DocumentationFile>bin\Debug\Sodium.FSharp.Frp.Async.xml</DocumentationFile>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DocumentationFile>bin\Release\Sodium.FSharp.Frp.xml</DocumentationFile>
+    <DocumentationFile>bin\Release\Sodium.FSharp.Frp.Async.xml</DocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>

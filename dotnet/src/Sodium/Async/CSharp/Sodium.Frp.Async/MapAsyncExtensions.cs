@@ -14,6 +14,15 @@ namespace Sodium.Frp.Async;
     ///     that trigger cancellation of queued or running work alike. The returned
     ///     <see cref="AsyncMapStatus{TInput}" /> is IDisposable; disposing it is how you tear the whole
     ///     pipeline down.
+    ///     <para>
+    ///         The overloads differ only in how the call's own
+    ///         <c>TInput</c>/<c>TResult</c> reach the types <paramref name="strategy" /> is written
+    ///         against. Pick by what your strategy needs: one that only schedules (Parallel, Queue,
+    ///         SwitchLatest) ignores both, so neither converter is needed; one that inspects the input
+    ///         (QueuePerGroup) needs <c>TInput</c> to either already be its input type or be
+    ///         convertible to it. Every overload forwards to the last one, which takes both converters
+    ///         explicitly and imposes no relationship at all.
+    ///     </para>
     /// </summary>
     [PublicAPI]
     public static class AsyncStreamExtensions
@@ -84,6 +93,11 @@ namespace Sodium.Frp.Async;
         ///     disposing always, unconditionally, stops any further values from ever being admitted.
         ///     This is fixed here, at setup, rather than being a parameter of Dispose itself, since
         ///     IDisposable.Dispose() is deliberately the only way to dispose.
+        ///     Note that disposing never gags the pipeline: whatever is still in flight runs to
+        ///     completion and still publishes to <paramref name="results" />/<paramref name="errors" />
+        ///     after the call returns. With true that's usually moot, since canceled outcomes are
+        ///     never published and an operation that honors its token won't produce one — but an
+        ///     operation that ignores its token will, and with false it's the entire point.
         /// </param>
         /// <returns>
         ///     An <see cref="AsyncMapStatus{TInput}" />: IsRunning is a Cell&lt;bool&gt; that is true while
@@ -186,6 +200,11 @@ namespace Sodium.Frp.Async;
         ///     disposing always, unconditionally, stops any further values from ever being admitted.
         ///     This is fixed here, at setup, rather than being a parameter of Dispose itself, since
         ///     IDisposable.Dispose() is deliberately the only way to dispose.
+        ///     Note that disposing never gags the pipeline: whatever is still in flight runs to
+        ///     completion and still publishes to <paramref name="results" />/<paramref name="errors" />
+        ///     after the call returns. With true that's usually moot, since canceled outcomes are
+        ///     never published and an operation that honors its token won't produce one — but an
+        ///     operation that ignores its token will, and with false it's the entire point.
         /// </param>
         /// <returns>
         ///     An <see cref="AsyncMapStatus{TInput}" />: IsRunning is a Cell&lt;bool&gt; that is true while
@@ -292,6 +311,11 @@ namespace Sodium.Frp.Async;
         ///     disposing always, unconditionally, stops any further values from ever being admitted.
         ///     This is fixed here, at setup, rather than being a parameter of Dispose itself, since
         ///     IDisposable.Dispose() is deliberately the only way to dispose.
+        ///     Note that disposing never gags the pipeline: whatever is still in flight runs to
+        ///     completion and still publishes to <paramref name="results" />/<paramref name="errors" />
+        ///     after the call returns. With true that's usually moot, since canceled outcomes are
+        ///     never published and an operation that honors its token won't produce one — but an
+        ///     operation that ignores its token will, and with false it's the entire point.
         /// </param>
         /// <returns>
         ///     An <see cref="AsyncMapStatus{TInput}" />: IsRunning is a Cell&lt;bool&gt; that is true while
@@ -395,6 +419,11 @@ namespace Sodium.Frp.Async;
         ///     disposing always, unconditionally, stops any further values from ever being admitted.
         ///     This is fixed here, at setup, rather than being a parameter of Dispose itself, since
         ///     IDisposable.Dispose() is deliberately the only way to dispose.
+        ///     Note that disposing never gags the pipeline: whatever is still in flight runs to
+        ///     completion and still publishes to <paramref name="results" />/<paramref name="errors" />
+        ///     after the call returns. With true that's usually moot, since canceled outcomes are
+        ///     never published and an operation that honors its token won't produce one — but an
+        ///     operation that ignores its token will, and with false it's the entire point.
         /// </param>
         /// <returns>
         ///     An <see cref="AsyncMapStatus{TInput}" />: IsRunning is a Cell&lt;bool&gt; that is true while
@@ -500,6 +529,11 @@ namespace Sodium.Frp.Async;
         ///     disposing always, unconditionally, stops any further values from ever being admitted.
         ///     This is fixed here, at setup, rather than being a parameter of Dispose itself, since
         ///     IDisposable.Dispose() is deliberately the only way to dispose.
+        ///     Note that disposing never gags the pipeline: whatever is still in flight runs to
+        ///     completion and still publishes to <paramref name="results" />/<paramref name="errors" />
+        ///     after the call returns. With true that's usually moot, since canceled outcomes are
+        ///     never published and an operation that honors its token won't produce one — but an
+        ///     operation that ignores its token will, and with false it's the entire point.
         /// </param>
         /// <returns>
         ///     An <see cref="AsyncMapStatus{TInput}" />: IsRunning is a Cell&lt;bool&gt; that is true while
@@ -602,6 +636,11 @@ namespace Sodium.Frp.Async;
         ///     disposing always, unconditionally, stops any further values from ever being admitted.
         ///     This is fixed here, at setup, rather than being a parameter of Dispose itself, since
         ///     IDisposable.Dispose() is deliberately the only way to dispose.
+        ///     Note that disposing never gags the pipeline: whatever is still in flight runs to
+        ///     completion and still publishes to <paramref name="results" />/<paramref name="errors" />
+        ///     after the call returns. With true that's usually moot, since canceled outcomes are
+        ///     never published and an operation that honors its token won't produce one — but an
+        ///     operation that ignores its token will, and with false it's the entire point.
         /// </param>
         /// <returns>
         ///     An <see cref="AsyncMapStatus{TInput}" />: IsRunning is a Cell&lt;bool&gt; that is true while
@@ -718,6 +757,11 @@ namespace Sodium.Frp.Async;
         ///     disposing always, unconditionally, stops any further values from ever being admitted.
         ///     This is fixed here, at setup, rather than being a parameter of Dispose itself, since
         ///     IDisposable.Dispose() is deliberately the only way to dispose.
+        ///     Note that disposing never gags the pipeline: whatever is still in flight runs to
+        ///     completion and still publishes to <paramref name="results" />/<paramref name="errors" />
+        ///     after the call returns. With true that's usually moot, since canceled outcomes are
+        ///     never published and an operation that honors its token won't produce one — but an
+        ///     operation that ignores its token will, and with false it's the entire point.
         /// </param>
         /// <returns>
         ///     An <see cref="AsyncMapStatus{TInput}" />: IsRunning is a Cell&lt;bool&gt; that is true while
@@ -831,6 +875,11 @@ namespace Sodium.Frp.Async;
         ///     disposing always, unconditionally, stops any further values from ever being admitted.
         ///     This is fixed here, at setup, rather than being a parameter of Dispose itself, since
         ///     IDisposable.Dispose() is deliberately the only way to dispose.
+        ///     Note that disposing never gags the pipeline: whatever is still in flight runs to
+        ///     completion and still publishes to <paramref name="results" />/<paramref name="errors" />
+        ///     after the call returns. With true that's usually moot, since canceled outcomes are
+        ///     never published and an operation that honors its token won't produce one — but an
+        ///     operation that ignores its token will, and with false it's the entire point.
         /// </param>
         /// <returns>
         ///     An <see cref="AsyncMapStatus{TInput}" />: IsRunning is a Cell&lt;bool&gt; that is true while
@@ -950,6 +999,11 @@ namespace Sodium.Frp.Async;
         ///     disposing always, unconditionally, stops any further values from ever being admitted.
         ///     This is fixed here, at setup, rather than being a parameter of Dispose itself, since
         ///     IDisposable.Dispose() is deliberately the only way to dispose.
+        ///     Note that disposing never gags the pipeline: whatever is still in flight runs to
+        ///     completion and still publishes to <paramref name="results" />/<paramref name="errors" />
+        ///     after the call returns. With true that's usually moot, since canceled outcomes are
+        ///     never published and an operation that honors its token won't produce one — but an
+        ///     operation that ignores its token will, and with false it's the entire point.
         /// </param>
         /// <returns>
         ///     An <see cref="AsyncMapStatus{TInput}" />: IsRunning is a Cell&lt;bool&gt; that is true while

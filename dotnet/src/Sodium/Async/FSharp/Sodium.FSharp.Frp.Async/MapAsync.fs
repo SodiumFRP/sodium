@@ -59,11 +59,30 @@ let queuePerGroupWithComparer
 let queuePerGroup (getGroup : 'TInput -> 'TGroup) =
     getGroup |> queuePerGroupWithComparer EqualityComparer<'TGroup>.Default
 
+// Core's MapAsyncImpl takes its cancelAll as a Stream<UnitInternal>, since Core has no "don't
+// care" type it can expose. Mapping rather than casting is what keeps UnitInternal — which is
+// internal to Sodium.Core.Frp and so unnameable by anyone consuming this library — out of every
+// signature in this module. `null` for None: Core's parameter is a plain nullable reference.
 [<MethodImpl(MethodImplOptions.NoInlining)>]
 let private toUnitInternalStream (cancelAll : Stream<unit> option) : Stream<UnitInternal> =
     match cancelAll with
     | Some s -> s.MapImpl(Func<_, _>(fun (_ : unit) -> UnitInternal.Value))
     | None -> null
+
+// The four mapAsync functions below differ only in how this call's own 'TInput/'TResult reach the
+// types `strategy` is written against — exactly the axis the C# wrapper's overloads vary along, but
+// spelled as distinct names since F# has no optional/overloaded let bindings:
+//
+//   mapAsync                     strategy ignores both       (parallelStrategy, queue, switchLatest)
+//   mapAsyncWithInputConverter   strategy inspects the input (queuePerGroup)
+//   mapAsyncWithResultConverter  strategy inspects the result
+//   mapAsyncWithConverters       strategy inspects both
+//
+// Deliberately absent are variants keyed on 'TInput already being a subtype of the strategy's input
+// type: F# can't express that constraint between two open type parameters, and `fun v -> v` as the
+// converter covers it anyway. `source` comes last throughout so these compose with |>. cancelAll,
+// cancelMatching and cancelOnDispose are all required arguments rather than optional as in C# —
+// pass None, None and true for the common case.
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
 let mapAsync
