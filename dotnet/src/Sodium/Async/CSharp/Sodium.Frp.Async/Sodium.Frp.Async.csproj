@@ -6,20 +6,10 @@
 
     <PropertyGroup>
         <PackageId>SodiumFRP.Async</PackageId>
-        <Authors>SodiumFRP</Authors>
-        <PackageLicenseUrl>http://opensource.org/licenses/MIT</PackageLicenseUrl>
-        <PackageProjectUrl>https://github.com/SodiumFRP/sodium</PackageProjectUrl>
-        <Version>1.0.0</Version>
-        <PackageVersion>1.0.0</PackageVersion>
-        <AssemblyVersion>1.0.0.0</AssemblyVersion>
-        <FileVersion>1.0.0.0</FileVersion>
-        <InformationalVersion>1.0.0.0</InformationalVersion>
-        <Company>SodiumFRP</Company>
+        <MinVerTagPrefix>dotnet-async-csharp-</MinVerTagPrefix>
         <Product>Sodium FRP Async for C#</Product>
         <Title>Sodium FRP Async for C#</Title>
         <Description>Sodium FRP Async Extensions library for C#.</Description>
-        <IncludeSource>True</IncludeSource>
-        <IncludeSymbols>True</IncludeSymbols>
         <AssemblyName>Sodium.Frp.Async</AssemblyName>
         <RootNamespace>Sodium.Frp.Async</RootNamespace>
         <EnableDefaultItems>false</EnableDefaultItems>
