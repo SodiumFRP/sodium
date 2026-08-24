@@ -80,7 +80,7 @@ namespace Sodium.Frp.Async
         ///     operation only actually stops if it observes its CancellationToken, and a queued item
         ///     is removed once the strategy would otherwise have promoted it, not necessarily the
         ///     instant this call returns. Nor does this gag the pipeline: anything still in flight
-        ///     runs to completion and still publishes its result or error afterwards. Safe to call
+        ///     runs to completion and still publishes its result or error afterward. Safe to call
         ///     more than once — later calls are no-ops.
         /// </summary>
         public void Dispose() => this.dispose();
@@ -255,7 +255,7 @@ namespace Sodium.Frp.Async
 
             /// <summary>
             ///     Runs whichever handler matches how this item finished. Each handler is optional —
-            ///     pass null for an outcome you don't care about and it's simply skipped.
+            ///     pass null for an outcome you don't care about, and it's simply skipped.
             /// </summary>
             /// <param name="onSucceeded">Handles a successful run, given the value the operation returned; may be null.</param>
             /// <param name="onFailed">Handles a failed run, given the exception the operation threw; may be null.</param>
@@ -1445,12 +1445,21 @@ namespace Sodium.Frp.Async
                 // Canceled while it was still queued — finish immediately without ever
                 // invoking the operation. This still goes through the normal completion path,
                 // so a strategy like the built-in Queue naturally moves on to whatever's next.
-                this.Complete(
-                    item: toStart.Item,
-                    strategyOutcome: AsyncOutcome<TStrategyResult>.Canceled(),
-                    outcome: AsyncOutcome<TResult>.Canceled(),
-                    entryByIdCell: entryByIdCell,
-                    tokenToCheck: null);
+                // Deferred through Post, exactly like the normal-start branch below: Complete
+                // opens its own transaction via TransactionInternal.RunImpl, and this branch can
+                // be reached synchronously, from within the very transaction that's processing
+                // the admission — a strategy is free to cancel incoming and still return it as a
+                // ToStart in the same Admit call, not just via a later Admit/OnCompleted call in
+                // its own transaction. Calling Complete inline here would then nest a transaction
+                // inside one already open and crash with "Send may not be called inside a
+                // callback."
+                TransactionInternal.PostImpl(() =>
+                    this.Complete(
+                        item: toStart.Item,
+                        strategyOutcome: AsyncOutcome<TStrategyResult>.Canceled(),
+                        outcome: AsyncOutcome<TResult>.Canceled(),
+                        entryByIdCell: entryByIdCell,
+                        tokenToCheck: null));
 
                 return;
             }
@@ -1570,10 +1579,7 @@ namespace Sodium.Frp.Async
 
                 for (int i = 0; i < decision.Next.Count; i++)
                 {
-                    if (entryById == null)
-                    {
-                        entryById = entryByIdCell.SampleImpl();
-                    }
+                    entryById ??= entryByIdCell.SampleImpl();
 
                     Guid id = decision.Next[i].Item.Id;
 
