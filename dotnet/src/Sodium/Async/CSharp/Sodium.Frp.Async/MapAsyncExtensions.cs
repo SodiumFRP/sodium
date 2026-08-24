@@ -5,8 +5,8 @@ using System.Threading.Tasks;
 using JetBrains.Annotations;
 using Sodium.Functional;
 
-namespace Sodium.Frp.Async;
-
+namespace Sodium.Frp.Async
+{
     /// <summary>
     ///     Extension methods that bridge an impure asynchronous operation into the FRP world:
     ///     listen on a Stream&lt;TInput&gt;, run an async operation per firing, push the result into a
@@ -16,7 +16,7 @@ namespace Sodium.Frp.Async;
     ///     pipeline down.
     ///     <para>
     ///         The overloads differ only in how the call's own
-    ///         <c>TInput</c>/<c>TResult</c> reach the types <paramref name="strategy" /> is written
+    ///         <c>TInput</c>/<c>TResult</c> reach the types the <c>strategy</c> argument is written
     ///         against. Pick by what your strategy needs: one that only schedules (Parallel, Queue,
     ///         SwitchLatest) ignores both, so neither converter is needed; one that inspects the input
     ///         (QueuePerGroup) needs <c>TInput</c> to either already be its input type or be
@@ -1037,3 +1037,4 @@ namespace Sodium.Frp.Async;
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
     }
+}

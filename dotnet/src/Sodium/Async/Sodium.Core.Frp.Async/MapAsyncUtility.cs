@@ -215,7 +215,9 @@ namespace Sodium.Frp.Async
         {
             // Note the deliberate absence of any Value/Error/Kind property: matching is the only
             // way in, so a strategy can't read a result without also saying what to do when there
-            // isn't one.
+            // isn't one. Nor is there an asynchronous match: OnCompleted is synchronous and answers
+            // with data, so an awaitable one would only invite doing work here that belongs to the
+            // execution engine.
 
             /// <summary>Which of the three ways this item finished.</summary>
             private readonly AsyncOutcomeKind kind;
@@ -273,70 +275,6 @@ namespace Sodium.Frp.Async
                         break;
                     case AsyncOutcomeKind.Canceled:
                         onCanceled?.Invoke();
-                        break;
-                    default:
-                        throw new InvalidOperationException("Unknown value for kind.");
-                }
-            }
-
-            /// <summary>
-            ///     Asynchronous <see cref="Match{T}" />. Note that a strategy can't use this from
-            ///     <see cref="AsyncConcurrencyStrategy{TInput,TResult,TState}.OnCompleted" />, which is
-            ///     synchronous and answers with data — this is for code outside the strategy that holds
-            ///     an outcome and wants to await per-case work.
-            /// </summary>
-            /// <typeparam name="T">The type every handler's task produces.</typeparam>
-            /// <param name="onSucceeded">Handles a successful run, given the value the operation returned.</param>
-            /// <param name="onFailed">Handles a failed run, given the exception the operation threw.</param>
-            /// <param name="onCanceled">Handles a canceled run — which may never have started at all.</param>
-            /// <returns>Whatever the matching handler's task produced.</returns>
-            public async Task<T> MatchAsync<T>(
-                Func<TResult, Task<T>> onSucceeded,
-                Func<Exception, Task<T>> onFailed,
-                Func<Task<T>> onCanceled) =>
-                this.kind switch
-                {
-                    AsyncOutcomeKind.Succeeded => await onSucceeded(this.value!),
-                    AsyncOutcomeKind.Failed => await onFailed(this.error!),
-                    AsyncOutcomeKind.Canceled => await onCanceled(),
-                    _ => throw new InvalidOperationException("Unknown value for kind.")
-                };
-
-            /// <summary>
-            ///     Asynchronous <see cref="MatchVoid" />, with the same optional handlers and the same
-            ///     caveat as <see cref="MatchAsync{T}" /> about not being usable from within a strategy.
-            /// </summary>
-            /// <param name="onSucceeded">Handles a successful run, given the value the operation returned; may be null.</param>
-            /// <param name="onFailed">Handles a failed run, given the exception the operation threw; may be null.</param>
-            /// <param name="onCanceled">Handles a canceled run — which may never have started at all; may be null.</param>
-            /// <returns>A task that completes once the matching handler has.</returns>
-            public async Task MatchAsyncVoid(
-                Func<TResult, Task>? onSucceeded,
-                Func<Exception, Task>? onFailed,
-                Func<Task>? onCanceled)
-            {
-                switch (this.kind)
-                {
-                    case AsyncOutcomeKind.Succeeded:
-                        if (onSucceeded != null)
-                        {
-                            await onSucceeded(this.value!);
-                        }
-
-                        break;
-                    case AsyncOutcomeKind.Failed:
-                        if (onFailed != null)
-                        {
-                            await onFailed(this.error!);
-                        }
-
-                        break;
-                    case AsyncOutcomeKind.Canceled:
-                        if (onCanceled != null)
-                        {
-                            await onCanceled();
-                        }
-
                         break;
                     default:
                         throw new InvalidOperationException("Unknown value for kind.");
@@ -968,7 +906,7 @@ namespace Sodium.Frp.Async
                 }
                 else
                 {
-                    throw new Exception("Could not find group.");
+                    throw new InvalidOperationException("Could not find group.");
                 }
 
                 if (groupState.Pending.Count > 0)
@@ -994,6 +932,10 @@ namespace Sodium.Frp.Async
             : AsyncConcurrencyStrategy<TUnit, TUnit, SwitchLatestStrategy<TUnit>.State>
         {
             internal static readonly SwitchLatestStrategy<TUnit> Instance = new();
+
+            private SwitchLatestStrategy()
+            {
+            }
 
             /// <summary>The currently in-flight item, if any — superseded and replaced by each new firing.</summary>
             public sealed class State
@@ -1231,7 +1173,7 @@ namespace Sodium.Frp.Async
                                         }
                                         else
                                         {
-                                            throw new Exception("Could not find item to start.");
+                                            throw new InvalidOperationException("Could not find item to start.");
                                         }
                                     }
 
@@ -1652,7 +1594,7 @@ namespace Sodium.Frp.Async
                     }
                     else
                     {
-                        throw new Exception("Could not find item to start.");
+                        throw new InvalidOperationException("Could not find item to start.");
                     }
 
                     promote[i] = decision.Next[i].Item.Id;
@@ -1722,8 +1664,8 @@ namespace Sodium.Frp.Async
 This example uses the C# wrapper's public surface (Sodium.Frp.Async.AsyncStreamExtensions.MapAsync
 and Sodium.Frp.Async.AsyncConcurrencyStrategy) — not this project's own internal MapAsyncImpl/
 AsyncConcurrencyStrategyFactory directly, which no external consumer ever references. The F#
-wrapper's equivalents (mapAsync and the functions in Sodium.Frp.Async, e.g. queue()) follow the
-same shape, typed against F#'s native unit instead of Sodium.Functional.Unit.
+wrapper's equivalents (mapAsync and the functions in Sodium.Frp.Async, e.g. queueStrategy()) follow
+the same shape, typed against F#'s native unit instead of Sodium.Functional.Unit.
 
 Usage:
 

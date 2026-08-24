@@ -25,6 +25,13 @@
         <EnableDefaultItems>false</EnableDefaultItems>
         <Nullable>enable</Nullable>
         <LangVersion>10</LangVersion>
+        <!--
+            The types a consumer actually holds — AsyncMapStatus, AsyncItem, AsyncConcurrencyStrategy
+            and friends — are declared here, not in the language wrappers, so without this their
+            documentation would be missing from IntelliSense even once the wrappers ship theirs.
+            GenerateDocumentationFile rather than an explicit path: see Sodium.Frp.Async.csproj.
+        -->
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
 
     <ItemGroup>

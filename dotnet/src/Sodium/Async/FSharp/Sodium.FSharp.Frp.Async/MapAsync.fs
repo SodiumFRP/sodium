@@ -44,10 +44,10 @@ let private switchLatestInstance = AsyncConcurrencyStrategyFactory.SwitchLatest(
 let parallelStrategy () : AsyncConcurrencyStrategyBase<unit, unit> = parallelInstance
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
-let queue () : AsyncConcurrencyStrategyBase<unit, unit> = queueInstance
+let queueStrategy () : AsyncConcurrencyStrategyBase<unit, unit> = queueInstance
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
-let switchLatest () : AsyncConcurrencyStrategyBase<unit, unit> = switchLatestInstance
+let switchLatestStrategy () : AsyncConcurrencyStrategyBase<unit, unit> = switchLatestInstance
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
 let queuePerGroupWithComparer
@@ -73,7 +73,8 @@ let private toUnitInternalStream (cancelAll : Stream<unit> option) : Stream<Unit
 // types `strategy` is written against — exactly the axis the C# wrapper's overloads vary along, but
 // spelled as distinct names since F# has no optional/overloaded let bindings:
 //
-//   mapAsync                     strategy ignores both       (parallelStrategy, queue, switchLatest)
+//   mapAsync                     strategy ignores both       (parallelStrategy, queueStrategy,
+//                                                             switchLatestStrategy)
 //   mapAsyncWithInputConverter   strategy inspects the input (queuePerGroup)
 //   mapAsyncWithResultConverter  strategy inspects the result
 //   mapAsyncWithConverters       strategy inspects both

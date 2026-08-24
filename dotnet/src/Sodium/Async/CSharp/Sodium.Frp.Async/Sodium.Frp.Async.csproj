@@ -25,6 +25,14 @@
         <EnableDefaultItems>false</EnableDefaultItems>
         <Nullable>enable</Nullable>
         <LangVersion>10</LangVersion>
+        <!--
+            GenerateDocumentationFile rather than an explicit DocumentationFile path as in
+            Sodium.Frp/Sodium.Functional: this project multi-targets, and a single hard-coded path
+            makes all three target frameworks write over one another's XML. This emits one file per
+            target framework, next to its own assembly, which is also where NuGet pack expects to
+            find it when populating each lib folder.
+        -->
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
     </PropertyGroup>
 
     <ItemGroup>
