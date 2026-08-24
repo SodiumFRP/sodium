@@ -866,14 +866,10 @@ namespace Sodium.Frp.Async
             {
                 TGroup group = this.getGroup(incoming.Value);
 
-                GroupState groupState;
-
-                if (state.Groups.TryGetValue(key: group, value: out GroupState? gs))
+                if (!state.Groups.TryGetValue(key: group, value: out GroupState? groupState))
                 {
-                    groupState = gs;
-                }
-                else
-                {
+                    // First value for this group — it gets its own queue, removed again in
+                    // OnCompleted once the group falls idle.
                     groupState = new GroupState();
                     state.Groups.Add(key: group, value: groupState);
                 }
@@ -898,13 +894,7 @@ namespace Sodium.Frp.Async
             {
                 TGroup group = this.getGroup(item.Value);
 
-                GroupState groupState;
-
-                if (state.Groups.TryGetValue(key: group, value: out GroupState? gs))
-                {
-                    groupState = gs;
-                }
-                else
+                if (!state.Groups.TryGetValue(key: group, value: out GroupState? groupState))
                 {
                     throw new InvalidOperationException("Could not find group.");
                 }
@@ -1165,16 +1155,13 @@ namespace Sodium.Frp.Async
                                     {
                                         value = o.Value;
                                     }
+                                    else if (o.EntryById.TryGetValue(key: promote[i], value: out Entry? entry))
+                                    {
+                                        value = entry.Value;
+                                    }
                                     else
                                     {
-                                        if (o.EntryById.ContainsKey(promote[i]))
-                                        {
-                                            value = o.EntryById[promote[i]].Value;
-                                        }
-                                        else
-                                        {
-                                            throw new InvalidOperationException("Could not find item to start.");
-                                        }
+                                        throw new InvalidOperationException("Could not find item to start.");
                                     }
 
                                     this.PromoteAndLaunch(
@@ -1588,16 +1575,18 @@ namespace Sodium.Frp.Async
                         entryById = entryByIdCell.SampleImpl();
                     }
 
-                    if (entryById.ContainsKey(decision.Next[i].Item.Id))
+                    Guid id = decision.Next[i].Item.Id;
+
+                    if (entryById.TryGetValue(key: id, value: out Entry? entry))
                     {
-                        values[i] = entryById[decision.Next[i].Item.Id].Value;
+                        values[i] = entry.Value;
                     }
                     else
                     {
                         throw new InvalidOperationException("Could not find item to start.");
                     }
 
-                    promote[i] = decision.Next[i].Item.Id;
+                    promote[i] = id;
                 }
 
                 this.mutations.SendImpl(
