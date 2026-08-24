@@ -411,857 +411,6 @@ namespace Sodium.Frp.Async
     internal static class AsyncStreamUtility
     {
         /// <summary>
-        ///     Convenience overload for a strategy that only cares about scheduling, not about
-        ///     <typeparamref name="TInput" />/<typeparamref name="TResult" /> themselves (e.g. Parallel,
-        ///     Queue, SwitchLatest) — both are erased to <see cref="UnitInternal" /> before reaching it. See the
-        ///     canonical
-        ///     <see
-        ///         cref="MapAsyncImpl{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{UnitInternal},Stream{IReadOnlyCollection{TInput}},bool)" />
-        ///     overload
-        ///     for the full parameter contract.
-        /// </summary>
-        /// <typeparam name="TInput">
-        ///     The type carried by the source stream — the input each invocation of
-        ///     <paramref name="operation" /> receives, and the type reported by
-        ///     <see cref="AsyncMapStatus{TInput}.Items" /> and matched against by
-        ///     <paramref name="cancelMatching" />.
-        /// </typeparam>
-        /// <typeparam name="TResult">
-        ///     The type <paramref name="operation" /> produces on success, sent to
-        ///     <paramref name="results" />.
-        /// </typeparam>
-        /// <param name="source">
-        ///     The stream of inputs to run against. Every firing is offered to
-        ///     <paramref name="strategy" />, which decides whether it starts immediately or waits.
-        ///     After the returned status is disposed, further firings are ignored entirely.
-        /// </param>
-        /// <param name="results">
-        ///     Required. Each successful operation's return value is sent here, in completion order
-        ///     rather than the order inputs arrived. A result whose run was superseded or canceled
-        ///     is not sent — see <paramref name="strategy" />.
-        /// </param>
-        /// <param name="errors">
-        ///     Required. Every failed operation is sent here — there is deliberately no way to call
-        ///     this method without somewhere for errors to go.
-        /// </param>
-        /// <param name="operation">
-        ///     The asynchronous work to run per input. It's invoked inline, so it doesn't reach a
-        ///     thread pool until it awaits something itself, and it's handed a CancellationToken
-        ///     combining this item's own cancellation with any token the strategy supplied. Honoring
-        ///     that token is what makes <paramref name="cancelAll" />, <paramref name="cancelMatching" />,
-        ///     and <paramref name="cancelOnDispose" /> take effect on work that has already started —
-        ///     an operation that ignores it still runs to completion, and cancellation only means its
-        ///     result goes unpublished. There is deliberately no overload that omits the token.
-        /// </param>
-        /// <param name="strategy">
-        ///     How overlapping requests are handled — a strategy that only cares about scheduling, not
-        ///     about <typeparamref name="TInput" />/<typeparamref name="TResult" /> themselves. A
-        ///     strategy instance holds no state of its own and may safely be reused across multiple
-        ///     MapAsync calls (even concurrently) — each call gets its own freshly created state
-        ///     manager, so separate pipelines never share scheduling state.
-        /// </param>
-        /// <param name="cancelAll">
-        ///     Optional. Each firing cancels every tracked operation — queued or already running.
-        ///     A queued item that's canceled is simply never started when its turn comes.
-        ///     Cancellation only takes effect for a running operation if it observes its
-        ///     CancellationToken.
-        /// </param>
-        /// <param name="cancelMatching">
-        ///     Optional. Each firing cancels whichever tracked operations (queued or running) were
-        ///     admitted for an input value present in the fired collection (compared with the
-        ///     default equality comparer for TInput). Same caveats as <paramref name="cancelAll" />.
-        /// </param>
-        /// <param name="cancelOnDispose">
-        ///     Whether disposing the returned <see cref="AsyncMapStatus{TInput}" /> also cancels every
-        ///     item tracked at that point (queued or running) — true by default. Either way,
-        ///     disposing always, unconditionally, stops any further values from ever being admitted.
-        ///     This is fixed here, at setup, rather than being a parameter of Dispose itself, since
-        ///     IDisposable.Dispose() is deliberately the only way to dispose.
-        /// </param>
-        /// <returns>
-        ///     An <see cref="AsyncMapStatus{TInput}" />: IsRunning is a Cell&lt;bool&gt; that is true while
-        ///     at least one invocation is actually running (not merely queued), updating glitch-free
-        ///     in the same transaction as whichever event caused it to change; Items lists every
-        ///     tracked value with its status; disposing it tears the pipeline down.
-        /// </returns>
-        public static AsyncMapStatus<TInput> MapAsyncImpl<TInput, TResult>(
-            this Stream<TInput> source,
-            StreamSink<TResult> results,
-            StreamSink<Exception> errors,
-            Func<TInput, CancellationToken, Task<TResult>> operation,
-            AsyncConcurrencyStrategyBase<UnitInternal, UnitInternal> strategy,
-            Stream<UnitInternal>? cancelAll = null,
-            Stream<IReadOnlyCollection<TInput>>? cancelMatching = null,
-            bool cancelOnDispose = true) =>
-            source.MapAsyncImpl(
-                results: results,
-                errors: errors,
-                operation: operation,
-                strategy: strategy,
-                inputConverter: _ => UnitInternal.Value,
-                resultConverter: _ => UnitInternal.Value,
-                cancelAll: cancelAll,
-                cancelMatching: cancelMatching,
-                cancelOnDispose: cancelOnDispose);
-
-        /// <summary>
-        ///     Convenience overload for a strategy that cares about <typeparamref name="TStrategyInput" />
-        ///     but not about the result (<see cref="UnitInternal" />), where <typeparamref name="TInput" /> is
-        ///     already a <typeparamref name="TStrategyInput" /> (e.g. QueuePerGroup on the call's own
-        ///     input type). See the canonical
-        ///     <see
-        ///         cref="MapAsyncImpl{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{UnitInternal},Stream{IReadOnlyCollection{TInput}},bool)" />
-        ///     overload for the
-        ///     full parameter contract.
-        /// </summary>
-        /// <typeparam name="TInput">
-        ///     The type carried by the source stream — the input each invocation of
-        ///     <paramref name="operation" /> receives, and the type reported by
-        ///     <see cref="AsyncMapStatus{TInput}.Items" /> and matched against by
-        ///     <paramref name="cancelMatching" />.
-        /// </typeparam>
-        /// <typeparam name="TResult">
-        ///     The type <paramref name="operation" /> produces on success, sent to
-        ///     <paramref name="results" />.
-        /// </typeparam>
-        /// <typeparam name="TStrategyInput">
-        ///     The input type <paramref name="strategy" /> is written against — inferred from
-        ///     <paramref name="strategy" />'s type, never specified explicitly. Usually the same as
-        ///     <typeparamref name="TInput" />, but a strategy can be written against a broader type
-        ///     (an interface or base class) so a single instance can be shared across MapAsync calls
-        ///     for several different, more specific <typeparamref name="TInput" /> types — the
-        ///     <c>where TInput : TStrategyInput</c> constraint is what permits that while still
-        ///     letting the strategy operate purely in terms of <typeparamref name="TStrategyInput" />.
-        /// </typeparam>
-        /// <param name="source">
-        ///     The stream of inputs to run against. Every firing is offered to
-        ///     <paramref name="strategy" />, which decides whether it starts immediately or waits.
-        ///     After the returned status is disposed, further firings are ignored entirely.
-        /// </param>
-        /// <param name="results">
-        ///     Required. Each successful operation's return value is sent here, in completion order
-        ///     rather than the order inputs arrived. A result whose run was superseded or canceled
-        ///     is not sent — see <paramref name="strategy" />.
-        /// </param>
-        /// <param name="errors">
-        ///     Required. Every failed operation is sent here — there is deliberately no way to call
-        ///     this method without somewhere for errors to go.
-        /// </param>
-        /// <param name="operation">
-        ///     The asynchronous work to run per input. It's invoked inline, so it doesn't reach a
-        ///     thread pool until it awaits something itself, and it's handed a CancellationToken
-        ///     combining this item's own cancellation with any token the strategy supplied. Honoring
-        ///     that token is what makes <paramref name="cancelAll" />, <paramref name="cancelMatching" />,
-        ///     and <paramref name="cancelOnDispose" /> take effect on work that has already started —
-        ///     an operation that ignores it still runs to completion, and cancellation only means its
-        ///     result goes unpublished. There is deliberately no overload that omits the token.
-        /// </param>
-        /// <param name="strategy">
-        ///     How overlapping requests are handled — a strategy that cares about
-        ///     <typeparamref name="TStrategyInput" /> but not about the result (fixed to
-        ///     <see cref="UnitInternal" />). A strategy instance holds no state of its own and may safely be
-        ///     reused across multiple MapAsync calls (even concurrently) — each call gets its own
-        ///     freshly created state manager, so separate pipelines never share scheduling state.
-        /// </param>
-        /// <param name="cancelAll">
-        ///     Optional. Each firing cancels every tracked operation — queued or already running.
-        ///     A queued item that's canceled is simply never started when its turn comes.
-        ///     Cancellation only takes effect for a running operation if it observes its
-        ///     CancellationToken.
-        /// </param>
-        /// <param name="cancelMatching">
-        ///     Optional. Each firing cancels whichever tracked operations (queued or running) were
-        ///     admitted for an input value present in the fired collection (compared with the
-        ///     default equality comparer for TInput). Same caveats as <paramref name="cancelAll" />.
-        /// </param>
-        /// <param name="cancelOnDispose">
-        ///     Whether disposing the returned <see cref="AsyncMapStatus{TInput}" /> also cancels every
-        ///     item tracked at that point (queued or running) — true by default. Either way,
-        ///     disposing always, unconditionally, stops any further values from ever being admitted.
-        ///     This is fixed here, at setup, rather than being a parameter of Dispose itself, since
-        ///     IDisposable.Dispose() is deliberately the only way to dispose.
-        /// </param>
-        /// <returns>
-        ///     An <see cref="AsyncMapStatus{TInput}" />: IsRunning is a Cell&lt;bool&gt; that is true while
-        ///     at least one invocation is actually running (not merely queued), updating glitch-free
-        ///     in the same transaction as whichever event caused it to change; Items lists every
-        ///     tracked value with its status; disposing it tears the pipeline down.
-        /// </returns>
-        public static AsyncMapStatus<TInput> MapAsyncImpl<TInput, TResult, TStrategyInput>(
-            this Stream<TInput> source,
-            StreamSink<TResult> results,
-            StreamSink<Exception> errors,
-            Func<TInput, CancellationToken, Task<TResult>> operation,
-            AsyncConcurrencyStrategyBase<TStrategyInput, UnitInternal> strategy,
-            Stream<UnitInternal>? cancelAll = null,
-            Stream<IReadOnlyCollection<TInput>>? cancelMatching = null,
-            bool cancelOnDispose = true)
-            where TInput : TStrategyInput =>
-            source.MapAsyncImpl(
-                results: results,
-                errors: errors,
-                operation: operation,
-                strategy: strategy,
-                inputConverter: v => v,
-                resultConverter: _ => UnitInternal.Value,
-                cancelAll: cancelAll,
-                cancelMatching: cancelMatching,
-                cancelOnDispose: cancelOnDispose);
-
-        /// <summary>
-        ///     Convenience overload for a strategy that cares about <typeparamref name="TStrategyInput" />
-        ///     but not about the result (<see cref="UnitInternal" />), where <paramref name="inputConverter" />
-        ///     derives it from <typeparamref name="TInput" /> (e.g. QueuePerGroup, deriving the group
-        ///     key). See the canonical
-        ///     <see
-        ///         cref="MapAsyncImpl{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{UnitInternal},Stream{IReadOnlyCollection{TInput}},bool)" />
-        ///     overload for the
-        ///     full parameter contract.
-        /// </summary>
-        /// <typeparam name="TInput">
-        ///     The type carried by the source stream — the input each invocation of
-        ///     <paramref name="operation" /> receives, and the type reported by
-        ///     <see cref="AsyncMapStatus{TInput}.Items" /> and matched against by
-        ///     <paramref name="cancelMatching" />.
-        /// </typeparam>
-        /// <typeparam name="TResult">
-        ///     The type <paramref name="operation" /> produces on success, sent to
-        ///     <paramref name="results" />.
-        /// </typeparam>
-        /// <typeparam name="TStrategyInput">
-        ///     The input type <paramref name="strategy" /> is written against — inferred from
-        ///     <paramref name="strategy" />'s type, never specified explicitly. Not required to be
-        ///     related to <typeparamref name="TInput" /> by inheritance at all, since
-        ///     <paramref name="inputConverter" /> derives it explicitly.
-        /// </typeparam>
-        /// <param name="source">
-        ///     The stream of inputs to run against. Every firing is offered to
-        ///     <paramref name="strategy" />, which decides whether it starts immediately or waits.
-        ///     After the returned status is disposed, further firings are ignored entirely.
-        /// </param>
-        /// <param name="results">
-        ///     Required. Each successful operation's return value is sent here, in completion order
-        ///     rather than the order inputs arrived. A result whose run was superseded or canceled
-        ///     is not sent — see <paramref name="strategy" />.
-        /// </param>
-        /// <param name="errors">
-        ///     Required. Every failed operation is sent here — there is deliberately no way to call
-        ///     this method without somewhere for errors to go.
-        /// </param>
-        /// <param name="operation">
-        ///     The asynchronous work to run per input. It's invoked inline, so it doesn't reach a
-        ///     thread pool until it awaits something itself, and it's handed a CancellationToken
-        ///     combining this item's own cancellation with any token the strategy supplied. Honoring
-        ///     that token is what makes <paramref name="cancelAll" />, <paramref name="cancelMatching" />,
-        ///     and <paramref name="cancelOnDispose" /> take effect on work that has already started —
-        ///     an operation that ignores it still runs to completion, and cancellation only means its
-        ///     result goes unpublished. There is deliberately no overload that omits the token.
-        /// </param>
-        /// <param name="strategy">
-        ///     How overlapping requests are handled — a strategy that cares about
-        ///     <typeparamref name="TStrategyInput" /> but not about the result (fixed to
-        ///     <see cref="UnitInternal" />). A strategy instance holds no state of its own and may safely be
-        ///     reused across multiple MapAsync calls (even concurrently) — each call gets its own
-        ///     freshly created state manager, so separate pipelines never share scheduling state.
-        /// </param>
-        /// <param name="inputConverter">
-        ///     Converts each <typeparamref name="TInput" /> value to the
-        ///     <typeparamref name="TStrategyInput" /> <paramref name="strategy" /> is written against,
-        ///     before it's admitted (e.g. deriving a QueuePerGroup group key).
-        /// </param>
-        /// <param name="cancelAll">
-        ///     Optional. Each firing cancels every tracked operation — queued or already running.
-        ///     A queued item that's canceled is simply never started when its turn comes.
-        ///     Cancellation only takes effect for a running operation if it observes its
-        ///     CancellationToken.
-        /// </param>
-        /// <param name="cancelMatching">
-        ///     Optional. Each firing cancels whichever tracked operations (queued or running) were
-        ///     admitted for an input value present in the fired collection (compared with the
-        ///     default equality comparer for TInput). Same caveats as <paramref name="cancelAll" />.
-        /// </param>
-        /// <param name="cancelOnDispose">
-        ///     Whether disposing the returned <see cref="AsyncMapStatus{TInput}" /> also cancels every
-        ///     item tracked at that point (queued or running) — true by default. Either way,
-        ///     disposing always, unconditionally, stops any further values from ever being admitted.
-        ///     This is fixed here, at setup, rather than being a parameter of Dispose itself, since
-        ///     IDisposable.Dispose() is deliberately the only way to dispose.
-        /// </param>
-        /// <returns>
-        ///     An <see cref="AsyncMapStatus{TInput}" />: IsRunning is a Cell&lt;bool&gt; that is true while
-        ///     at least one invocation is actually running (not merely queued), updating glitch-free
-        ///     in the same transaction as whichever event caused it to change; Items lists every
-        ///     tracked value with its status; disposing it tears the pipeline down.
-        /// </returns>
-        public static AsyncMapStatus<TInput> MapAsyncImpl<TInput, TResult, TStrategyInput>(
-            this Stream<TInput> source,
-            StreamSink<TResult> results,
-            StreamSink<Exception> errors,
-            Func<TInput, CancellationToken, Task<TResult>> operation,
-            AsyncConcurrencyStrategyBase<TStrategyInput, UnitInternal> strategy,
-            Func<TInput, TStrategyInput> inputConverter,
-            Stream<UnitInternal>? cancelAll = null,
-            Stream<IReadOnlyCollection<TInput>>? cancelMatching = null,
-            bool cancelOnDispose = true) =>
-            source.MapAsyncImpl(
-                results: results,
-                errors: errors,
-                operation: operation,
-                strategy: strategy,
-                inputConverter: inputConverter,
-                resultConverter: _ => UnitInternal.Value,
-                cancelAll: cancelAll,
-                cancelMatching: cancelMatching,
-                cancelOnDispose: cancelOnDispose);
-
-        /// <summary>
-        ///     Convenience overload for a strategy that doesn't care about the input (<see cref="UnitInternal" />)
-        ///     but does care about <typeparamref name="TStrategyResult" />, where
-        ///     <typeparamref name="TResult" /> is already a <typeparamref name="TStrategyResult" />. See
-        ///     the canonical
-        ///     <see
-        ///         cref="MapAsyncImpl{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{UnitInternal},Stream{IReadOnlyCollection{TInput}},bool)" />
-        ///     overload for the full parameter contract.
-        /// </summary>
-        /// <typeparam name="TInput">
-        ///     The type carried by the source stream — the input each invocation of
-        ///     <paramref name="operation" /> receives, and the type reported by
-        ///     <see cref="AsyncMapStatus{TInput}.Items" /> and matched against by
-        ///     <paramref name="cancelMatching" />.
-        /// </typeparam>
-        /// <typeparam name="TResult">
-        ///     The type <paramref name="operation" /> produces on success, sent to
-        ///     <paramref name="results" />.
-        /// </typeparam>
-        /// <typeparam name="TStrategyResult">
-        ///     The result type <paramref name="strategy" /> is written against — inferred from
-        ///     <paramref name="strategy" />'s type, never specified explicitly. Usually the same as
-        ///     <typeparamref name="TResult" />, but a strategy can be written against a broader type
-        ///     (an interface or base class) so a single instance can be shared across MapAsync calls
-        ///     for several different, more specific <typeparamref name="TResult" /> types — the
-        ///     <c>where TResult : TStrategyResult</c> constraint is what permits that while still
-        ///     letting the strategy operate purely in terms of <typeparamref name="TStrategyResult" />.
-        /// </typeparam>
-        /// <param name="source">
-        ///     The stream of inputs to run against. Every firing is offered to
-        ///     <paramref name="strategy" />, which decides whether it starts immediately or waits.
-        ///     After the returned status is disposed, further firings are ignored entirely.
-        /// </param>
-        /// <param name="results">
-        ///     Required. Each successful operation's return value is sent here, in completion order
-        ///     rather than the order inputs arrived. A result whose run was superseded or canceled
-        ///     is not sent — see <paramref name="strategy" />.
-        /// </param>
-        /// <param name="errors">
-        ///     Required. Every failed operation is sent here — there is deliberately no way to call
-        ///     this method without somewhere for errors to go.
-        /// </param>
-        /// <param name="operation">
-        ///     The asynchronous work to run per input. It's invoked inline, so it doesn't reach a
-        ///     thread pool until it awaits something itself, and it's handed a CancellationToken
-        ///     combining this item's own cancellation with any token the strategy supplied. Honoring
-        ///     that token is what makes <paramref name="cancelAll" />, <paramref name="cancelMatching" />,
-        ///     and <paramref name="cancelOnDispose" /> take effect on work that has already started —
-        ///     an operation that ignores it still runs to completion, and cancellation only means its
-        ///     result goes unpublished. There is deliberately no overload that omits the token.
-        /// </param>
-        /// <param name="strategy">
-        ///     How overlapping requests are handled — a strategy that doesn't care about the input
-        ///     (fixed to <see cref="UnitInternal" />) but does care about <typeparamref name="TStrategyResult" />.
-        ///     A strategy instance holds no state of its own and may safely be reused across multiple
-        ///     MapAsync calls (even concurrently) — each call gets its own freshly created state
-        ///     manager, so separate pipelines never share scheduling state.
-        /// </param>
-        /// <param name="cancelAll">
-        ///     Optional. Each firing cancels every tracked operation — queued or already running.
-        ///     A queued item that's canceled is simply never started when its turn comes.
-        ///     Cancellation only takes effect for a running operation if it observes its
-        ///     CancellationToken.
-        /// </param>
-        /// <param name="cancelMatching">
-        ///     Optional. Each firing cancels whichever tracked operations (queued or running) were
-        ///     admitted for an input value present in the fired collection (compared with the
-        ///     default equality comparer for TInput). Same caveats as <paramref name="cancelAll" />.
-        /// </param>
-        /// <param name="cancelOnDispose">
-        ///     Whether disposing the returned <see cref="AsyncMapStatus{TInput}" /> also cancels every
-        ///     item tracked at that point (queued or running) — true by default. Either way,
-        ///     disposing always, unconditionally, stops any further values from ever being admitted.
-        ///     This is fixed here, at setup, rather than being a parameter of Dispose itself, since
-        ///     IDisposable.Dispose() is deliberately the only way to dispose.
-        /// </param>
-        /// <returns>
-        ///     An <see cref="AsyncMapStatus{TInput}" />: IsRunning is a Cell&lt;bool&gt; that is true while
-        ///     at least one invocation is actually running (not merely queued), updating glitch-free
-        ///     in the same transaction as whichever event caused it to change; Items lists every
-        ///     tracked value with its status; disposing it tears the pipeline down.
-        /// </returns>
-        public static AsyncMapStatus<TInput> MapAsyncImpl<TInput, TResult, TStrategyResult>(
-            this Stream<TInput> source,
-            StreamSink<TResult> results,
-            StreamSink<Exception> errors,
-            Func<TInput, CancellationToken, Task<TResult>> operation,
-            AsyncConcurrencyStrategyBase<UnitInternal, TStrategyResult> strategy,
-            Stream<UnitInternal>? cancelAll = null,
-            Stream<IReadOnlyCollection<TInput>>? cancelMatching = null,
-            bool cancelOnDispose = true)
-            where TResult : TStrategyResult =>
-            source.MapAsyncImpl(
-                results: results,
-                errors: errors,
-                operation: operation,
-                strategy: strategy,
-                inputConverter: _ => UnitInternal.Value,
-                resultConverter: v => v,
-                cancelAll: cancelAll,
-                cancelMatching: cancelMatching,
-                cancelOnDispose: cancelOnDispose);
-
-        /// <summary>
-        ///     Convenience overload for a strategy that doesn't care about the input (<see cref="UnitInternal" />)
-        ///     but does care about <typeparamref name="TStrategyResult" />, where
-        ///     <paramref name="resultConverter" /> derives it from <typeparamref name="TResult" />. See
-        ///     the canonical
-        ///     <see
-        ///         cref="MapAsyncImpl{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{UnitInternal},Stream{IReadOnlyCollection{TInput}},bool)" />
-        ///     overload for the full parameter contract.
-        /// </summary>
-        /// <typeparam name="TInput">
-        ///     The type carried by the source stream — the input each invocation of
-        ///     <paramref name="operation" /> receives, and the type reported by
-        ///     <see cref="AsyncMapStatus{TInput}.Items" /> and matched against by
-        ///     <paramref name="cancelMatching" />.
-        /// </typeparam>
-        /// <typeparam name="TResult">
-        ///     The type <paramref name="operation" /> produces on success, sent to
-        ///     <paramref name="results" />.
-        /// </typeparam>
-        /// <typeparam name="TStrategyResult">
-        ///     The result type <paramref name="strategy" /> is written against — inferred from
-        ///     <paramref name="strategy" />'s type, never specified explicitly. Not required to be
-        ///     related to <typeparamref name="TResult" /> by inheritance at all, since
-        ///     <paramref name="resultConverter" /> derives it explicitly.
-        /// </typeparam>
-        /// <param name="source">
-        ///     The stream of inputs to run against. Every firing is offered to
-        ///     <paramref name="strategy" />, which decides whether it starts immediately or waits.
-        ///     After the returned status is disposed, further firings are ignored entirely.
-        /// </param>
-        /// <param name="results">
-        ///     Required. Each successful operation's return value is sent here, in completion order
-        ///     rather than the order inputs arrived. A result whose run was superseded or canceled
-        ///     is not sent — see <paramref name="strategy" />.
-        /// </param>
-        /// <param name="errors">
-        ///     Required. Every failed operation is sent here — there is deliberately no way to call
-        ///     this method without somewhere for errors to go.
-        /// </param>
-        /// <param name="operation">
-        ///     The asynchronous work to run per input. It's invoked inline, so it doesn't reach a
-        ///     thread pool until it awaits something itself, and it's handed a CancellationToken
-        ///     combining this item's own cancellation with any token the strategy supplied. Honoring
-        ///     that token is what makes <paramref name="cancelAll" />, <paramref name="cancelMatching" />,
-        ///     and <paramref name="cancelOnDispose" /> take effect on work that has already started —
-        ///     an operation that ignores it still runs to completion, and cancellation only means its
-        ///     result goes unpublished. There is deliberately no overload that omits the token.
-        /// </param>
-        /// <param name="strategy">
-        ///     How overlapping requests are handled — a strategy that doesn't care about the input
-        ///     (fixed to <see cref="UnitInternal" />) but does care about <typeparamref name="TStrategyResult" />.
-        ///     A strategy instance holds no state of its own and may safely be reused across multiple
-        ///     MapAsync calls (even concurrently) — each call gets its own freshly created state
-        ///     manager, so separate pipelines never share scheduling state.
-        /// </param>
-        /// <param name="resultConverter">
-        ///     Converts each successful <typeparamref name="TResult" /> to the
-        ///     <typeparamref name="TStrategyResult" /> <paramref name="strategy" /> is written against,
-        ///     before <see cref="AsyncConcurrencyStrategy{TInput,TResult,TState}.OnCompleted" /> sees it.
-        /// </param>
-        /// <param name="cancelAll">
-        ///     Optional. Each firing cancels every tracked operation — queued or already running.
-        ///     A queued item that's canceled is simply never started when its turn comes.
-        ///     Cancellation only takes effect for a running operation if it observes its
-        ///     CancellationToken.
-        /// </param>
-        /// <param name="cancelMatching">
-        ///     Optional. Each firing cancels whichever tracked operations (queued or running) were
-        ///     admitted for an input value present in the fired collection (compared with the
-        ///     default equality comparer for TInput). Same caveats as <paramref name="cancelAll" />.
-        /// </param>
-        /// <param name="cancelOnDispose">
-        ///     Whether disposing the returned <see cref="AsyncMapStatus{TInput}" /> also cancels every
-        ///     item tracked at that point (queued or running) — true by default. Either way,
-        ///     disposing always, unconditionally, stops any further values from ever being admitted.
-        ///     This is fixed here, at setup, rather than being a parameter of Dispose itself, since
-        ///     IDisposable.Dispose() is deliberately the only way to dispose.
-        /// </param>
-        /// <returns>
-        ///     An <see cref="AsyncMapStatus{TInput}" />: IsRunning is a Cell&lt;bool&gt; that is true while
-        ///     at least one invocation is actually running (not merely queued), updating glitch-free
-        ///     in the same transaction as whichever event caused it to change; Items lists every
-        ///     tracked value with its status; disposing it tears the pipeline down.
-        /// </returns>
-        public static AsyncMapStatus<TInput> MapAsyncImpl<TInput, TResult, TStrategyResult>(
-            this Stream<TInput> source,
-            StreamSink<TResult> results,
-            StreamSink<Exception> errors,
-            Func<TInput, CancellationToken, Task<TResult>> operation,
-            AsyncConcurrencyStrategyBase<UnitInternal, TStrategyResult> strategy,
-            Func<TResult, TStrategyResult> resultConverter,
-            Stream<UnitInternal>? cancelAll = null,
-            Stream<IReadOnlyCollection<TInput>>? cancelMatching = null,
-            bool cancelOnDispose = true) =>
-            source.MapAsyncImpl(
-                results: results,
-                errors: errors,
-                operation: operation,
-                strategy: strategy,
-                inputConverter: _ => UnitInternal.Value,
-                resultConverter: resultConverter,
-                cancelAll: cancelAll,
-                cancelMatching: cancelMatching,
-                cancelOnDispose: cancelOnDispose);
-
-        /// <summary>
-        ///     Convenience overload where <typeparamref name="TStrategyInput" /> is already a <typeparamref name="TInput" /> and
-        ///     <typeparamref name="TResult" /> is already a <typeparamref name="TStrategyResult" />. See the canonical
-        ///     <see
-        ///         cref="MapAsyncImpl{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{UnitInternal},Stream{IReadOnlyCollection{TInput}},bool)" />
-        ///     overload for the full parameter contract.
-        /// </summary>
-        /// <summary>
-        ///     Runs <paramref name="operation" /> for each firing of <paramref name="source" />,
-        ///     sending successes to <paramref name="results" /> and failures to <paramref name="errors" />.
-        /// </summary>
-        /// <typeparam name="TInput">
-        ///     The type carried by the source stream — the input each invocation of
-        ///     <paramref name="operation" /> receives, and the type reported by
-        ///     <see cref="AsyncMapStatus{TInput}.Items" /> and matched against by
-        ///     <paramref name="cancelMatching" />.
-        /// </typeparam>
-        /// <typeparam name="TResult">
-        ///     The type <paramref name="operation" /> produces on success, sent to
-        ///     <paramref name="results" />.
-        /// </typeparam>
-        /// <typeparam name="TStrategyInput">
-        ///     The input type <paramref name="strategy" /> is written against — inferred from
-        ///     <paramref name="strategy" />'s type, never specified explicitly. Usually the same as
-        ///     <typeparamref name="TInput" />, but a strategy can be written against a broader type
-        ///     (an interface or base class) so a single instance can be shared across MapAsync calls
-        ///     for several different, more specific <typeparamref name="TInput" /> types — the
-        ///     <c>where TInput : TStrategyInput</c> constraint is what permits that while still
-        ///     letting the strategy operate purely in terms of <typeparamref name="TStrategyInput" />.
-        /// </typeparam>
-        /// <typeparam name="TStrategyResult">
-        ///     The result type <paramref name="strategy" /> is written against, in the same spirit as
-        ///     <typeparamref name="TStrategyInput" /> — inferred, usually equal to
-        ///     <typeparamref name="TResult" />, and related to it by the
-        ///     <c>where TResult : TStrategyResult</c> constraint.
-        /// </typeparam>
-        /// <param name="source">
-        ///     The stream of inputs to run against. Every firing is offered to
-        ///     <paramref name="strategy" />, which decides whether it starts immediately or waits.
-        ///     After the returned status is disposed, further firings are ignored entirely.
-        /// </param>
-        /// <param name="results">
-        ///     Required. Each successful operation's return value is sent here, in completion order
-        ///     rather than the order inputs arrived. A result whose run was superseded or canceled
-        ///     is not sent — see <paramref name="strategy" />.
-        /// </param>
-        /// <param name="errors">
-        ///     Required. Every failed operation is sent here — there is deliberately no way to call
-        ///     this method without somewhere for errors to go.
-        /// </param>
-        /// <param name="operation">
-        ///     The asynchronous work to run per input. It's invoked inline, so it doesn't reach a
-        ///     thread pool until it awaits something itself, and it's handed a CancellationToken
-        ///     combining this item's own cancellation with any token the strategy supplied. Honoring
-        ///     that token is what makes <paramref name="cancelAll" />, <paramref name="cancelMatching" />,
-        ///     and <paramref name="cancelOnDispose" /> take effect on work that has already started —
-        ///     an operation that ignores it still runs to completion, and cancellation only means its
-        ///     result goes unpublished. There is deliberately no overload that omits the token.
-        /// </param>
-        /// <param name="strategy">
-        ///     How overlapping requests are handled. A strategy instance holds no state of its own
-        ///     and may safely be reused across multiple MapAsync calls (even concurrently) — each
-        ///     call gets its own freshly created state manager, so separate pipelines never share scheduling state.
-        /// </param>
-        /// <param name="cancelAll">
-        ///     Optional. Each firing cancels every tracked operation — queued or already running.
-        ///     A queued item that's canceled is simply never started when its turn comes.
-        ///     Cancellation only takes effect for a running operation if it observes its
-        ///     CancellationToken.
-        /// </param>
-        /// <param name="cancelMatching">
-        ///     Optional. Each firing cancels whichever tracked operations (queued or running) were
-        ///     admitted for an input value present in the fired collection (compared with the
-        ///     default equality comparer for TInput). Same caveats as <paramref name="cancelAll" />.
-        /// </param>
-        /// <param name="cancelOnDispose">
-        ///     Whether disposing the returned <see cref="AsyncMapStatus{TInput}" /> also cancels every
-        ///     item tracked at that point (queued or running) — true by default. Either way,
-        ///     disposing always, unconditionally, stops any further values from ever being admitted.
-        ///     This is fixed here, at setup, rather than being a parameter of Dispose itself, since
-        ///     IDisposable.Dispose() is deliberately the only way to dispose.
-        /// </param>
-        /// <returns>
-        ///     An <see cref="AsyncMapStatus{TInput}" />: IsRunning is a Cell&lt;bool&gt; that is true while
-        ///     at least one invocation is actually running (not merely queued), updating glitch-free
-        ///     in the same transaction as whichever event caused it to change; Items lists every
-        ///     tracked value with its status; disposing it tears the pipeline down.
-        /// </returns>
-        /// <exception cref="ArgumentNullException">
-        ///     <paramref name="source" />, <paramref name="results" />, <paramref name="errors" />,
-        ///     <paramref name="operation" />, or <paramref name="strategy" /> is null.
-        /// </exception>
-        public static AsyncMapStatus<TInput> MapAsyncImpl<TInput, TResult, TStrategyInput, TStrategyResult>(
-            this Stream<TInput> source,
-            StreamSink<TResult> results,
-            StreamSink<Exception> errors,
-            Func<TInput, CancellationToken, Task<TResult>> operation,
-            AsyncConcurrencyStrategyBase<TStrategyInput, TStrategyResult> strategy,
-            Stream<UnitInternal>? cancelAll = null,
-            Stream<IReadOnlyCollection<TInput>>? cancelMatching = null,
-            bool cancelOnDispose = true)
-            where TInput : TStrategyInput
-            where TResult : TStrategyResult =>
-            source.MapAsyncImpl(
-                results: results,
-                errors: errors,
-                operation: operation,
-                strategy: strategy,
-                inputConverter: v => v,
-                resultConverter: v => v,
-                cancelAll: cancelAll,
-                cancelMatching: cancelMatching,
-                cancelOnDispose: cancelOnDispose);
-
-        /// <summary>
-        ///     Convenience overload where <paramref name="inputConverter" /> derives
-        ///     <typeparamref name="TStrategyInput" /> from <typeparamref name="TInput" />, but
-        ///     <typeparamref name="TResult" /> is already a <typeparamref name="TStrategyResult" />. See
-        ///     the canonical
-        ///     <see
-        ///         cref="MapAsyncImpl{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{UnitInternal},Stream{IReadOnlyCollection{TInput}},bool)" />
-        ///     overload for the full parameter contract.
-        /// </summary>
-        /// <typeparam name="TInput">
-        ///     The type carried by the source stream — the input each invocation of
-        ///     <paramref name="operation" /> receives, and the type reported by
-        ///     <see cref="AsyncMapStatus{TInput}.Items" /> and matched against by
-        ///     <paramref name="cancelMatching" />.
-        /// </typeparam>
-        /// <typeparam name="TResult">
-        ///     The type <paramref name="operation" /> produces on success, sent to
-        ///     <paramref name="results" />.
-        /// </typeparam>
-        /// <typeparam name="TStrategyInput">
-        ///     The input type <paramref name="strategy" /> is written against — inferred from
-        ///     <paramref name="strategy" />'s type, never specified explicitly. Not required to be
-        ///     related to <typeparamref name="TInput" /> by inheritance at all, since
-        ///     <paramref name="inputConverter" /> derives it explicitly.
-        /// </typeparam>
-        /// <typeparam name="TStrategyResult">
-        ///     The result type <paramref name="strategy" /> is written against, inferred from
-        ///     <paramref name="strategy" />'s type. Usually the same as <typeparamref name="TResult" />,
-        ///     but a strategy can be written against a broader type so a single instance can be shared
-        ///     across MapAsync calls for several different, more specific <typeparamref name="TResult" />
-        ///     types — the <c>where TResult : TStrategyResult</c> constraint is what permits that.
-        /// </typeparam>
-        /// <param name="source">
-        ///     The stream of inputs to run against. Every firing is offered to
-        ///     <paramref name="strategy" />, which decides whether it starts immediately or waits.
-        ///     After the returned status is disposed, further firings are ignored entirely.
-        /// </param>
-        /// <param name="results">
-        ///     Required. Each successful operation's return value is sent here, in completion order
-        ///     rather than the order inputs arrived. A result whose run was superseded or canceled
-        ///     is not sent — see <paramref name="strategy" />.
-        /// </param>
-        /// <param name="errors">
-        ///     Required. Every failed operation is sent here — there is deliberately no way to call
-        ///     this method without somewhere for errors to go.
-        /// </param>
-        /// <param name="operation">
-        ///     The asynchronous work to run per input. It's invoked inline, so it doesn't reach a
-        ///     thread pool until it awaits something itself, and it's handed a CancellationToken
-        ///     combining this item's own cancellation with any token the strategy supplied. Honoring
-        ///     that token is what makes <paramref name="cancelAll" />, <paramref name="cancelMatching" />,
-        ///     and <paramref name="cancelOnDispose" /> take effect on work that has already started —
-        ///     an operation that ignores it still runs to completion, and cancellation only means its
-        ///     result goes unpublished. There is deliberately no overload that omits the token.
-        /// </param>
-        /// <param name="strategy">
-        ///     How overlapping requests are handled. A strategy instance holds no state of its own
-        ///     and may safely be reused across multiple MapAsync calls (even concurrently) — each
-        ///     call gets its own freshly created state manager, so separate pipelines never share
-        ///     scheduling state.
-        /// </param>
-        /// <param name="inputConverter">
-        ///     Converts each <typeparamref name="TInput" /> value to the
-        ///     <typeparamref name="TStrategyInput" /> <paramref name="strategy" /> is written against,
-        ///     before it's admitted.
-        /// </param>
-        /// <param name="cancelAll">
-        ///     Optional. Each firing cancels every tracked operation — queued or already running.
-        ///     A queued item that's canceled is simply never started when its turn comes.
-        ///     Cancellation only takes effect for a running operation if it observes its
-        ///     CancellationToken.
-        /// </param>
-        /// <param name="cancelMatching">
-        ///     Optional. Each firing cancels whichever tracked operations (queued or running) were
-        ///     admitted for an input value present in the fired collection (compared with the
-        ///     default equality comparer for TInput). Same caveats as <paramref name="cancelAll" />.
-        /// </param>
-        /// <param name="cancelOnDispose">
-        ///     Whether disposing the returned <see cref="AsyncMapStatus{TInput}" /> also cancels every
-        ///     item tracked at that point (queued or running) — true by default. Either way,
-        ///     disposing always, unconditionally, stops any further values from ever being admitted.
-        ///     This is fixed here, at setup, rather than being a parameter of Dispose itself, since
-        ///     IDisposable.Dispose() is deliberately the only way to dispose.
-        /// </param>
-        /// <returns>
-        ///     An <see cref="AsyncMapStatus{TInput}" />: IsRunning is a Cell&lt;bool&gt; that is true while
-        ///     at least one invocation is actually running (not merely queued), updating glitch-free
-        ///     in the same transaction as whichever event caused it to change; Items lists every
-        ///     tracked value with its status; disposing it tears the pipeline down.
-        /// </returns>
-        public static AsyncMapStatus<TInput> MapAsyncImpl<TInput, TResult, TStrategyInput, TStrategyResult>(
-            this Stream<TInput> source,
-            StreamSink<TResult> results,
-            StreamSink<Exception> errors,
-            Func<TInput, CancellationToken, Task<TResult>> operation,
-            AsyncConcurrencyStrategyBase<TStrategyInput, TStrategyResult> strategy,
-            Func<TInput, TStrategyInput> inputConverter,
-            Stream<UnitInternal>? cancelAll = null,
-            Stream<IReadOnlyCollection<TInput>>? cancelMatching = null,
-            bool cancelOnDispose = true)
-            where TResult : TStrategyResult =>
-            source.MapAsyncImpl(
-                results: results,
-                errors: errors,
-                operation: operation,
-                strategy: strategy,
-                inputConverter: inputConverter,
-                resultConverter: v => v,
-                cancelAll: cancelAll,
-                cancelMatching: cancelMatching,
-                cancelOnDispose: cancelOnDispose);
-
-        /// <summary>
-        ///     Convenience overload where <typeparamref name="TInput" /> is already a
-        ///     <typeparamref name="TStrategyInput" />, but <paramref name="resultConverter" /> derives
-        ///     <typeparamref name="TStrategyResult" /> from <typeparamref name="TResult" />. See the
-        ///     canonical
-        ///     <see
-        ///         cref="MapAsyncImpl{TInput,TResult,TStrategyInput,TStrategyResult}(Stream{TInput},StreamSink{TResult},StreamSink{Exception},Func{TInput,CancellationToken,Task{TResult}},AsyncConcurrencyStrategyBase{TStrategyInput,TStrategyResult},Func{TInput,TStrategyInput},Func{TResult,TStrategyResult},Stream{UnitInternal},Stream{IReadOnlyCollection{TInput}},bool)" />
-        ///     overload
-        ///     for the full parameter contract.
-        /// </summary>
-        /// <typeparam name="TInput">
-        ///     The type carried by the source stream — the input each invocation of
-        ///     <paramref name="operation" /> receives, and the type reported by
-        ///     <see cref="AsyncMapStatus{TInput}.Items" /> and matched against by
-        ///     <paramref name="cancelMatching" />.
-        /// </typeparam>
-        /// <typeparam name="TResult">
-        ///     The type <paramref name="operation" /> produces on success, sent to
-        ///     <paramref name="results" />.
-        /// </typeparam>
-        /// <typeparam name="TStrategyInput">
-        ///     The input type <paramref name="strategy" /> is written against, inferred from
-        ///     <paramref name="strategy" />'s type. Usually the same as <typeparamref name="TInput" />,
-        ///     but a strategy can be written against a broader type so a single instance can be shared
-        ///     across MapAsync calls for several different, more specific <typeparamref name="TInput" />
-        ///     types — the <c>where TInput : TStrategyInput</c> constraint is what permits that.
-        /// </typeparam>
-        /// <typeparam name="TStrategyResult">
-        ///     The result type <paramref name="strategy" /> is written against — inferred from
-        ///     <paramref name="strategy" />'s type, never specified explicitly. Not required to be
-        ///     related to <typeparamref name="TResult" /> by inheritance at all, since
-        ///     <paramref name="resultConverter" /> derives it explicitly.
-        /// </typeparam>
-        /// <param name="source">
-        ///     The stream of inputs to run against. Every firing is offered to
-        ///     <paramref name="strategy" />, which decides whether it starts immediately or waits.
-        ///     After the returned status is disposed, further firings are ignored entirely.
-        /// </param>
-        /// <param name="results">
-        ///     Required. Each successful operation's return value is sent here, in completion order
-        ///     rather than the order inputs arrived. A result whose run was superseded or canceled
-        ///     is not sent — see <paramref name="strategy" />.
-        /// </param>
-        /// <param name="errors">
-        ///     Required. Every failed operation is sent here — there is deliberately no way to call
-        ///     this method without somewhere for errors to go.
-        /// </param>
-        /// <param name="operation">
-        ///     The asynchronous work to run per input. It's invoked inline, so it doesn't reach a
-        ///     thread pool until it awaits something itself, and it's handed a CancellationToken
-        ///     combining this item's own cancellation with any token the strategy supplied. Honoring
-        ///     that token is what makes <paramref name="cancelAll" />, <paramref name="cancelMatching" />,
-        ///     and <paramref name="cancelOnDispose" /> take effect on work that has already started —
-        ///     an operation that ignores it still runs to completion, and cancellation only means its
-        ///     result goes unpublished. There is deliberately no overload that omits the token.
-        /// </param>
-        /// <param name="strategy">
-        ///     How overlapping requests are handled. A strategy instance holds no state of its own
-        ///     and may safely be reused across multiple MapAsync calls (even concurrently) — each
-        ///     call gets its own freshly created state manager, so separate pipelines never share
-        ///     scheduling state.
-        /// </param>
-        /// <param name="resultConverter">
-        ///     Converts each successful <typeparamref name="TResult" /> to the
-        ///     <typeparamref name="TStrategyResult" /> <paramref name="strategy" /> is written against,
-        ///     before <see cref="AsyncConcurrencyStrategy{TInput,TResult,TState}.OnCompleted" /> sees it.
-        /// </param>
-        /// <param name="cancelAll">
-        ///     Optional. Each firing cancels every tracked operation — queued or already running.
-        ///     A queued item that's canceled is simply never started when its turn comes.
-        ///     Cancellation only takes effect for a running operation if it observes its
-        ///     CancellationToken.
-        /// </param>
-        /// <param name="cancelMatching">
-        ///     Optional. Each firing cancels whichever tracked operations (queued or running) were
-        ///     admitted for an input value present in the fired collection (compared with the
-        ///     default equality comparer for TInput). Same caveats as <paramref name="cancelAll" />.
-        /// </param>
-        /// <param name="cancelOnDispose">
-        ///     Whether disposing the returned <see cref="AsyncMapStatus{TInput}" /> also cancels every
-        ///     item tracked at that point (queued or running) — true by default. Either way,
-        ///     disposing always, unconditionally, stops any further values from ever being admitted.
-        ///     This is fixed here, at setup, rather than being a parameter of Dispose itself, since
-        ///     IDisposable.Dispose() is deliberately the only way to dispose.
-        /// </param>
-        /// <returns>
-        ///     An <see cref="AsyncMapStatus{TInput}" />: IsRunning is a Cell&lt;bool&gt; that is true while
-        ///     at least one invocation is actually running (not merely queued), updating glitch-free
-        ///     in the same transaction as whichever event caused it to change; Items lists every
-        ///     tracked value with its status; disposing it tears the pipeline down.
-        /// </returns>
-        public static AsyncMapStatus<TInput> MapAsyncImpl<TInput, TResult, TStrategyInput, TStrategyResult>(
-            this Stream<TInput> source,
-            StreamSink<TResult> results,
-            StreamSink<Exception> errors,
-            Func<TInput, CancellationToken, Task<TResult>> operation,
-            AsyncConcurrencyStrategyBase<TStrategyInput, TStrategyResult> strategy,
-            Func<TResult, TStrategyResult> resultConverter,
-            Stream<UnitInternal>? cancelAll = null,
-            Stream<IReadOnlyCollection<TInput>>? cancelMatching = null,
-            bool cancelOnDispose = true)
-            where TInput : TStrategyInput =>
-            source.MapAsyncImpl(
-                results: results,
-                errors: errors,
-                operation: operation,
-                strategy: strategy,
-                inputConverter: v => v,
-                resultConverter: resultConverter,
-                cancelAll: cancelAll,
-                cancelMatching: cancelMatching,
-                cancelOnDispose: cancelOnDispose);
-
-        /// <summary>
         ///     The fully general form every other MapAsync
         ///     overload eventually forwards to, and the only one that needs no relationship at all
         ///     between <typeparamref name="TInput" />/<typeparamref name="TResult" /> and
@@ -1362,7 +511,7 @@ namespace Sodium.Frp.Async
         ///     <paramref name="source" />, <paramref name="results" />, <paramref name="errors" />,
         ///     <paramref name="operation" />, or <paramref name="strategy" /> is null.
         /// </exception>
-        public static AsyncMapStatus<TInput> MapAsyncImpl<TInput, TResult, TStrategyInput, TStrategyResult>(
+        internal static AsyncMapStatus<TInput> MapAsyncImpl<TInput, TResult, TStrategyInput, TStrategyResult>(
             this Stream<TInput> source,
             StreamSink<TResult> results,
             StreamSink<Exception> errors,
@@ -1543,79 +692,63 @@ namespace Sodium.Frp.Async
     internal static class AsyncConcurrencyStrategyFactory
     {
         /// <summary>Every firing starts its own operation immediately; results arrive in completion order.</summary>
-        public static AsyncConcurrencyStrategyBase<UnitInternal, UnitInternal> Parallel() => ParallelStrategy.Instance;
+        /// <typeparam name="TUnit">The type of the unit type</typeparam>
+        internal static AsyncConcurrencyStrategyBase<TUnit, TUnit> Parallel<TUnit>(TUnit unitValue) =>
+            new ParallelStrategy<TUnit>(unitValue);
 
         /// <summary>At most one operation runs at a time; later firings queue and run in order.</summary>
-        public static AsyncConcurrencyStrategyBase<UnitInternal, UnitInternal> Queue() => QueueStrategy.Instance;
+        /// <typeparam name="TUnit">The type of the unit type</typeparam>
+        internal static AsyncConcurrencyStrategyBase<TUnit, TUnit> Queue<TUnit>() => QueueStrategy<TUnit>.Instance;
 
         /// <summary>
-        ///     Entry point for a per-group queue: at most one operation runs at a time within a
-        ///     group, but different groups run concurrently. Call
-        ///     <see cref="QueuePerGroupHelper{TInput}.Create{TGroup}" /> on the result to supply the
-        ///     grouping function — <typeparamref name="TInput" /> here is only what's needed to infer
-        ///     that call's input type; the actual strategy is created by
-        ///     <see cref="QueuePerGroupHelper{TInput}.Create{TGroup}" />.
+        ///     Builds a queue-per-group strategy: <paramref name="getGroup" /> assigns each input to a
+        ///     group, and within a group, later firings queue behind earlier ones exactly like
+        ///     <see cref="Queue" /> — but different groups don't wait on each other.
         /// </summary>
-        public static QueuePerGroupHelper<TInput> QueuePerGroup<TInput>() => QueuePerGroupHelper<TInput>.Instance;
-
-        /// <summary>
-        ///     Exists solely so <see cref="QueuePerGroup{TInput}" /> can infer
-        ///     <typeparamref name="TInput" /> while leaving <c>TGroup</c> to be inferred separately, by
-        ///     <see cref="Create{TGroup}" /> — C# can't infer two type parameters from two different
-        ///     calls otherwise.
-        /// </summary>
-        [PublicAPI]
-        public class QueuePerGroupHelper<TInput>
-        {
-            internal static readonly QueuePerGroupHelper<TInput> Instance = new();
-
-            private QueuePerGroupHelper()
-            {
-            }
-
-            /// <summary>
-            ///     Builds a queue-per-group strategy: <paramref name="getGroup" /> assigns each input to a
-            ///     group, and within a group, later firings queue behind earlier ones exactly like
-            ///     <see cref="Queue" /> — but different groups don't wait on each other.
-            /// </summary>
-            /// <param name="getGroup">Computes the group key for an input value.</param>
-            /// <param name="groupComparer">
-            ///     Optional equality comparer for group keys; defaults to
-            ///     <see cref="EqualityComparer{TGroup}.Default" />.
-            /// </param>
-            public AsyncConcurrencyStrategyBase<TInput, UnitInternal> Create<TGroup>(
-                Func<TInput, TGroup> getGroup,
-                IEqualityComparer<TGroup>? groupComparer = null)
-                where TGroup : notnull =>
-                new QueuePerGroupStrategy<TInput, TGroup>(getGroup: getGroup, groupComparer: groupComparer);
-        }
+        /// <typeparam name="TUnit">The type of the unit type</typeparam>
+        /// <typeparam name="TInput">The type of the input</typeparam>
+        /// <typeparam name="TGroup">The type of a group</typeparam>
+        /// <param name="getGroup">Computes the group key for an input value.</param>
+        /// <param name="groupComparer">
+        ///     Optional equality comparer for group keys; defaults to
+        ///     <see cref="EqualityComparer{TGroup}.Default" />.
+        /// </param>
+        internal static AsyncConcurrencyStrategyBase<TInput, TUnit> QueuePerGroup<TUnit, TInput, TGroup>(
+            Func<TInput, TGroup> getGroup,
+            IEqualityComparer<TGroup>? groupComparer = null)
+            where TGroup : notnull =>
+            new QueuePerGroupStrategy<TUnit, TInput, TGroup>(getGroup: getGroup, groupComparer: groupComparer);
 
         /// <summary>A new firing cancels whatever is currently in flight and takes its place.</summary>
-        public static AsyncConcurrencyStrategyBase<UnitInternal, UnitInternal> SwitchLatest() => SwitchLatestStrategy.Instance;
+        /// <typeparam name="TUnit">The type of the unit type</typeparam>
+        internal static AsyncConcurrencyStrategyBase<TUnit, TUnit> SwitchLatest<TUnit>() =>
+            SwitchLatestStrategy<TUnit>.Instance;
 
-        private sealed class ParallelStrategy
-            : AsyncConcurrencyStrategy<UnitInternal, UnitInternal, UnitInternal>
+        private sealed class ParallelStrategy<TUnit>
+            : AsyncConcurrencyStrategy<TUnit, TUnit, TUnit>
         {
-            internal static readonly ParallelStrategy Instance = new();
+            private readonly TUnit unitValue;
+            
+            public ParallelStrategy(TUnit unitValue) => this.unitValue = unitValue;
 
-            protected override UnitInternal CreateState() => UnitInternal.Value;
+            protected override TUnit CreateState() => this.unitValue;
 
-            protected internal override IReadOnlyList<AsyncToStart<UnitInternal>> Admit(
-                UnitInternal state,
-                AsyncQueuedItem<UnitInternal> incoming) =>
-                new[] { new AsyncToStart<UnitInternal>(incoming) };
+            protected internal override IReadOnlyList<AsyncToStart<TUnit>> Admit(
+                TUnit state,
+                AsyncQueuedItem<TUnit> incoming) =>
+                new[] { new AsyncToStart<TUnit>(incoming) };
 
-            protected internal override AsyncStrategyResult<UnitInternal> OnCompleted(
-                UnitInternal state,
-                AsyncQueuedItem<UnitInternal> item,
-                AsyncOutcome<UnitInternal> outcome) =>
-                new(publish: true, next: AsyncStrategyResult<UnitInternal>.None);
+            protected internal override AsyncStrategyResult<TUnit> OnCompleted(
+                TUnit state,
+                AsyncQueuedItem<TUnit> item,
+                AsyncOutcome<TUnit> outcome) =>
+                new(publish: true, next: AsyncStrategyResult<TUnit>.None);
         }
 
-        private sealed class QueueStrategy
-            : AsyncConcurrencyStrategy<UnitInternal, UnitInternal, QueueStrategy.State>
+        private sealed class QueueStrategy<TUnit>
+            : AsyncConcurrencyStrategy<TUnit, TUnit, QueueStrategy<TUnit>.State>
         {
-            internal static readonly QueueStrategy Instance = new();
+            internal static readonly QueueStrategy<TUnit> Instance = new();
 
             private QueueStrategy()
             {
@@ -1624,61 +757,58 @@ namespace Sodium.Frp.Async
             /// <summary>Which item (if any) is currently running, and the backlog waiting behind it.</summary>
             public sealed class State
             {
-                internal readonly Queue<AsyncQueuedItem<UnitInternal>> Pending = new();
-
+                internal readonly Queue<AsyncQueuedItem<TUnit>> Pending = new();
                 internal bool Busy;
             }
 
             protected override State CreateState() => new();
 
-            protected internal override IReadOnlyList<AsyncToStart<UnitInternal>> Admit(
+            protected internal override IReadOnlyList<AsyncToStart<TUnit>> Admit(
                 State state,
-                AsyncQueuedItem<UnitInternal> incoming)
+                AsyncQueuedItem<TUnit> incoming)
             {
                 if (state.Busy)
                 {
                     // Stays visible as Queued; still cancellable while it waits.
                     state.Pending.Enqueue(incoming);
 
-                    return AsyncStrategyResult<UnitInternal>.None;
+                    return AsyncStrategyResult<TUnit>.None;
                 }
 
                 state.Busy = true;
 
-                return new[] { new AsyncToStart<UnitInternal>(incoming) };
+                return new[] { new AsyncToStart<TUnit>(incoming) };
             }
 
-            protected internal override AsyncStrategyResult<UnitInternal> OnCompleted(
+            protected internal override AsyncStrategyResult<TUnit> OnCompleted(
                 State state,
-                AsyncQueuedItem<UnitInternal> item,
-                AsyncOutcome<UnitInternal> outcome)
+                AsyncQueuedItem<TUnit> item,
+                AsyncOutcome<TUnit> outcome)
             {
                 if (state.Pending.Count > 0)
                 {
-                    AsyncQueuedItem<UnitInternal> next = state.Pending.Dequeue();
+                    AsyncQueuedItem<TUnit> next = state.Pending.Dequeue();
 
                     // If `next` was canceled while it sat here, the execution engine will notice
                     // when promoting it and short-circuit straight to Outcome.Canceled(), which
                     // calls back into OnCompleted and naturally dequeues whatever comes after it.
-                    return new AsyncStrategyResult<UnitInternal>(
+                    return new AsyncStrategyResult<TUnit>(
                         publish: true,
-                        next: new[] { new AsyncToStart<UnitInternal>(next) });
+                        next: new[] { new AsyncToStart<TUnit>(next) });
                 }
 
                 state.Busy = false;
 
-                return new AsyncStrategyResult<UnitInternal>(publish: true, next: AsyncStrategyResult<UnitInternal>.None);
+                return new AsyncStrategyResult<TUnit>(publish: true, next: AsyncStrategyResult<TUnit>.None);
             }
         }
 
         /// <summary>
-        ///     One independent <see cref="QueueStrategy" />-style queue per group, where inputs are assigned to a group by a
-        ///     specified group selector. Normally created via
-        ///     <see cref="QueuePerGroup{TInput}" />/<see cref="QueuePerGroupHelper{TInput}.Create{TGroup}" />
-        ///     rather than directly.
+        ///     One independent <see cref="QueueStrategy{TUnit}" />-style queue per group, where inputs are assigned to a group by a
+        ///     specified group selector.
         /// </summary>
-        private sealed class QueuePerGroupStrategy<TInput, TGroup>
-            : AsyncConcurrencyStrategy<TInput, UnitInternal, QueuePerGroupStrategy<TInput, TGroup>.State>
+        private sealed class QueuePerGroupStrategy<TUnit, TInput, TGroup>
+            : AsyncConcurrencyStrategy<TInput, TUnit, QueuePerGroupStrategy<TUnit, TInput, TGroup>.State>
             where TGroup : notnull
         {
             private readonly Func<TInput, TGroup> getGroup;
@@ -1702,7 +832,6 @@ namespace Sodium.Frp.Async
             internal sealed class GroupState
             {
                 internal readonly Queue<AsyncQueuedItem<TInput>> Pending = new();
-
                 internal bool Busy;
             }
 
@@ -1742,7 +871,7 @@ namespace Sodium.Frp.Async
             protected internal override AsyncStrategyResult<TInput> OnCompleted(
                 State state,
                 AsyncQueuedItem<TInput> item,
-                AsyncOutcome<UnitInternal> outcome)
+                AsyncOutcome<TUnit> outcome)
             {
                 TGroup group = this.getGroup(item.Value);
 
@@ -1776,22 +905,22 @@ namespace Sodium.Frp.Async
             }
         }
 
-        private sealed class SwitchLatestStrategy
-            : AsyncConcurrencyStrategy<UnitInternal, UnitInternal, SwitchLatestStrategy.State>
+        private sealed class SwitchLatestStrategy<TUnit>
+            : AsyncConcurrencyStrategy<TUnit, TUnit, SwitchLatestStrategy<TUnit>.State>
         {
-            internal static readonly SwitchLatestStrategy Instance = new();
+            internal static readonly SwitchLatestStrategy<TUnit> Instance = new();
 
             /// <summary>The currently in-flight item, if any — superseded and replaced by each new firing.</summary>
             public sealed class State
             {
-                internal AsyncQueuedItem<UnitInternal>? Active;
+                internal AsyncQueuedItem<TUnit>? Active;
             }
 
             protected override State CreateState() => new();
 
-            protected internal override IReadOnlyList<AsyncToStart<UnitInternal>> Admit(
+            protected internal override IReadOnlyList<AsyncToStart<TUnit>> Admit(
                 State state,
-                AsyncQueuedItem<UnitInternal> incoming)
+                AsyncQueuedItem<TUnit> incoming)
             {
                 // Cancel the item we're superseding via its own cancellation — no parallel
                 // CancellationTokenSource of our own to create, own, or dispose. Safe even if
@@ -1799,13 +928,13 @@ namespace Sodium.Frp.Async
                 state.Active?.Cancel();
                 state.Active = incoming;
 
-                return new[] { new AsyncToStart<UnitInternal>(incoming) };
+                return new[] { new AsyncToStart<TUnit>(incoming) };
             }
 
-            protected internal override AsyncStrategyResult<UnitInternal> OnCompleted(
+            protected internal override AsyncStrategyResult<TUnit> OnCompleted(
                 State state,
-                AsyncQueuedItem<UnitInternal> item,
-                AsyncOutcome<UnitInternal> outcome)
+                AsyncQueuedItem<TUnit> item,
+                AsyncOutcome<TUnit> outcome)
             {
                 // Only publish if nothing newer has since superseded this run.
                 bool isCurrent = state.Active != null && state.Active.Id == item.Id;
@@ -1817,7 +946,7 @@ namespace Sodium.Frp.Async
                     state.Active = null;
                 }
 
-                return new AsyncStrategyResult<UnitInternal>(publish: isCurrent, next: AsyncStrategyResult<UnitInternal>.None);
+                return new AsyncStrategyResult<TUnit>(publish: isCurrent, next: AsyncStrategyResult<TUnit>.None);
             }
         }
     }
