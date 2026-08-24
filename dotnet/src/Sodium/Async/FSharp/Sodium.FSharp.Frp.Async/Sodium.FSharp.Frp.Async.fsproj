@@ -24,12 +24,15 @@
     <IncludeSymbols>True</IncludeSymbols>
   </PropertyGroup>
 
-  <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
-    <DocumentationFile>bin\Debug\Sodium.FSharp.Frp.Async.xml</DocumentationFile>
-  </PropertyGroup>
-
-  <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
-    <DocumentationFile>bin\Release\Sodium.FSharp.Frp.Async.xml</DocumentationFile>
+  <PropertyGroup>
+    <!--
+        GenerateDocumentationFile rather than an explicit DocumentationFile path as in
+        Sodium.FSharp.Frp: this project multi-targets, and a single hard-coded path makes all three
+        target frameworks write over one another's XML. This emits one file per target framework,
+        next to its own assembly, which is also where NuGet pack expects to find it when populating
+        each lib folder.
+    -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
   </PropertyGroup>
 
   <ItemGroup>
