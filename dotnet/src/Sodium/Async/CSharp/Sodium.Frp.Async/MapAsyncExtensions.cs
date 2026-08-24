@@ -121,7 +121,7 @@ namespace Sodium.Frp.Async
                 strategy: strategy,
                 inputConverter: _ => Unit.Value,
                 resultConverter: _ => Unit.Value,
-                cancelAll: cancelAll?.MapImpl(_ => UnitInternal.Value),
+                cancelAll: ToUnitInternalStream(cancelAll),
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
@@ -229,7 +229,7 @@ namespace Sodium.Frp.Async
                 strategy: strategy,
                 inputConverter: v => v,
                 resultConverter: _ => Unit.Value,
-                cancelAll: cancelAll?.MapImpl(_ => UnitInternal.Value),
+                cancelAll: ToUnitInternalStream(cancelAll),
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
@@ -340,7 +340,7 @@ namespace Sodium.Frp.Async
                 strategy: strategy,
                 inputConverter: inputConverter,
                 resultConverter: _ => Unit.Value,
-                cancelAll: cancelAll?.MapImpl(_ => UnitInternal.Value),
+                cancelAll: ToUnitInternalStream(cancelAll),
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
@@ -448,7 +448,7 @@ namespace Sodium.Frp.Async
                 strategy: strategy,
                 inputConverter: _ => Unit.Value,
                 resultConverter: v => v,
-                cancelAll: cancelAll?.MapImpl(_ => UnitInternal.Value),
+                cancelAll: ToUnitInternalStream(cancelAll),
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
@@ -558,7 +558,7 @@ namespace Sodium.Frp.Async
                 strategy: strategy,
                 inputConverter: _ => Unit.Value,
                 resultConverter: resultConverter,
-                cancelAll: cancelAll?.MapImpl(_ => UnitInternal.Value),
+                cancelAll: ToUnitInternalStream(cancelAll),
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
@@ -670,7 +670,7 @@ namespace Sodium.Frp.Async
                 strategy: strategy,
                 inputConverter: v => v,
                 resultConverter: v => v,
-                cancelAll: cancelAll?.MapImpl(_ => UnitInternal.Value),
+                cancelAll: ToUnitInternalStream(cancelAll),
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
@@ -787,7 +787,7 @@ namespace Sodium.Frp.Async
                 strategy: strategy,
                 inputConverter: inputConverter,
                 resultConverter: v => v,
-                cancelAll: cancelAll?.MapImpl(_ => UnitInternal.Value),
+                cancelAll: ToUnitInternalStream(cancelAll),
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
@@ -905,7 +905,7 @@ namespace Sodium.Frp.Async
                 strategy: strategy,
                 inputConverter: v => v,
                 resultConverter: resultConverter,
-                cancelAll: cancelAll?.MapImpl(_ => UnitInternal.Value),
+                cancelAll: ToUnitInternalStream(cancelAll),
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
@@ -1033,8 +1033,17 @@ namespace Sodium.Frp.Async
                 strategy: strategy,
                 inputConverter: inputConverter,
                 resultConverter: resultConverter,
-                cancelAll: cancelAll?.MapImpl(_ => UnitInternal.Value),
+                cancelAll: ToUnitInternalStream(cancelAll),
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
+
+        // Sodium.Core.Frp.Async takes its cancelAll as a Stream<UnitInternal>, since Core has no
+        // "don't care" type of its own it could expose. Mapping rather than casting is what keeps
+        // UnitInternal — internal to Sodium.Core.Frp, and so unnameable by anyone consuming this
+        // library — out of every signature above, leaving Sodium.Functional.Unit as the only unit
+        // type a C# caller ever sees. The F# wrapper does the same thing for its own native unit;
+        // see toUnitInternalStream there.
+        private static Stream<UnitInternal>? ToUnitInternalStream(Stream<Unit>? cancelAll) =>
+            cancelAll?.MapImpl(_ => UnitInternal.Value);
     }
 }

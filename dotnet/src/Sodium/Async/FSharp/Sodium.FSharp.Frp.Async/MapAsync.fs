@@ -50,14 +50,14 @@ let queueStrategy () : AsyncConcurrencyStrategyBase<unit, unit> = queueInstance
 let switchLatestStrategy () : AsyncConcurrencyStrategyBase<unit, unit> = switchLatestInstance
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
-let queuePerGroupWithComparer
+let queuePerGroupStrategyWithComparer
     (groupComparer : IEqualityComparer<'TGroup>)
     (getGroup : 'TInput -> 'TGroup) =
     AsyncConcurrencyStrategyFactory.QueuePerGroup<unit, _, _>(getGroup, groupComparer)
 
 [<MethodImpl(MethodImplOptions.NoInlining)>]
-let queuePerGroup (getGroup : 'TInput -> 'TGroup) =
-    getGroup |> queuePerGroupWithComparer EqualityComparer<'TGroup>.Default
+let queuePerGroupStrategy (getGroup : 'TInput -> 'TGroup) =
+    getGroup |> queuePerGroupStrategyWithComparer EqualityComparer<'TGroup>.Default
 
 // Core's MapAsyncImpl takes its cancelAll as a Stream<UnitInternal>, since Core has no "don't
 // care" type it can expose. Mapping rather than casting is what keeps UnitInternal — which is
@@ -75,7 +75,7 @@ let private toUnitInternalStream (cancelAll : Stream<unit> option) : Stream<Unit
 //
 //   mapAsync                     strategy ignores both       (parallelStrategy, queueStrategy,
 //                                                             switchLatestStrategy)
-//   mapAsyncWithInputConverter   strategy inspects the input (queuePerGroup)
+//   mapAsyncWithInputConverter   strategy inspects the input (queuePerGroupStrategy)
 //   mapAsyncWithResultConverter  strategy inspects the result
 //   mapAsyncWithConverters       strategy inspects both
 //
