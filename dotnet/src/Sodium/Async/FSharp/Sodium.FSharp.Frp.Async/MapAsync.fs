@@ -53,8 +53,8 @@ type EmptyState = EmptyState
 ///     mapAsync signature.
 /// </typeparam>
 [<AbstractClass>]
-type AsyncConcurrencyStrategy<'TInput, 'TState> =
-    inherit AsyncConcurrencyStrategy<'TInput, unit, 'TState>
+type AsyncConcurrencyStrategy<'TInput, 'TState>() =
+    inherit AsyncConcurrencyStrategy<'TInput, unit, 'TState>()
 
 /// <summary>
 ///     Shorthand base class for a custom strategy that cares about neither the input nor the
@@ -65,8 +65,8 @@ type AsyncConcurrencyStrategy<'TInput, 'TState> =
 ///     mapAsync signature.
 /// </typeparam>
 [<AbstractClass>]
-type AsyncConcurrencyStrategy<'TState> =
-    inherit AsyncConcurrencyStrategy<unit, unit, 'TState>
+type AsyncConcurrencyStrategy<'TState>() =
+    inherit AsyncConcurrencyStrategy<unit, unit, 'TState>()
 
 /// <summary>
 ///     Shorthand base class for a custom strategy that cares about neither the input nor the result
@@ -74,8 +74,8 @@ type AsyncConcurrencyStrategy<'TState> =
 ///     state type is named rather than being <c>unit</c>.
 /// </summary>
 [<AbstractClass>]
-type AsyncConcurrencyStrategy =
-    inherit AsyncConcurrencyStrategy<unit, unit, EmptyState>
+type AsyncConcurrencyStrategy() =
+    inherit AsyncConcurrencyStrategy<unit, unit, EmptyState>()
 
 let private parallelInstance = AsyncConcurrencyStrategyFactory.Parallel()
 let private queueInstance = AsyncConcurrencyStrategyFactory.Queue<unit>()

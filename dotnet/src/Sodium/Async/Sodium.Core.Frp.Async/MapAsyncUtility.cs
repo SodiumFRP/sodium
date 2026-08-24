@@ -187,7 +187,7 @@ namespace Sodium.Frp.Async
 
         /// <summary>A previously-tracked item to start (or promote from Queued to Running) right now.</summary>
         [PublicAPI]
-        protected internal readonly struct AsyncToStart<TInput>
+        protected internal sealed class AsyncToStart<TInput>
         {
             /// <exception cref="ArgumentNullException"><paramref name="item" /> is null.</exception>
             public AsyncToStart(AsyncQueuedItem<TInput> item, CancellationToken strategyToken = default)
@@ -211,7 +211,7 @@ namespace Sodium.Frp.Async
 
         /// <summary>How an item finished.</summary>
         [PublicAPI]
-        protected internal readonly struct AsyncOutcome<TResult>
+        protected internal sealed class AsyncOutcome<TResult>
         {
             // Note the deliberate absence of any Value/Error/Kind property: matching is the only
             // way in, so a strategy can't read a result without also saying what to do when there
@@ -315,7 +315,7 @@ namespace Sodium.Frp.Async
         ///     A strategy's answer: whether to publish the just-finished outcome, and what to start next.
         /// </summary>
         [PublicAPI]
-        protected internal readonly struct AsyncStrategyResult<TInput>
+        protected internal sealed class AsyncStrategyResult<TInput>
         {
             /// <summary>An empty Next list — nothing more to start as a result of this decision.</summary>
             public static readonly IReadOnlyList<AsyncToStart<TInput>> None = Array.Empty<AsyncToStart<TInput>>();

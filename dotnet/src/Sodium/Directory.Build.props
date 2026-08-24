@@ -50,11 +50,31 @@
         To collapse several packages onto one release train, give them the same prefix; they then
         version and release together off a single tag.
 
+        MinVerIgnoreHeight is on for exactly this reason: without it, height counts every commit in
+        the whole repository, not just commits touching a given project, so any package's version
+        keeps drifting to a new prerelease (1.0.1-alpha.0.1, .2, .3...) as soon as anything else in
+        the repo moves — even changes nowhere near that project. That also poisons every dependent's
+        nuspec: a downstream package's dependency entry is read from the referenced project's own
+        resolved version at pack time, so an unrelated commit anywhere could turn a stable release's
+        dependency floor into a moving prerelease target and trip NuGet's NU5104 warning. With this
+        set, a project with no new tag since its last release keeps reporting exactly that tagged
+        version, no matter how much unrelated activity happens elsewhere — confirmed empirically:
+        packing a project 5 commits past its tag, with this on, still produces the exact tagged
+        version, not a next-patch prerelease. The cost is the one this flag is named for: a commit
+        that actually changes a project, but isn't followed by a new tag, is indistinguishable from
+        one that doesn't touch it at all — both keep reporting the last tag's version. That's an
+        accepted tradeoff here, not an oversight: tag on release, and don't rely on the prerelease
+        version to reflect "there are unreleased changes."
+
         Guarded on UsingMicrosoftNETSdk because four of the C# test projects here are legacy,
         non-SDK projects using packages.config, which cannot consume a PackageReference.
     -->
     <ItemGroup Condition="'$(UsingMicrosoftNETSdk)' == 'true'">
         <PackageReference Include="MinVer" Version="6.1.0" PrivateAssets="all" />
     </ItemGroup>
+
+    <PropertyGroup Condition="'$(UsingMicrosoftNETSdk)' == 'true'">
+        <MinVerIgnoreHeight>true</MinVerIgnoreHeight>
+    </PropertyGroup>
 
 </Project>

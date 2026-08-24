@@ -19,6 +19,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\..\..\FSharp\Sodium.FSharp.Frp\Sodium.FSharp.Frp.fsproj" />
+    <ProjectReference Include="..\..\Sodium.Core.Frp.Async\Sodium.Core.Frp.Async.csproj" />
     <ProjectReference Include="..\Sodium.FSharp.Frp.Async\Sodium.FSharp.Frp.Async.fsproj" />
   </ItemGroup>
 
