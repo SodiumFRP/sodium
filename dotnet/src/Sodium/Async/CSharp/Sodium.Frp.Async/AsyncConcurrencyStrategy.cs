@@ -6,8 +6,8 @@ using Sodium.Functional;
 namespace Sodium.Frp.Async
 {
     /// <summary>
-    ///     Shorthand for a strategy that doesn't publish a meaningful result — the result type is fixed
-    ///     to <see cref="Unit" />.
+    ///     Shorthand for a strategy that doesn't care about the result — the result type is fixed to
+    ///     <see cref="Unit" />.
     /// </summary>
     [PublicAPI]
     public abstract class AsyncConcurrencyStrategy<TInput, TState>

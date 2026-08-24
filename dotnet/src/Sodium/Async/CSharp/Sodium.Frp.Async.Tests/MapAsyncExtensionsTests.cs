@@ -19,15 +19,16 @@ namespace Sodium.Frp.Async.Tests
             List<string> received = new();
             IListener l = results.Listen(received.Add);
 
-            AsyncMapStatus<string> status = source.MapAsync(
-                results: results,
-                errors: errors,
-                operation: (v, ct) => Task.FromResult(v.ToUpperInvariant()),
-                strategy: AsyncConcurrencyStrategy.Parallel());
+            AsyncMapStatus<string> status =
+                source.MapAsync(
+                    results: results,
+                    errors: errors,
+                    operation: (v, _) => Task.FromResult(v.ToUpperInvariant()),
+                    strategy: AsyncConcurrencyStrategy.Parallel());
 
             source.Send("hello");
             TestUtil.WaitUntil(() => received.Count == 1);
-            Assert.AreEqual("HELLO", received[0]);
+            Assert.AreEqual(expected: "HELLO", actual: received[0]);
 
             status.Dispose();
             l.Unlisten();
@@ -44,17 +45,18 @@ namespace Sodium.Frp.Async.Tests
             Dog dog = new();
             AlwaysStartStrategy<Animal, Unit> strategy = new();
 
-            AsyncMapStatus<Dog> status = source.MapAsync(
-                results: results,
-                errors: errors,
-                operation: (v, ct) => Task.FromResult("done"),
-                strategy: strategy);
+            AsyncMapStatus<Dog> status =
+                source.MapAsync(
+                    results: results,
+                    errors: errors,
+                    operation: (_, _) => Task.FromResult("done"),
+                    strategy: strategy);
 
             source.Send(dog);
             TestUtil.WaitUntil(() => received.Count == 1);
 
-            Assert.AreSame(dog, strategy.AdmittedValues[0]);
-            Assert.AreEqual("done", received[0]);
+            Assert.AreSame(expected: dog, actual: strategy.AdmittedValues[0]);
+            Assert.AreEqual(expected: "done", actual: received[0]);
 
             status.Dispose();
             l.Unlisten();
@@ -70,18 +72,19 @@ namespace Sodium.Frp.Async.Tests
             IListener l = results.Listen(received.Add);
             AlwaysStartStrategy<int, Unit> strategy = new();
 
-            AsyncMapStatus<string> status = source.MapAsync(
-                results: results,
-                errors: errors,
-                operation: (v, ct) => Task.FromResult(v.ToUpperInvariant()),
-                strategy: strategy,
-                inputConverter: v => v.Length);
+            AsyncMapStatus<string> status =
+                source.MapAsync(
+                    results: results,
+                    errors: errors,
+                    operation: (v, _) => Task.FromResult(v.ToUpperInvariant()),
+                    strategy: strategy,
+                    inputConverter: v => v.Length);
 
             source.Send("hello");
             TestUtil.WaitUntil(() => received.Count == 1);
 
-            CollectionAssert.AreEqual(new[] { 5 }, strategy.AdmittedValues);
-            Assert.AreEqual("HELLO", received[0]);
+            CollectionAssert.AreEqual(expected: new[] { 5 }, actual: strategy.AdmittedValues);
+            Assert.AreEqual(expected: "HELLO", actual: received[0]);
 
             status.Dispose();
             l.Unlisten();
@@ -97,15 +100,16 @@ namespace Sodium.Frp.Async.Tests
             IListener l = results.Listen(received.Add);
             Dog dog = new();
 
-            AsyncMapStatus<string> status = source.MapAsync(
-                results: results,
-                errors: errors,
-                operation: (v, ct) => Task.FromResult(dog),
-                strategy: new AlwaysStartStrategy<Unit, Animal>());
+            AsyncMapStatus<string> status =
+                source.MapAsync(
+                    results: results,
+                    errors: errors,
+                    operation: (_, _) => Task.FromResult(dog),
+                    strategy: new AlwaysStartStrategy<Unit, Animal>());
 
             source.Send("hello");
             TestUtil.WaitUntil(() => received.Count == 1);
-            Assert.AreSame(dog, received[0]);
+            Assert.AreSame(expected: dog, actual: received[0]);
 
             status.Dispose();
             l.Unlisten();
@@ -121,18 +125,19 @@ namespace Sodium.Frp.Async.Tests
             IListener l = results.Listen(received.Add);
             AlwaysStartStrategy<Unit, int> strategy = new();
 
-            AsyncMapStatus<string> status = source.MapAsync(
-                results: results,
-                errors: errors,
-                operation: (v, ct) => Task.FromResult(v.ToUpperInvariant()),
-                strategy: strategy,
-                resultConverter: v => v.Length);
+            AsyncMapStatus<string> status =
+                source.MapAsync(
+                    results: results,
+                    errors: errors,
+                    operation: (v, _) => Task.FromResult(v.ToUpperInvariant()),
+                    strategy: strategy,
+                    resultConverter: v => v.Length);
 
             source.Send("hello");
             TestUtil.WaitUntil(() => received.Count == 1);
 
-            CollectionAssert.AreEqual(new[] { 5 }, strategy.CompletedResults);
-            Assert.AreEqual("HELLO", received[0]);
+            CollectionAssert.AreEqual(expected: new[] { 5 }, actual: strategy.CompletedResults);
+            Assert.AreEqual(expected: "HELLO", actual: received[0]);
 
             status.Dispose();
             l.Unlisten();
@@ -148,15 +153,16 @@ namespace Sodium.Frp.Async.Tests
             IListener l = results.Listen(received.Add);
             Dog dog = new();
 
-            AsyncMapStatus<Dog> status = source.MapAsync(
-                results: results,
-                errors: errors,
-                operation: (v, ct) => Task.FromResult(v),
-                strategy: new AlwaysStartStrategy<Animal, Animal>());
+            AsyncMapStatus<Dog> status =
+                source.MapAsync(
+                    results: results,
+                    errors: errors,
+                    operation: (v, _) => Task.FromResult(v),
+                    strategy: new AlwaysStartStrategy<Animal, Animal>());
 
             source.Send(dog);
             TestUtil.WaitUntil(() => received.Count == 1);
-            Assert.AreSame(dog, received[0]);
+            Assert.AreSame(expected: dog, actual: received[0]);
 
             status.Dispose();
             l.Unlisten();
@@ -173,18 +179,19 @@ namespace Sodium.Frp.Async.Tests
             Dog dog = new();
             AlwaysStartStrategy<int, Animal> strategy = new();
 
-            AsyncMapStatus<string> status = source.MapAsync(
-                results: results,
-                errors: errors,
-                operation: (v, ct) => Task.FromResult(dog),
-                strategy: strategy,
-                inputConverter: v => v.Length);
+            AsyncMapStatus<string> status =
+                source.MapAsync(
+                    results: results,
+                    errors: errors,
+                    operation: (_, _) => Task.FromResult(dog),
+                    strategy: strategy,
+                    inputConverter: v => v.Length);
 
             source.Send("hello");
             TestUtil.WaitUntil(() => received.Count == 1);
 
-            CollectionAssert.AreEqual(new[] { 5 }, strategy.AdmittedValues);
-            Assert.AreSame(dog, received[0]);
+            CollectionAssert.AreEqual(expected: new[] { 5 }, actual: strategy.AdmittedValues);
+            Assert.AreSame(expected: dog, actual: received[0]);
 
             status.Dispose();
             l.Unlisten();
@@ -201,18 +208,19 @@ namespace Sodium.Frp.Async.Tests
             Dog dog = new();
             AlwaysStartStrategy<Animal, int> strategy = new();
 
-            AsyncMapStatus<Dog> status = source.MapAsync(
-                results: results,
-                errors: errors,
-                operation: (v, ct) => Task.FromResult("done"),
-                strategy: strategy,
-                resultConverter: v => v.Length);
+            AsyncMapStatus<Dog> status =
+                source.MapAsync(
+                    results: results,
+                    errors: errors,
+                    operation: (_, _) => Task.FromResult("done"),
+                    strategy: strategy,
+                    resultConverter: v => v.Length);
 
             source.Send(dog);
             TestUtil.WaitUntil(() => received.Count == 1);
 
-            CollectionAssert.AreEqual(new[] { 4 }, strategy.CompletedResults);
-            Assert.AreEqual("done", received[0]);
+            CollectionAssert.AreEqual(expected: new[] { 4 }, actual: strategy.CompletedResults);
+            Assert.AreEqual(expected: "done", actual: received[0]);
 
             status.Dispose();
             l.Unlisten();
@@ -230,20 +238,21 @@ namespace Sodium.Frp.Async.Tests
 
             // TStrategyInput (int, a length) and TStrategyResult (bool, "is long") are both
             // unrelated by inheritance to TInput/TResult (string) — only this overload permits it.
-            AsyncMapStatus<string> status = source.MapAsync(
-                results: results,
-                errors: errors,
-                operation: (v, ct) => Task.FromResult(v.ToUpperInvariant()),
-                strategy: strategy,
-                inputConverter: v => v.Length,
-                resultConverter: v => v.Length > 3);
+            AsyncMapStatus<string> status =
+                source.MapAsync(
+                    results: results,
+                    errors: errors,
+                    operation: (v, _) => Task.FromResult(v.ToUpperInvariant()),
+                    strategy: strategy,
+                    inputConverter: v => v.Length,
+                    resultConverter: v => v.Length > 3);
 
             source.Send("hello");
             TestUtil.WaitUntil(() => received.Count == 1);
 
-            CollectionAssert.AreEqual(new[] { 5 }, strategy.AdmittedValues);
-            CollectionAssert.AreEqual(new[] { true }, strategy.CompletedResults);
-            Assert.AreEqual("HELLO", received[0]);
+            CollectionAssert.AreEqual(expected: new[] { 5 }, actual: strategy.AdmittedValues);
+            CollectionAssert.AreEqual(expected: new[] { true }, actual: strategy.CompletedResults);
+            Assert.AreEqual(expected: "HELLO", actual: received[0]);
 
             status.Dispose();
             l.Unlisten();
@@ -260,12 +269,13 @@ namespace Sodium.Frp.Async.Tests
             List<string> received = new();
             IListener l = results.Listen(received.Add);
 
-            AsyncMapStatus<string> status = source.MapAsync(
-                results: results,
-                errors: errors,
-                operation: op.Operation,
-                strategy: AsyncConcurrencyStrategy.Parallel(),
-                cancelAll: cancelAll);
+            AsyncMapStatus<string> status =
+                source.MapAsync(
+                    results: results,
+                    errors: errors,
+                    operation: op.Operation,
+                    strategy: AsyncConcurrencyStrategy.Parallel(),
+                    cancelAll: cancelAll);
 
             source.Send("a");
             source.Send("b");
@@ -274,7 +284,11 @@ namespace Sodium.Frp.Async.Tests
             cancelAll.Send(Unit.Value);
 
             Thread.Sleep(200);
-            Assert.AreEqual(0, received.Count, "A canceled outcome must never be published.");
+
+            Assert.AreEqual(
+                expected: 0,
+                actual: received.Count,
+                message: "A canceled outcome must never be published.");
 
             status.Dispose();
             l.Unlisten();
@@ -291,12 +305,13 @@ namespace Sodium.Frp.Async.Tests
             List<string> received = new();
             IListener l = results.Listen(received.Add);
 
-            AsyncMapStatus<string> status = source.MapAsync(
-                results: results,
-                errors: errors,
-                operation: op.Operation,
-                strategy: AsyncConcurrencyStrategy.Parallel(),
-                cancelMatching: cancelMatching);
+            AsyncMapStatus<string> status =
+                source.MapAsync(
+                    results: results,
+                    errors: errors,
+                    operation: op.Operation,
+                    strategy: AsyncConcurrencyStrategy.Parallel(),
+                    cancelMatching: cancelMatching);
 
             source.Send("a");
             source.Send("b");
@@ -304,11 +319,11 @@ namespace Sodium.Frp.Async.Tests
 
             cancelMatching.Send(new[] { "a" });
 
-            op.Release("b", "B");
+            op.Release(input: "b", result: "B");
             TestUtil.WaitUntil(() => received.Count == 1);
 
             Thread.Sleep(100);
-            CollectionAssert.AreEqual(new[] { "B" }, received);
+            CollectionAssert.AreEqual(expected: new[] { "B" }, actual: received);
 
             status.Dispose();
             l.Unlisten();
@@ -324,12 +339,13 @@ namespace Sodium.Frp.Async.Tests
             List<string> received = new();
             IListener l = results.Listen(received.Add);
 
-            AsyncMapStatus<string> status = source.MapAsync(
-                results: results,
-                errors: errors,
-                operation: op.Operation,
-                strategy: AsyncConcurrencyStrategy.Parallel(),
-                cancelOnDispose: true);
+            AsyncMapStatus<string> status =
+                source.MapAsync(
+                    results: results,
+                    errors: errors,
+                    operation: op.Operation,
+                    strategy: AsyncConcurrencyStrategy.Parallel(),
+                    cancelOnDispose: true);
 
             source.Send("a");
             TestUtil.WaitUntil(() => op.HasStarted("a"));
@@ -337,7 +353,7 @@ namespace Sodium.Frp.Async.Tests
             status.Dispose();
 
             Thread.Sleep(200);
-            Assert.AreEqual(0, received.Count);
+            Assert.AreEqual(expected: 0, actual: received.Count);
 
             l.Unlisten();
         }
@@ -352,21 +368,22 @@ namespace Sodium.Frp.Async.Tests
             List<string> received = new();
             IListener l = results.Listen(received.Add);
 
-            AsyncMapStatus<string> status = source.MapAsync(
-                results: results,
-                errors: errors,
-                operation: op.Operation,
-                strategy: AsyncConcurrencyStrategy.Parallel(),
-                cancelOnDispose: false);
+            AsyncMapStatus<string> status =
+                source.MapAsync(
+                    results: results,
+                    errors: errors,
+                    operation: op.Operation,
+                    strategy: AsyncConcurrencyStrategy.Parallel(),
+                    cancelOnDispose: false);
 
             source.Send("a");
             TestUtil.WaitUntil(() => op.HasStarted("a"));
 
             status.Dispose();
-            op.Release("a", "A");
+            op.Release(input: "a", result: "A");
 
             TestUtil.WaitUntil(() => received.Count == 1);
-            CollectionAssert.AreEqual(new[] { "A" }, received);
+            CollectionAssert.AreEqual(expected: new[] { "A" }, actual: received);
 
             l.Unlisten();
         }
@@ -381,15 +398,16 @@ namespace Sodium.Frp.Async.Tests
             List<Exception> received = new();
             IListener l = errors.Listen(received.Add);
 
-            AsyncMapStatus<string> status = source.MapAsync(
-                results: results,
-                errors: errors,
-                operation: (v, ct) => Task.FromException<string>(thrown),
-                strategy: AsyncConcurrencyStrategy.Parallel());
+            AsyncMapStatus<string> status =
+                source.MapAsync(
+                    results: results,
+                    errors: errors,
+                    operation: (_, _) => Task.FromException<string>(thrown),
+                    strategy: AsyncConcurrencyStrategy.Parallel());
 
             source.Send("hello");
             TestUtil.WaitUntil(() => received.Count == 1);
-            Assert.AreSame(thrown, received[0]);
+            Assert.AreSame(expected: thrown, actual: received[0]);
 
             status.Dispose();
             l.Unlisten();
@@ -403,14 +421,15 @@ namespace Sodium.Frp.Async.Tests
             StreamSink<Exception> errors = Stream.CreateSink<Exception>();
             ControlledOperation<string, string> op = new();
 
-            AsyncMapStatus<string> status = source.MapAsync(
-                results: results,
-                errors: errors,
-                operation: op.Operation,
-                strategy: AsyncConcurrencyStrategy.Queue());
+            AsyncMapStatus<string> status =
+                source.MapAsync(
+                    results: results,
+                    errors: errors,
+                    operation: op.Operation,
+                    strategy: AsyncConcurrencyStrategy.Queue());
 
             Assert.IsFalse(status.IsRunning.Sample());
-            Assert.AreEqual(0, status.Items.Sample().Count);
+            Assert.AreEqual(expected: 0, actual: status.Items.Sample().Count);
 
             source.Send("a");
             source.Send("b");
@@ -418,11 +437,11 @@ namespace Sodium.Frp.Async.Tests
             TestUtil.WaitUntil(() => status.IsRunning.Sample());
 
             IReadOnlyList<AsyncItem<string>> items = status.Items.Sample();
-            Assert.AreEqual(2, items.Count);
+            Assert.AreEqual(expected: 2, actual: items.Count);
 
-            op.Release("a", "A");
+            op.Release(input: "a", result: "A");
             TestUtil.WaitUntil(() => op.HasStarted("b"));
-            op.Release("b", "B");
+            op.Release(input: "b", result: "B");
 
             TestUtil.WaitUntil(() => status.Items.Sample().Count == 0);
             Assert.IsFalse(status.IsRunning.Sample());
@@ -444,15 +463,15 @@ namespace Sodium.Frp.Async.Tests
         ///     saw on completion — so a test can assert a converter actually ran, not merely compiled.
         /// </summary>
         private sealed class AlwaysStartStrategy<TStrategyInput, TStrategyResult>
-            : AsyncConcurrencyStrategy<TStrategyInput, TStrategyResult, object?>
+            : AsyncConcurrencyStrategy<TStrategyInput, TStrategyResult, Unit>
         {
             public readonly List<TStrategyInput> AdmittedValues = new();
             public readonly List<TStrategyResult> CompletedResults = new();
 
-            protected override object? CreateState() => null;
+            protected override Unit CreateState() => Unit.Value;
 
             protected override IReadOnlyList<AsyncToStart<TStrategyInput>> Admit(
-                object? state,
+                Unit state,
                 AsyncQueuedItem<TStrategyInput> incoming)
             {
                 lock (this.AdmittedValues)
@@ -464,7 +483,7 @@ namespace Sodium.Frp.Async.Tests
             }
 
             protected override AsyncStrategyResult<TStrategyInput> OnCompleted(
-                object? state,
+                Unit state,
                 AsyncQueuedItem<TStrategyInput> item,
                 AsyncOutcome<TStrategyResult> outcome)
             {
@@ -479,7 +498,9 @@ namespace Sodium.Frp.Async.Tests
                     onFailed: null,
                     onCanceled: null);
 
-                return new AsyncStrategyResult<TStrategyInput>(publish: true, next: AsyncStrategyResult<TStrategyInput>.None);
+                return new AsyncStrategyResult<TStrategyInput>(
+                    publish: true,
+                    next: AsyncStrategyResult<TStrategyInput>.None);
             }
         }
     }

@@ -34,7 +34,7 @@ type ControlledOperation<'TInput, 'TResult when 'TInput : equality>() =
 
     member _.Operation : 'TInput -> CancellationToken -> Task<'TResult> =
         fun input token ->
-            started.[input] <- true
+            started[input] <- true
             let tcs = gateFor input
             token.Register(fun () -> tcs.TrySetCanceled(token) |> ignore) |> ignore
             tcs.Task

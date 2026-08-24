@@ -1,5 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Threading;
+using System.Threading.Tasks;
 using NUnit.Framework;
 using Sodium.Functional;
 
@@ -18,23 +20,24 @@ namespace Sodium.Frp.Async.Tests
             List<string> received = new();
             IListener l = results.Listen(received.Add);
 
-            AsyncMapStatus<string> status = source.MapAsync(
-                results: results,
-                errors: errors,
-                operation: op.Operation,
-                strategy: AsyncConcurrencyStrategy.Parallel());
+            AsyncMapStatus<string> status =
+                source.MapAsync(
+                    results: results,
+                    errors: errors,
+                    operation: op.Operation,
+                    strategy: AsyncConcurrencyStrategy.Parallel());
 
             source.Send("a");
             source.Send("b");
 
             TestUtil.WaitUntil(() => op.HasStarted("a") && op.HasStarted("b"));
 
-            op.Release("b", "B");
+            op.Release(input: "b", result: "B");
             TestUtil.WaitUntil(() => received.Count == 1);
-            op.Release("a", "A");
+            op.Release(input: "a", result: "A");
             TestUtil.WaitUntil(() => received.Count == 2);
 
-            CollectionAssert.AreEqual(new[] { "B", "A" }, received);
+            CollectionAssert.AreEqual(expected: new[] { "B", "A" }, actual: received);
 
             status.Dispose();
             l.Unlisten();
@@ -50,11 +53,12 @@ namespace Sodium.Frp.Async.Tests
             List<string> received = new();
             IListener l = results.Listen(received.Add);
 
-            AsyncMapStatus<string> status = source.MapAsync(
-                results: results,
-                errors: errors,
-                operation: op.Operation,
-                strategy: AsyncConcurrencyStrategy.Queue());
+            AsyncMapStatus<string> status =
+                source.MapAsync(
+                    results: results,
+                    errors: errors,
+                    operation: op.Operation,
+                    strategy: AsyncConcurrencyStrategy.Queue());
 
             source.Send("a");
             source.Send("b");
@@ -62,12 +66,12 @@ namespace Sodium.Frp.Async.Tests
             TestUtil.WaitUntil(() => op.HasStarted("a"));
             Assert.IsFalse(op.HasStarted("b"));
 
-            op.Release("a", "A");
+            op.Release(input: "a", result: "A");
             TestUtil.WaitUntil(() => op.HasStarted("b"));
-            op.Release("b", "B");
+            op.Release(input: "b", result: "B");
 
             TestUtil.WaitUntil(() => received.Count == 2);
-            CollectionAssert.AreEqual(new[] { "A", "B" }, received);
+            CollectionAssert.AreEqual(expected: new[] { "A", "B" }, actual: received);
 
             status.Dispose();
             l.Unlisten();
@@ -86,11 +90,12 @@ namespace Sodium.Frp.Async.Tests
             AsyncConcurrencyStrategyBase<string, Unit> strategy =
                 AsyncConcurrencyStrategy.QueuePerGroup<string>().Create(v => v.Split('-')[0]);
 
-            AsyncMapStatus<string> status = source.MapAsync(
-                results: results,
-                errors: errors,
-                operation: op.Operation,
-                strategy: strategy);
+            AsyncMapStatus<string> status =
+                source.MapAsync(
+                    results: results,
+                    errors: errors,
+                    operation: op.Operation,
+                    strategy: strategy);
 
             source.Send("g1-a");
             source.Send("g1-b");
@@ -99,14 +104,14 @@ namespace Sodium.Frp.Async.Tests
             TestUtil.WaitUntil(() => op.HasStarted("g1-a") && op.HasStarted("g2-a"));
             Assert.IsFalse(op.HasStarted("g1-b"));
 
-            op.Release("g1-a", "A1");
+            op.Release(input: "g1-a", result: "A1");
             TestUtil.WaitUntil(() => op.HasStarted("g1-b"));
 
-            op.Release("g1-b", "B1");
-            op.Release("g2-a", "A2");
+            op.Release(input: "g1-b", result: "B1");
+            op.Release(input: "g2-a", result: "A2");
             TestUtil.WaitUntil(() => received.Count == 3);
 
-            CollectionAssert.AreEquivalent(new[] { "A1", "B1", "A2" }, received);
+            CollectionAssert.AreEquivalent(expected: new[] { "A1", "B1", "A2" }, actual: received);
 
             status.Dispose();
             l.Unlisten();
@@ -122,23 +127,24 @@ namespace Sodium.Frp.Async.Tests
             List<string> received = new();
             IListener l = results.Listen(received.Add);
 
-            AsyncMapStatus<string> status = source.MapAsync(
-                results: results,
-                errors: errors,
-                operation: op.Operation,
-                strategy: AsyncConcurrencyStrategy.SwitchLatest());
+            AsyncMapStatus<string> status =
+                source.MapAsync(
+                    results: results,
+                    errors: errors,
+                    operation: op.Operation,
+                    strategy: AsyncConcurrencyStrategy.SwitchLatest());
 
             source.Send("a");
             TestUtil.WaitUntil(() => op.HasStarted("a"));
             source.Send("b");
             TestUtil.WaitUntil(() => op.HasStarted("b"));
 
-            op.Release("a", "A");
-            op.Release("b", "B");
+            op.Release(input: "a", result: "A");
+            op.Release(input: "b", result: "B");
             TestUtil.WaitUntil(() => received.Count == 1);
 
-            System.Threading.Thread.Sleep(100);
-            CollectionAssert.AreEqual(new[] { "B" }, received);
+            Thread.Sleep(100);
+            CollectionAssert.AreEqual(expected: new[] { "B" }, actual: received);
 
             status.Dispose();
             l.Unlisten();
@@ -149,9 +155,12 @@ namespace Sodium.Frp.Async.Tests
         {
             // These are advertised as stateless and reusable; the wrapper caches one instance per
             // strategy rather than allocating fresh on every call.
-            Assert.AreSame(AsyncConcurrencyStrategy.Parallel(), AsyncConcurrencyStrategy.Parallel());
-            Assert.AreSame(AsyncConcurrencyStrategy.Queue(), AsyncConcurrencyStrategy.Queue());
-            Assert.AreSame(AsyncConcurrencyStrategy.SwitchLatest(), AsyncConcurrencyStrategy.SwitchLatest());
+            Assert.AreSame(expected: AsyncConcurrencyStrategy.Parallel(), actual: AsyncConcurrencyStrategy.Parallel());
+            Assert.AreSame(expected: AsyncConcurrencyStrategy.Queue(), actual: AsyncConcurrencyStrategy.Queue());
+
+            Assert.AreSame(
+                expected: AsyncConcurrencyStrategy.SwitchLatest(),
+                actual: AsyncConcurrencyStrategy.SwitchLatest());
         }
 
         [Test]
@@ -165,17 +174,18 @@ namespace Sodium.Frp.Async.Tests
 
             CountingStrategy strategy = new();
 
-            AsyncMapStatus<string> status = source.MapAsync(
-                results: results,
-                errors: errors,
-                operation: (v, ct) => System.Threading.Tasks.Task.FromResult(Unit.Value),
-                strategy: strategy);
+            AsyncMapStatus<string> status =
+                source.MapAsync(
+                    results: results,
+                    errors: errors,
+                    operation: (_, _) => Task.FromResult(Unit.Value),
+                    strategy: strategy);
 
             source.Send("a");
             source.Send("b");
 
             TestUtil.WaitUntil(() => received.Count == 2);
-            Assert.AreEqual(2, strategy.AdmittedCount);
+            Assert.AreEqual(expected: 2, actual: strategy.AdmittedCount);
 
             status.Dispose();
             l.Unlisten();
@@ -198,7 +208,7 @@ namespace Sodium.Frp.Async.Tests
                 int state,
                 AsyncQueuedItem<Unit> incoming)
             {
-                System.Threading.Interlocked.Increment(ref this.count);
+                Interlocked.Increment(ref this.count);
                 return new[] { new AsyncToStart<Unit>(incoming) };
             }
 

@@ -3,13 +3,14 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.Threading;
 using System.Threading.Tasks;
+using JetBrains.Annotations;
 
 namespace Sodium.Frp.Async.Tests
 {
     internal static class TestUtil
     {
         /// <summary>Polls <paramref name="condition" /> until it's true, or fails the test via timeout.</summary>
-        public static void WaitUntil(Func<bool> condition, int timeoutMs = 5000)
+        public static void WaitUntil([InstantHandle] Func<bool> condition, int timeoutMs = 5000)
         {
             Stopwatch stopwatch = Stopwatch.StartNew();
 
@@ -58,6 +59,6 @@ namespace Sodium.Frp.Async.Tests
         }
 
         private TaskCompletionSource<TResult> GateFor(TInput input) =>
-            this.gates.GetOrAdd(input, _ => new TaskCompletionSource<TResult>());
+            this.gates.GetOrAdd(key: input, valueFactory: _ => new TaskCompletionSource<TResult>());
     }
 }

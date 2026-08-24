@@ -9,17 +9,82 @@ open Sodium.Frp
 open Sodium.Frp.Async
 open Sodium.Frp.Async.Tests.TestUtil
 
-// A hand-written custom strategy (subclassing AsyncConcurrencyStrategy<'TInput,'TResult,'TState>
-// and overriding Admit/OnCompleted/CreateState) is deliberately NOT exercised in this file: F#
-// cannot construct AsyncToStart<'T> or AsyncStrategyResult<'T> — both protected-internal nested
-// types declared in the Core.Frp.Async assembly — from an override in a foreign assembly. It's a
-// genuine F# compiler limitation, confirmed by trying both the implicit and explicit `new` call
-// forms; both are rejected as inaccessible even though the identical construction compiles fine in
-// C#, and even though naming/reading these same types (e.g. incoming.Value, outside a closure)
-// works once qualified through AsyncMapBase. Every built-in strategy the F# wrapper exposes is
-// therefore implemented in C# (AsyncConcurrencyStrategyFactory) rather than in this module. The
-// tests below stay within what an F# consumer can actually build today: the five built-in strategy
-// functions, used through all four mapAsync variants.
+// A handwritten custom strategy (subclassing AsyncConcurrencyStrategy<'TInput,'TResult,'TState>
+// and overriding Admit/OnCompleted/CreateState) IS exercised below. An earlier version of this
+// file concluded F# couldn't do this at all — that was wrong, and the actual causes were more
+// mundane than "a genuine compiler limitation":
+//   - This project had no direct ProjectReference to Sodium.Core.Frp.Async, only a transitive one
+//     through Sodium.FSharp.Frp.Async. F#'s accessibility checking for the protected-internal
+//     AsyncQueuedItem/AsyncToStart/AsyncOutcome/AsyncStrategyResult types needs the direct
+//     reference to resolve correctly; a transitive one isn't enough.
+//   - AsyncToStart<'T>, AsyncOutcome<'T> and AsyncStrategyResult<'T> were readonly structs. Every
+//     struct has an implicit, non-suppressible parameterless constructor, and F# could reach it
+//     (e.g. via a bare default/Unchecked.defaultof), silently producing an invalid instance — item
+//     = null, in particular — without ever running the validating constructor. They're sealed
+//     classes now, closing that hole; there's no default construction path around `new`.
+//   - The F# module's own non-generic AsyncConcurrencyStrategy shorthand classes used the
+//     abbreviated `type X = inherit Y` class syntax, which didn't reliably produce a constructor
+//     usable from outside the module. They're written with an explicit `type X() = inherit Y()`
+//     now.
+//   - One more, found while porting these tests, with no C# equivalent to fix: F# rejects
+//     constructing a protected-internal type directly inside an array literal (`[| Ctor(...) |]`)
+//     as if that were itself a closure, even though nothing about it looks like one. Building the
+//     instance in its own `let` first and only referencing that local inside the array — see
+//     Admit below, in both strategies — is what actually resolves it.
+
+/// Starts everything immediately, like parallelStrategy, but works against arbitrary
+/// 'TStrategyInput/'TStrategyResult and records both what it was admitted with and what it saw on
+/// completion — so a test can assert a converter actually ran, not merely compiled.
+type private AlwaysStartStrategy<'TStrategyInput, 'TStrategyResult>() =
+    inherit AsyncConcurrencyStrategy<'TStrategyInput, 'TStrategyResult, EmptyState>()
+
+    let admittedValues = ResizeArray<'TStrategyInput>()
+    let completedResults = ResizeArray<'TStrategyResult>()
+
+    member _.AdmittedValues = admittedValues
+    member _.CompletedResults = completedResults
+
+    override _.CreateState() = EmptyState
+
+    override _.Admit(_state : EmptyState, incoming : AsyncMapBase.AsyncQueuedItem<'TStrategyInput>) =
+        // The protected-internal item's members can't be read from inside a closure — read the
+        // value out to a plain local first, then close over that instead.
+        let v = incoming.Value
+        lock admittedValues (fun () -> admittedValues.Add(v))
+        let toStart = AsyncMapBase.AsyncToStart<'TStrategyInput>(incoming)
+        [| toStart |] :> IReadOnlyList<_>
+
+    override _.OnCompleted(
+        _state : EmptyState,
+        _item : AsyncMapBase.AsyncQueuedItem<'TStrategyInput>,
+        outcome : AsyncMapBase.AsyncOutcome<'TStrategyResult>) =
+        let mutable captured = Unchecked.defaultof<'TStrategyResult>
+        outcome.MatchVoid(Action<'TStrategyResult>(fun v -> captured <- v), null, null)
+        lock completedResults (fun () -> completedResults.Add(captured))
+        AsyncMapBase.AsyncStrategyResult<'TStrategyInput>(true, AsyncMapBase.AsyncStrategyResult<'TStrategyInput>.None)
+
+/// A trivial custom strategy using EmptyState directly (input and result both fixed to `unit`,
+/// via the F# module's own non-generic AsyncConcurrencyStrategy shorthand) — every value starts
+/// immediately, like parallelStrategy, but also counts admissions.
+type private CountingStrategy() =
+    inherit AsyncConcurrencyStrategy()
+
+    let mutable count = 0
+
+    member _.AdmittedCount = count
+
+    override _.CreateState() = EmptyState
+
+    override _.Admit(_state : EmptyState, incoming : AsyncMapBase.AsyncQueuedItem<unit>) =
+        count <- count + 1
+        let toStart = AsyncMapBase.AsyncToStart<unit>(incoming)
+        [| toStart |] :> IReadOnlyList<_>
+
+    override _.OnCompleted(
+        _state : EmptyState,
+        _item : AsyncMapBase.AsyncQueuedItem<unit>,
+        _outcome : AsyncMapBase.AsyncOutcome<unit>) =
+        AsyncMapBase.AsyncStrategyResult<unit>(true, AsyncMapBase.AsyncStrategyResult<unit>.None)
 
 [<TestFixture>]
 type ``MapAsync Tests``() =
@@ -173,62 +238,79 @@ type ``MapAsync Tests``() =
         l |> unlistenL
 
     [<Test>]
-    member _.``mapAsyncWithResultConverter accepts a strategy that erases the result to unit``() =
+    member _.``mapAsyncWithResultConverter applies the result converter before the strategy sees it``() =
         let source = sinkS<string> ()
         let results = sinkS<string> ()
         let errors = sinkS<exn> ()
         let received = List<string>()
         let l = results |> listenS received.Add
+        let strategy = AlwaysStartStrategy<unit, int>()
 
         let operation (v : string) (_ : CancellationToken) = Task.FromResult(v.ToUpperInvariant())
 
-        // parallelStrategy() : AsyncConcurrencyStrategyBase<unit, unit> fits this overload's
-        // AsyncConcurrencyStrategyBase<unit, 'TStrategyResult> shape exactly at 'TStrategyResult =
-        // unit, so a resultConverter that discards the real TResult is enough to use it here — the
-        // real result (untouched by that converter) is still what reaches `results`.
         let status =
             source
-            |> mapAsyncWithResultConverter results errors operation (parallelStrategy ()) (fun (_ : string) -> ()) None None true
+            |> mapAsyncWithResultConverter results errors operation strategy (fun (v : string) -> v.Length) None None true
 
         source |> sendS "hello"
         waitUntil (fun () -> received.Count = 1)
-        Assert.AreEqual("HELLO", received.[0])
+
+        CollectionAssert.AreEqual([ 5 ], strategy.CompletedResults)
+        Assert.AreEqual("HELLO", received[0])
 
         status.Dispose()
         l |> unlistenL
 
     [<Test>]
-    member _.``mapAsyncWithConverters applies an input converter to a strategy typed against a custom group key``() =
+    member _.``mapAsyncWithConverters applies both converters to strategy types unrelated to TInput or TResult``() =
         let source = sinkS<string> ()
         let results = sinkS<string> ()
         let errors = sinkS<exn> ()
-        let op = ControlledOperation<string, string>()
         let received = List<string>()
         let l = results |> listenS received.Add
+        let strategy = AlwaysStartStrategy<int, bool>()
 
-        // queuePerGroupStrategy's TStrategyInput (here, an int length) is unrelated by inheritance
-        // to TInput (string), and its TStrategyResult is unit — the fully general overload is what
-        // lets both an inputConverter and a (discarding) resultConverter be supplied at once.
-        let strategy = queuePerGroupStrategy (fun (len : int) -> len % 2)
+        let operation (v : string) (_ : CancellationToken) = Task.FromResult(v.ToUpperInvariant())
 
+        // 'TStrategyInput (int, a length) and 'TStrategyResult (bool, "is long") are both unrelated
+        // by inheritance to 'TInput/'TResult (string) — only this overload permits that.
         let status =
             source
             |> mapAsyncWithConverters
-                results errors op.Operation strategy
+                results errors operation strategy
                 (fun (v : string) -> v.Length)
-                (fun (_ : string) -> ())
+                (fun (v : string) -> v.Length > 3)
                 None None true
 
-        // "hi" (length 2) and "bob" (length 3) land in different groups, so both start at once.
-        source |> sendS "hi"
-        source |> sendS "bob"
-        waitUntil (fun () -> op.HasStarted "hi" && op.HasStarted "bob")
+        source |> sendS "hello"
+        waitUntil (fun () -> received.Count = 1)
 
-        op.Release("hi", "HI")
-        op.Release("bob", "BOB")
+        CollectionAssert.AreEqual([ 5 ], strategy.AdmittedValues)
+        CollectionAssert.AreEqual([ true ], strategy.CompletedResults)
+        Assert.AreEqual("HELLO", received[0])
+
+        status.Dispose()
+        l |> unlistenL
+
+    [<Test>]
+    member _.``a custom strategy using EmptyState works``() =
+        let source = sinkS<string> ()
+        let results = sinkS<unit> ()
+        let errors = sinkS<exn> ()
+        let received = List<unit>()
+        let l = results |> listenS received.Add
+        let strategy = CountingStrategy()
+
+        let operation (_ : string) (_ : CancellationToken) = Task.FromResult(())
+
+        let status =
+            source |> mapAsync results errors operation strategy None None true
+
+        source |> sendS "a"
+        source |> sendS "b"
+
         waitUntil (fun () -> received.Count = 2)
-
-        CollectionAssert.AreEquivalent([ "HI"; "BOB" ], received)
+        Assert.AreEqual(2, strategy.AdmittedCount)
 
         status.Dispose()
         l |> unlistenL
@@ -349,7 +431,7 @@ type ``MapAsync Tests``() =
 
         source |> sendS "hello"
         waitUntil (fun () -> received.Count = 1)
-        Assert.AreSame(thrown, received.[0])
+        Assert.AreSame(thrown, received[0])
 
         status.Dispose()
         l |> unlistenL

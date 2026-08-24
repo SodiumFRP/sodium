@@ -22,7 +22,7 @@ namespace Sodium.Frp.Async.Tests
             AsyncMapStatus<string> status = source.MapAsyncImpl(
                 results: results,
                 errors: errors,
-                operation: (v, ct) => Task.FromResult(v.ToUpperInvariant()),
+                operation: (v, _) => Task.FromResult(v.ToUpperInvariant()),
                 strategy: AsyncConcurrencyStrategyFactory.Parallel("unused"),
                 inputConverter: v => v,
                 resultConverter: v => v);
@@ -30,7 +30,7 @@ namespace Sodium.Frp.Async.Tests
             source.Send("hello");
 
             TestUtil.WaitUntil(() => received.Count == 1);
-            Assert.AreEqual("HELLO", received[0]);
+            Assert.AreEqual(expected: "HELLO", actual: received[0]);
 
             status.Dispose();
             l.Unlisten();
@@ -49,7 +49,7 @@ namespace Sodium.Frp.Async.Tests
             AsyncMapStatus<string> status = source.MapAsyncImpl(
                 results: results,
                 errors: errors,
-                operation: (v, ct) => Task.FromException<string>(thrown),
+                operation: (_, _) => Task.FromException<string>(thrown),
                 strategy: AsyncConcurrencyStrategyFactory.Parallel("unused"),
                 inputConverter: v => v,
                 resultConverter: v => v);
@@ -57,7 +57,7 @@ namespace Sodium.Frp.Async.Tests
             source.Send("hello");
 
             TestUtil.WaitUntil(() => received.Count == 1);
-            Assert.AreSame(thrown, received[0]);
+            Assert.AreSame(expected: thrown, actual: received[0]);
 
             status.Dispose();
             l.Unlisten();
@@ -78,7 +78,7 @@ namespace Sodium.Frp.Async.Tests
             AsyncMapStatus<string> status = source.MapAsyncImpl(
                 results: results,
                 errors: errors,
-                operation: (v, ct) => Task.FromResult(v.ToUpperInvariant()),
+                operation: (v, _) => Task.FromResult(v.ToUpperInvariant()),
                 strategy: strategy,
                 inputConverter: v => v.Length,
                 resultConverter: v => v.Length);
@@ -88,10 +88,10 @@ namespace Sodium.Frp.Async.Tests
             TestUtil.WaitUntil(() => received.Count == 1);
 
             // The strategy only ever sees the converted int, never the original string.
-            CollectionAssert.AreEqual(new[] { 5 }, strategy.AdmittedValues);
+            CollectionAssert.AreEqual(expected: new[] { 5 }, actual: strategy.AdmittedValues);
 
             // Meanwhile the real TResult published is the untouched, unconverted operation output.
-            Assert.AreEqual("HELLO", received[0]);
+            Assert.AreEqual(expected: "HELLO", actual: received[0]);
 
             status.Dispose();
             l.Unlisten();
@@ -110,7 +110,7 @@ namespace Sodium.Frp.Async.Tests
             AsyncMapStatus<int> status = source.MapAsyncImpl(
                 results: results,
                 errors: errors,
-                operation: (v, ct) => Task.FromResult(v),
+                operation: (v, _) => Task.FromResult(v),
                 strategy: strategy,
                 inputConverter: v => v,
                 resultConverter: v => v);
@@ -123,12 +123,12 @@ namespace Sodium.Frp.Async.Tests
             // -1 was rejected by the strategy — canceled and left permanently Queued, per the
             // documented "reject outright" idiom — and so never reached the operation; only the
             // non-negative value made it through.
-            CollectionAssert.AreEqual(new[] { 2 }, received);
+            CollectionAssert.AreEqual(expected: new[] { 2 }, actual: received);
 
             // The rejected item is still visible, forever Queued — that's the visible cost of this
             // idiom, called out in AsyncConcurrencyStrategy's own remarks.
             Assert.IsTrue(
-                status.Items.Sample().Any(i => i.Value == -1 && i.Status == AsyncItemStatus.Queued));
+                status.Items.Sample().Any(i => i is { Value: -1, Status: AsyncItemStatus.Queued }));
 
             status.Dispose();
             l.Unlisten();
@@ -137,8 +137,8 @@ namespace Sodium.Frp.Async.Tests
         /// <summary>
         ///     Regression test for a real bug found while writing
         ///     <see cref="CustomStrategyCanRejectAnIncomingValueOutright" />: a strategy is free to
-        ///     call <see cref="AsyncQueuedItem{TInput}.Cancel" /> on <c>incoming</c> and still return
-        ///     it as an <see cref="AsyncToStart{TInput}" /> in the same <c>Admit</c> call — nothing in
+        ///     call <see cref="AsyncMapBase.AsyncQueuedItem{TInput}.Cancel" /> on <c>incoming</c> and still return
+        ///     it as an <see cref="AsyncMapBase.AsyncToStart{TInput}" /> in the same <c>Admit</c> call — nothing in
         ///     that method's contract forbids it, unlike the "reject outright" idiom above, which
         ///     cancels but deliberately never promotes. Doing so currently crashes:
         ///     <c>PromoteAndLaunch</c>'s "already canceled" branch calls <c>Complete</c>
@@ -162,18 +162,18 @@ namespace Sodium.Frp.Async.Tests
             AsyncMapStatus<int> status = source.MapAsyncImpl(
                 results: results,
                 errors: errors,
-                operation: (v, ct) => Task.FromResult(v),
+                operation: (v, _) => Task.FromResult(v),
                 strategy: new CancelAndPromoteSameItemStrategy(),
                 inputConverter: v => v,
                 resultConverter: v => v);
 
             Assert.DoesNotThrow(
-                () => source.Send(1),
-                "Canceling and promoting the same item in one Admit call should complete it as " +
-                "Canceled, not crash the transaction that admitted it.");
+                code: () => source.Send(1),
+                message: "Canceling and promoting the same item in one Admit call should complete it as " +
+                         "Canceled, not crash the transaction that admitted it.");
 
             Thread.Sleep(100);
-            Assert.AreEqual(0, received.Count, "A canceled outcome must never be published.");
+            Assert.AreEqual(expected: 0, actual: received.Count, message: "A canceled outcome must never be published.");
 
             status.Dispose();
             l.Unlisten();
@@ -191,7 +191,7 @@ namespace Sodium.Frp.Async.Tests
             AsyncMapStatus<string> status = source.MapAsyncImpl(
                 results: results,
                 errors: errors,
-                operation: (v, ct) => Task.FromResult(v),
+                operation: (v, _) => Task.FromResult(v),
                 strategy: AsyncConcurrencyStrategyFactory.Parallel("unused"),
                 inputConverter: v => v,
                 resultConverter: v => v);
@@ -200,7 +200,7 @@ namespace Sodium.Frp.Async.Tests
             source.Send("after-dispose");
 
             Thread.Sleep(100);
-            Assert.AreEqual(0, received.Count);
+            Assert.AreEqual(expected: 0, actual: received.Count);
 
             l.Unlisten();
         }
@@ -230,7 +230,7 @@ namespace Sodium.Frp.Async.Tests
             status.Dispose();
 
             Thread.Sleep(200);
-            Assert.AreEqual(0, received.Count, "A canceled outcome must never be published.");
+            Assert.AreEqual(expected: 0, actual: received.Count, message: "A canceled outcome must never be published.");
 
             l.Unlisten();
         }
@@ -258,10 +258,10 @@ namespace Sodium.Frp.Async.Tests
             TestUtil.WaitUntil(() => op.HasStarted("a"));
 
             status.Dispose();
-            op.Release("a", "A");
+            op.Release(input: "a", result: "A");
 
             TestUtil.WaitUntil(() => received.Count == 1);
-            CollectionAssert.AreEqual(new[] { "A" }, received);
+            CollectionAssert.AreEqual(expected: new[] { "A" }, actual: received);
 
             l.Unlisten();
         }
@@ -283,7 +283,7 @@ namespace Sodium.Frp.Async.Tests
                 resultConverter: v => v);
 
             Assert.IsFalse(status.IsRunning.Sample());
-            Assert.AreEqual(0, status.Items.Sample().Count);
+            Assert.AreEqual(expected: 0, actual: status.Items.Sample().Count);
 
             source.Send("a");
             source.Send("b");
@@ -292,14 +292,14 @@ namespace Sodium.Frp.Async.Tests
             TestUtil.WaitUntil(() => status.IsRunning.Sample());
 
             IReadOnlyList<AsyncItem<string>> items = status.Items.Sample();
-            Assert.AreEqual(2, items.Count);
-            Assert.IsTrue(items.Any(i => i.Value == "a" && i.Status == AsyncItemStatus.Running));
-            Assert.IsTrue(items.Any(i => i.Value == "b" && i.Status == AsyncItemStatus.Queued));
+            Assert.AreEqual(expected: 2, actual: items.Count);
+            Assert.IsTrue(items.Any(i => i is { Value: "a", Status: AsyncItemStatus.Running }));
+            Assert.IsTrue(items.Any(i => i is { Value: "b", Status: AsyncItemStatus.Queued }));
 
-            op.Release("a", "A");
+            op.Release(input: "a", result: "A");
             TestUtil.WaitUntil(() => op.HasStarted("b"));
 
-            op.Release("b", "B");
+            op.Release(input: "b", result: "B");
             TestUtil.WaitUntil(() => status.Items.Sample().Count == 0);
             Assert.IsFalse(status.IsRunning.Sample());
 
@@ -317,7 +317,7 @@ namespace Sodium.Frp.Async.Tests
                     source: null!,
                     results: results,
                     errors: errors,
-                    operation: (v, ct) => Task.FromResult(v),
+                    operation: (v, _) => Task.FromResult(v),
                     strategy: AsyncConcurrencyStrategyFactory.Parallel("unused"),
                     inputConverter: v => v,
                     resultConverter: v => v));
@@ -333,7 +333,7 @@ namespace Sodium.Frp.Async.Tests
                 source.MapAsyncImpl(
                     results: null!,
                     errors: errors,
-                    operation: (v, ct) => Task.FromResult(v),
+                    operation: (v, _) => Task.FromResult(v),
                     strategy: AsyncConcurrencyStrategyFactory.Parallel("unused"),
                     inputConverter: v => v,
                     resultConverter: v => v));
@@ -349,7 +349,7 @@ namespace Sodium.Frp.Async.Tests
                 source.MapAsyncImpl(
                     results: results,
                     errors: null!,
-                    operation: (v, ct) => Task.FromResult(v),
+                    operation: (v, _) => Task.FromResult(v),
                     strategy: AsyncConcurrencyStrategyFactory.Parallel("unused"),
                     inputConverter: v => v,
                     resultConverter: v => v));
@@ -383,7 +383,7 @@ namespace Sodium.Frp.Async.Tests
                 source.MapAsyncImpl(
                     results: results,
                     errors: errors,
-                    operation: (v, ct) => Task.FromResult(v),
+                    operation: (v, _) => Task.FromResult(v),
                     strategy: null!,
                     inputConverter: v => v,
                     resultConverter: v => v));
@@ -393,7 +393,10 @@ namespace Sodium.Frp.Async.Tests
         private sealed class RecordingStrategy<TStrategyInput, TStrategyResult>
             : AsyncConcurrencyStrategy<TStrategyInput, TStrategyResult, object?>
         {
-            public readonly List<TStrategyInput> AdmittedValues = new();
+            // This state is global and not per MapAsync call.  Per MapAsync state needs to be held in a TState object.
+            private readonly List<TStrategyInput> admittedValues = new();
+
+            public IReadOnlyList<TStrategyInput> AdmittedValues => this.admittedValues;
 
             protected override object? CreateState() => null;
 
@@ -401,10 +404,7 @@ namespace Sodium.Frp.Async.Tests
                 object? state,
                 AsyncQueuedItem<TStrategyInput> incoming)
             {
-                lock (this.AdmittedValues)
-                {
-                    this.AdmittedValues.Add(incoming.Value);
-                }
+                this.admittedValues.Add(incoming.Value);
 
                 return new[] { new AsyncToStart<TStrategyInput>(incoming) };
             }
@@ -448,12 +448,12 @@ namespace Sodium.Frp.Async.Tests
 
         /// <summary>
         ///     Cancels every incoming value and, unlike <see cref="RejectNegativeStrategy" />, still
-        ///     returns it as an <see cref="AsyncToStart{TInput}" /> to promote in the same call —
+        ///     returns it as an <see cref="AsyncMapBase.AsyncToStart{TInput}" /> to promote in the same call —
         ///     exercising <c>PromoteAndLaunch</c>'s "already canceled while queued" branch
         ///     synchronously, from within the same transaction as the admission itself, rather than
-        ///     from a later transaction the way that branch is normally reached (an external
+        ///     from a later transaction the way that branch is normally reached. (An external
         ///     cancelAll/cancelMatching firing, or another item's completion promoting a
-        ///     previously-queued one).
+        ///     previously-queued one.)
         /// </summary>
         private sealed class CancelAndPromoteSameItemStrategy : AsyncConcurrencyStrategy<int, int, object?>
         {
