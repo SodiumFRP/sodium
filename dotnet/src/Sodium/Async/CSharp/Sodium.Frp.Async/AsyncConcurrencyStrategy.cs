@@ -28,15 +28,18 @@ public abstract class AsyncConcurrencyStrategy<TState>
 /// <summary>
 ///     Non-generic entry point for the built-in strategies (Parallel, Queue, QueuePerGroup,
 ///     SwitchLatest) — each cares only about scheduling, not about the call's
-///     <c>TInput</c>/<c>TResult</c>, so both are fixed to <see cref="Unit" />. This is this
-///     project's own copy of the equivalent built-ins in Sodium.Core.Frp.Async: that project has no
-///     dependency on Sodium.Functional, so it has no publicly-nameable "don't care" type to type
-///     these against and keeps its own copy internal. Each language wrapper provides its own
-///     public version instead, against whatever "don't care" type is natural for that language —
-///     this one against <see cref="Unit" />, since that's the type this C# wrapper already uses for
-///     e.g. <c>cancelAll</c>. Subclasses <see cref="AsyncConcurrencyStrategy{TInput,TResult,TState}" />
-///     directly (skipping the shorthand base classes Core uses for the same purpose) purely to avoid
-///     colliding with Core's own same-named, internal-but-IVT-visible shorthand classes.
+///     <c>TInput</c>/<c>TResult</c>, so both are fixed to <see cref="Unit" />. The actual scheduling
+///     logic for each lives once, shared, in Sodium.Core.Frp.Async's internal
+///     <c>AsyncConcurrencyStrategyFactory</c> (generic over the "don't care" type, since Core itself
+///     has no dependency on Sodium.Functional and so no type of its own to fix it to) — the static
+///     methods below just supply <see cref="Unit" /> as that type argument and hand back the result,
+///     giving this C# wrapper's own consumers a version typed against <see cref="Unit" />, since
+///     that's the type this wrapper already uses for e.g. <c>cancelAll</c>. This class itself, and
+///     its shorthand base classes below (<see cref="AsyncConcurrencyStrategy{TState}" />,
+///     <see cref="AsyncConcurrencyStrategy{TInput,TState}" />), are unrelated to that shared
+///     factory — they exist purely so a consumer writing their own custom strategy against
+///     <see cref="Unit" /> can subclass <see cref="AsyncConcurrencyStrategy{TInput,TResult,TState}" />
+///     without spelling out <see cref="Unit" /> twice.
 /// </summary>
 [PublicAPI]
 public abstract class AsyncConcurrencyStrategy
@@ -44,13 +47,13 @@ public abstract class AsyncConcurrencyStrategy
 {
     private static readonly AsyncConcurrencyStrategyBase<Unit, Unit> ParallelInstance =
         AsyncConcurrencyStrategyFactory.Parallel(Unit.Value);
-    
+
     private static readonly AsyncConcurrencyStrategyBase<Unit, Unit> QueueInstance =
         AsyncConcurrencyStrategyFactory.Queue<Unit>();
-    
+
     private static readonly AsyncConcurrencyStrategyBase<Unit, Unit> SwitchLatestInstance =
         AsyncConcurrencyStrategyFactory.SwitchLatest<Unit>();
-    
+
     /// <summary>Every firing starts its own operation immediately; results arrive in completion order.</summary>
     public static AsyncConcurrencyStrategyBase<Unit, Unit> Parallel() => ParallelInstance;
 

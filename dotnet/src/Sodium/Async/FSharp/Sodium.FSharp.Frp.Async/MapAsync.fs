@@ -8,11 +8,19 @@ open System.Threading.Tasks
 open Sodium.Frp
 open Sodium.Frp.Async
 
-// TState is never part of a strategy's public type (only TInput/TResult are), so ParallelStrategy
-// is free to use something other than literal `unit` for it — which it must: F# can't override an
-// abstract member whose signature reduces to a bare `unit -> unit` segment (ambiguous between "a
-// nullary member" and "a member taking a unit argument"), and ParallelStrategy.CreateState is
-// exactly that shape when TState is also `unit`.
+// These three shorthand classes mirror the C# wrapper's own AsyncConcurrencyStrategy /
+// AsyncConcurrencyStrategy<TState> / AsyncConcurrencyStrategy<TInput,TState> — they exist purely so
+// a consumer writing their own custom strategy against `unit` can subclass Core's
+// AsyncConcurrencyStrategy<TInput,TResult,TState> without spelling out `unit` twice. They're
+// unrelated to the built-in Parallel/Queue/SwitchLatest/QueuePerGroup below, which call straight
+// into Core's shared, generic AsyncConcurrencyStrategyFactory instead of going through these.
+//
+// The non-generic AsyncConcurrencyStrategy needs a concrete TState (not `unit`) for the same
+// reason ParallelStrategy does in Core: TState is never part of a strategy's public type (only
+// TInput/TResult are), but F# can't override an abstract member whose signature reduces to a bare
+// `unit -> unit` segment (ambiguous between "a nullary member" and "a member taking a unit
+// argument") — which CreateState would be if TState were also `unit`. EmptyState sidesteps that
+// for any consumer implementing CreateState against this shorthand.
 [<Struct>]
 type EmptyState = EmptyState
 

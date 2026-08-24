@@ -668,26 +668,31 @@ namespace Sodium.Frp.Async
     }
 
     /// <summary>
-    ///     Non-generic container for the built-in strategies (Parallel, Queue, QueuePerGroup,
-    ///     SwitchLatest) — each cares only about scheduling, not about the call's
-    ///     <c>TInput</c>/<c>TResult</c>, so both are fixed to <see cref="UnitInternal" /> (or, for
-    ///     QueuePerGroup, just the input type needed to compute a group key). Internal, not public:
-    ///     <see cref="UnitInternal" /> can't appear in a public signature (Core deliberately has no
-    ///     dependency on Sodium.Functional, so it has no publicly-nameable "don't care" type to use
-    ///     here instead). Each language wrapper (Sodium.Frp.Async, Sodium.FSharp.Frp.Async) is a friend
-    ///     assembly and can see this class fine; the C# wrapper re-exposes equivalent built-in
-    ///     strategies publicly, typed against Sodium.Functional.Unit for its own consumers, while the
-    ///     F# wrapper calls straight through to this class since it never needs to name
-    ///     <see cref="UnitInternal" /> explicitly (it only ever flows as an inferred type argument).
+    ///     Container for the built-in strategies (Parallel, Queue, QueuePerGroup, SwitchLatest) —
+    ///     each cares only about scheduling, not about the call's <c>TInput</c>/<c>TResult</c>, so
+    ///     both are generic over a caller-supplied <c>TUnit</c> (or, for QueuePerGroup, just the
+    ///     input type needed to compute a group key) instead of being fixed to any one "don't care"
+    ///     type. This is what lets a single, shared implementation of the actual scheduling logic
+    ///     serve every language wrapper: each supplies whatever "don't care" type is natural for
+    ///     it as <c>TUnit</c> — the C# wrapper passes <c>Sodium.Functional.Unit</c>, the F# wrapper
+    ///     passes its own native <c>unit</c> — rather than Core needing a publicly-nameable type of
+    ///     its own (which it can't have anyway, since it deliberately has no dependency on
+    ///     Sodium.Functional) or every wrapper reimplementing this logic itself. Internal, not
+    ///     public: even though every method here is generic, the containing class doesn't need to
+    ///     be, and keeping it internal is what lets each language wrapper (Sodium.Frp.Async,
+    ///     Sodium.FSharp.Frp.Async — both friend assemblies via IVT) build its own public,
+    ///     specifically-typed façade over it instead of exposing this generic surface directly.
     ///     Deliberately named differently from, and not a subclass of,
-    ///     <see cref="AsyncConcurrencyStrategy{TInput,TResult,TState}" /> — sharing that name across
-    ///     generic arities is exactly what a same-assembly consumer can disambiguate (as this
-    ///     project's own nested strategies below do, implicitly, and as the C# wrapper's own
-    ///     same-named class does, since a type declared in the consuming assembly takes precedence
-    ///     over a same-named type merely imported via a reference) but the F# wrapper — which has
-    ///     nothing of its own to prefer — cannot: F# does not reliably resolve a bare type name across
-    ///     multiple generic arities of the same name, even when fully qualified, so this class keeps
-    ///     an unambiguous name instead of overloading "AsyncConcurrencyStrategy" by arity.
+    ///     <see cref="AsyncConcurrencyStrategy{TInput,TResult,TState}" />: F# does not reliably
+    ///     resolve a bare type name across multiple generic arities of the same name, even when
+    ///     fully qualified — the C# wrapper's own same-named shorthand hierarchy is fine because a
+    ///     type declared in the consuming assembly takes precedence over a same-named type merely
+    ///     imported via a reference, but the F# wrapper has nothing of its own to prefer, so this
+    ///     class keeps an unambiguous name instead of overloading "AsyncConcurrencyStrategy" by
+    ///     arity. (This project's own nested strategies below never hit that ambiguity in the first
+    ///     place — they always reference <see cref="AsyncConcurrencyStrategy{TInput,TResult,TState}" />
+    ///     with its full three type arguments, which pins the arity unambiguously regardless of what
+    ///     else shares the name.)
     /// </summary>
     internal static class AsyncConcurrencyStrategyFactory
     {
@@ -1607,14 +1612,20 @@ namespace Sodium.Frp.Async
 }
 
 /*
+This example uses the C# wrapper's public surface (Sodium.Frp.Async.AsyncStreamExtensions.MapAsync
+and Sodium.Frp.Async.AsyncConcurrencyStrategy) — not this project's own internal MapAsyncImpl/
+AsyncConcurrencyStrategyFactory directly, which no external consumer ever references. The F#
+wrapper's equivalents (mapAsync and the functions in Sodium.Frp.Async, e.g. queue()) follow the
+same shape, typed against F#'s native unit instead of Sodium.Functional.Unit.
+
 Usage:
 
-    StreamSink<string> requests = new StreamSink<string>();
-    StreamSink<SearchResults> results = new StreamSink<SearchResults>();
-    StreamSink<Exception> errors = new StreamSink<Exception>();
-    StreamSink<UnitInternal> cancelAll = new StreamSink<UnitInternal>();                            // e.g. a "Cancel" button
+    StreamSink<string> requests = Stream.CreateSink<string>();
+    StreamSink<SearchResults> results = Stream.CreateSink<SearchResults>();
+    StreamSink<Exception> errors = Stream.CreateSink<Exception>();
+    StreamSink<Unit> cancelAll = Stream.CreateSink<Unit>();                                 // e.g. a "Cancel" button
     StreamSink<IReadOnlyCollection<string>> cancelMatching =
-        new StreamSink<IReadOnlyCollection<string>>();                              // e.g. per-row cancel buttons
+        Stream.CreateSink<IReadOnlyCollection<string>>();                           // e.g. per-row cancel buttons
 
     // The strategy instance is stateless and reusable — it's fine to keep this one around and
     // pass it to multiple MapAsync calls, even concurrently; each call gets its own independent
@@ -1626,7 +1637,7 @@ Usage:
         results: results,
         errors: errors,
         operation: async (query, ct) => await searchService.SearchAsync(query, ct),
-        strategy: AsyncConcurrencyStrategy<string, SearchResults>.Queue(),
+        strategy: AsyncConcurrencyStrategy.Queue(),
         cancelAll: cancelAll,
         cancelMatching: cancelMatching,
         cancelOnDispose: true);
@@ -1634,7 +1645,7 @@ Usage:
     Cell<bool> isSearching = status.IsRunning;                  // true only while something is actually executing
     Cell<IReadOnlyList<AsyncItem<string>>> queueView = status.Items; // both Queued and Running entries, for e.g. a queue-position display
 
-    // cancelAll.Send(UnitInternal.Value) cancels everything, queued or running.
+    // cancelAll.Send(Unit.Value) cancels everything, queued or running.
     // cancelMatching.Send(new[] { "some query" }) cancels just that one, wherever it currently sits.
 
     // Tearing the whole thing down (e.g. when the owning view is closed) — this is the ONLY way
@@ -1665,13 +1676,13 @@ Custom concurrency logic:
 Sharing one strategy across several TInput/TResult types:
     AsyncConcurrencyStrategy<TInput, TResult, TState> doesn't have to be written against the exact
     TInput/TResult of any one MapAsync call. MapAsync itself is
-    MapAsync<TInput, TResult, TStrategyInput, TStrategyResult, TState>, with
-    `where TInput : TStrategyInput` and `where TResult : TStrategyResult` — so a strategy written
-    against a common base or interface (e.g. AsyncConcurrencyStrategy<IRequest, IResponse, TState>)
-    can be handed to MapAsync calls over several different, more specific Stream<TInput> /
-    StreamSink<TResult> pairs, one shared instance governing all of them together (e.g. one Queue
-    strategy serializing every kind of IRequest across multiple streams). TStrategyInput/
-    TStrategyResult are always inferred from the strategy argument's type — for the common case
-    where the strategy is written against the call's exact types, they're simply equal to
-    TInput/TResult and nothing needs to be specified explicitly.
+    MapAsync<TInput, TResult, TStrategyInput, TStrategyResult>, with `where TInput : TStrategyInput`
+    and `where TResult : TStrategyResult` — so a strategy written against a common base or interface
+    (e.g. AsyncConcurrencyStrategy<IRequest, IResponse, TState>) can be handed to MapAsync calls over
+    several different, more specific Stream<TInput> / StreamSink<TResult> pairs, one shared instance
+    governing all of them together (e.g. one Queue strategy serializing every kind of IRequest across
+    multiple streams). TStrategyInput/TStrategyResult are always inferred from the strategy
+    argument's type — for the common case where the strategy is written against the call's exact
+    types, they're simply equal to TInput/TResult and nothing needs to be specified explicitly.
+    TState never appears in a MapAsync signature at all — it's fully opaque to callers.
 */
