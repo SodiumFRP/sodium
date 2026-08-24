@@ -8,10 +8,29 @@
     <PropertyGroup>
         <Authors>SodiumFRP</Authors>
         <Company>SodiumFRP</Company>
-        <PackageLicenseUrl>http://opensource.org/licenses/MIT</PackageLicenseUrl>
         <PackageProjectUrl>https://github.com/SodiumFRP/sodium</PackageProjectUrl>
         <IncludeSource>True</IncludeSource>
         <IncludeSymbols>True</IncludeSymbols>
+    </PropertyGroup>
+
+    <!--
+        PackageLicenseExpression rather than the PackageLicenseUrl these projects used previously:
+        licenseUrl is deprecated by NuGet and warns as NU5125, and an expression additionally gives
+        nuget.org a real licence badge and lets dependency auditing tools read the licence without
+        fetching a URL.
+
+        BSD-3-Clause, not the MIT that the old licenseUrl pointed at. The repository's COPYING is a
+        three-clause BSD licence — it carries both the binary-redistribution clause and the
+        non-endorsement clause, neither of which exists in MIT — so the previous declaration was
+        simply wrong. There is no .NET-specific licence file, so root COPYING governs this code.
+
+        COPYING's "except for portions of this code where a different licence is given" preamble
+        still applies: JetBrainsAnnotations.cs in Sodium.Frp and Sodium.Functional carries JetBrains'
+        own MIT notice. An expression describes the licence of the package's own code, which is what
+        this is; the third-party notice travels in the source file that bears it.
+    -->
+    <PropertyGroup>
+        <PackageLicenseExpression>BSD-3-Clause</PackageLicenseExpression>
     </PropertyGroup>
 
     <!--
