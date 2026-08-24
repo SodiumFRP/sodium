@@ -38,19 +38,34 @@ build_script:
   - msbuild %SOLUTION% /p:Configuration=%CONFIGURATION% /v:minimal /m
 
 # Only the two F# test projects are SDK-style with Microsoft.NET.Test.Sdk and NUnit3TestAdapter, so
-# only they are runnable by dotnet test.
+# only they are runnable by dotnet test. The three legacy C# test projects (Sodium.Frp.Tests,
+# .Tests.Internal, .Tests.Memory) reference nunit.framework directly with no test adapter, so
+# nothing here can discover them via dotnet test — they run through the NUnit console runner
+# instead, installed via nuget install since it is not preinstalled on this image.
 #
-# The four legacy C# test projects (Sodium.Frp.Tests, .Tests.Internal, .Tests.Memory,
-# .Tests.Performance) reference nunit.framework directly with no test adapter, so nothing here can
-# discover them. Running them needs either the NUnit console runner or a migration to
-# PackageReference plus NUnit3TestAdapter. Until one of those happens they are built but not run —
-# see the commented block below for the console-runner route, which has not been verified on this
-# image.
+# Sodium.Frp.Tests.Performance is deliberately excluded: it is a console benchmark (OutputType
+# Exe, no NUnit reference, no [Test] attributes), not a test assembly. Handing it to nunit3-console
+# would fail with "no tests found" rather than actually running it.
+#
+# All three DLLs are passed to a single nunit3-console invocation rather than one call each — the
+# runner accepts a list of assemblies and reports one combined summary, so this is both fewer
+# script lines and one result file instead of three. Confirmed locally against a Release build of
+# this solution: 245 tests, 233 passed, 12 skipped (5 in .Tests.Memory tagged
+# [Ignore("Requires dotMemory.")], since the dotMemory profiler is not installed on a CI agent; 7
+# more in .Tests/.Tests.Internal tagged obsolete for unrelated reasons) — 0 failed, exit code 0.
+# nunit3-console returns the failure count as its exit code, so AppVeyor fails the build the same
+# way dotnet test does above.
 test_script:
   - dotnet test dotnet\src\Sodium\FSharp\Sodium.FSharp.Frp.Tests\Sodium.FSharp.Frp.Tests.fsproj -c %CONFIGURATION% --no-build
   - dotnet test dotnet\src\Sodium\FSharp\Sodium.FSharp.Frp.Tests.Internal\Sodium.FSharp.Frp.Tests.Internal.fsproj -c %CONFIGURATION% --no-build
-  # - nuget install NUnit.ConsoleRunner -Version 3.11.1 -OutputDirectory tools
-  # - tools\NUnit.ConsoleRunner.3.11.1\tools\nunit3-console.exe dotnet\src\Sodium\CSharp\Sodium.Frp.Tests\bin\%CONFIGURATION%\Sodium.Frp.Tests.dll
+  - nuget install NUnit.ConsoleRunner -Version 3.19.2 -OutputDirectory tools
+  - tools\NUnit.ConsoleRunner.3.19.2\tools\nunit3-console.exe dotnet\src\Sodium\CSharp\Sodium.Frp.Tests\bin\%CONFIGURATION%\Sodium.Frp.Tests.dll dotnet\src\Sodium\CSharp\Sodium.Frp.Tests.Internal\bin\%CONFIGURATION%\Sodium.Frp.Tests.Internal.dll dotnet\src\Sodium\CSharp\Sodium.Frp.Tests.Memory\bin\%CONFIGURATION%\Sodium.Frp.Tests.Memory.dll --result=TestResult.xml
+  # Uploads TestResult.xml to AppVeyor's Tests tab. This REST convention is well documented by
+  # AppVeyor for NUnit3 XML but has not been exercised against a live AppVeyor job from this
+  # environment — confirm the Tests tab actually populates on the first real run.
+  - ps: |
+      $wc = New-Object System.Net.WebClient
+      $wc.UploadFile("https://ci.appveyor.com/api/testresults/nunit3/$($env:APPVEYOR_JOB_ID)", (Resolve-Path .\TestResult.xml))
 
 # Packed one project at a time rather than by solution: dotnet pack on the solution fails with
 # MSB4057 ("the target Pack does not exist") on the four legacy test projects.
