@@ -38,7 +38,6 @@
     </ItemGroup>
 
     <ItemGroup>
-      <ProjectReference Include="..\..\CSharp\Sodium.Functional\Sodium.Functional.csproj" />
       <ProjectReference Include="..\..\Sodium.Core.Frp\Sodium.Core.Frp.csproj" />
     </ItemGroup>
 

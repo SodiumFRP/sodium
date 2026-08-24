@@ -105,7 +105,9 @@ namespace Sodium.Frp.Async;
                 errors: errors,
                 operation: operation,
                 strategy: strategy,
-                cancelAll: cancelAll,
+                inputConverter: _ => Unit.Value,
+                resultConverter: _ => Unit.Value,
+                cancelAll: cancelAll?.MapImpl(_ => UnitInternal.Value),
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
@@ -206,7 +208,9 @@ namespace Sodium.Frp.Async;
                 errors: errors,
                 operation: operation,
                 strategy: strategy,
-                cancelAll: cancelAll,
+                inputConverter: v => v,
+                resultConverter: _ => Unit.Value,
+                cancelAll: cancelAll?.MapImpl(_ => UnitInternal.Value),
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
@@ -311,7 +315,8 @@ namespace Sodium.Frp.Async;
                 operation: operation,
                 strategy: strategy,
                 inputConverter: inputConverter,
-                cancelAll: cancelAll,
+                resultConverter: _ => Unit.Value,
+                cancelAll: cancelAll?.MapImpl(_ => UnitInternal.Value),
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
@@ -412,7 +417,9 @@ namespace Sodium.Frp.Async;
                 errors: errors,
                 operation: operation,
                 strategy: strategy,
-                cancelAll: cancelAll,
+                inputConverter: _ => Unit.Value,
+                resultConverter: v => v,
+                cancelAll: cancelAll?.MapImpl(_ => UnitInternal.Value),
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
@@ -515,8 +522,9 @@ namespace Sodium.Frp.Async;
                 errors: errors,
                 operation: operation,
                 strategy: strategy,
+                inputConverter: _ => Unit.Value,
                 resultConverter: resultConverter,
-                cancelAll: cancelAll,
+                cancelAll: cancelAll?.MapImpl(_ => UnitInternal.Value),
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
@@ -621,7 +629,9 @@ namespace Sodium.Frp.Async;
                 errors: errors,
                 operation: operation,
                 strategy: strategy,
-                cancelAll: cancelAll,
+                inputConverter: v => v,
+                resultConverter: v => v,
+                cancelAll: cancelAll?.MapImpl(_ => UnitInternal.Value),
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
@@ -732,7 +742,8 @@ namespace Sodium.Frp.Async;
                 operation: operation,
                 strategy: strategy,
                 inputConverter: inputConverter,
-                cancelAll: cancelAll,
+                resultConverter: v => v,
+                cancelAll: cancelAll?.MapImpl(_ => UnitInternal.Value),
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
@@ -843,8 +854,9 @@ namespace Sodium.Frp.Async;
                 errors: errors,
                 operation: operation,
                 strategy: strategy,
+                inputConverter: v => v,
                 resultConverter: resultConverter,
-                cancelAll: cancelAll,
+                cancelAll: cancelAll?.MapImpl(_ => UnitInternal.Value),
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
 
@@ -967,7 +979,7 @@ namespace Sodium.Frp.Async;
                 strategy: strategy,
                 inputConverter: inputConverter,
                 resultConverter: resultConverter,
-                cancelAll: cancelAll,
+                cancelAll: cancelAll?.MapImpl(_ => UnitInternal.Value),
                 cancelMatching: cancelMatching,
                 cancelOnDispose: cancelOnDispose);
     }
