@@ -119,12 +119,34 @@ namespace Sodium.Frp
 
         internal Stream<T> Updates() => this.stream;
 
+        /// <summary>
+        ///     The stream of this behavior's value: its current value, delivered in this transaction,
+        ///     followed by every update.
+        /// </summary>
+        /// <remarks>
+        ///     Both sources feed one output stream directly rather than going through a spark stream, a
+        ///     snapshot of it and a merge - four streams where two will do. Value sits underneath
+        ///     Cell.Listen, Apply and the switches, so it was a large part of what each of those cost.
+        ///
+        ///     The initial send is queued against a bare node of its own, exactly as the spark stream it
+        ///     replaces was, and for the same reason: a fresh node ranks below everything, so the value
+        ///     is delivered even when Value is called part-way through a drain. SwitchB does precisely
+        ///     that - its handler builds a Value for the newly selected behavior mid-transaction - and
+        ///     hanging the initial send off the output node instead makes the switch deliver a stale
+        ///     value. The node costs nothing; it is the two intermediate streams that were expensive.
+        ///
+        ///     Coalescing right-wins leaves an update from this transaction in front of the initial
+        ///     value, which is what merging with (left, right) =&gt; right used to do.
+        /// </remarks>
         internal Stream<T> Value(TransactionInternal trans1)
         {
-            Stream<UnitInternal> spark = new Stream<UnitInternal>(this.stream.KeepListenersAlive);
-            trans1.Prioritized(spark.Node, trans2 => spark.Send(trans2, UnitInternal.Value));
-            Stream<T> initial = spark.SnapshotImpl(this);
-            return initial.Merge(trans1, this.Updates(), (left, right) => right);
+            Stream<T> @out = new Stream<T>(this.stream.KeepListenersAlive);
+
+            trans1.Prioritized(new Node<UnitInternal>(), trans2 => @out.Send(trans2, this.SampleNoTransaction()));
+
+            IListener l = this.Updates().Listen(@out.Node, trans1, (trans2, v) => @out.Send(trans2, v), false);
+
+            return @out.UnsafeAttachListener(l).Coalesce(trans1, (left, right) => right);
         }
 
         internal Behavior<TResult> MapImpl<TResult>(Func<T, TResult> f) =>
