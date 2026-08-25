@@ -27,6 +27,10 @@ namespace Sodium.Frp
 
         private readonly StreamListenerManager.StreamListeners trackedListeners;
         private readonly List<T> firings;
+
+        // Cached because a method group conversion allocates a fresh delegate each time, and
+        // Send hands this to trans.Last on the first firing of every transaction.
+        private readonly Action clearFirings;
         internal readonly IKeepListenersAlive KeepListenersAlive;
 
         private readonly object attachListenerLock = new object();
@@ -44,6 +48,7 @@ namespace Sodium.Frp
             this.attachedListeners = new List<IListener>();
             this.trackedListeners = new StreamListenerManager.StreamListeners(this.streamId);
             this.firings = new List<T>();
+            this.clearFirings = this.firings.Clear;
         }
 
         internal IStrongListener ListenImpl(Action<T> handler)
@@ -125,10 +130,14 @@ namespace Sodium.Frp
         {
             Node<T>.Target nodeTarget = this.Node.Link(trans, action, target);
 
-            // ReSharper disable once LocalVariableHidesMember
-            List<T> firings = this.firings.ToList();
-            if (!suppressEarlierFirings && firings.Count > 0)
+            // Only snapshot the firings when they are actually going to be replayed - the copy
+            // used to be taken unconditionally, on every listen, including the overwhelmingly
+            // common case of a stream that has not fired in this transaction.
+            if (!suppressEarlierFirings && this.firings.Count > 0)
             {
+                // ReSharper disable once LocalVariableHidesMember
+                List<T> firings = this.firings.ToList();
+
                 trans.Prioritized(
                     target,
                     trans2 =>
@@ -421,7 +430,7 @@ namespace Sodium.Frp
         {
             if (this.firings.Count < 1)
             {
-                trans.Last(this.firings.Clear);
+                trans.Last(this.clearFirings);
             }
 
             this.firings.Add(a);

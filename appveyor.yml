@@ -47,7 +47,7 @@ build_script:
 # benchmark (OutputType Exe, no NUnit reference, no [Test] attributes), not a test project; dotnet
 # test would just report "no test is available" for it.
 #
-# Confirmed locally against a Debug build of this solution: 233, 7, 5 (all skipped — the dotMemory
+# Confirmed locally against a Debug build of this solution: 234, 7, 5 (all skipped — the dotMemory
 # profiler these particular tests need isn't installed on a CI agent, so they're tagged
 # [Ignore("Requires dotMemory.")], and dotnet test still exits 0 for an assembly with zero executed,
 # only-skipped tests), 153+5, 4+1, 14, 19 and 21 tests respectively — 0 failed anywhere.

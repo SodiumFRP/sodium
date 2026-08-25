@@ -1,12 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
 
 namespace Sodium.Frp
 {
     internal abstract class Node
     {
-        public static int NullRank = int.MaxValue;
+        public const int NullRank = int.MaxValue;
 
         // Fine-grained lock that protects listeners and nodes.
         protected static readonly object ListenersLock = new object();
@@ -39,9 +38,9 @@ namespace Sodium.Frp
 
             lock (ListenersLock)
             {
-                foreach (Node n in node.GetListenerNodesUnsafe())
+                foreach (Target t in node.GetListenerTargetsUnsafe())
                 {
-                    EnsureBiggerThanRecursive(trans, node, n, node.Rank);
+                    EnsureBiggerThanRecursive(trans, node, t.Node, node.Rank);
                 }
             }
         }
@@ -66,13 +65,15 @@ namespace Sodium.Frp
                 trans.RerankEntriesSet.Add(e);
             }
 
-            foreach (Node n in node.GetListenerNodesUnsafe())
+            foreach (Target t in node.GetListenerTargetsUnsafe())
             {
-                EnsureBiggerThanRecursive(trans, originalNode, n, node.Rank);
+                EnsureBiggerThanRecursive(trans, originalNode, t.Node, node.Rank);
             }
         }
 
-        protected abstract IEnumerable<Node> GetListenerNodesUnsafe();
+        // Returns the targets themselves rather than projecting out their nodes, so that walking
+        // them does not allocate a LINQ iterator per node visited during a rerank cascade.
+        protected abstract IReadOnlyList<Target> GetListenerTargetsUnsafe();
 
         public abstract class Target
         {
@@ -93,6 +94,12 @@ namespace Sodium.Frp
 
         private HashSet<Target> listeners = new HashSet<Target>();
         private int listenersCapacity;
+
+        // Snapshot of listeners, rebuilt lazily. Send walks the listener set on every single
+        // firing while the set itself only changes when the graph is wired up or a dead weak
+        // reference is reaped, so without this every firing allocated a fresh array.
+        // Null means stale; all mutations below null it out under ListenersLock.
+        private Target[] listenersSnapshot;
 
         internal Node()
         {
@@ -124,6 +131,7 @@ namespace Sodium.Frp
             {
                 this.listeners.Add(t);
                 this.listenersCapacity++;
+                this.listenersSnapshot = null;
             }
             lock (NodeRanksLock)
             {
@@ -149,7 +157,7 @@ namespace Sodium.Frp
         {
             lock (ListenersLock)
             {
-                return this.listeners.ToArray();
+                return this.GetListenersSnapshotUnsafe();
             }
         }
 
@@ -158,6 +166,7 @@ namespace Sodium.Frp
             lock (ListenersLock)
             {
                 this.listeners.Remove(target);
+                this.listenersSnapshot = null;
                 // HashSet does not reclaim space after items are removed, so we will create a new one if we can reclaim a substantial amount of space
                 if (this.listenersCapacity > 100 && this.listeners.Count < this.listenersCapacity / 2)
                 {
@@ -167,9 +176,22 @@ namespace Sodium.Frp
             }
         }
 
-        protected override IEnumerable<Node> GetListenerNodesUnsafe()
+        // Callers must hold ListenersLock. The returned array is never handed out for mutation,
+        // and each snapshot is immutable once built, so a caller that is still walking an older
+        // one after an invalidation simply sees the listener set as of when it started - exactly
+        // the semantics the previous copy-per-call gave.
+        private Target[] GetListenersSnapshotUnsafe()
         {
-            return this.listeners.Select(l => l.Node);
+            if (this.listenersSnapshot == null)
+            {
+                Target[] snapshot = new Target[this.listeners.Count];
+                this.listeners.CopyTo(snapshot);
+                this.listenersSnapshot = snapshot;
+            }
+
+            return this.listenersSnapshot;
         }
+
+        protected override IReadOnlyList<Node.Target> GetListenerTargetsUnsafe() => this.GetListenersSnapshotUnsafe();
     }
 }

@@ -909,5 +909,39 @@ namespace Sodium.Frp.Tests
 
             CollectionAssert.AreEqual(new[] { 3, 4, 5 }, @out);
         }
+
+        // Node ranks index directly into the prioritized queue's backing array, which starts at
+        // 1000 entries. A chain this long pushes ranks past that boundary and past several
+        // regrowths. Because that queue is static, getting this wrong did not just fail the deep
+        // graph - it left the queue unusable for every later transaction in the process, which is
+        // what the trailing shallow chain checks.
+        [Test]
+        public void TestDeepChainGrowsPrioritizedQueue()
+        {
+            foreach (int depth in new[] { 999, 1000, 1001, 2000, 5000 })
+            {
+                StreamSink<int> s = Stream.CreateSink<int>();
+                Stream<int> stream = s;
+                for (int i = 0; i < depth; i++)
+                {
+                    stream = stream.Map(v => v + 1);
+                }
+
+                List<int> @out = new List<int>();
+                IListener l = stream.Listen(@out.Add);
+                s.Send(0);
+                l.Unlisten();
+
+                CollectionAssert.AreEqual(new[] { depth }, @out, "chain of depth {0}", depth);
+            }
+
+            StreamSink<int> shallowSink = Stream.CreateSink<int>();
+            List<int> shallowOut = new List<int>();
+            IListener shallowListener = shallowSink.Map(v => v + 1).Listen(shallowOut.Add);
+            shallowSink.Send(1);
+            shallowListener.Unlisten();
+
+            CollectionAssert.AreEqual(new[] { 2 }, shallowOut);
+        }
     }
 }

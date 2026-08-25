@@ -1,8 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 
 namespace Sodium.Frp
 {
@@ -90,9 +87,23 @@ namespace Sodium.Frp
                 throw new Exception("Enqueue requires ranks to agree.");
             }
 
-            if (e.PqRank != Node.NullRank && e.PqRank > this.entriesSize)
+            // Ranks index directly into entries, so the array has to be strictly longer than the
+            // rank being stored - hence >=, not >. Doubling also has to repeat until the rank
+            // actually fits, since a single doubling is not enough for a rank well past the end.
+            if (e.PqRank != Node.NullRank && e.PqRank >= this.entriesSize)
             {
-                int newSize = this.entriesSize * 2;
+                int newSize = this.entriesSize;
+                while (newSize <= e.PqRank)
+                {
+                    if (newSize > int.MaxValue / 2)
+                    {
+                        newSize = int.MaxValue;
+                        break;
+                    }
+
+                    newSize *= 2;
+                }
+
                 Array.Resize(ref this.entries, newSize);
                 this.entriesSize = newSize;
             }

@@ -1,6 +1,5 @@
 using System;
 using System.Collections.Generic;
-using System.Linq;
 using System.Runtime.ExceptionServices;
 using System.Threading;
 
@@ -11,8 +10,15 @@ namespace Sodium.Frp
     /// </summary>
     internal sealed class TransactionInternal
     {
-        private static readonly ThreadLocal<TransactionInternal> LocalTransaction = new ThreadLocal<TransactionInternal>();
-        private static readonly ThreadLocal<bool> RunningOnStartHooks = new ThreadLocal<bool>();
+        // [ThreadStatic] rather than ThreadLocal<T>: these are read on essentially every public
+        // entry point, and a thread-static field is a direct TLS access where ThreadLocal<T>.Value
+        // goes through a generic slot table. Nothing here uses ThreadLocal's extra surface
+        // (Values, IsValueCreated, value factories, disposal), so the two are interchangeable.
+        [ThreadStatic]
+        private static TransactionInternal localTransaction;
+
+        [ThreadStatic]
+        private static bool runningOnStartHooks;
 
         // Coarse-grained lock that's held during the whole transaction.
         private static readonly object TransactionLock = new object();
@@ -56,19 +62,19 @@ namespace Sodium.Frp
         ///     Return whether there is a current transaction.
         /// </summary>
         /// <returns><code>true</code> if there is a current transaction, <code>false</code> otherwise.</returns>
-        internal static bool HasCurrentTransaction() => LocalTransaction.Value != null;
+        internal static bool HasCurrentTransaction() => localTransaction != null;
 
         /// <summary>
         ///     Return the current transaction or <code>null</code>.
         /// </summary>
         /// <returns>The current transaction or <code>null</code>.</returns>
-        internal static TransactionInternal GetCurrentTransaction() => LocalTransaction.Value;
+        internal static TransactionInternal GetCurrentTransaction() => localTransaction;
 
         internal static T RunImpl<T>(Func<T> f) => Apply((_, __) => f());
 
         internal static T Apply<T>(Func<TransactionInternal, bool, T> code)
         {
-            TransactionInternal transaction = LocalTransaction.Value;
+            TransactionInternal transaction = localTransaction;
 
             T returnValue = default;
             Exception exception = null;
@@ -80,7 +86,7 @@ namespace Sodium.Frp
                 {
                     newTransaction = new TransactionInternal();
 
-                    LocalTransaction.Value = newTransaction;
+                    localTransaction = newTransaction;
                 }
 
                 EnsureElevated(newTransaction);
@@ -127,7 +133,7 @@ namespace Sodium.Frp
                         Monitor.Exit(TransactionLock);
                     }
 
-                    LocalTransaction.Value = null;
+                    localTransaction = null;
                 }
             }
         }
@@ -138,7 +144,7 @@ namespace Sodium.Frp
             {
                 transaction.isElevated = true;
 
-                if (!RunningOnStartHooks.Value)
+                if (!runningOnStartHooks)
                 {
                     if (!transaction.hasParentTransaction)
                     {
@@ -165,8 +171,8 @@ namespace Sodium.Frp
             {
                 try
                 {
-                    LocalTransaction.Value = null;
-                    RunningOnStartHooks.Value = true;
+                    localTransaction = null;
+                    runningOnStartHooks = true;
 
                     foreach (Action action in OnStartHooks)
                     {
@@ -175,8 +181,8 @@ namespace Sodium.Frp
                 }
                 finally
                 {
-                    LocalTransaction.Value = transaction;
-                    RunningOnStartHooks.Value = false;
+                    localTransaction = transaction;
+                    runningOnStartHooks = false;
                 }
             }
         }
@@ -326,7 +332,7 @@ namespace Sodium.Frp
                                 transaction.isElevated = true;
                             }
 
-                            LocalTransaction.Value = transaction;
+                            localTransaction = transaction;
                             try
                             {
                                 action(transaction);
@@ -338,7 +344,7 @@ namespace Sodium.Frp
                         }
                         finally
                         {
-                            LocalTransaction.Value = this;
+                            localTransaction = this;
                         }
                     }
 
@@ -351,7 +357,10 @@ namespace Sodium.Frp
 
                         Dictionary<int, Action<TransactionInternal>> sq = this.splitQueue;
                         this.splitQueue = new Dictionary<int, Action<TransactionInternal>>();
-                        foreach (int n in sq.Keys.OrderBy(n => n))
+
+                        List<int> splitIndexes = new List<int>(sq.Keys);
+                        splitIndexes.Sort();
+                        foreach (int n in splitIndexes)
                         {
                             ExecuteInNewTransaction(sq[n], false);
                         }
