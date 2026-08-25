@@ -89,12 +89,16 @@ artifacts:
 #   legacy symbols format that nuget.org rejects.
 #   --skip-duplicate means re-running a build over an already published version is a no-op rather
 #   than a failure, so packages whose version did not move are simply left alone.
+#
+#
+# Restore the following if webhooks are enabled:
+#
+#      if ($env:APPVEYOR_REPO_TAG -ne "true") {
+#          Write-Host "Not a tag build - skipping NuGet push.  APPVEYOR_REPO_TAG = $($env:APPVEYOR_REPO_TAG)"
+#          return
+#      }
 deploy_script:
   - ps: |
-      if ($env:APPVEYOR_REPO_TAG -ne "true") {
-          Write-Host "Not a tag build - skipping NuGet push.  APPVEYOR_REPO_TAG = $($env:APPVEYOR_REPO_TAG)"
-          return
-      }
       if (-not $env:NUGET_API_KEY) {
           throw "NUGET_API_KEY is not set. Add it as a secure variable in AppVeyor."
       }
