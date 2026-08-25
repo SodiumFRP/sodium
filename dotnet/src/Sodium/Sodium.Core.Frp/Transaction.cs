@@ -189,9 +189,11 @@ namespace Sodium.Frp
 
         internal void Send(Action<TransactionInternal> action) => this.sendQueue.Add(action);
 
-        internal void Prioritized(Node node, Action<TransactionInternal> action)
+        internal void Prioritized(Node node, Action<TransactionInternal> action) =>
+            this.Prioritized(new ActionEntry(node, action));
+
+        internal void Prioritized(Entry e)
         {
-            Entry e = new Entry(node, action);
             lock (Node.NodeRanksLock)
             {
                 prioritizedQueue.Enqueue(e);
@@ -301,7 +303,7 @@ namespace Sodium.Frp
 
                         Entry e = prioritizedQueue.Dequeue();
                         e.IsRemoved = true;
-                        e.Action(this);
+                        e.Execute(this);
                         e.Dispose();
                     }
 
@@ -390,10 +392,9 @@ namespace Sodium.Frp
             }
         }
 
-        internal class Entry : IDisposable
+        internal abstract class Entry : IDisposable
         {
             public readonly Node Node;
-            public readonly Action<TransactionInternal> Action;
             public bool InPq;
             public int PqRank;
             public Entry PqNext;
@@ -405,14 +406,17 @@ namespace Sodium.Frp
             // rather than removing whatever entry now occupies the old position.
             private int nodeEntryIndex;
 
-            public Entry(Node node, Action<TransactionInternal> action)
+            protected Entry(Node node)
             {
                 this.Node = node;
-                this.Action = action;
                 this.PqRank = node.Rank;
                 this.nodeEntryIndex = node.Entries.Count;
                 node.Entries.Add(this);
             }
+
+            // Subclasses carry whatever state the queued work needs as fields, so a caller on a
+            // hot path can avoid allocating a closure and a delegate on top of the entry itself.
+            public abstract void Execute(TransactionInternal trans);
 
             public void Dispose()
             {
@@ -440,6 +444,18 @@ namespace Sodium.Frp
 
                 entries.RemoveAt(last);
             }
+        }
+
+        // The general-purpose entry, for the call sites that run once per construction or once
+        // per transaction and so have nothing to gain from avoiding the delegate.
+        internal sealed class ActionEntry : Entry
+        {
+            private readonly Action<TransactionInternal> action;
+
+            public ActionEntry(Node node, Action<TransactionInternal> action)
+                : base(node) => this.action = action;
+
+            public override void Execute(TransactionInternal trans) => this.action(trans);
         }
     }
 }

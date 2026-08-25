@@ -437,35 +437,54 @@ namespace Sodium.Frp
 
             foreach (Node<T>.Target target in this.Node.GetListenersCopy())
             {
-                trans.Prioritized(
-                    target.Node,
-                    trans2 =>
+                // SendEntry rather than a lambda: this runs for every target of every firing,
+                // and a closure here costs a display class and a delegate on top of the queue
+                // entry that has to be allocated anyway. Carrying the three captured values as
+                // fields on the entry collapses that to a single allocation.
+                trans.Prioritized(new SendEntry(this, target, a));
+            }
+        }
+
+        private sealed class SendEntry : TransactionInternal.Entry
+        {
+            private readonly Stream<T> stream;
+            private readonly Node<T>.Target target;
+            private readonly T value;
+
+            public SendEntry(Stream<T> stream, Node<T>.Target target, T value)
+                : base(target.Node)
+            {
+                this.stream = stream;
+                this.target = target;
+                this.value = value;
+            }
+
+            public override void Execute(TransactionInternal trans)
+            {
+                trans.InCallback++;
+                try
+                {
+                    // Don't allow transactions to interfere with Sodium
+                    // internals.
+                    // Dereference the weak reference
+                    if (this.target.Action.TryGetTarget(out Action<TransactionInternal, T> action))
                     {
-                        trans2.InCallback++;
-                        try
+                        // If it hasn't been garbage collected, call it.
+                        if (this.target.IsActivated)
                         {
-                            // Don't allow transactions to interfere with Sodium
-                            // internals.
-                            // Dereference the weak reference
-                            if (target.Action.TryGetTarget(out Action<TransactionInternal, T> action))
-                            {
-                                // If it hasn't been garbage collected, call it.
-                                if (target.IsActivated)
-                                {
-                                    action(trans2, a);
-                                }
-                            }
-                            else
-                            {
-                                // If it has been garbage collected, remove it.
-                                this.Node.RemoveListener(target);
-                            }
+                            action(trans, this.value);
                         }
-                        finally
-                        {
-                            trans2.InCallback--;
-                        }
-                    });
+                    }
+                    else
+                    {
+                        // If it has been garbage collected, remove it.
+                        this.stream.Node.RemoveListener(this.target);
+                    }
+                }
+                finally
+                {
+                    trans.InCallback--;
+                }
             }
         }
 
