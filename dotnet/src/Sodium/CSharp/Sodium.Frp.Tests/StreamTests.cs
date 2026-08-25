@@ -499,6 +499,49 @@ namespace Sodium.Frp.Tests
             CollectionAssert.AreEqual(new[] { 2, 4, 2, 4, 2 }, @out);
         }
 
+        // Calm remembers the last value it let through, and that memory has to survive the end of a
+        // transaction. The existing Calm tests only ever send outside one, so they never exercise a
+        // firing that arrives with several sources feeding it in a single transaction, nor whether
+        // the remembered value committed at the end of one transaction is what the next compares
+        // against. Both are checked here: the second transaction is suppressed only if the first
+        // committed correctly, and the fourth only if the third did.
+        [Test]
+        public void TestCalmRemembersAcrossTransactions()
+        {
+            StreamSink<int> a = Stream.CreateSink<int>();
+            StreamSink<int> b = Stream.CreateSink<int>();
+            Stream<int> merged = a.Merge(b, (x, y) => x + y);
+
+            List<int> @out = new List<int>();
+            IListener l = merged.Calm().Listen(@out.Add);
+
+            Transaction.RunVoid(
+                () =>
+                {
+                    a.Send(1);
+                    b.Send(1);
+                });
+
+            // 2 again, from a single source this time - must be suppressed.
+            a.Send(2);
+
+            Transaction.RunVoid(
+                () =>
+                {
+                    a.Send(1);
+                    b.Send(2);
+                });
+
+            // 3 again - suppressed.
+            a.Send(3);
+
+            b.Send(4);
+
+            l.Unlisten();
+
+            CollectionAssert.AreEqual(new[] { 2, 3, 4 }, @out);
+        }
+
         [Test]
         public void TestCollect()
         {

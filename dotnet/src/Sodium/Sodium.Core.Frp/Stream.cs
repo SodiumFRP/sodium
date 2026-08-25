@@ -341,22 +341,79 @@ namespace Sodium.Frp
         internal Stream<T> CalmImpl(Func<T, T, bool> areEqual) =>
             this.Calm(new Lazy<MaybeInternal<T>>(() => MaybeInternal.None), areEqual);
 
-        internal Stream<T> Calm(Lazy<MaybeInternal<T>> init, Func<T, T, bool> areEqual)
-        {
-            return this.CollectLazyImpl(
-                    init,
-                    (a, lastA) =>
-                    {
-                        if (lastA.Match(v => areEqual(v, a), () => false))
-                        {
-                            return (ReturnValue: MaybeInternal.None, State: lastA);
-                        }
+        /// <summary>
+        ///     Suppresses firings equal to the last one that got through.
+        /// </summary>
+        /// <remarks>
+        ///     Written directly rather than on top of CollectLazyImpl. Going through Collect meant a
+        ///     looped stream, a behavior to hold the state, a snapshot and two maps, plus a filter on
+        ///     the way out - six streams to remember one value.
+        ///
+        ///     The state is kept in two fields rather than one, which is what Collect got for free by
+        ///     holding it in a behavior: a snapshot reads a behavior with SampleNoTransaction, so every
+        ///     firing within a transaction compared against the value the behavior had when that
+        ///     transaction opened, and the behavior then committed whatever the final firing produced.
+        ///     A single field updated in place would instead let an earlier firing in the same
+        ///     transaction be seen by a later one, which is a different stream.
+        /// </remarks>
+        internal Stream<T> Calm(Lazy<MaybeInternal<T>> init, Func<T, T, bool> areEqual) =>
+            TransactionInternal.Apply(
+                (trans1, _) =>
+                {
+                    Stream<T> @out = new Stream<T>(this.KeepListenersAlive);
 
-                        MaybeInternal<T> ma = MaybeInternal.Some(a);
-                        return (ReturnValue: ma, State: ma);
-                    })
-                .FilterMaybeInternal();
-        }
+                    MaybeInternal<T> committed = MaybeInternal.None;
+                    bool committedIsSet = false;
+                    MaybeInternal<T> pending = MaybeInternal.None;
+                    bool hasPending = false;
+
+                    void EnsureCommittedIsSet()
+                    {
+                        if (!committedIsSet)
+                        {
+                            committed = init.Value;
+                            committedIsSet = true;
+                        }
+                    }
+
+                    // Forced in the sample phase as well as on demand, because the behavior this
+                    // replaces forced its lazy initial value there whether or not anything fired.
+                    trans1.Sample(EnsureCommittedIsSet);
+
+                    IListener l = this.Listen(
+                        @out.Node,
+                        trans1,
+                        (trans2, a) =>
+                        {
+                            EnsureCommittedIsSet();
+
+                            bool emit = !(committed.TryGetValue(out T last) && areEqual(last, a));
+
+                            if (!hasPending)
+                            {
+                                hasPending = true;
+                                trans2.Last(
+                                    () =>
+                                    {
+                                        committed = pending;
+                                        hasPending = false;
+                                    });
+                            }
+
+                            // Assigned on every firing, not just the ones that get through: Collect
+                            // fed its state back for suppressed firings too, carrying the unchanged
+                            // value forward.
+                            pending = emit ? MaybeInternal.Some(a) : committed;
+
+                            if (emit)
+                            {
+                                @out.Send(trans2, a);
+                            }
+                        },
+                        false);
+
+                    return @out.UnsafeAttachListener(l);
+                });
 
         internal Stream<TReturn> CollectImpl<TState, TReturn>(
             TState initialState,
