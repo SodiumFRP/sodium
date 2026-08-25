@@ -26,21 +26,35 @@ namespace Sodium.Frp
     /// <typeparam name="T">The type of the value.</typeparam>
     public class Cell<T>
     {
-        private readonly Lazy<Stream<T>> updates;
+        // Built on first use rather than held in a Lazy. A Lazy plus the closure it needs is three
+        // objects allocated for every cell - and cells are created for every Hold, Map and Lift -
+        // where most never have Updates or Calm called on them at all.
+        private Stream<T> updates;
 
-        internal Cell(Behavior<T> behavior)
-        {
-            this.BehaviorImpl = behavior;
-
-            this.updates = new Lazy<Stream<T>>(() => TransactionInternal.Apply(
-                (trans, _) => this.BehaviorImpl.Updates().Coalesce(trans, (left, right) => right)));
-        }
+        internal Cell(Behavior<T> behavior) => this.BehaviorImpl = behavior;
 
         internal T SampleImpl() => this.BehaviorImpl.SampleImpl();
 
         internal Lazy<T> SampleLazyImpl() => this.BehaviorImpl.SampleLazyImpl();
 
-        internal Stream<T> UpdatesImpl => this.updates.Value;
+        internal Stream<T> UpdatesImpl
+        {
+            get
+            {
+                Stream<T> existing = this.updates;
+                if (existing != null)
+                {
+                    return existing;
+                }
+
+                // Creating it inside the transaction is what makes the check-and-set safe without a
+                // lock of its own: transactions are serialized process-wide, so only one thread can
+                // be in here at a time. See the remarks on Sodium.Frp.Transaction.
+                return TransactionInternal.Apply(
+                    (trans, _) => this.updates ??
+                        (this.updates = this.BehaviorImpl.Updates().Coalesce(trans, (left, right) => right)));
+            }
+        }
 
         internal Stream<T> ValuesImpl => TransactionInternal.Apply((trans, _) => this.BehaviorImpl.Value(trans));
 

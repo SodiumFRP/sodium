@@ -457,8 +457,7 @@ namespace Sodium.Frp
             {
                 this.Node = node;
                 this.PqRank = node.Rank;
-                this.nodeEntryIndex = node.Entries.Count;
-                node.Entries.Add(this);
+                this.nodeEntryIndex = node.AddEntry(this);
             }
 
             // Subclasses carry whatever state the queued work needs as fields, so a caller on a

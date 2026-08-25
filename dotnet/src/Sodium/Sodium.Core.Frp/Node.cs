@@ -14,7 +14,21 @@ namespace Sodium.Frp
 
         internal int Rank;
 
-        internal List<TransactionInternal.Entry> Entries = new List<TransactionInternal.Entry>();
+        // Allocated on first use: every stream owns a node, but a node only needs this once work is
+        // actually queued against it, and the terminal node of a chain never has any.
+        internal List<TransactionInternal.Entry> Entries;
+
+        internal int AddEntry(TransactionInternal.Entry entry)
+        {
+            if (this.Entries == null)
+            {
+                this.Entries = new List<TransactionInternal.Entry>();
+            }
+
+            int index = this.Entries.Count;
+            this.Entries.Add(entry);
+            return index;
+        }
 
         internal Node()
         {
@@ -31,9 +45,12 @@ namespace Sodium.Frp
 
             node.Rank = limit + 1;
 
-            foreach (TransactionInternal.Entry e in node.Entries)
+            if (node.Entries != null)
             {
-                trans.AddRerankEntry(e);
+                foreach (TransactionInternal.Entry e in node.Entries)
+                {
+                    trans.AddRerankEntry(e);
+                }
             }
 
             lock (ListenersLock)
@@ -60,9 +77,12 @@ namespace Sodium.Frp
 
             node.Rank = limit + 1;
 
-            foreach (TransactionInternal.Entry e in node.Entries)
+            if (node.Entries != null)
             {
-                trans.AddRerankEntry(e);
+                foreach (TransactionInternal.Entry e in node.Entries)
+                {
+                    trans.AddRerankEntry(e);
+                }
             }
 
             foreach (Target t in node.GetListenerTargetsUnsafe())
@@ -92,7 +112,11 @@ namespace Sodium.Frp
     {
         public static readonly Node<T> Null = new Node<T>(NullRank);
 
-        private HashSet<Target> listeners = new HashSet<Target>();
+        private static readonly Target[] NoListeners = new Target[0];
+
+        // Allocated on first link. A HashSet is not cheap, and the last node in a chain never has
+        // anything linked to it.
+        private HashSet<Target> listeners;
         private int listenersCapacity;
 
         // Snapshot of listeners, rebuilt lazily. Send walks the listener set on every single
@@ -129,6 +153,11 @@ namespace Sodium.Frp
             }
             lock (ListenersLock)
             {
+                if (this.listeners == null)
+                {
+                    this.listeners = new HashSet<Target>();
+                }
+
                 this.listeners.Add(t);
                 this.listenersCapacity++;
                 this.listenersSnapshot = null;
@@ -165,6 +194,11 @@ namespace Sodium.Frp
         {
             lock (ListenersLock)
             {
+                if (this.listeners == null)
+                {
+                    return;
+                }
+
                 this.listeners.Remove(target);
                 this.listenersSnapshot = null;
                 // HashSet does not reclaim space after items are removed, so we will create a new one if we can reclaim a substantial amount of space
@@ -184,9 +218,16 @@ namespace Sodium.Frp
         {
             if (this.listenersSnapshot == null)
             {
-                Target[] snapshot = new Target[this.listeners.Count];
-                this.listeners.CopyTo(snapshot);
-                this.listenersSnapshot = snapshot;
+                if (this.listeners == null || this.listeners.Count == 0)
+                {
+                    this.listenersSnapshot = NoListeners;
+                }
+                else
+                {
+                    Target[] snapshot = new Target[this.listeners.Count];
+                    this.listeners.CopyTo(snapshot);
+                    this.listenersSnapshot = snapshot;
+                }
             }
 
             return this.listenersSnapshot;

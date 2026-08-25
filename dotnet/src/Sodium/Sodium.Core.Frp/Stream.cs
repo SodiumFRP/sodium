@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Threading;
 
 namespace Sodium.Frp
 {
@@ -21,18 +22,24 @@ namespace Sodium.Frp
     {
         internal readonly Node<T> Node;
 
+        // Everything below is allocated on first use. Streams are created in bulk - a single
+        // two-cell Lift builds around twenty of them - and a stream that is only ever an
+        // intermediate step in a chain never sends, never has a listener attached, and never has
+        // AttachListener called on it, so eagerly allocating for all three was most of what a
+        // stream cost to construct.
+
         // ReSharper disable once CollectionNeverQueried.Local
-        private readonly List<IListener> attachedListeners;
+        private List<IListener> attachedListeners;
 
         private readonly StreamListenerManager.StreamListeners trackedListeners;
-        private readonly List<T> firings;
+        private List<T> firings;
 
-        // Cached because a method group conversion allocates a fresh delegate each time, and
-        // Send hands this to trans.Last on the first firing of every transaction.
-        private readonly Action clearFirings;
+        // Cached alongside firings because a method group conversion allocates a fresh delegate
+        // each time, and Send hands this to trans.Last on the first firing of every transaction.
+        private Action clearFirings;
         internal readonly IKeepListenersAlive KeepListenersAlive;
 
-        private readonly object attachListenerLock = new object();
+        private object attachListenerLock;
 
         internal Stream()
             : this(new KeepListenersAliveImplementation())
@@ -43,9 +50,6 @@ namespace Sodium.Frp
         {
             this.KeepListenersAlive = keepListenersAlive;
             this.Node = new Node<T>();
-            this.attachedListeners = new List<IListener>();
-            this.firings = new List<T>();
-            this.clearFirings = this.firings.Clear;
 
             // Last, so nothing half-built is reachable from the registry. The registry only ever
             // holds this stream through a weak handle, so registering here does not keep it alive.
@@ -85,9 +89,26 @@ namespace Sodium.Frp
 
         internal Stream<T> AttachListenerImpl(IListener listener)
         {
-            lock (this.attachListenerLock)
+            lock (this.AttachListenerLock)
             {
                 return this.UnsafeAttachListener(listener);
+            }
+        }
+
+        // Created on demand like the rest, but via CompareExchange rather than a plain null check,
+        // since there is no other lock available to guard creating this one.
+        private object AttachListenerLock
+        {
+            get
+            {
+                object existing = this.attachListenerLock;
+                if (existing != null)
+                {
+                    return existing;
+                }
+
+                Interlocked.CompareExchange(ref this.attachListenerLock, new object(), null);
+                return this.attachListenerLock;
             }
         }
 
@@ -134,7 +155,7 @@ namespace Sodium.Frp
             // Only snapshot the firings when they are actually going to be replayed - the copy
             // used to be taken unconditionally, on every listen, including the overwhelmingly
             // common case of a stream that has not fired in this transaction.
-            if (!suppressEarlierFirings && this.firings.Count > 0)
+            if (!suppressEarlierFirings && this.firings != null && this.firings.Count > 0)
             {
                 // ReSharper disable once LocalVariableHidesMember
                 List<T> firings = this.firings.ToList();
@@ -422,6 +443,11 @@ namespace Sodium.Frp
         //    be shared between threads.
         internal Stream<T> UnsafeAttachListener(IListener cleanup)
         {
+            if (this.attachedListeners == null)
+            {
+                this.attachedListeners = new List<IListener>();
+            }
+
             this.attachedListeners.Add(cleanup);
             this.trackedListeners.AddListener(cleanup.GetListenerWithWeakReference());
             return this;
@@ -429,6 +455,12 @@ namespace Sodium.Frp
 
         internal void Send(TransactionInternal trans, T a)
         {
+            if (this.firings == null)
+            {
+                this.firings = new List<T>();
+                this.clearFirings = this.firings.Clear;
+            }
+
             if (this.firings.Count < 1)
             {
                 trans.Last(this.clearFirings);
@@ -557,23 +589,35 @@ namespace Sodium.Frp
 
         private class KeepListenersAliveImplementation : IKeepListenersAlive
         {
-            private readonly HashSet<IListener> listeners = new HashSet<IListener>();
+            // One of these exists per root stream, and plenty of streams are never listened to at
+            // all, so both collections wait until something actually needs them.
+            private HashSet<IListener> listeners;
 
             // ReSharper disable once CollectionNeverQueried.Local
-            private readonly List<IKeepListenersAlive> childKeepListenersAliveList = new List<IKeepListenersAlive>();
+            private List<IKeepListenersAlive> childKeepListenersAliveList;
 
             public void KeepListenerAlive(IListener listener)
             {
+                if (this.listeners == null)
+                {
+                    this.listeners = new HashSet<IListener>();
+                }
+
                 this.listeners.Add(listener);
             }
 
             public void StopKeepingListenerAlive(IListener listener)
             {
-                this.listeners.Remove(listener);
+                this.listeners?.Remove(listener);
             }
 
             public void Use(IKeepListenersAlive childKeepListenersAlive)
             {
+                if (this.childKeepListenersAliveList == null)
+                {
+                    this.childKeepListenersAliveList = new List<IKeepListenersAlive>();
+                }
+
                 this.childKeepListenersAliveList.Add(childKeepListenersAlive);
             }
         }
