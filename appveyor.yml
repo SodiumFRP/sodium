@@ -25,68 +25,55 @@ environment:
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   SOLUTION: dotnet\src\Sodium\Sodium.sln
 
-# nuget restore, not dotnet restore: four of the C# test projects are legacy, non-SDK projects
-# using packages.config, which dotnet restore ignores. nuget restore handles both those and the
-# PackageReference projects.
+# Every project in the solution is SDK-style now (the last legacy, packages.config holdouts —
+# Sodium.Frp.Tests, .Tests.Internal, .Tests.Memory, .Tests.Performance — were converted alongside
+# this file), so plain dotnet restore covers all of it. Confirmed locally: restores all sixteen
+# projects with nothing left for nuget.exe to handle that this doesn't.
 before_build:
   - dotnet --info
-  - nuget restore %SOLUTION%
+  - dotnet restore %SOLUTION%
 
-# msbuild, not dotnet build, for the same reason — it is the only one of the two that can build the
-# legacy test projects.
+# dotnet build, not msbuild: with no legacy projects left, there's no longer a reason to reach for
+# the one tool that could build both — confirmed locally that dotnet build handles the whole
+# solution, console benchmark included.
 build_script:
-  - msbuild %SOLUTION% /p:Configuration=%CONFIGURATION% /v:minimal /m
+  - dotnet build %SOLUTION% -c %CONFIGURATION%
 
-# The SDK-style test projects run via dotnet test, since each carries Microsoft.NET.Test.Sdk +
-# NUnit3TestAdapter: the three F# ones (the two pre-existing ones for the core F# wrapper, plus
-# Sodium.FSharp.Frp.Async.Tests for the F# async wrapper), and the two SDK-style C# async ones,
-# Sodium.Core.Frp.Async.Tests and Sodium.Frp.Async.Tests — converted from legacy, packages.config
-# projects specifically so they could pick up the test adapter and run this way, matching their
-# sibling source projects' project style.
+# Every test project is SDK-style with Microsoft.NET.Test.Sdk + NUnit3TestAdapter now, so dotnet
+# test runs all eight: the three original C# ones (Sodium.Frp.Tests, .Tests.Internal, .Tests.Memory
+# — converted from legacy, packages.config projects specifically so they could pick up the test
+# adapter), the two C# async ones converted the same way earlier, and the three F# ones (always
+# SDK-style). Sodium.Frp.Tests.Performance is deliberately absent from this list — it is a console
+# benchmark (OutputType Exe, no NUnit reference, no [Test] attributes), not a test project; dotnet
+# test would just report "no test is available" for it.
 #
-# The three remaining C# test projects — Sodium.Frp.Tests, .Tests.Internal, .Tests.Memory — are
-# still legacy, non-SDK projects referencing nunit.framework directly with no test adapter, so
-# nothing here can discover them via dotnet test. They run through the NUnit console runner
-# instead, installed via nuget install since it is not preinstalled on this image.
-#
-# Sodium.Frp.Tests.Performance is deliberately excluded from that runner: it is a console benchmark
-# (OutputType Exe, no NUnit reference, no [Test] attributes), not a test assembly. Handing it to
-# nunit3-console would fail with "no tests found" rather than actually running it.
-#
-# The three DLLs are passed to a single nunit3-console invocation rather than one call each — the
-# runner accepts a list of assemblies and reports one combined summary, so this is both fewer
-# script lines and one result file instead of three. Confirmed locally against a Debug build of
-# this solution: 245 tests across those three assemblies, 233 passed, 12 skipped (5 in .Tests.Memory
-# tagged [Ignore("Requires dotMemory.")], since the dotMemory profiler is not installed on a CI
-# agent; 7 more in .Tests/.Tests.Internal tagged obsolete for unrelated reasons) — 0 failed, exit
-# code 0. nunit3-console returns the failure count as its exit code, so AppVeyor fails the build the
-# same way dotnet test does for the five dotnet-test projects, which came to 153+5, 4+1, 14, 19 and
-# 21 tests respectively, all passing.
+# Confirmed locally against a Debug build of this solution: 233, 7, 5 (all skipped — the dotMemory
+# profiler these particular tests need isn't installed on a CI agent, so they're tagged
+# [Ignore("Requires dotMemory.")], and dotnet test still exits 0 for an assembly with zero executed,
+# only-skipped tests), 153+5, 4+1, 14, 19 and 21 tests respectively — 0 failed anywhere.
 test_script:
+  - dotnet test dotnet\src\Sodium\CSharp\Sodium.Frp.Tests\Sodium.Frp.Tests.csproj -c %CONFIGURATION% --no-build
+  - dotnet test dotnet\src\Sodium\CSharp\Sodium.Frp.Tests.Internal\Sodium.Frp.Tests.Internal.csproj -c %CONFIGURATION% --no-build
+  - dotnet test dotnet\src\Sodium\CSharp\Sodium.Frp.Tests.Memory\Sodium.Frp.Tests.Memory.csproj -c %CONFIGURATION% --no-build
   - dotnet test dotnet\src\Sodium\FSharp\Sodium.FSharp.Frp.Tests\Sodium.FSharp.Frp.Tests.fsproj -c %CONFIGURATION% --no-build
   - dotnet test dotnet\src\Sodium\FSharp\Sodium.FSharp.Frp.Tests.Internal\Sodium.FSharp.Frp.Tests.Internal.fsproj -c %CONFIGURATION% --no-build
   - dotnet test dotnet\src\Sodium\Async\FSharp\Sodium.FSharp.Frp.Async.Tests\Sodium.FSharp.Frp.Async.Tests.fsproj -c %CONFIGURATION% --no-build
   - dotnet test dotnet\src\Sodium\Async\Sodium.Core.Frp.Async.Tests\Sodium.Core.Frp.Async.Tests.csproj -c %CONFIGURATION% --no-build
   - dotnet test dotnet\src\Sodium\Async\CSharp\Sodium.Frp.Async.Tests\Sodium.Frp.Async.Tests.csproj -c %CONFIGURATION% --no-build
-  - nuget install NUnit.ConsoleRunner -Version 3.19.2 -OutputDirectory tools
-  - tools\NUnit.ConsoleRunner.3.19.2\tools\nunit3-console.exe dotnet\src\Sodium\CSharp\Sodium.Frp.Tests\bin\%CONFIGURATION%\Sodium.Frp.Tests.dll dotnet\src\Sodium\CSharp\Sodium.Frp.Tests.Internal\bin\%CONFIGURATION%\Sodium.Frp.Tests.Internal.dll dotnet\src\Sodium\CSharp\Sodium.Frp.Tests.Memory\bin\%CONFIGURATION%\Sodium.Frp.Tests.Memory.dll --result=TestResult.xml
-  # Uploads TestResult.xml to AppVeyor's Tests tab. This REST convention is well documented by
-  # AppVeyor for NUnit3 XML but has not been exercised against a live AppVeyor job from this
-  # environment — confirm the Tests tab actually populates on the first real run.
-  - ps: |
-      $wc = New-Object System.Net.WebClient
-      $wc.UploadFile("https://ci.appveyor.com/api/testresults/nunit3/$($env:APPVEYOR_JOB_ID)", (Resolve-Path .\TestResult.xml))
 
-# Packed one project at a time rather than by solution: dotnet pack on the solution fails with
-# MSB4057 ("the target Pack does not exist") on the four legacy test projects.
+# One dotnet pack over the whole solution now, rather than one invocation per packable project:
+# the previous per-project list existed only to route around dotnet pack failing outright
+# (MSB4057, "the target Pack does not exist") on the legacy test projects. With those gone, dotnet
+# pack on the solution just packs the seven publishable projects and skips the nine test/benchmark
+# ones. Eight of those nine reference Microsoft.NET.Test.Sdk, which the SDK reads as IsTestProject
+# and defaults IsPackable to false for accordingly — no explicit opt-out needed, confirmed via
+# dotnet msbuild -getProperty:IsPackable/-getProperty:IsTestProject. The ninth,
+# Sodium.Frp.Tests.Performance, is a console benchmark with no test adapter reference at all, so it
+# never gets that automatic IsTestProject treatment; it sets IsPackable false explicitly instead.
+# Confirmed locally: produces the same seven packages the old per-project list did, nothing more,
+# exit code 0.
 after_test:
-  - dotnet pack dotnet\src\Sodium\Sodium.Core.Frp\Sodium.Core.Frp.csproj -c %CONFIGURATION% -o artifacts
-  - dotnet pack dotnet\src\Sodium\CSharp\Sodium.Functional\Sodium.Functional.csproj -c %CONFIGURATION% -o artifacts
-  - dotnet pack dotnet\src\Sodium\CSharp\Sodium.Frp\Sodium.Frp.csproj -c %CONFIGURATION% -o artifacts
-  - dotnet pack dotnet\src\Sodium\FSharp\Sodium.FSharp.Frp\Sodium.FSharp.Frp.fsproj -c %CONFIGURATION% -o artifacts
-  - dotnet pack dotnet\src\Sodium\Async\Sodium.Core.Frp.Async\Sodium.Core.Frp.Async.csproj -c %CONFIGURATION% -o artifacts
-  - dotnet pack dotnet\src\Sodium\Async\CSharp\Sodium.Frp.Async\Sodium.Frp.Async.csproj -c %CONFIGURATION% -o artifacts
-  - dotnet pack dotnet\src\Sodium\Async\FSharp\Sodium.FSharp.Frp.Async\Sodium.FSharp.Frp.Async.fsproj -c %CONFIGURATION% -o artifacts
+  - dotnet pack %SOLUTION% -c %CONFIGURATION% -o artifacts
   - ps: Get-ChildItem artifacts\*.nupkg | Sort-Object Name | ForEach-Object { Write-Host $_.Name }
 
 artifacts:
