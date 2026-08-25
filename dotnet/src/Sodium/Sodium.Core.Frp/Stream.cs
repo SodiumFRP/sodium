@@ -19,7 +19,6 @@ namespace Sodium.Frp
     /// <typeparam name="T">The type of values fired by the stream.</typeparam>
     public class Stream<T>
     {
-        private readonly Guid streamId;
         internal readonly Node<T> Node;
 
         // ReSharper disable once CollectionNeverQueried.Local
@@ -42,13 +41,15 @@ namespace Sodium.Frp
 
         internal Stream(IKeepListenersAlive keepListenersAlive)
         {
-            this.streamId = Guid.NewGuid();
             this.KeepListenersAlive = keepListenersAlive;
             this.Node = new Node<T>();
             this.attachedListeners = new List<IListener>();
-            this.trackedListeners = new StreamListenerManager.StreamListeners(this.streamId);
             this.firings = new List<T>();
             this.clearFirings = this.firings.Clear;
+
+            // Last, so nothing half-built is reachable from the registry. The registry only ever
+            // holds this stream through a weak handle, so registering here does not keep it alive.
+            this.trackedListeners = new StreamListenerManager.StreamListeners(this);
         }
 
         internal IStrongListener ListenImpl(Action<T> handler)
@@ -444,8 +445,6 @@ namespace Sodium.Frp
                 trans.Prioritized(new SendEntry(this, target, a));
             }
         }
-
-        ~Stream() => StreamListenerManager.Remove(this.streamId);
 
         private sealed class SendEntry : TransactionInternal.Entry
         {

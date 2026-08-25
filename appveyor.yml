@@ -49,10 +49,15 @@ build_script:
 # benchmark (OutputType Exe, no NUnit reference, no [Test] attributes), not a test project; dotnet
 # test would just report "no test is available" for it.
 #
-# Confirmed locally against a Debug build of this solution: 235, 7, 5 (all skipped — the dotMemory
-# profiler these particular tests need isn't installed on a CI agent, so they're tagged
-# [Ignore("Requires dotMemory.")], and dotnet test still exits 0 for an assembly with zero executed,
-# only-skipped tests), 153+5, 4+1, 14, 19 and 21 tests respectively — 0 failed anywhere.
+# Confirmed locally against a Debug build of this solution: 235, 7, 6+5, 153+5, 4+1, 14, 19 and 21
+# tests respectively — 0 failed anywhere.
+#
+# The 6+5 is Sodium.Frp.Tests.Memory. Its original StreamTests count live objects with dotMemory,
+# which isn't installed on a CI agent, so those five are tagged [Ignore("Requires dotMemory.")] and
+# skip. The others are GarbageCollectionTests, which assert the same lifetime invariants using only
+# weak references, the node's listener set, and the manager's registry count, so they do run here.
+# Keep it that way: they are the only automated cover for stream/listener cleanup, and each one has
+# been checked to fail when the cleanup it guards is broken.
 test_script:
   - dotnet test dotnet\src\Sodium\CSharp\Sodium.Frp.Tests\Sodium.Frp.Tests.csproj -c %CONFIGURATION% --no-build
   - dotnet test dotnet\src\Sodium\CSharp\Sodium.Frp.Tests.Internal\Sodium.Frp.Tests.Internal.csproj -c %CONFIGURATION% --no-build
