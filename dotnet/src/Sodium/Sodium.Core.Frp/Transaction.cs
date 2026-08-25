@@ -21,6 +21,13 @@ namespace Sodium.Frp
         private static bool runningOnStartHooks;
 
         // Coarse-grained lock that's held during the whole transaction.
+        //
+        // Serializing every transaction process-wide is a deliberate guarantee of the library, not an
+        // implementation artifact: it is what makes a transaction atomic across threads and keeps update
+        // ordering deterministic, which is why callers need no synchronization of their own. Narrowing or
+        // sharding this lock would change the library's threading semantics, however tempting it looks as a
+        // contention fix. The guarantee and its consequences are documented in the remarks on the public
+        // Sodium.Frp.Transaction class.
         private static readonly object TransactionLock = new object();
 
         private bool isElevated;
