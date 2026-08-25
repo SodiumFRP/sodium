@@ -92,7 +92,7 @@ artifacts:
 deploy_script:
   - ps: |
       if ($env:APPVEYOR_REPO_TAG -ne "true") {
-          Write-Host "Not a tag build - skipping NuGet push."
+          Write-Host "Not a tag build - skipping NuGet push.  APPVEYOR_REPO_TAG = $($env:APPVEYOR_REPO_TAG)"
           return
       }
       if (-not $env:NUGET_API_KEY) {
