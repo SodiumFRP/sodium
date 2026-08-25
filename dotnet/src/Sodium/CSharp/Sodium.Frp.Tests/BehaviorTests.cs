@@ -827,6 +827,72 @@ namespace Sodium.Frp.Tests
             CollectionAssert.AreEqual(new[] { 50, 54, 58, 74 }, @out);
         }
 
+        // Lift builds one pulse stream that every input feeds, coalesced so a transaction produces a
+        // single firing. That only gives the right answer if each input's new value has been captured
+        // before the recombine runs - so updating several inputs at once has to yield exactly one
+        // output, carrying every new value and none of the old ones.
+        [Test]
+        public void TestLiftSimultaneousUpdatesFireOnceWithAllNewValues()
+        {
+            CellSink<int> a = Cell.CreateSink(1);
+            CellSink<int> b = Cell.CreateSink(10);
+            CellSink<int> c = Cell.CreateSink(100);
+
+            Cell<string> lifted = a.Lift(b, c, (x, y, z) => x + "/" + y + "/" + z);
+
+            List<string> @out = new List<string>();
+            IListener l = lifted.Listen(@out.Add);
+
+            // All three at once: one firing, all new.
+            Transaction.RunVoid(
+                () =>
+                {
+                    a.Send(2);
+                    b.Send(20);
+                    c.Send(200);
+                });
+
+            // A subset: one firing, mixing new values with the untouched one.
+            Transaction.RunVoid(
+                () =>
+                {
+                    a.Send(3);
+                    c.Send(300);
+                });
+
+            // A single input on its own.
+            b.Send(30);
+
+            l.Unlisten();
+
+            CollectionAssert.AreEqual(
+                new[] { "1/10/100", "2/20/200", "3/20/300", "3/30/300" },
+                @out);
+        }
+
+        // Inputs updating one at a time across separate transactions: each firing has to pair the
+        // input that changed with the settled values of the ones that did not.
+        [Test]
+        public void TestLiftInterleavedSingleInputUpdates()
+        {
+            CellSink<int> a = Cell.CreateSink(1);
+            CellSink<int> b = Cell.CreateSink(10);
+
+            Cell<string> lifted = a.Lift(b, (x, y) => x + "/" + y);
+
+            List<string> @out = new List<string>();
+            IListener l = lifted.Listen(@out.Add);
+
+            a.Send(2);
+            b.Send(20);
+            a.Send(3);
+            b.Send(30);
+
+            l.Unlisten();
+
+            CollectionAssert.AreEqual(new[] { "1/10", "2/10", "2/20", "3/20", "3/30" }, @out);
+        }
+
         // Lift links every one of the input behaviors to a single output node, so updating them
         // all in one transaction leaves that node holding one queued entry per cell. This walks
         // that fan-in wide enough, and drains it at enough different occupancies, to catch a

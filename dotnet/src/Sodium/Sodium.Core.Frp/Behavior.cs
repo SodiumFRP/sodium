@@ -131,38 +131,146 @@ namespace Sodium.Frp
             TransactionInternal.Apply(
                 (trans, _) => this.Updates().MapImpl(f).HoldLazyInternal(trans, this.SampleLazy(trans).MapImpl(f)));
 
-        internal Behavior<TResult> LiftImpl<T2, TResult>(Behavior<T2> b2, Func<T, T2, TResult> f)
-        {
-            Func<T2, TResult> Ffa(T a) => b => f(a, b);
-            return b2.ApplyImpl(this.MapImpl(Ffa));
-        }
+        // Lift is deliberately no longer built out of Apply. Chaining ApplyImpl once per extra
+        // input made every input pay for a Value() - a spark stream, a snapshot, a merge and a
+        // coalesce - so a six-way lift constructed around fifty streams and cost roughly 87KB.
+        // This shape, which the IEnumerable overload in BehaviorExtensionMethods already used,
+        // builds three streams whatever the arity: one pulse stream that every input feeds, a
+        // coalesce collapsing a transaction's updates into a single firing, and a map that
+        // recombines the inputs.
+        //
+        // Each input's new value is captured as it propagates rather than read back off the
+        // behavior afterwards. A behavior applies its update through a listener on Node<T>.Null,
+        // and the priority queue drains null-ranked entries only after every ranked one, so at the
+        // point the map below runs the behaviors still hold their previous values. Rank ordering is
+        // what makes capturing safe: every input links into pulse.Node, so pulse.Node outranks all
+        // of them and each slot is filled before anything downstream of the coalesce can run.
 
-        internal Behavior<TResult> LiftImpl<T2, T3, TResult>(Behavior<T2> b2, Behavior<T3> b3, Func<T, T2, T3, TResult> f)
-        {
-            Func<T2, Func<T3, TResult>> Ffa(T a) => b => c => f(a, b, c);
-            return b3.ApplyImpl(b2.ApplyImpl(this.MapImpl(Ffa)));
-        }
+        internal Behavior<TResult> LiftImpl<T2, TResult>(Behavior<T2> b2, Func<T, T2, TResult> f) =>
+            TransactionInternal.Apply(
+                (trans, _) =>
+                {
+                    Stream<UnitInternal> pulse = new Stream<UnitInternal>(this.stream.KeepListenersAlive);
+
+                    MaybeInternal<T> p1 = MaybeInternal.None;
+                    MaybeInternal<T2> p2 = MaybeInternal.None;
+
+                    IListener[] listeners =
+                    {
+                        Pulse(this, pulse, trans, v => p1 = MaybeInternal.Some(v)),
+                        Pulse(b2, pulse, trans, v => p2 = MaybeInternal.Some(v))
+                    };
+
+                    return HoldLifted(
+                        pulse,
+                        trans,
+                        () =>
+                        {
+                            TResult result = f(Take(ref p1, this), Take(ref p2, b2));
+                            return result;
+                        },
+                        () => f(this.SampleNoTransaction(), b2.SampleNoTransaction()),
+                        listeners);
+                });
+
+        internal Behavior<TResult> LiftImpl<T2, T3, TResult>(Behavior<T2> b2, Behavior<T3> b3, Func<T, T2, T3, TResult> f) =>
+            TransactionInternal.Apply(
+                (trans, _) =>
+                {
+                    Stream<UnitInternal> pulse = new Stream<UnitInternal>(this.stream.KeepListenersAlive);
+
+                    MaybeInternal<T> p1 = MaybeInternal.None;
+                    MaybeInternal<T2> p2 = MaybeInternal.None;
+                    MaybeInternal<T3> p3 = MaybeInternal.None;
+
+                    IListener[] listeners =
+                    {
+                        Pulse(this, pulse, trans, v => p1 = MaybeInternal.Some(v)),
+                        Pulse(b2, pulse, trans, v => p2 = MaybeInternal.Some(v)),
+                        Pulse(b3, pulse, trans, v => p3 = MaybeInternal.Some(v))
+                    };
+
+                    return HoldLifted(
+                        pulse,
+                        trans,
+                        () => f(Take(ref p1, this), Take(ref p2, b2), Take(ref p3, b3)),
+                        () => f(this.SampleNoTransaction(), b2.SampleNoTransaction(), b3.SampleNoTransaction()),
+                        listeners);
+                });
 
         internal Behavior<TResult> LiftImpl<T2, T3, T4, TResult>(
             Behavior<T2> b2,
             Behavior<T3> b3,
             Behavior<T4> b4,
-            Func<T, T2, T3, T4, TResult> f)
-        {
-            Func<T2, Func<T3, Func<T4, TResult>>> Ffa(T a) => b => c => d => f(a, b, c, d);
-            return b4.ApplyImpl(b3.ApplyImpl(b2.ApplyImpl(this.MapImpl(Ffa))));
-        }
+            Func<T, T2, T3, T4, TResult> f) =>
+            TransactionInternal.Apply(
+                (trans, _) =>
+                {
+                    Stream<UnitInternal> pulse = new Stream<UnitInternal>(this.stream.KeepListenersAlive);
+
+                    MaybeInternal<T> p1 = MaybeInternal.None;
+                    MaybeInternal<T2> p2 = MaybeInternal.None;
+                    MaybeInternal<T3> p3 = MaybeInternal.None;
+                    MaybeInternal<T4> p4 = MaybeInternal.None;
+
+                    IListener[] listeners =
+                    {
+                        Pulse(this, pulse, trans, v => p1 = MaybeInternal.Some(v)),
+                        Pulse(b2, pulse, trans, v => p2 = MaybeInternal.Some(v)),
+                        Pulse(b3, pulse, trans, v => p3 = MaybeInternal.Some(v)),
+                        Pulse(b4, pulse, trans, v => p4 = MaybeInternal.Some(v))
+                    };
+
+                    return HoldLifted(
+                        pulse,
+                        trans,
+                        () => f(Take(ref p1, this), Take(ref p2, b2), Take(ref p3, b3), Take(ref p4, b4)),
+                        () => f(
+                            this.SampleNoTransaction(),
+                            b2.SampleNoTransaction(),
+                            b3.SampleNoTransaction(),
+                            b4.SampleNoTransaction()),
+                        listeners);
+                });
 
         internal Behavior<TResult> LiftImpl<T2, T3, T4, T5, TResult>(
             Behavior<T2> b2,
             Behavior<T3> b3,
             Behavior<T4> b4,
             Behavior<T5> b5,
-            Func<T, T2, T3, T4, T5, TResult> f)
-        {
-            Func<T2, Func<T3, Func<T4, Func<T5, TResult>>>> Ffa(T a) => b => c => d => e => f(a, b, c, d, e);
-            return b5.ApplyImpl(b4.ApplyImpl(b3.ApplyImpl(b2.ApplyImpl(this.MapImpl(Ffa)))));
-        }
+            Func<T, T2, T3, T4, T5, TResult> f) =>
+            TransactionInternal.Apply(
+                (trans, _) =>
+                {
+                    Stream<UnitInternal> pulse = new Stream<UnitInternal>(this.stream.KeepListenersAlive);
+
+                    MaybeInternal<T> p1 = MaybeInternal.None;
+                    MaybeInternal<T2> p2 = MaybeInternal.None;
+                    MaybeInternal<T3> p3 = MaybeInternal.None;
+                    MaybeInternal<T4> p4 = MaybeInternal.None;
+                    MaybeInternal<T5> p5 = MaybeInternal.None;
+
+                    IListener[] listeners =
+                    {
+                        Pulse(this, pulse, trans, v => p1 = MaybeInternal.Some(v)),
+                        Pulse(b2, pulse, trans, v => p2 = MaybeInternal.Some(v)),
+                        Pulse(b3, pulse, trans, v => p3 = MaybeInternal.Some(v)),
+                        Pulse(b4, pulse, trans, v => p4 = MaybeInternal.Some(v)),
+                        Pulse(b5, pulse, trans, v => p5 = MaybeInternal.Some(v))
+                    };
+
+                    return HoldLifted(
+                        pulse,
+                        trans,
+                        () => f(Take(ref p1, this), Take(ref p2, b2), Take(ref p3, b3), Take(ref p4, b4), Take(ref p5, b5)),
+                        () => f(
+                            this.SampleNoTransaction(),
+                            b2.SampleNoTransaction(),
+                            b3.SampleNoTransaction(),
+                            b4.SampleNoTransaction(),
+                            b5.SampleNoTransaction()),
+                        listeners);
+                });
 
         internal Behavior<TResult> LiftImpl<T2, T3, T4, T5, T6, TResult>(
             Behavior<T2> b2,
@@ -170,12 +278,104 @@ namespace Sodium.Frp
             Behavior<T4> b4,
             Behavior<T5> b5,
             Behavior<T6> b6,
-            Func<T, T2, T3, T4, T5, T6, TResult> f)
-        {
-            Func<T2, Func<T3, Func<T4, Func<T5, Func<T6, TResult>>>>> Ffa(T a) =>
-                b => c => d => e => ff => f(a, b, c, d, e, ff);
+            Func<T, T2, T3, T4, T5, T6, TResult> f) =>
+            TransactionInternal.Apply(
+                (trans, _) =>
+                {
+                    Stream<UnitInternal> pulse = new Stream<UnitInternal>(this.stream.KeepListenersAlive);
 
-            return b6.ApplyImpl(b5.ApplyImpl(b4.ApplyImpl(b3.ApplyImpl(b2.ApplyImpl(this.MapImpl(Ffa))))));
+                    MaybeInternal<T> p1 = MaybeInternal.None;
+                    MaybeInternal<T2> p2 = MaybeInternal.None;
+                    MaybeInternal<T3> p3 = MaybeInternal.None;
+                    MaybeInternal<T4> p4 = MaybeInternal.None;
+                    MaybeInternal<T5> p5 = MaybeInternal.None;
+                    MaybeInternal<T6> p6 = MaybeInternal.None;
+
+                    IListener[] listeners =
+                    {
+                        Pulse(this, pulse, trans, v => p1 = MaybeInternal.Some(v)),
+                        Pulse(b2, pulse, trans, v => p2 = MaybeInternal.Some(v)),
+                        Pulse(b3, pulse, trans, v => p3 = MaybeInternal.Some(v)),
+                        Pulse(b4, pulse, trans, v => p4 = MaybeInternal.Some(v)),
+                        Pulse(b5, pulse, trans, v => p5 = MaybeInternal.Some(v)),
+                        Pulse(b6, pulse, trans, v => p6 = MaybeInternal.Some(v))
+                    };
+
+                    return HoldLifted(
+                        pulse,
+                        trans,
+                        () => f(
+                            Take(ref p1, this),
+                            Take(ref p2, b2),
+                            Take(ref p3, b3),
+                            Take(ref p4, b4),
+                            Take(ref p5, b5),
+                            Take(ref p6, b6)),
+                        () => f(
+                            this.SampleNoTransaction(),
+                            b2.SampleNoTransaction(),
+                            b3.SampleNoTransaction(),
+                            b4.SampleNoTransaction(),
+                            b5.SampleNoTransaction(),
+                            b6.SampleNoTransaction()),
+                        listeners);
+                });
+
+        /// <summary>
+        ///     Wires one lifted input to the shared pulse stream, recording its new value on the way
+        ///     through so the recombine step does not have to read it back off the behavior.
+        /// </summary>
+        private static IListener Pulse<TInput>(
+            Behavior<TInput> input,
+            Stream<UnitInternal> pulse,
+            TransactionInternal trans,
+            Action<TInput> capture) =>
+            input.Updates()
+                .Listen(
+                    pulse.Node,
+                    trans,
+                    (trans2, v) =>
+                    {
+                        capture(v);
+                        pulse.Send(trans2, UnitInternal.Value);
+                    },
+                    false);
+
+        /// <summary>
+        ///     Reads an input's value for this firing: the value captured on the way through if it
+        ///     updated in this transaction, otherwise the behavior's current one.
+        /// </summary>
+        /// <remarks>
+        ///     Clearing the slot afterwards is hygiene rather than correctness. A slot left set would
+        ///     still give the right answer, because by the time the next transaction reads it the
+        ///     behavior has committed that same value - verified by removing the reset and finding no
+        ///     test could tell. It is cleared so the closure does not hold a second reference to every
+        ///     input's last value for as long as the lifted behavior lives.
+        /// </remarks>
+        private static TInput Take<TInput>(ref MaybeInternal<TInput> pending, Behavior<TInput> input)
+        {
+            TInput value = pending.TryGetValue(out TInput captured) ? captured : input.SampleNoTransaction();
+            pending = MaybeInternal.None;
+            return value;
+        }
+
+        private static Behavior<TResult> HoldLifted<TResult>(
+            Stream<UnitInternal> pulse,
+            TransactionInternal trans,
+            Func<TResult> recombine,
+            Func<TResult> initialValue,
+            IListener[] listeners)
+        {
+            // Coalescing means a transaction that updates several inputs produces exactly one
+            // firing, with every input's new value already captured.
+            Stream<TResult> result = pulse.Coalesce(trans, (x, y) => x).MapImpl(_ => recombine());
+
+            foreach (IListener listener in listeners)
+            {
+                result = result.UnsafeAttachListener(listener);
+            }
+
+            return result.HoldLazyInternal(trans, new Lazy<TResult>(initialValue));
         }
 
         internal Behavior<TResult> ApplyImpl<TResult>(Behavior<Func<T, TResult>> bf)
