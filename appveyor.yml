@@ -24,6 +24,8 @@ environment:
   DOTNET_NOLOGO: true
   DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
   SOLUTION: dotnet\src\Sodium\Sodium.sln
+  NUGET_API_KEY:
+    secure: XNZcQD50KvJaGaBYLSt99dNLjdLMFqNTAM/mbZFKMtHQdtxiAbsVScKcM3GnYdk4
 
 # Every project in the solution is SDK-style now (the last legacy, packages.config holdouts —
 # Sodium.Frp.Tests, .Tests.Internal, .Tests.Memory, .Tests.Performance — were converted alongside
