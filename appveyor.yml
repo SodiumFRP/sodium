@@ -91,9 +91,8 @@ artifacts:
 #   than a failure, so packages whose version did not move are simply left alone.
 deploy_script:
   - ps: |
-      $has_tag = $env:APPVEYOR_REPO_TAG
       if ($env:APPVEYOR_REPO_TAG -ne "true") {
-          Write-Host "Not a tag build - skipping NuGet push.  APPVEYOR_REPO_TAG = $hasTag"
+          Write-Host "Not a tag build - skipping NuGet push.  APPVEYOR_REPO_TAG = $($env:APPVEYOR_REPO_TAG)"
           return
       }
       if (-not $env:NUGET_API_KEY) {
