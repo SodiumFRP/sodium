@@ -68,7 +68,17 @@ namespace Sodium.Frp
 
         #region Helper Methods
 
-        internal bool HasValue() => this.Match(v => true, () => false);
+        internal bool HasValue() => this.hasValue;
+
+        /// <summary>
+        ///     Reads the value without going through a callback, for hot paths where the delegates
+        ///     <see cref="Match{TResult}" /> and friends require would be allocated per call.
+        /// </summary>
+        internal bool TryGetValue(out T v)
+        {
+            v = this.value;
+            return this.hasValue;
+        }
 
         #endregion
 

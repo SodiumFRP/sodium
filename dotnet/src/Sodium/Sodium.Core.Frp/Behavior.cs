@@ -24,6 +24,10 @@ namespace Sodium.Frp
         private readonly Stream<T> stream;
         private MaybeInternal<T> valueUpdate;
 
+        // Captures nothing but this behavior, so it is built once rather than on every firing.
+        // Only the stream-backed constructor needs it; a constant behavior never updates.
+        private readonly Action applyValueUpdate;
+
         // ReSharper disable once NotAccessedField.Local - Used to keep object from being garbage collected
         private readonly IListener streamListener;
 
@@ -41,6 +45,10 @@ namespace Sodium.Frp
             this.valueProperty = initialValue;
             this.UsingInitialValue = true;
 
+            // Assigned before Listen, because listening can replay firings already made in this
+            // transaction and so run the handler below before the constructor returns.
+            this.applyValueUpdate = this.ApplyValueUpdate;
+
             this.streamListener = TransactionInternal.Apply(
                 (trans1, _) =>
                     this.stream.Listen(
@@ -48,20 +56,27 @@ namespace Sodium.Frp
                         trans1,
                         (trans2, a) =>
                         {
-                            this.valueUpdate.MatchNone(
-                                () =>
-                                {
-                                    trans2.Last(
-                                        () =>
-                                        {
-                                            this.valueUpdate.MatchSome(v => this.ValueProperty = v);
-                                            this.valueUpdate = MaybeInternal.None;
-                                        });
-                                });
+                            // Deliberately not MatchNone/MatchSome: those take callbacks, and this
+                            // runs on every firing of every cell, so the closures they require were
+                            // showing up as a large share of the cost of a single Send.
+                            if (!this.valueUpdate.HasValue())
+                            {
+                                trans2.Last(this.applyValueUpdate);
+                            }
 
                             this.valueUpdate = MaybeInternal.Some(a);
                         },
                         false));
+        }
+
+        private void ApplyValueUpdate()
+        {
+            if (this.valueUpdate.TryGetValue(out T v))
+            {
+                this.ValueProperty = v;
+            }
+
+            this.valueUpdate = MaybeInternal.None;
         }
 
         internal IKeepListenersAlive KeepListenersAlive => this.stream.KeepListenersAlive;

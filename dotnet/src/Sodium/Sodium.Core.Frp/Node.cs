@@ -33,7 +33,7 @@ namespace Sodium.Frp
 
             foreach (TransactionInternal.Entry e in node.Entries)
             {
-                trans.RerankEntriesSet.Add(e);
+                trans.AddRerankEntry(e);
             }
 
             lock (ListenersLock)
@@ -62,7 +62,7 @@ namespace Sodium.Frp
 
             foreach (TransactionInternal.Entry e in node.Entries)
             {
-                trans.RerankEntriesSet.Add(e);
+                trans.AddRerankEntry(e);
             }
 
             foreach (Target t in node.GetListenerTargetsUnsafe())
@@ -125,7 +125,7 @@ namespace Sodium.Frp
             Target t = new Target(action, target, trans.ActivatedTargets);
             if (!trans.ActivatedTargets)
             {
-                trans.TargetsToActivate.Add(t);
+                trans.AddTargetToActivate(t);
             }
             lock (ListenersLock)
             {

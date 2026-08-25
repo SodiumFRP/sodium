@@ -34,34 +34,40 @@ namespace Sodium.Frp
         private bool obtainedLock;
         internal int InCallback;
         private static readonly List<Action> OnStartHooks = new List<Action>();
-        private readonly List<Action<TransactionInternal>> sendQueue = new List<Action<TransactionInternal>>();
-        private List<Action> sampleQueue = new List<Action>();
-        private readonly Queue<Action> lastQueue = new Queue<Action>();
-        private readonly Queue<Action<TransactionInternal>> postQueue;
+        // All of these are allocated on first use rather than in the constructor. A transaction
+        // is created for every send that is not already inside one, and the great majority of
+        // them touch only a couple of these - eagerly allocating all seven, the dictionary and
+        // the set in particular, was the majority of what an empty transaction cost.
+        private List<Action<TransactionInternal>> sendQueue;
+        private List<Action> sampleQueue;
+        private Queue<Action> lastQueue;
+        private List<Node.Target> targetsToActivate;
+        private HashSet<Entry> rerankEntriesSet;
+
+        // The post and split queues belong to the root transaction and are shared with the child
+        // transactions it spawns while closing, so that work deferred from inside a deferred
+        // action lands in the queue the root is still draining. Children reach them through
+        // deferredOwner rather than holding their own.
+        private readonly TransactionInternal deferredOwner;
+        private Queue<Action<TransactionInternal>> postQueue;
         private Dictionary<int, Action<TransactionInternal>> splitQueue;
+
         private readonly bool hasParentTransaction;
-        internal readonly List<Node.Target> TargetsToActivate;
         internal bool ActivatedTargets;
 
         private static readonly EntryPriorityQueue prioritizedQueue = new EntryPriorityQueue();
 
-        public readonly HashSet<Entry> RerankEntriesSet = new HashSet<Entry>();
-
         internal TransactionInternal()
-            : this(new Queue<Action<TransactionInternal>>(), new Dictionary<int, Action<TransactionInternal>>(), false)
         {
         }
 
-        private TransactionInternal(
-            Queue<Action<TransactionInternal>> postQueue,
-            Dictionary<int, Action<TransactionInternal>> splitQueue,
-            bool hasParentTransaction = true)
+        private TransactionInternal(TransactionInternal deferredOwner)
         {
-            this.postQueue = postQueue;
-            this.splitQueue = splitQueue;
-            this.hasParentTransaction = hasParentTransaction;
-            this.TargetsToActivate = new List<Node.Target>();
+            this.deferredOwner = deferredOwner;
+            this.hasParentTransaction = true;
         }
+
+        private TransactionInternal DeferredOwner => this.deferredOwner ?? this;
 
         internal static bool IsActiveImpl() => HasCurrentTransaction();
 
@@ -194,7 +200,14 @@ namespace Sodium.Frp
             }
         }
 
-        internal void Send(Action<TransactionInternal> action) => this.sendQueue.Add(action);
+        internal void Send(Action<TransactionInternal> action) =>
+            (this.sendQueue ?? (this.sendQueue = new List<Action<TransactionInternal>>())).Add(action);
+
+        internal void AddTargetToActivate(Node.Target target) =>
+            (this.targetsToActivate ?? (this.targetsToActivate = new List<Node.Target>())).Add(target);
+
+        internal void AddRerankEntry(Entry entry) =>
+            (this.rerankEntriesSet ?? (this.rerankEntriesSet = new HashSet<Entry>())).Add(entry);
 
         internal void Prioritized(Node node, Action<TransactionInternal> action) =>
             this.Prioritized(new ActionEntry(node, action));
@@ -207,13 +220,15 @@ namespace Sodium.Frp
             }
         }
 
-        internal void Sample(Action action) => this.sampleQueue.Add(action);
+        internal void Sample(Action action) =>
+            (this.sampleQueue ?? (this.sampleQueue = new List<Action>())).Add(action);
 
         /// <summary>
         ///     Add an action to run after all prioritized actions.
         /// </summary>
         /// <param name="action">The action to run after all prioritized actions.</param>
-        internal void Last(Action action) => this.lastQueue.Enqueue(action);
+        internal void Last(Action action) =>
+            (this.lastQueue ?? (this.lastQueue = new Queue<Action>())).Enqueue(action);
 
         /// <summary>
         ///     Add an action to run after all last actions.
@@ -221,7 +236,8 @@ namespace Sodium.Frp
         /// <param name="action">The action to run after all last actions.</param>
         internal UnitInternal Post(Action<TransactionInternal> action)
         {
-            this.postQueue.Enqueue(action);
+            TransactionInternal owner = this.DeferredOwner;
+            (owner.postQueue ?? (owner.postQueue = new Queue<Action<TransactionInternal>>())).Enqueue(action);
 
             return UnitInternal.Value;
         }
@@ -233,9 +249,13 @@ namespace Sodium.Frp
         /// <param name="action">The action to run after all last actions.</param>
         internal UnitInternal Split(int index, Action<TransactionInternal> action)
         {
+            TransactionInternal owner = this.DeferredOwner;
+            Dictionary<int, Action<TransactionInternal>> queue =
+                owner.splitQueue ?? (owner.splitQueue = new Dictionary<int, Action<TransactionInternal>>());
+
             // If an entry exists already, combine the old one with the new one.
             Action<TransactionInternal> @new;
-            if (this.splitQueue.TryGetValue(index, out Action<TransactionInternal> existing))
+            if (queue.TryGetValue(index, out Action<TransactionInternal> existing))
             {
                 @new = existing + action;
             }
@@ -244,7 +264,7 @@ namespace Sodium.Frp
                 @new = action;
             }
 
-            this.splitQueue[index] = @new;
+            queue[index] = @new;
 
             return UnitInternal.Value;
         }
@@ -273,12 +293,17 @@ namespace Sodium.Frp
         // ranks, then we need to re-generate it to make sure it's up-to-date.
         private void CheckRegen()
         {
-            foreach (Entry entry in this.RerankEntriesSet)
+            if (this.rerankEntriesSet == null)
+            {
+                return;
+            }
+
+            foreach (Entry entry in this.rerankEntriesSet)
             {
                 prioritizedQueue.ChangeRank(entry, entry.Node.Rank);
             }
 
-            this.RerankEntriesSet.Clear();
+            this.rerankEntriesSet.Clear();
         }
 
         internal void Close()
@@ -287,22 +312,28 @@ namespace Sodium.Frp
             {
                 EnsureElevated(this);
 
-                foreach (Node.Target target in this.TargetsToActivate)
+                if (this.targetsToActivate != null)
                 {
-                    target.IsActivated = true;
+                    foreach (Node.Target target in this.targetsToActivate)
+                    {
+                        target.IsActivated = true;
+                    }
                 }
 
                 this.ActivatedTargets = true;
 
-                // ReSharper disable once ForCanBeConvertedToForeach
-                for (int i = 0; i < this.sendQueue.Count; i++)
+                if (this.sendQueue != null)
                 {
-                    this.sendQueue[i](this);
+                    // ReSharper disable once ForCanBeConvertedToForeach
+                    for (int i = 0; i < this.sendQueue.Count; i++)
+                    {
+                        this.sendQueue[i](this);
+                    }
+
+                    this.sendQueue.Clear();
                 }
 
-                this.sendQueue.Clear();
-
-                while (!prioritizedQueue.IsEmpty() || this.sampleQueue.Count > 0)
+                while (!prioritizedQueue.IsEmpty() || this.sampleQueue?.Count > 0)
                 {
                     while (!prioritizedQueue.IsEmpty())
                     {
@@ -315,14 +346,17 @@ namespace Sodium.Frp
                     }
 
                     List<Action> sq = this.sampleQueue;
-                    this.sampleQueue = new List<Action>();
-                    foreach (Action s in sq)
+                    this.sampleQueue = null;
+                    if (sq != null)
                     {
-                        s();
+                        foreach (Action s in sq)
+                        {
+                            s();
+                        }
                     }
                 }
 
-                while (this.lastQueue.Count > 0)
+                while (this.lastQueue?.Count > 0)
                 {
                     this.lastQueue.Dequeue()();
                 }
@@ -333,7 +367,10 @@ namespace Sodium.Frp
                     {
                         try
                         {
-                            TransactionInternal transaction = new TransactionInternal(this.postQueue, this.splitQueue);
+                            // The child defers back into this transaction's queues, so a Post or
+                            // Split made from inside a deferred action joins the drain already
+                            // in progress here rather than being stranded on the child.
+                            TransactionInternal transaction = new TransactionInternal(this);
 
                             if (!runStartHooks)
                             {
@@ -357,44 +394,47 @@ namespace Sodium.Frp
                         }
                     }
 
-                    while (this.postQueue.Count > 0 || this.splitQueue.Count > 0)
+                    while (this.postQueue?.Count > 0 || this.splitQueue?.Count > 0)
                     {
-                        while (this.postQueue.Count > 0)
+                        while (this.postQueue?.Count > 0)
                         {
                             ExecuteInNewTransaction(this.postQueue.Dequeue(), true);
                         }
 
                         Dictionary<int, Action<TransactionInternal>> sq = this.splitQueue;
-                        this.splitQueue = new Dictionary<int, Action<TransactionInternal>>();
+                        this.splitQueue = null;
 
-                        List<int> splitIndexes = new List<int>(sq.Keys);
-                        splitIndexes.Sort();
-                        foreach (int n in splitIndexes)
+                        if (sq != null)
                         {
-                            ExecuteInNewTransaction(sq[n], false);
+                            List<int> splitIndexes = new List<int>(sq.Keys);
+                            splitIndexes.Sort();
+                            foreach (int n in splitIndexes)
+                            {
+                                ExecuteInNewTransaction(sq[n], false);
+                            }
                         }
                     }
                 }
             }
             catch
             {
-                this.sendQueue.Clear();
-                
+                this.sendQueue?.Clear();
+
                 while (!prioritizedQueue.IsEmpty())
                 {
                     Entry e = prioritizedQueue.Dequeue();
                     e.IsRemoved = true;
                     e.Dispose();
                 }
-                
-                this.sampleQueue = new List<Action>();
-                
-                this.lastQueue.Clear();
-                
-                this.postQueue.Clear();
-                
-                this.splitQueue = new Dictionary<int, Action<TransactionInternal>>();
-                
+
+                this.sampleQueue = null;
+
+                this.lastQueue?.Clear();
+
+                this.postQueue?.Clear();
+
+                this.splitQueue = null;
+
                 throw;
             }
         }
@@ -437,7 +477,7 @@ namespace Sodium.Frp
 
                 // Swap the last entry into this slot rather than shifting everything after it
                 // down. Node.Entries is only ever walked to collect entries into
-                // RerankEntriesSet, a HashSet, so nothing depends on the order - and a wide
+                // rerankEntriesSet, a HashSet, so nothing depends on the order - and a wide
                 // fan-in (Cell.Lift over N cells links all N to one node) makes the repeated
                 // RemoveAt(0) that this replaces quadratic in the number of entries.
                 List<Entry> entries = this.Node.Entries;
