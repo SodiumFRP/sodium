@@ -445,6 +445,8 @@ namespace Sodium.Frp
             }
         }
 
+        ~Stream() => StreamListenerManager.Remove(this.streamId);
+
         private sealed class SendEntry : TransactionInternal.Entry
         {
             private readonly Stream<T> stream;
@@ -487,8 +489,6 @@ namespace Sodium.Frp
                 }
             }
         }
-
-        ~Stream() => StreamListenerManager.Remove(this.streamId);
 
         private class StrongListener : IStrongListener
         {
