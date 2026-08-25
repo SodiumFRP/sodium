@@ -6,23 +6,14 @@
 
   <PropertyGroup>
     <PackageId>SodiumFRP</PackageId>
-    <Authors>SodiumFRP</Authors>
-    <PackageLicenseUrl>http://opensource.org/licenses/MIT</PackageLicenseUrl>
-    <PackageProjectUrl>https://github.com/SodiumFRP/sodium</PackageProjectUrl>
-    <Version>1.0.0</Version>
-    <PackageVersion>1.0.0</PackageVersion>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
-    <InformationalVersion>1.0.0.0</InformationalVersion>
-    <Company>SodiumFRP</Company>
+    <MinVerTagPrefix>dotnet-csharp-</MinVerTagPrefix>
     <Product>Sodium FRP for .NET</Product>
     <Title>Sodium FRP for .NET</Title>
     <Description>Sodium - Functional Reactive Programming (FRP) library for .NET.</Description>
-    <IncludeSource>True</IncludeSource>
-    <IncludeSymbols>True</IncludeSymbols>
     <AssemblyName>Sodium.Frp</AssemblyName>
     <RootNamespace>Sodium.Frp</RootNamespace>
-</PropertyGroup>
+    <EnableDefaultItems>false</EnableDefaultItems>
+  </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
     <DocumentationFile>bin\Debug\Sodium.Frp.xml</DocumentationFile>
@@ -34,6 +25,38 @@
 
   <ItemGroup>
     <PackageReference Include="System.ValueTuple" Version="4.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="Behavior.cs" />
+    <Compile Include="BehaviorExtensionMethods.cs" />
+    <Compile Include="BehaviorLoop.cs" />
+    <Compile Include="BehaviorSinkExtensionMethods.cs" />
+    <Compile Include="Cell.cs" />
+    <Compile Include="CellExtensionMethods.cs" />
+    <Compile Include="CellLoop.cs" />
+    <Compile Include="CellSinkExtensionMethods.cs" />
+    <Compile Include="CellStreamSinkExtensionMethods.cs" />
+    <Compile Include="CleanupExtensionMethods.cs" />
+    <Compile Include="JetBrainsAnnotations.cs" />
+    <Compile Include="Listener.cs" />
+    <Compile Include="LoopedBehaviorExtensionMethods.cs" />
+    <Compile Include="LoopedCellExtensionMethods.cs" />
+    <Compile Include="LoopedStreamExtensionMethods.cs" />
+    <Compile Include="MutableListenerExtensionMethods.cs" />
+    <Compile Include="Operational.cs" />
+    <Compile Include="Stream.cs" />
+    <Compile Include="StreamExtensionMethods.cs" />
+    <Compile Include="StreamLoop.cs" />
+    <Compile Include="StreamSinkExtensionMethods.cs" />
+    <Compile Include="Transaction.cs" />
+    <Compile Include="Time\ITimer.cs" />
+    <Compile Include="Time\ITimerSystem.cs" />
+    <Compile Include="Time\ITimerSystemImplementation.cs" />
+    <Compile Include="Time\SecondsTimerSystem.cs" />
+    <Compile Include="Time\SystemClockTimerSystem.cs" />
+    <Compile Include="Time\TimerSystem.cs" />
+    <Compile Include="Time\TimerSystemImplementationBase.cs" />
   </ItemGroup>
 
   <ItemGroup>

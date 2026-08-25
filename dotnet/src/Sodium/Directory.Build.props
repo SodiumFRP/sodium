@@ -1,0 +1,80 @@
+<Project>
+
+    <!--
+        Package metadata shared by every packable project here. Anything that identifies an
+        individual package — PackageId, Title, Product, Description, AssemblyName, RootNamespace —
+        stays in that project's own file.
+    -->
+    <PropertyGroup>
+        <Authors>SodiumFRP</Authors>
+        <Company>SodiumFRP</Company>
+        <PackageProjectUrl>https://github.com/SodiumFRP/sodium</PackageProjectUrl>
+        <IncludeSource>True</IncludeSource>
+        <IncludeSymbols>True</IncludeSymbols>
+    </PropertyGroup>
+
+    <!--
+        PackageLicenseExpression rather than the PackageLicenseUrl these projects used previously:
+        licenseUrl is deprecated by NuGet and warns as NU5125, and an expression additionally gives
+        nuget.org a real licence badge and lets dependency auditing tools read the licence without
+        fetching a URL.
+
+        BSD-3-Clause, not the MIT that the old licenseUrl pointed at. The repository's COPYING is a
+        three-clause BSD licence — it carries both the binary-redistribution clause and the
+        non-endorsement clause, neither of which exists in MIT — so the previous declaration was
+        simply wrong. There is no .NET-specific licence file, so root COPYING governs this code.
+
+        COPYING's "except for portions of this code where a different licence is given" preamble
+        still applies: JetBrainsAnnotations.cs in Sodium.Frp and Sodium.Functional carries JetBrains'
+        own MIT notice. An expression describes the licence of the package's own code, which is what
+        this is; the third-party notice travels in the source file that bears it.
+    -->
+    <PropertyGroup>
+        <PackageLicenseExpression>BSD-3-Clause</PackageLicenseExpression>
+    </PropertyGroup>
+
+    <!--
+        Versions come from git tags via MinVer, so no project hardcodes Version, PackageVersion,
+        AssemblyVersion, FileVersion or InformationalVersion any more.
+
+        Each packable project sets its own MinVerTagPrefix, and that is what lets these packages
+        release on independent schedules: a project's stable version only moves when a tag carrying
+        its own prefix is pushed. Tagging dotnet-async-1.1.0 releases the C# async wrapper at 1.1.0
+        and leaves every other package where its own last tag put it. This follows the per-component
+        tagging already used in this repository — haskell-*, java-*, sodium-*.
+
+        A commit with no matching tag builds as a prerelease of the next patch, e.g.
+        1.0.1-alpha.0.7, where 7 counts commits since the tag. CI can therefore build and pack every
+        commit while only tagged builds ever produce a version worth publishing.
+
+        To collapse several packages onto one release train, give them the same prefix; they then
+        version and release together off a single tag.
+
+        MinVerIgnoreHeight is on for exactly this reason: without it, height counts every commit in
+        the whole repository, not just commits touching a given project, so any package's version
+        keeps drifting to a new prerelease (1.0.1-alpha.0.1, .2, .3...) as soon as anything else in
+        the repo moves — even changes nowhere near that project. That also poisons every dependent's
+        nuspec: a downstream package's dependency entry is read from the referenced project's own
+        resolved version at pack time, so an unrelated commit anywhere could turn a stable release's
+        dependency floor into a moving prerelease target and trip NuGet's NU5104 warning. With this
+        set, a project with no new tag since its last release keeps reporting exactly that tagged
+        version, no matter how much unrelated activity happens elsewhere — confirmed empirically:
+        packing a project 5 commits past its tag, with this on, still produces the exact tagged
+        version, not a next-patch prerelease. The cost is the one this flag is named for: a commit
+        that actually changes a project, but isn't followed by a new tag, is indistinguishable from
+        one that doesn't touch it at all — both keep reporting the last tag's version. That's an
+        accepted tradeoff here, not an oversight: tag on release, and don't rely on the prerelease
+        version to reflect "there are unreleased changes."
+
+        Guarded on UsingMicrosoftNETSdk because four of the C# test projects here are legacy,
+        non-SDK projects using packages.config, which cannot consume a PackageReference.
+    -->
+    <ItemGroup Condition="'$(UsingMicrosoftNETSdk)' == 'true'">
+        <PackageReference Include="MinVer" Version="6.1.0" PrivateAssets="all" />
+    </ItemGroup>
+
+    <PropertyGroup Condition="'$(UsingMicrosoftNETSdk)' == 'true'">
+        <MinVerIgnoreHeight>true</MinVerIgnoreHeight>
+    </PropertyGroup>
+
+</Project>

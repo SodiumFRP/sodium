@@ -1,0 +1,26 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyName>Sodium.FSharp.Frp.Async.Tests</AssemblyName>
+    <RootNamespace>Sodium.Frp.Async.Tests</RootNamespace>
+    <TargetFramework>net472</TargetFramework>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="TestUtil.fs" />
+    <Compile Include="MapAsyncTests.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.9.0" />
+    <PackageReference Include="NUnit" Version="3.11.0" />
+    <PackageReference Include="NUnit3TestAdapter" Version="3.10.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\..\FSharp\Sodium.FSharp.Frp\Sodium.FSharp.Frp.fsproj" />
+    <ProjectReference Include="..\..\Sodium.Core.Frp.Async\Sodium.Core.Frp.Async.csproj" />
+    <ProjectReference Include="..\Sodium.FSharp.Frp.Async\Sodium.FSharp.Frp.Async.fsproj" />
+  </ItemGroup>
+
+</Project>

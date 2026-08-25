@@ -6,22 +6,13 @@
 
   <PropertyGroup>
     <PackageId>Sodium.Functional</PackageId>
-    <Authors>SodiumFRP</Authors>
-    <PackageLicenseUrl>http://opensource.org/licenses/MIT</PackageLicenseUrl>
-    <PackageProjectUrl>https://github.com/SodiumFRP/sodium</PackageProjectUrl>
-    <Version>1.0.0</Version>
-    <PackageVersion>1.0.0</PackageVersion>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
-    <InformationalVersion>1.0.0.0</InformationalVersion>
-    <Company>SodiumFRP</Company>
+    <MinVerTagPrefix>dotnet-functional-</MinVerTagPrefix>
     <Product>Sodium Functional for C#</Product>
     <Title>Sodium Functional for C#</Title>
     <Description>Sodium Functional - Functional constructs for C#.</Description>
-    <IncludeSource>True</IncludeSource>
-    <IncludeSymbols>True</IncludeSymbols>
     <AssemblyName>Sodium.Functional</AssemblyName>
     <RootNamespace>Sodium.Functional</RootNamespace>
+    <EnableDefaultItems>false</EnableDefaultItems>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -31,5 +22,18 @@
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DocumentationFile>bin\Release\Sodium.Functional.xml</DocumentationFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Either.cs" />
+    <Compile Include="IEither.cs" />
+    <Compile Include="IMaybe.cs" />
+    <Compile Include="JetBrainsAnnotations.cs" />
+    <Compile Include="LazyExtensionMethods.cs" />
+    <Compile Include="Maybe.cs" />
+    <Compile Include="MaybeExtensionMethods.cs" />
+    <Compile Include="MaybeMonad.cs" />
+    <Compile Include="Unit.cs" />
+    <Compile Include="UnitExtensionMethods.cs" />
+  </ItemGroup>
 
 </Project>

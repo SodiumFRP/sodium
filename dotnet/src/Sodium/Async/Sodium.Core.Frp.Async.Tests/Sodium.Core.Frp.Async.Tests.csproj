@@ -1,0 +1,43 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <!--
+            Single-targeted at net472, unlike the sibling source projects' net472;net60;netstandard2.0:
+            dotnet test needs one concrete assembly to run, and net472 is what matches the rest of
+            this solution's own target — a netstandard2.0 build wouldn't be runnable at all, and
+            nothing here exercises a net60 one.
+        -->
+        <TargetFramework>net472</TargetFramework>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <AssemblyName>Sodium.Core.Frp.Async.Tests</AssemblyName>
+        <RootNamespace>Sodium.Frp.Async.Tests</RootNamespace>
+        <EnableDefaultItems>false</EnableDefaultItems>
+        <Nullable>enable</Nullable>
+        <LangVersion>10</LangVersion>
+        <!-- Never packed — appveyor.yml's after_test step names the seven packable projects explicitly. -->
+        <IsPackable>false</IsPackable>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="JetBrains.Annotations" Version="2026.2.0" />
+        <PackageReference Include="Microsoft.NET.Test.Sdk" Version="15.9.0" />
+        <PackageReference Include="NUnit" Version="3.11.0" />
+        <PackageReference Include="NUnit3TestAdapter" Version="3.10.0" />
+        <PackageReference Include="System.ValueTuple" Version="4.4.0" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Include="AsyncConcurrencyStrategyFactoryTests.cs" />
+      <Compile Include="MapAsyncImplTests.cs" />
+      <Compile Include="TestUtil.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\Sodium.Core.Frp\Sodium.Core.Frp.csproj" />
+      <ProjectReference Include="..\..\CSharp\Sodium.Frp\Sodium.Frp.csproj" />
+      <ProjectReference Include="..\Sodium.Core.Frp.Async\Sodium.Core.Frp.Async.csproj" />
+    </ItemGroup>
+
+</Project>

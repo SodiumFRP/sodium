@@ -1,0 +1,40 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <AssemblyName>Sodium.FSharp.Frp.Async</AssemblyName>
+    <RootNamespace>Sodium.Frp.Async</RootNamespace>
+    <TargetFrameworks>net472;net60;netstandard2.0</TargetFrameworks>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <PackageId>SodiumFRP.FSharp.Async</PackageId>
+    <MinVerTagPrefix>dotnet-async-fsharp-</MinVerTagPrefix>
+    <Product>Sodium FRP Async Extensions for F#</Product>
+    <Title>Sodium FRP Async Extensions for F#</Title>
+    <Description>Sodium FRP Async Extensions library for F#.</Description>
+  </PropertyGroup>
+
+  <PropertyGroup>
+    <!--
+        GenerateDocumentationFile rather than an explicit DocumentationFile path as in
+        Sodium.FSharp.Frp: this project multi-targets, and a single hard-coded path makes all three
+        target frameworks write over one another's XML. This emits one file per target framework,
+        next to its own assembly, which is also where NuGet pack expects to find it when populating
+        each lib folder.
+    -->
+    <GenerateDocumentationFile>true</GenerateDocumentationFile>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Update="FSharp.Core" Version="4.5.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="MapAsync.fs" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\..\Sodium.Core.Frp.Async\Sodium.Core.Frp.Async.csproj" />
+  </ItemGroup>
+
+</Project>

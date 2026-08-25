@@ -1,0 +1,110 @@
+# AppVeyor build for the .NET implementation under dotnet/src/Sodium.
+#
+# NOTE: committing this file supersedes the configuration currently held in the AppVeyor UI.
+# Compare the two before enabling "use YAML from repository".
+#
+# Package versions are NOT set here. Each packable project derives its own version from git tags
+# via MinVer (see dotnet/src/Sodium/Directory.Build.props), so pushing dotnet-async-csharp-1.1.0
+# releases only SodiumFRP.Async and leaves every other package on its own last tag. Deliberately
+# absent, therefore, is AppVeyor's dotnet_csproj patcher: it stamps every matched project with a
+# single shared version, which is the opposite of what this repository wants.
+
+version: '{build}'
+
+image: Visual Studio 2022
+
+# MinVer reads the full commit graph and every tag. A shallow clone yields wrong versions, or none.
+shallow_clone: false
+clone_depth: 0
+
+configuration: Release
+
+environment:
+  DOTNET_CLI_TELEMETRY_OPTOUT: true
+  DOTNET_NOLOGO: true
+  DOTNET_SKIP_FIRST_TIME_EXPERIENCE: true
+  SOLUTION: dotnet\src\Sodium\Sodium.sln
+
+# Every project in the solution is SDK-style now (the last legacy, packages.config holdouts —
+# Sodium.Frp.Tests, .Tests.Internal, .Tests.Memory, .Tests.Performance — were converted alongside
+# this file), so plain dotnet restore covers all of it. Confirmed locally: restores all sixteen
+# projects with nothing left for nuget.exe to handle that this doesn't.
+before_build:
+  - dotnet --info
+  - dotnet restore %SOLUTION%
+
+# dotnet build, not msbuild: with no legacy projects left, there's no longer a reason to reach for
+# the one tool that could build both — confirmed locally that dotnet build handles the whole
+# solution, console benchmark included.
+build_script:
+  - dotnet build %SOLUTION% -c %CONFIGURATION%
+
+# Every test project is SDK-style with Microsoft.NET.Test.Sdk + NUnit3TestAdapter now, so dotnet
+# test runs all eight: the three original C# ones (Sodium.Frp.Tests, .Tests.Internal, .Tests.Memory
+# — converted from legacy, packages.config projects specifically so they could pick up the test
+# adapter), the two C# async ones converted the same way earlier, and the three F# ones (always
+# SDK-style). Sodium.Frp.Tests.Performance is deliberately absent from this list — it is a console
+# benchmark (OutputType Exe, no NUnit reference, no [Test] attributes), not a test project; dotnet
+# test would just report "no test is available" for it.
+#
+# Confirmed locally against a Debug build of this solution: 233, 7, 5 (all skipped — the dotMemory
+# profiler these particular tests need isn't installed on a CI agent, so they're tagged
+# [Ignore("Requires dotMemory.")], and dotnet test still exits 0 for an assembly with zero executed,
+# only-skipped tests), 153+5, 4+1, 14, 19 and 21 tests respectively — 0 failed anywhere.
+test_script:
+  - dotnet test dotnet\src\Sodium\CSharp\Sodium.Frp.Tests\Sodium.Frp.Tests.csproj -c %CONFIGURATION% --no-build
+  - dotnet test dotnet\src\Sodium\CSharp\Sodium.Frp.Tests.Internal\Sodium.Frp.Tests.Internal.csproj -c %CONFIGURATION% --no-build
+  - dotnet test dotnet\src\Sodium\CSharp\Sodium.Frp.Tests.Memory\Sodium.Frp.Tests.Memory.csproj -c %CONFIGURATION% --no-build
+  - dotnet test dotnet\src\Sodium\FSharp\Sodium.FSharp.Frp.Tests\Sodium.FSharp.Frp.Tests.fsproj -c %CONFIGURATION% --no-build
+  - dotnet test dotnet\src\Sodium\FSharp\Sodium.FSharp.Frp.Tests.Internal\Sodium.FSharp.Frp.Tests.Internal.fsproj -c %CONFIGURATION% --no-build
+  - dotnet test dotnet\src\Sodium\Async\FSharp\Sodium.FSharp.Frp.Async.Tests\Sodium.FSharp.Frp.Async.Tests.fsproj -c %CONFIGURATION% --no-build
+  - dotnet test dotnet\src\Sodium\Async\Sodium.Core.Frp.Async.Tests\Sodium.Core.Frp.Async.Tests.csproj -c %CONFIGURATION% --no-build
+  - dotnet test dotnet\src\Sodium\Async\CSharp\Sodium.Frp.Async.Tests\Sodium.Frp.Async.Tests.csproj -c %CONFIGURATION% --no-build
+
+# One dotnet pack over the whole solution now, rather than one invocation per packable project:
+# the previous per-project list existed only to route around dotnet pack failing outright
+# (MSB4057, "the target Pack does not exist") on the legacy test projects. With those gone, dotnet
+# pack on the solution just packs the seven publishable projects and skips the nine test/benchmark
+# ones. Eight of those nine reference Microsoft.NET.Test.Sdk, which the SDK reads as IsTestProject
+# and defaults IsPackable to false for accordingly — no explicit opt-out needed, confirmed via
+# dotnet msbuild -getProperty:IsPackable/-getProperty:IsTestProject. The ninth,
+# Sodium.Frp.Tests.Performance, is a console benchmark with no test adapter reference at all, so it
+# never gets that automatic IsTestProject treatment; it sets IsPackable false explicitly instead.
+# Confirmed locally: produces the same seven packages the old per-project list did, nothing more,
+# exit code 0.
+after_test:
+  - dotnet pack %SOLUTION% -c %CONFIGURATION% -o artifacts
+  - ps: Get-ChildItem artifacts\*.nupkg | Sort-Object Name | ForEach-Object { Write-Host $_.Name }
+
+artifacts:
+  - path: artifacts\*.nupkg
+    name: packages
+
+# Publishing is gated on a tag, which is what makes the release schedule per-package: MinVer gives a
+# tagged build a stable version and every other build a prerelease one, so only deliberate tags can
+# ever produce something publishable.
+#
+# Two details worth keeping:
+#   *.symbols.nupkg is excluded — these projects set IncludeSource/IncludeSymbols, which emits the
+#   legacy symbols format that nuget.org rejects.
+#   --skip-duplicate means re-running a build over an already published version is a no-op rather
+#   than a failure, so packages whose version did not move are simply left alone.
+deploy_script:
+  - ps: |
+      if ($env:APPVEYOR_REPO_TAG -ne "true") {
+          Write-Host "Not a tag build - skipping NuGet push."
+          return
+      }
+      if (-not $env:NUGET_API_KEY) {
+          throw "NUGET_API_KEY is not set. Add it as a secure variable in AppVeyor."
+      }
+      $packages = Get-ChildItem artifacts\*.nupkg | Where-Object { $_.Name -notlike "*.symbols.nupkg" }
+      if (-not $packages) { throw "No packages found to push." }
+      foreach ($package in $packages) {
+          Write-Host "Pushing $($package.Name)"
+          dotnet nuget push $package.FullName `
+              --skip-duplicate `
+              --api-key $env:NUGET_API_KEY `
+              --source https://api.nuget.org/v3/index.json
+          if ($LASTEXITCODE -ne 0) { throw "Failed to push $($package.Name)" }
+      }

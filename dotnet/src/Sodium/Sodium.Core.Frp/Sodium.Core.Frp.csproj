@@ -6,26 +6,48 @@
 
   <PropertyGroup>
     <PackageId>SodiumFRP.Core</PackageId>
-    <Authors>SodiumFRP</Authors>
-    <PackageLicenseUrl>http://opensource.org/licenses/MIT</PackageLicenseUrl>
-    <PackageProjectUrl>https://github.com/SodiumFRP/sodium</PackageProjectUrl>
-    <Version>1.0.0</Version>
-    <PackageVersion>1.0.0</PackageVersion>
-    <AssemblyVersion>1.0.0.0</AssemblyVersion>
-    <FileVersion>1.0.0.0</FileVersion>
-    <InformationalVersion>1.0.0.0</InformationalVersion>
-    <Company>SodiumFRP</Company>
+    <MinVerTagPrefix>dotnet-core-</MinVerTagPrefix>
     <Product>Sodium FRP Core for .NET</Product>
     <Title>Sodium FRP Core for .NET</Title>
     <Description>Sodium - Functional Reactive Programming (FRP) library for .NET core library.</Description>
-    <IncludeSource>True</IncludeSource>
-    <IncludeSymbols>True</IncludeSymbols>
     <AssemblyName>Sodium.Core.Frp</AssemblyName>
     <RootNamespace>Sodium.Frp</RootNamespace>
-</PropertyGroup>
+    <EnableDefaultItems>false</EnableDefaultItems>
+  </PropertyGroup>
 
   <ItemGroup>
     <PackageReference Include="System.ValueTuple" Version="4.4.0" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <Compile Include="AssemblyInfo.cs" />
+    <Compile Include="Behavior.cs" />
+    <Compile Include="BehaviorExtensionMethods.cs" />
+    <Compile Include="BehaviorSink.cs" />
+    <Compile Include="Cell.cs" />
+    <Compile Include="CellExtensionMethods.cs" />
+    <Compile Include="CellSink.cs" />
+    <Compile Include="CellStreamSink.cs" />
+    <Compile Include="Cleanup.cs" />
+    <Compile Include="CoalesceHandler.cs" />
+    <Compile Include="EntryPriorityQueue.cs" />
+    <Compile Include="LazyBehavior.cs" />
+    <Compile Include="LazyExtensionMethods.cs" />
+    <Compile Include="Listener.cs" />
+    <Compile Include="LoopedBehavior.cs" />
+    <Compile Include="LoopedCell.cs" />
+    <Compile Include="LoopedStream.cs" />
+    <Compile Include="Maybe.cs" />
+    <Compile Include="MutableListener.cs" />
+    <Compile Include="Node.cs" />
+    <Compile Include="Operational.cs" />
+    <Compile Include="Stream.cs" />
+    <Compile Include="StreamExtensionMethods.cs" />
+    <Compile Include="StreamListenerManager.cs" />
+    <Compile Include="StreamSink.cs" />
+    <Compile Include="Transaction.cs" />
+    <Compile Include="Unit.cs" />
+    <Compile Include="Utilities.cs" />
   </ItemGroup>
 
 </Project>

@@ -1,0 +1,41 @@
+﻿<Project Sdk="Microsoft.NET.Sdk">
+
+    <PropertyGroup>
+        <TargetFrameworks>net472;net60;netstandard2.0</TargetFrameworks>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <PackageId>SodiumFRP.Async.Core</PackageId>
+        <MinVerTagPrefix>dotnet-async-core-</MinVerTagPrefix>
+        <Product>Sodium FRP Async Core for .NET</Product>
+        <Title>Sodium FRP Async Core for .NET</Title>
+        <Description>Sodium FRP Async Extensions library for .NET core library.</Description>
+        <AssemblyName>Sodium.Core.Frp.Async</AssemblyName>
+        <RootNamespace>Sodium.Frp.Async</RootNamespace>
+        <EnableDefaultItems>false</EnableDefaultItems>
+        <Nullable>enable</Nullable>
+        <LangVersion>10</LangVersion>
+        <!--
+            The types a consumer actually holds — AsyncMapStatus, AsyncItem, AsyncConcurrencyStrategy
+            and friends — are declared here, not in the language wrappers, so without this their
+            documentation would be missing from IntelliSense even once the wrappers ship theirs.
+            GenerateDocumentationFile rather than an explicit path: see Sodium.Frp.Async.csproj.
+        -->
+        <GenerateDocumentationFile>true</GenerateDocumentationFile>
+    </PropertyGroup>
+
+    <ItemGroup>
+        <PackageReference Include="JetBrains.Annotations" Version="2026.2.0" />
+        <PackageReference Include="System.ValueTuple" Version="4.4.0"/>
+    </ItemGroup>
+
+    <ItemGroup>
+      <Compile Include="AssemblyInfo.cs" />
+      <Compile Include="MapAsyncUtility.cs" />
+    </ItemGroup>
+
+    <ItemGroup>
+      <ProjectReference Include="..\..\Sodium.Core.Frp\Sodium.Core.Frp.csproj" />
+    </ItemGroup>
+
+</Project>
