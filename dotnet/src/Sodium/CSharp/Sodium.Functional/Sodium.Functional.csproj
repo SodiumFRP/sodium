@@ -12,6 +12,7 @@
     <Description>Sodium Functional - Functional constructs for C#.</Description>
     <AssemblyName>Sodium.Functional</AssemblyName>
     <RootNamespace>Sodium.Functional</RootNamespace>
+    <EnableDefaultItems>false</EnableDefaultItems>
   </PropertyGroup>
 
   <PropertyGroup Condition=" '$(Configuration)' == 'Debug' ">
@@ -21,5 +22,18 @@
   <PropertyGroup Condition=" '$(Configuration)' == 'Release' ">
     <DocumentationFile>bin\Release\Sodium.Functional.xml</DocumentationFile>
   </PropertyGroup>
+
+  <ItemGroup>
+    <Compile Include="Either.cs" />
+    <Compile Include="IEither.cs" />
+    <Compile Include="IMaybe.cs" />
+    <Compile Include="JetBrainsAnnotations.cs" />
+    <Compile Include="LazyExtensionMethods.cs" />
+    <Compile Include="Maybe.cs" />
+    <Compile Include="MaybeExtensionMethods.cs" />
+    <Compile Include="MaybeMonad.cs" />
+    <Compile Include="Unit.cs" />
+    <Compile Include="UnitExtensionMethods.cs" />
+  </ItemGroup>
 
 </Project>
