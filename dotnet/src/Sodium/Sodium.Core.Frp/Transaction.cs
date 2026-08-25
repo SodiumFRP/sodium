@@ -400,24 +400,45 @@ namespace Sodium.Frp
             public Entry PqPrev;
             public bool IsRemoved;
 
+            // Where this entry sits in Node.Entries, so removal needs neither a search nor a
+            // shift. -1 means "not in the list", which also makes a second Dispose a no-op
+            // rather than removing whatever entry now occupies the old position.
+            private int nodeEntryIndex;
+
             public Entry(Node node, Action<TransactionInternal> action)
             {
                 this.Node = node;
                 this.Action = action;
                 this.PqRank = node.Rank;
-                this.Node.Entries.Add(this);
+                this.nodeEntryIndex = node.Entries.Count;
+                node.Entries.Add(this);
             }
 
             public void Dispose()
             {
-                for (int i = 0; i < this.Node.Entries.Count; ++i)
+                int index = this.nodeEntryIndex;
+                if (index < 0)
                 {
-                    if (this.Node.Entries[i] == this)
-                    {
-                        this.Node.Entries.RemoveAt(i);
-                        break;
-                    }
+                    return;
                 }
+
+                this.nodeEntryIndex = -1;
+
+                // Swap the last entry into this slot rather than shifting everything after it
+                // down. Node.Entries is only ever walked to collect entries into
+                // RerankEntriesSet, a HashSet, so nothing depends on the order - and a wide
+                // fan-in (Cell.Lift over N cells links all N to one node) makes the repeated
+                // RemoveAt(0) that this replaces quadratic in the number of entries.
+                List<Entry> entries = this.Node.Entries;
+                int last = entries.Count - 1;
+                if (index != last)
+                {
+                    Entry moved = entries[last];
+                    entries[index] = moved;
+                    moved.nodeEntryIndex = index;
+                }
+
+                entries.RemoveAt(last);
             }
         }
     }

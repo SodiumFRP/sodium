@@ -827,6 +827,51 @@ namespace Sodium.Frp.Tests
             CollectionAssert.AreEqual(new[] { 50, 54, 58, 74 }, @out);
         }
 
+        // Lift links every one of the input behaviors to a single output node, so updating them
+        // all in one transaction leaves that node holding one queued entry per cell. This walks
+        // that fan-in wide enough, and drains it at enough different occupancies, to catch a
+        // queue entry that removes itself from the wrong slot on the way out.
+        [Test]
+        public void TestLiftListWideFanIn()
+        {
+            const int count = 200;
+
+            IReadOnlyList<CellSink<int>> cellSinks =
+                Enumerable.Range(0, count).Select(_ => Cell.CreateSink(0)).ToArray();
+            Cell<int> sum = cellSinks.Lift().Map(v => v.Sum());
+            List<int> @out = new List<int>();
+            IListener l = sum.Listen(@out.Add);
+
+            // Every cell at once.
+            Transaction.RunVoid(
+                () =>
+                {
+                    foreach (CellSink<int> cellSink in cellSinks)
+                    {
+                        cellSink.Send(1);
+                    }
+                });
+
+            // Every other cell, so the entries drain from a partially populated node.
+            Transaction.RunVoid(
+                () =>
+                {
+                    for (int i = 0; i < count; i += 2)
+                    {
+                        cellSinks[i].Send(3);
+                    }
+                });
+
+            // A single cell, back down to one entry.
+            cellSinks[count - 1].Send(5);
+
+            l.Unlisten();
+
+            int afterAll = count;
+            int afterEvens = count / 2 * 3 + count / 2;
+            CollectionAssert.AreEqual(new[] { 0, afterAll, afterEvens, afterEvens + 4 }, @out);
+        }
+
         [Test]
         public void TestLiftLoopList()
         {
