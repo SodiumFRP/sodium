@@ -578,6 +578,79 @@ namespace Sodium.Frp.Tests
             CollectionAssert.AreEqual(new[] { 100, 105, 112, 113, 115, 118 }, @out);
         }
 
+        // Collect carries state between firings, and that state has to survive the end of a
+        // transaction. TestCollect only ever sends outside one, so it never covers a firing that
+        // arrives with several sources feeding it in a single transaction, nor whether the state
+        // committed at the end of one transaction is what the next one folds over. The count in the
+        // state makes both visible: it can only reach 3 if every transaction committed.
+        [Test]
+        public void TestCollectStateSurvivesTransactions()
+        {
+            StreamSink<int> a = Stream.CreateSink<int>();
+            StreamSink<int> b = Stream.CreateSink<int>();
+            Stream<int> merged = a.Merge(b, (x, y) => x + y);
+
+            List<string> @out = new List<string>();
+            IListener l = merged
+                .Collect(
+                    (Total: 0, Count: 0),
+                    (v, s) => (ReturnValue: (s.Total + v) + "/" + (s.Count + 1),
+                        State: (Total: s.Total + v, Count: s.Count + 1)))
+                .Listen(@out.Add);
+
+            Transaction.RunVoid(
+                () =>
+                {
+                    a.Send(1);
+                    b.Send(2);
+                });
+
+            a.Send(10);
+
+            Transaction.RunVoid(
+                () =>
+                {
+                    a.Send(1);
+                    b.Send(1);
+                });
+
+            l.Unlisten();
+
+            CollectionAssert.AreEqual(new[] { "3/1", "13/2", "15/3" }, @out);
+        }
+
+        // Accum shares Collect's state carrying, so the same boundary applies to it.
+        [Test]
+        public void TestAccumStateSurvivesTransactions()
+        {
+            StreamSink<int> a = Stream.CreateSink<int>();
+            StreamSink<int> b = Stream.CreateSink<int>();
+            Stream<int> merged = a.Merge(b, (x, y) => x + y);
+
+            List<int> @out = new List<int>();
+            IListener l = merged.Accum(0, (v, s) => s + v).Listen(@out.Add);
+
+            Transaction.RunVoid(
+                () =>
+                {
+                    a.Send(1);
+                    b.Send(2);
+                });
+
+            a.Send(10);
+
+            Transaction.RunVoid(
+                () =>
+                {
+                    a.Send(1);
+                    b.Send(1);
+                });
+
+            l.Unlisten();
+
+            CollectionAssert.AreEqual(new[] { 0, 3, 13, 15 }, @out);
+        }
+
         [Test]
         public void TestOnce()
         {

@@ -422,35 +422,94 @@ namespace Sodium.Frp
 
         internal Stream<TReturn> CollectLazyImpl<TState, TReturn>(
             Lazy<TState> initialState,
-            Func<T, TState, (TReturn ReturnValue, TState State)> f)
-        {
-            return TransactionInternal.Apply(
-                (trans, _) =>
-                {
-                    LoopedStream<TState> es = new LoopedStream<TState>();
-                    Behavior<TState> s = es.HoldLazyInternal(trans, initialState);
-                    Stream<(TReturn ReturnValue, TState State)> ebs = this.SnapshotImpl(s, f);
-                    Stream<TReturn> eb = ebs.MapImpl(bs => bs.ReturnValue);
-                    Stream<TState> esOut = ebs.MapImpl(bs => bs.State);
-                    es.Loop(trans, esOut);
-                    return eb;
-                });
-        }
+            Func<T, TState, (TReturn ReturnValue, TState State)> f) =>
+            TransactionInternal.Apply((trans, _) => this.CarryState(trans, initialState, f));
 
         internal Cell<TReturn> AccumImpl<TReturn>(TReturn initialState, Func<T, TReturn, TReturn> f) =>
             this.AccumLazyImpl(new Lazy<TReturn>(() => initialState), f);
 
-        internal Cell<TReturn> AccumLazyImpl<TReturn>(Lazy<TReturn> initialState, Func<T, TReturn, TReturn> f)
+        internal Cell<TReturn> AccumLazyImpl<TReturn>(Lazy<TReturn> initialState, Func<T, TReturn, TReturn> f) =>
+            TransactionInternal.Apply(
+                (trans, _) => this.CarryState<TReturn, TReturn>(
+                        trans,
+                        initialState,
+                        (a, s) =>
+                        {
+                            TReturn next = f(a, s);
+                            return (next, next);
+                        })
+                    .HoldLazyImpl(initialState));
+
+        /// <summary>
+        ///     Runs <paramref name="f" /> over each firing with state carried between firings, sending
+        ///     whatever it returns for that firing. Collect and Accum differ only in what they do with
+        ///     the resulting stream.
+        /// </summary>
+        /// <remarks>
+        ///     This used to be assembled out of FRP primitives: a looped stream carrying the state back
+        ///     round, a behavior holding it, a snapshot to read it, and a map per output - four streams
+        ///     for Collect, two for Accum, to carry one value between firings. It is now a single output
+        ///     stream and two fields.
+        ///
+        ///     Those two fields are what the behavior used to provide, and the split matters. A snapshot
+        ///     reads a behavior with SampleNoTransaction, so every firing within a transaction saw the
+        ///     state as of when that transaction opened, and the behavior committed whatever the final
+        ///     firing produced. Keeping a single field updated in place would instead let an earlier
+        ///     firing in the same transaction be seen by a later one - a different fold, and one the
+        ///     caller's f would notice. Same reasoning as Calm above.
+        /// </remarks>
+        private Stream<TReturn> CarryState<TState, TReturn>(
+            TransactionInternal trans1,
+            Lazy<TState> initialState,
+            Func<T, TState, (TReturn ReturnValue, TState State)> f)
         {
-            return TransactionInternal.Apply(
-                (trans, _) =>
+            Stream<TReturn> @out = new Stream<TReturn>(this.KeepListenersAlive);
+
+            TState committed = default(TState);
+            bool committedIsSet = false;
+            TState pending = default(TState);
+            bool hasPending = false;
+
+            void EnsureCommittedIsSet()
+            {
+                if (!committedIsSet)
                 {
-                    LoopedStream<TReturn> es = new LoopedStream<TReturn>();
-                    Behavior<TReturn> s = es.HoldLazyInternal(trans, initialState);
-                    Stream<TReturn> esOut = this.SnapshotImpl(s, f);
-                    es.Loop(trans, esOut);
-                    return esOut.HoldLazyImpl(initialState);
-                });
+                    committed = initialState.Value;
+                    committedIsSet = true;
+                }
+            }
+
+            // Forced in the sample phase as well as on demand, because the behavior this replaces
+            // forced its lazy initial value there whether or not anything fired.
+            trans1.Sample(EnsureCommittedIsSet);
+
+            IListener l = this.Listen(
+                @out.Node,
+                trans1,
+                (trans2, a) =>
+                {
+                    EnsureCommittedIsSet();
+
+                    (TReturn returnValue, TState state) = f(a, committed);
+
+                    if (!hasPending)
+                    {
+                        hasPending = true;
+                        trans2.Last(
+                            () =>
+                            {
+                                committed = pending;
+                                hasPending = false;
+                            });
+                    }
+
+                    pending = state;
+
+                    @out.Send(trans2, returnValue);
+                },
+                false);
+
+            return @out.UnsafeAttachListener(l);
         }
 
         internal Stream<T> OnceImpl()
