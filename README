@@ -5,8 +5,8 @@ Reactive Programming efforts, as well as a lot of personal experience. Enjoy.
 
 Status:
   C++ - complete, but the memory management is not quite right yet - in separate sodium-cxx repository
-  C# - complete (source in dotnet folder, binaries in SodiumFRP NuGet package)
-  F# - complete (source in dotnet folder, binaries in SodiumFRP.FSharp NuGet package)
+  C# - complete, but not in active development* (source in dotnet folder, binaries in SodiumFRP NuGet package)
+  F# - complete, but not in active development* (source in dotnet folder, binaries in SodiumFRP.FSharp NuGet package)
   Java - complete
   Kotlin - complete - in separate sodium-kotlin repository
   Scala - complete
@@ -16,11 +16,12 @@ Status:
   Embedded-C - just an experiment
   Rust - complete - in separate sodium-rust repository
 
-Got a question about how to use Sodium? Go to Sodium user forum:
-  https://sodiumfrp.discourse.group/
-
 Found a bug? Raise an issue at
   https://github.com/SodiumFRP/
 
 Buy the book "Functional Reactive Programming" at
   https://www.manning.com/books/functional-reactive-programming
+
+* If you're looking for the .NET version of Sodium, it is no longer being maintained.  Please use SodaFlow instead.
+
+https://morsecode-software.github.io/SodaFlow/
